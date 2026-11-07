@@ -1,16 +1,27 @@
 import http from 'node:http';
+import type { AddMarker } from '../../../application/ports/in/add-marker.js';
+import type { ClearSpeech } from '../../../application/ports/in/clear-speech.js';
+import type { GetStatus } from '../../../application/ports/in/get-status.js';
+import type { ReadConfig } from '../../../application/ports/in/manage-config.js';
+import type { QuerySpeech } from '../../../application/ports/in/query-speech.js';
+import type { WaitForSpeech } from '../../../application/ports/in/wait-for-speech.js';
+import type { WatchSpeech } from '../../../application/ports/in/watch-speech.js';
 import type { Logger } from '../../../application/ports/out/logger.js';
 import type { Config } from '../../../domain/config.js';
 import { listen } from '../net/listen.js';
 import { sendError } from './errors.js';
 import { Router } from './router.js';
-import { speechRoutes, type SpeechRoutesDeps } from './speech-routes.js';
-import { statusRoutes, type StatusRoutesDeps } from './status-routes.js';
+import { speechRoutes } from './speech-routes.js';
+import { statusRoutes } from './status-routes.js';
 
 export type HttpSettings = Config['http'];
 
-export interface HttpServerDeps
-  extends Omit<SpeechRoutesDeps, 'streams' | 'pingMs'>, StatusRoutesDeps {
+/** The driving ports the API calls, plus the logger. */
+export interface HttpServerDeps {
+  speech: QuerySpeech & ClearSpeech & AddMarker & WatchSpeech;
+  waits: WaitForSpeech;
+  status: GetStatus;
+  config: ReadConfig;
   logger: Logger;
   /** Interval of the SSE `: ping` comment. Default 15 s. */
   pingMs?: number;
