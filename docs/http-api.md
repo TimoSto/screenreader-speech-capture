@@ -25,14 +25,14 @@ format for every endpoint (see [Errors](#errors)).
 | Method & path | Description |
 |---|---|
 | `GET /api/v1/speech?since=<seq>&limit=<n>` | List speech entries and markers with `seq > since` (oldest first). `since` defaults to `0`, `limit` to `1000` (max `10000`). Response: `{ "entries": [...], "truncated": false }`. `truncated` is `true` when entries after `since` were dropped because the buffer was full. |
-| `DELETE /api/v1/speech` | Clear the buffer. Call this between tests. |
+| `DELETE /api/v1/speech` | Clear the buffer (`204`, no body). Call this between tests. |
 | `GET /api/v1/speech/stream` | Server-Sent Events: one `entry` event per new entry (event `id` = `seq`) and a `clear` event after a clear. A reconnect with `Last-Event-ID` first gets the entries it missed from the buffer. A `: ping` comment every 15 s keeps the connection open. |
 | `GET /api/v1/speech/wait?contains=<text>&since=<seq>&timeoutMs=<n>` | Long-poll until a speech entry with `seq > since` matches, then return it (also if it arrived before the request). `regex=<pattern>` can be used instead of `contains`, `normalize=1` ignores case and extra whitespace. Markers never match. `since` defaults to `0`, `timeoutMs` to `5000` (max `300000`). Returns `408` (`TIMEOUT`) on timeout, with the entries seen so far in `error.details.entries`. |
-| `POST /api/v1/markers` `{ "label": "step 3" }` | Insert a marker into the timeline (shown in the UI, returned in lists). |
+| `POST /api/v1/markers` `{ "label": "step 3" }` | Insert a marker into the timeline (shown in the UI, returned in lists). Returns `201` with the new entry. |
 | `POST /api/v1/set-focus` `{ "x": 640, "y": 12, "button": "left" }` | Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
 | `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | Native key presses: one chord, or a sequence with `delayMs` between them. |
-| `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. Changing ports restarts the affected listeners. |
-| `GET /api/v1/status` | Bridge and API version, state (`starting` / `ready`), TCP connections, buffer size, Playwright / MCP process state and versions, native input available. |
+| `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. Changing ports restarts the affected listeners. (`PUT` is not implemented yet, see the [roadmap](ROADMAP.md).) |
+| `GET /api/v1/status` | Bridge and API version, state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, native input available. |
 | `POST /api/v1/services/{playwright\|mcp}/{start\|stop\|restart}` | Control the child services. |
 
 `GET /api/v1/status` example:
@@ -42,10 +42,12 @@ format for every endpoint (see [Errors](#errors)).
   "bridge": { "version": "0.3.0", "apiVersion": "1.2", "state": "ready" },
   "tcp": {
     "listening": true,
+    "host": "127.0.0.1",
+    "port": 4449,
     "encoding": "windows-1252",
     "connections": [{ "id": 3, "voice": null, "connectedAt": "2026-11-07T14:01:02.000Z" }]
   },
-  "buffer": { "size": 120, "firstSeq": 223, "lastSeq": 342 },
+  "buffer": { "size": 120, "maxEntries": 10000, "firstSeq": 223, "lastSeq": 342 },
   "playwright": { "state": "running", "version": "1.56.1", "port": 3000, "restarts": 0 },
   "mcp": { "state": "running", "version": "0.0.40", "port": 8931 },
   "input": { "enabled": true }
