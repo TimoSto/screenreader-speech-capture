@@ -61,8 +61,7 @@ Per connection, the `text-to-socket` parser (`tcp.format`):
 
 For each line, `RecordSpeech`:
 
-- assigns the next `seq` and takes `receivedAt` and `monotonicMs` from the clock when the line is
-  complete (the engine sends no timestamps of its own),
+- assigns the next `seq` and takes `receivedAt` from the clock when the line is complete (the engine sends no timestamps of its own),
 - stores the entry in the buffer and publishes it on the event bus (SSE stream, waiting
   `wait` requests, UI).
 

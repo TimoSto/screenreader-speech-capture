@@ -39,7 +39,6 @@ export class SpeechService implements QuerySpeech, ClearSpeech, AddMarker {
       kind: 'marker',
       text,
       receivedAt: clock.now(),
-      monotonicMs: clock.monotonicMs(),
       source: 'api',
       voice: null,
       connectionId: null,

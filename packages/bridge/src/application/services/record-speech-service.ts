@@ -61,7 +61,6 @@ export class RecordSpeechService implements RecordSpeech {
       kind: 'speech',
       text,
       receivedAt: clock.now(),
-      monotonicMs: clock.monotonicMs(),
       source: 'tcp',
       voice: this.open.get(connectionId)?.voice ?? null,
       connectionId,

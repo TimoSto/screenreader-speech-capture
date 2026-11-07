@@ -1,13 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bus.js';
 import { RingBufferRepository } from '../../adapters/out/memory/ring-buffer-repository.js';
-import { FakeClock, MemoryLogger } from '../../../test/fakes.js';
+import { SystemClock } from '../../adapters/out/clock/system-clock.js';
+import { MemoryLogger } from '../../../test/fakes.js';
 import type { SpeechEvent } from '../ports/out/speech-event-bus.js';
 import { RecordSpeechService } from './record-speech-service.js';
 import { SpeechService } from './speech-service.js';
 
 function setup() {
-  const clock = new FakeClock();
+  const clock = new SystemClock();
   const repository = new RingBufferRepository(100);
   const events = new InProcessEventBus();
   const published: SpeechEvent[] = [];
@@ -22,15 +23,24 @@ function setup() {
     transcript,
   });
   const speech = new SpeechService({ repository, events, clock });
-  return { clock, recorder, speech, published, logger, transcript };
+  return { recorder, speech, published, logger, transcript };
 }
+
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-11-07T14:00:00.000Z'));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('RecordSpeechService', () => {
   it('records lines with voice, connection and timestamps, and publishes them', () => {
-    const { clock, recorder, speech, published } = setup();
+    const { recorder, speech, published } = setup();
     const id = recorder.connectionOpened();
     recorder.setVoice(id, 'dev');
-    clock.advance(250);
+    vi.advanceTimersByTime(250);
     recorder.record(id, 'Submit, button');
 
     const [entry] = speech.list({ since: 0, limit: 10 }).entries;
@@ -39,7 +49,6 @@ describe('RecordSpeechService', () => {
       kind: 'speech',
       text: 'Submit, button',
       receivedAt: new Date('2026-11-07T14:00:00.250Z'),
-      monotonicMs: 1250,
       source: 'tcp',
       voice: 'dev',
       connectionId: id,

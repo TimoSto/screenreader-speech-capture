@@ -14,7 +14,6 @@ format for every endpoint (see [Errors](#errors)).
   "kind": "speech",                      // "speech" | "marker"
   "text": "Submit, button",
   "receivedAt": "2026-11-07T14:03:12.345Z",
-  "monotonicMs": 123456.789,             // high-resolution, for measuring durations
   "source": "tcp",                       // "tcp" | "api" (markers)
   "voice": "ssc5000",                    // tcpHeader of the sending voice, null if not set
   "connectionId": 3                      // TCP connection that delivered it

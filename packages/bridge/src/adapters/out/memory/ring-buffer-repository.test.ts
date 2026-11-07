@@ -6,7 +6,6 @@ const draft = (text: string): NewSpeechEntry => ({
   kind: 'speech',
   text,
   receivedAt: new Date(0),
-  monotonicMs: 0,
   source: 'tcp',
   voice: null,
   connectionId: 1,
