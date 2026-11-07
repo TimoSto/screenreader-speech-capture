@@ -2,7 +2,8 @@ import { API_PREFIX } from '@screenreader-speech-capture/shared';
 import type { GetStatus } from '../../../application/ports/in/get-status.js';
 import type { ReadConfig } from '../../../application/ports/in/manage-config.js';
 import { toConfigDto, toStatusDto } from './dto.js';
-import { sendJson, type Router } from './router.js';
+import { sendJson } from './response.js';
+import type { Router } from './router.js';
 
 export interface StatusRoutesDeps {
   status: GetStatus;

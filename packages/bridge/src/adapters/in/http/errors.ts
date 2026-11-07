@@ -2,7 +2,7 @@ import type http from 'node:http';
 import { ERROR_STATUS, type ErrorBodyDto } from '@screenreader-speech-capture/shared';
 import type { Logger } from '../../../application/ports/out/logger.js';
 import { AppError } from '../../../domain/errors.js';
-import { sendJson } from './router.js';
+import { sendJson } from './response.js';
 
 /**
  * Sends the error body every endpoint uses (docs/http-api.md#errors). An `AppError` keeps its

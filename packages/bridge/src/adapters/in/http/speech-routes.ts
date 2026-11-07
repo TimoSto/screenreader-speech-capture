@@ -8,7 +8,9 @@ import type { WatchSpeech } from '../../../application/ports/in/watch-speech.js'
 import { AppError, invalidField } from '../../../domain/errors.js';
 import type { SpeechEvent } from '../../../domain/speech-event.js';
 import { toSpeechEntryDto, toSpeechListDto } from './dto.js';
-import { booleanParam, intParam, readJson, sendJson, stringParam, type Router } from './router.js';
+import { booleanParam, intParam, readJson, stringParam } from './request.js';
+import { sendJson } from './response.js';
+import type { Router } from './router.js';
 
 export interface SpeechRoutesDeps {
   speech: QuerySpeech & ClearSpeech & AddMarker & WatchSpeech;
