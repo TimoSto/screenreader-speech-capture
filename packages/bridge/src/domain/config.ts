@@ -166,24 +166,21 @@ export function configFields(config: ConfigPatch): Map<ConfigField, unknown> {
 export function validatePatch(patch: unknown): ConfigPatch {
   if (patch === undefined || patch === null) return {};
   mergeConfig(DEFAULT_CONFIG, patch);
-  const result: Record<string, Record<string, unknown>> = {};
-  for (const [field, value] of configFields(patch as ConfigPatch)) {
-    const [section, key] = field.split('.') as [string, string];
-    (result[section] ??= {})[key] = value;
-  }
-  return result as ConfigPatch;
+  return fromFields(configFields(patch));
 }
 
 /** `patch` on top of `base`, both partial configurations (for the config file's content). */
 export function mergePatch(base: ConfigPatch, patch: ConfigPatch): ConfigPatch {
+  return fromFields(new Map([...configFields(base), ...configFields(patch)]));
+}
+
+function fromFields(fields: Map<ConfigField, unknown>): ConfigPatch {
   const result: Record<string, Record<string, unknown>> = {};
-  for (const source of [base, patch]) {
-    for (const [field, value] of configFields(source)) {
-      const [section, key] = field.split('.') as [string, string];
-      (result[section] ??= {})[key] = value;
-    }
+  for (const [field, value] of fields) {
+    const [section, key] = field.split('.') as [string, string];
+    (result[section] ??= {})[key] = value;
   }
-  return result as ConfigPatch;
+  return result;
 }
 
 /** The settings whose values differ between `a` and `b`. */

@@ -16,13 +16,16 @@ export class FsConfigStore implements ConfigStore {
       text = await fs.readFile(this.location, 'utf8');
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
-      throw new Error(`Cannot read the config file ${this.location}: ${(error as Error).message}`);
+      throw new Error(`Cannot read the config file ${this.location}: ${(error as Error).message}`, {
+        cause: error,
+      });
     }
     try {
       return JSON.parse(text) as unknown;
     } catch (error) {
       throw new Error(
         `The config file ${this.location} is not valid JSON: ${(error as Error).message}`,
+        { cause: error },
       );
     }
   }
