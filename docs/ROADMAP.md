@@ -15,7 +15,7 @@ GitHub issues. This file only tracks milestones.
 ### M1 Capture core 🚧
 
 - [x] pnpm monorepo, TypeScript, ESLint + Prettier, Vitest, `packages/shared` API contract
-- [x] Minimal Linux CI (lint, format, typecheck, test, build)
+- [x] Minimal Linux CI: jobs `lint` (lint, format, typecheck), `test`, all on Node 25 (`.nvmrc`), `build`
 - [ ] TCP listener: framing, `voice=<id>` header, decoding with the configured code page
 - [ ] In-memory ring buffer, `seq`, `truncated`
 - [ ] HTTP API v1: speech, wait, markers, config, status, SSE stream
