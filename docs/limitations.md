@@ -37,8 +37,8 @@ What this project can't do, so you can decide early whether it fits your tests.
   serially (`workers: 1`). To run in parallel, use several VMs, each with its own bridge.
 - **The MCP browser and test browsers share the screen.** Use only one at a time
   ([Remote Playwright & MCP](playwright-mcp.md#playwright-mcp)).
-- **Memory only.** Utterances are kept in memory and lost on restart. Use the utterance log
-  (`--utterance-log`) if you need a record ([Operations](operations.md#logging)).
+- **Memory only.** Speech is kept in memory and lost on restart. Export it from the
+  [web UI](web-ui.md) if you need a record.
 
 ## Environment
 

@@ -53,7 +53,7 @@ text-to-socket-engine-unregister      # removes the engine and the default voice
 The optional `tcpHeader` is sent once as the first line of every new connection. Give it the
 form **`voice=<id>`**, so the bridge can tell it apart from speech (see
 [Speech capture](speech-capture.md)). The bridge stores `<id>` as `voice` on each
-utterance, which tells you which voice an utterance came from when several are in use.
+speech entry, which tells you which voice it came from when several are in use.
 
 > **Voice not listed?** See [Troubleshooting](troubleshooting.md#speech).
 
@@ -85,7 +85,7 @@ The UI has the same instructions under **Setup**. In both screen readers, select
 ### Checking the setup
 
 With the bridge running, press a key that makes the screen reader speak (for example
-`Insert+T` to read the window title). The utterance should appear in the UI within a few
+`Insert+T` to read the window title). The text should appear in the UI within a few
 milliseconds. `GET /api/v1/status` should list at least one entry in `tcp.connections`.
 
 The exact text depends on the screen reader, its version and its verbosity settings. Phrases like

@@ -13,14 +13,14 @@ enabled. It turns red when no voice has connected yet.
 
 ## Live log
 
-The main page. It shows utterances as they arrive (over SSE), newest at the bottom.
+The main page. It shows speech entries as they arrive (over SSE), newest at the bottom.
 
-- Each row shows the time (`receivedAt`, and the gap to the previous utterance), the text, and
+- Each row shows the time (`receivedAt`, and the gap to the previous entry), the text, and
   `voice` / `connectionId` when there are several voices. Markers are shown as separator rows.
-- **Follow** scrolls to new utterances automatically. Scrolling up pauses it, and a "n new"
+- **Follow** scrolls to new entries automatically. Scrolling up pauses it, and a "n new"
   button jumps back to the end.
 - **Search / filter** by text (substring or regex) and by voice. Markers can be hidden.
-- **Add marker** (with a label) and **Clear** (`DELETE /api/v1/utterances`, with confirmation).
+- **Add marker** (with a label) and **Clear** (`DELETE /api/v1/speech`, with confirmation).
 - **Copy** the visible text, or **export** it as JSON / JSONL / plain text.
 - After a reconnect, the UI fetches what it missed with `since=<last seq>`. If the bridge reports
   `truncated: true`, it shows a gap row.
@@ -43,7 +43,7 @@ Playwright / MCP versions, and native input on/off.
 The [socket voice](vm-setup.md#socket-voice-setup) and [screen reader](vm-setup.md#screen-reader-setup) instructions
 from these docs, plus a **check** button. It inserts a marker, asks you to make the screen
 reader speak (or sends `Insert+T` through native input, if enabled), and shows a green check when
-an utterance arrives within a few seconds.
+speech arrives within a few seconds.
 
 ## Accessibility of the UI itself
 

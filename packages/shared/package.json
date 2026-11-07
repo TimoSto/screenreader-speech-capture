@@ -1,0 +1,13 @@
+{
+  "name": "@screenreader-speech-capture/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "HTTP API contract (DTOs) shared by bridge, UI and client. Bundled into them, never published.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
