@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
 import { DEFAULT_CONFIG } from '../../domain/config.js';
 import type { CaptureStatus } from '../../domain/capture.js';
-import { ConfigService } from './config-service.js';
 import { StatusService } from './status-service.js';
 
 function setup(capture: CaptureStatus) {
@@ -10,7 +9,7 @@ function setup(capture: CaptureStatus) {
   const status = new StatusService({
     capture: { captureStatus: () => capture },
     repository,
-    config: new ConfigService(DEFAULT_CONFIG),
+    config: () => DEFAULT_CONFIG,
     version: '1.2.3',
     apiVersion: '1.0',
   });

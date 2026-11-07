@@ -87,7 +87,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   const status = new StatusService({
     capture: tcp,
     repository,
-    config: configService,
+    config: () => configService.get(),
     version,
     apiVersion: API_VERSION,
   });
