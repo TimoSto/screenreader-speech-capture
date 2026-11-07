@@ -1,5 +1,6 @@
 // Composition root: the only place that knows the concrete adapters (docs/architecture.md).
-import { ListenError, TcpListener } from './adapters/in/tcp/tcp-listener.js';
+import { ListenError } from './adapters/in/net/listen.js';
+import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { fileSink } from './adapters/out/log/file-sink.js';
 import { BridgeLog, consoleSink, type LogSink } from './adapters/out/log/log.js';

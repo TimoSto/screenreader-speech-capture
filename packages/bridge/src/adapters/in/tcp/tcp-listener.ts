@@ -5,21 +5,10 @@ import type { Clock } from '../../../application/ports/out/clock.js';
 import type { Logger } from '../../../application/ports/out/logger.js';
 import type { CaptureStatus, ConnectionInfo, ListenerState } from '../../../domain/capture.js';
 import type { Config } from '../../../domain/config.js';
+import { listen } from '../net/listen.js';
 import { TextToSocketParser } from './text-to-socket-parser.js';
 
 export type TcpSettings = Config['tcp'];
-
-/** Thrown by `start()` when the port can't be used (for example `EADDRINUSE`). */
-export class ListenError extends Error {
-  override readonly name = 'ListenError';
-
-  constructor(
-    message: string,
-    readonly code: string | undefined,
-  ) {
-    super(message);
-  }
-}
 
 /**
  * Driving adapter for the socket voice: a TCP server that accepts any number of connections
@@ -52,29 +41,10 @@ export class TcpListener implements CaptureStatusSource {
     if (this.server) throw new Error('TCP listener is already running');
     const server = net.createServer((socket) => this.accept(socket, settings));
 
-    await new Promise<void>((resolve, reject) => {
-      const onError = (error: NodeJS.ErrnoException) => {
-        const reason =
-          error.code === 'EADDRINUSE'
-            ? 'the port is already in use (is another bridge running?)'
-            : error.message;
-        reject(
-          new ListenError(
-            `Cannot listen on ${settings.host}:${settings.port}: ${reason}`,
-            error.code,
-          ),
-        );
-      };
-      server.once('error', onError);
-      server.listen(settings.port, settings.host, () => {
-        server.off('error', onError);
-        resolve();
-      });
-    });
+    const port = await listen(server, settings.host, settings.port);
 
     server.on('error', (error) => this.logger.error(`TCP listener error: ${error.message}`));
     this.server = server;
-    const port = (server.address() as net.AddressInfo).port;
     this.listener = { listening: true, host: settings.host, port, encoding: settings.encoding };
     this.logger.info(`listening on ${settings.host}:${port}, encoding ${settings.encoding}`);
     return port;
