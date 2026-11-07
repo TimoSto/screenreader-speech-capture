@@ -30,7 +30,12 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   const { config, version } = options;
   const log = options.log ?? new BridgeLog(config.log.level, [consoleSink()]);
   const bridgeLogger = log.for('bridge');
-  bridgeLogger.info(`starting, version ${version}`);
+  // Always written, so the console shows which version and log level are running.
+  log.always(
+    'bridge',
+    `starting, version ${version}, log level ${config.log.level}` +
+      (config.log.level === 'debug' ? '' : ' (set SR_SPEECH_LOG_LEVEL=debug to see the speech)'),
+  );
 
   const clock = options.clock ?? new SystemClock();
   const ids = new UlidGenerator();

@@ -121,8 +121,17 @@ export class BridgeLog {
     return { error: log('error'), warn: log('warn'), info: log('info'), debug: log('debug') };
   }
 
+  /** Writes an INFO line whatever the level is (for the startup line). */
+  always(prefix: LogPrefix, message: string): void {
+    this.emit(prefix, 'info', message);
+  }
+
   private write(prefix: LogPrefix, level: LogLevel, message: string): void {
     if (LEVEL_RANK[level] > LEVEL_RANK[this.level]) return;
+    this.emit(prefix, level, message);
+  }
+
+  private emit(prefix: LogPrefix, level: LogLevel, message: string): void {
     const time = this.now();
     for (const sink of this.sinks) {
       for (const line of formatLogLines(prefix, level, time, message, sink.colour)) {

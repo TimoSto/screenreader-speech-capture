@@ -69,4 +69,16 @@ describe('BridgeLog', () => {
     expect(coloured).toHaveLength(2);
     expect(coloured[0]).toContain('\u001b[90m[config]\u001b[0m');
   });
+
+  it('writes always() lines at every level', () => {
+    const lines: string[] = [];
+    const log = new BridgeLog(
+      'error',
+      [{ colour: false, write: (l) => lines.push(l) }],
+      () => time,
+    );
+    log.for('bridge').info('hidden');
+    log.always('bridge', 'starting');
+    expect(lines).toEqual(['[bridge]            2026-11-07T14:03:10.002Z INFO  starting']);
+  });
 });
