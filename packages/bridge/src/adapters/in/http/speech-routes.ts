@@ -79,6 +79,8 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
           signal: controller.signal,
         });
       } catch (error) {
+        // Nobody left to answer, and a client hanging up is not an error.
+        if (controller.signal.aborted) return;
         if (error instanceof AppError && error.code === 'TIMEOUT') {
           const entries = (error.details?.entries ?? []) as SpeechEntry[];
           throw new AppError(error.code, error.message, {

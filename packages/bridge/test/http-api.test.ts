@@ -150,6 +150,23 @@ describe('HTTP API', () => {
     expect(entries.map((e) => [e.text, typeof e.receivedAt])).toEqual([['Name, edit', 'string']]);
   });
 
+  it('drops a wait quietly when the client disconnects', async () => {
+    const lines: string[] = [];
+    const bridge = await start(
+      {},
+      { sinks: [{ colour: false, speech: false, write: (line) => lines.push(line) }] },
+    );
+    const controller = new AbortController();
+    const pending = fetch(api(bridge, '/speech/wait?contains=never&timeoutMs=60000'), {
+      signal: controller.signal,
+    }).catch(() => undefined);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    controller.abort();
+    await pending;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(lines.filter((line) => line.includes('ERROR'))).toEqual([]);
+  });
+
   it('rejects a wait without contains or regex', async () => {
     const bridge = await start();
     const response = await fetch(api(bridge, '/speech/wait'));
