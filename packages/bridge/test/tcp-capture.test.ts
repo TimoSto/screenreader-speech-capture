@@ -86,21 +86,34 @@ describe('TCP capture (real socket)', () => {
     expect(console.some((line) => line.includes('connection 1 opened'))).toBe(true);
   });
 
+  it('reports the listener and stops it on shutdown', async () => {
+    const bridge = await start();
+    expect(bridge.capture.captureStatus().listener).toEqual({
+      listening: true,
+      host: '127.0.0.1',
+      port: bridge.tcpPort,
+      encoding: 'windows-1252',
+    });
+    await bridge.stop();
+    expect(bridge.capture.captureStatus().listener).toMatchObject({ listening: false });
+  });
+
   it('lists open connections and forgets closed ones', async () => {
     const bridge = await start();
     const socket = net.connect(bridge.tcpPort, '127.0.0.1');
     socket.write('voice=open\r\n');
     const open = await eventually(
-      () => bridge.recorder.connections(),
+      () => bridge.capture.captureStatus().connections,
       (list) => list[0]?.voice === 'open',
     );
-    expect(open).toHaveLength(1);
+    expect(open).toMatchObject([{ id: 1, voice: 'open' }]);
+    expect(open[0]!.connectedAt).toBeInstanceOf(Date);
     socket.end();
     await eventually(
-      () => bridge.recorder.connections(),
+      () => bridge.capture.captureStatus().connections,
       (list) => list.length === 0,
     );
-    expect(bridge.recorder.connections()).toEqual([]);
+    expect(bridge.capture.captureStatus().connections).toEqual([]);
   });
 
   it('fails to start when the port is in use', async () => {

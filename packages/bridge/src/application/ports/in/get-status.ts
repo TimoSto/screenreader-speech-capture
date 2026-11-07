@@ -1,12 +1,7 @@
+import type { ConnectionInfo } from '../../../domain/capture.js';
 import type { BufferStats } from '../../../domain/speech-buffer.js';
 
 export type BridgeState = 'starting' | 'ready' | 'stopping';
-
-export interface ConnectionInfo {
-  id: number;
-  voice: string | null;
-  connectedAt: Date;
-}
 
 export interface Status {
   bridge: { version: string; apiVersion: string; state: BridgeState };

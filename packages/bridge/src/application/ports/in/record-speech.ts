@@ -1,12 +1,12 @@
-/** Driven by the TCP adapter: what the socket voice sends. */
+/** One complete, decoded, non-empty line from a capture source. */
+export interface CapturedSpeech {
+  text: string;
+  /** From the connection's `voice=<id>` header, `null` if it had none. */
+  voice: string | null;
+  connectionId: number;
+}
+
+/** Driven by a capture adapter (the TCP listener for the socket voice). */
 export interface RecordSpeech {
-  listenerStarted(info: { host: string; port: number; encoding: string }): void;
-  listenerStopped(): void;
-  /** Returns the id of the new connection. */
-  connectionOpened(): number;
-  /** The connection's first line was a `voice=<id>` header. */
-  setVoice(connectionId: number, voice: string): void;
-  /** One complete, decoded, non-empty line. */
-  record(connectionId: number, text: string): void;
-  connectionClosed(connectionId: number): void;
+  record(speech: CapturedSpeech): void;
 }

@@ -83,11 +83,12 @@ packages/bridge/src/
     ports/in/        driving ports (use cases): RecordSpeech, QuerySpeech,
                      WaitForSpeech, ClearSpeech, AddMarker, SendNativeInput,
                      ManageConfig, ManageServices, GetStatus
-    ports/out/       driven ports: SpeechRepository, SpeechEventBus, ConfigStore,
-                     ProcessSupervisor, InputInjector, Logger, Clock
+    ports/out/       driven ports: SpeechRepository, SpeechEventBus, CaptureStatusSource,
+                     ConfigStore, ProcessSupervisor, InputInjector, Logger, Clock
     services/        use-case implementations (only depend on domain + ports)
   adapters/
-    in/tcp/          socket listener + wire-format parsers → RecordSpeech
+    in/tcp/          socket listener + wire-format parsers → RecordSpeech;
+                     tracks its connections (CaptureStatusSource)
     in/http/         REST + SSE routes → driving ports; serves the built UI
     in/cli/          flags / env → ManageConfig
     out/memory/      speech repository (capped list), in-process event bus
