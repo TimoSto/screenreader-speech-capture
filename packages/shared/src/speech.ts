@@ -18,6 +18,8 @@ export interface SpeechListDto {
   entries: SpeechEntryDto[];
   /** `true` when entries after `since` were dropped because the buffer was full. */
   truncated: boolean;
+  /** `true` when there are more entries: ask again with the last entry's `seq` as `since`. */
+  hasMore: boolean;
 }
 
 /** `POST /api/v1/markers` */

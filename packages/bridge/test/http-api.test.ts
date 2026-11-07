@@ -54,6 +54,7 @@ describe('HTTP API', () => {
 
     const list = await json<SpeechListDto>(await fetch(api(bridge, '/speech?since=1')));
     expect(list.truncated).toBe(false);
+    expect(list.hasMore).toBe(false);
     const [entry] = list.entries;
     expect(list.entries).toEqual([
       {
@@ -67,9 +68,12 @@ describe('HTTP API', () => {
       },
     ]);
     expect(new Date(entry!.receivedAt).toISOString()).toBe(entry!.receivedAt);
-    expect(
-      (await json<SpeechListDto>(await fetch(api(bridge, '/speech?limit=1')))).entries,
-    ).toHaveLength(1);
+    const first = await json<SpeechListDto>(await fetch(api(bridge, '/speech?limit=1')));
+    expect(first.entries.map((e) => e.seq)).toEqual([1]);
+    expect(first.hasMore).toBe(true);
+    const next = await json<SpeechListDto>(await fetch(api(bridge, '/speech?since=1&limit=1')));
+    expect(next.entries.map((e) => e.seq)).toEqual([2]);
+    expect(next.hasMore).toBe(false);
 
     const cleared = await fetch(api(bridge, '/speech'), { method: 'DELETE' });
     expect(cleared.status).toBe(204);

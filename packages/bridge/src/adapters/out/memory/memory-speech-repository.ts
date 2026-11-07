@@ -22,9 +22,11 @@ export class MemorySpeechRepository implements SpeechRepository {
   }
 
   list(since: number, limit: number): SpeechPage {
+    const after = this.entries.filter((entry) => entry.seq > since);
     return {
-      entries: this.entries.filter((entry) => entry.seq > since).slice(0, limit),
+      entries: after.slice(0, limit),
       truncated: since < this.droppedUpToSeq,
+      hasMore: after.length > limit,
     };
   }
 

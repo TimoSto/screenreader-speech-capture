@@ -24,7 +24,11 @@ export function toSpeechEntryDto(entry: SpeechEntry): SpeechEntryDto {
 }
 
 export function toSpeechListDto(page: SpeechPage): SpeechListDto {
-  return { entries: page.entries.map(toSpeechEntryDto), truncated: page.truncated };
+  return {
+    entries: page.entries.map(toSpeechEntryDto),
+    truncated: page.truncated,
+    hasMore: page.hasMore,
+  };
 }
 
 export function toStatusDto(status: Status): StatusDto {
