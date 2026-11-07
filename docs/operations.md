@@ -30,7 +30,7 @@ On Ctrl+C, closing the console window, or Windows log off / shutdown, the bridge
 2. stops the child services and **kills their whole process tree**. On Windows, killing a process
    does not kill its children, so without this the browsers started by the Playwright server would
    stay open. The bridge uses `taskkill /T /F /PID <pid>`,
-3. writes any buffered lines of the utterance log and the bridge log to disk,
+3. writes any buffered lines of the bridge log to disk,
 4. exits with code `0` (or `1` if something failed on the way).
 
 If a shutdown step hangs, the bridge exits anyway after 10 seconds.
@@ -50,12 +50,10 @@ Speech capture and the HTTP API keep working while a child service is down.
 
 ## Logging
 
-The bridge writes two different logs. Don't confuse them:
-
-| Log | Content | Setting |
-|---|---|---|
-| **Utterance log** | Every utterance and marker, one JSON object per line (JSONL). For keeping a record of what was said. | `--utterance-log <path>` / `utteranceLog.file`. Off by default. |
-| **Bridge log** | What the bridge itself does: start/stop, TCP connects/disconnects, config changes, warnings (cut lines, encoding fallback), errors, child service output. | `--bridge-log <path>` / `log.file`, `--log-level` / `log.level` |
+The **bridge log** records what the bridge itself does: start/stop, TCP connects/disconnects,
+config changes, warnings (cut lines), errors and child service output. Settings: `--bridge-log
+<path>` / `log.file`, `--log-level` / `log.level`. The speech itself is not written to a file. It
+lives in the in-memory [buffer](speech-capture.md#buffer).
 
 Bridge log details:
 
@@ -73,7 +71,7 @@ always starts in the same column:
 
 ```
 [bridge]            2026-11-07T14:03:10.002Z INFO  starting, version 0.3.0, config C:\Users\test\AppData\Roaming\screenreader-speech-capture\config.json
-[speech-capture]    2026-11-07T14:03:10.015Z INFO  listening on 127.0.0.1:4449, encoding windows-1252 (auto)
+[speech-capture]    2026-11-07T14:03:10.015Z INFO  listening on 127.0.0.1:4449, encoding windows-1252
 [http-api]          2026-11-07T14:03:10.031Z INFO  listening on 0.0.0.0:5151
 [playwright-server] 2026-11-07T14:03:11.410Z INFO  Listening on ws://0.0.0.0:3000/
 [playwright-mcp]    2026-11-07T14:03:11.622Z INFO  Listening on http://0.0.0.0:8931
@@ -118,6 +116,6 @@ Rules:
 
 ## Restarting the bridge
 
-Utterances live in memory, so a restart empties the buffer. `seq` starts again at 1, and clients
+Speech entries live in memory, so a restart empties the buffer. `seq` starts again at 1, and clients
 that kept a cursor have to `clear()` again. The socket voice reconnects by itself on its next
 `Speak` call (it retries a failed send once), so the screen reader doesn't need to be restarted.

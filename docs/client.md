@@ -36,7 +36,7 @@ Speech often arrives **before** your code starts waiting for it: the screen read
 
 - `clear()` sets the cursor to the end of the buffer (the fixture calls it before each test).
 - `waitForOutput` / `waitForSequence` search **from the cursor**, so speech that already arrived
-  is found. On a match the cursor moves past the matched utterance, so the next wait only sees
+  is found. On a match the cursor moves past the matched entry, so the next wait only sees
   what came after it.
 - `mark()` and an explicit `since` option let you control the range yourself.
 - `cursor()` returns the current value, `setCursor(seq)` sets it.
@@ -45,18 +45,18 @@ Speech often arrives **before** your code starts waiting for it: the screen read
 
 | Function | Returns | Description |
 |---|---|---|
-| `getUtterances({ since?, limit?, includeMarkers? })` | `Utterance[]` | Recorded utterances, oldest first. `since` defaults to the cursor. |
+| `getSpeech({ since?, limit?, includeMarkers? })` | `SpeechEntry[]` | Recorded speech entries, oldest first. `since` defaults to the cursor. |
 | `getText({ since?, separator? })` | `string` | All speech since `since` (default: the cursor), joined into one string. Handy for snapshot assertions. |
 | `clear()` | `void` | Clear the buffer and reset the cursor. |
-| `waitForOutput(match, { timeout?, since?, normalize? })` | `Utterance` | Wait until an utterance after the cursor (or `since`) matches, then move the cursor past it. `match` is a `string` (substring), a `RegExp` or a predicate `(u) => boolean`. `normalize: true` ignores case and extra whitespace. Throws `SpeechTimeoutError` (with the utterances seen so far) on timeout. Default `timeout`: 5000 ms. |
-| `waitForSequence(matches[], { timeout?, since?, normalize? })` | `Utterance[]` | Wait until the matches occur in this order (other utterances may come in between). Moves the cursor past the last match. |
+| `waitForOutput(match, { timeout?, since?, normalize? })` | `SpeechEntry` | Wait until a speech entry after the cursor (or `since`) matches, then move the cursor past it. `match` is a `string` (substring), a `RegExp` or a predicate `(u) => boolean`. `normalize: true` ignores case and extra whitespace. Throws `SpeechTimeoutError` (with the entries seen so far) on timeout. Default `timeout`: 5000 ms. |
+| `waitForSequence(matches[], { timeout?, since?, normalize? })` | `SpeechEntry[]` | Wait until the matches occur in this order (other entries may come in between). Moves the cursor past the last match. |
 | `waitForSilence({ quietFor?, timeout? })` | `void` | Wait until nothing has been spoken for `quietFor` ms (default 500). Useful before asserting on "everything that was said". |
-| `record(fn)` | `{ result, utterances }` | Run `fn` and return everything spoken while it ran (waits for silence at the end, then moves the cursor to the end). |
-| `mark(label)` | `Utterance` | Insert a marker. Its `seq` can be used as `since`. |
+| `record(fn)` | `{ result, entries }` | Run `fn` and return everything spoken while it ran (waits for silence at the end, then moves the cursor to the end). |
+| `mark(label)` | `SpeechEntry` | Insert a marker. Its `seq` can be used as `since`. |
 | `setFocus(page, { target? })` | `void` | Make the page's browser window the OS foreground window with a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
 | `click({ x, y })` | `void` | Native click at screen coordinates (`POST /api/v1/set-focus`). |
 | `pressKeys(keys, { delayMs? })` | `void` | Native key presses, for screen reader commands (`'Insert+T'`, `['h', 'h']`). |
-| `onUtterance(cb)` | `() => void` | Subscribe to the live SSE feed. Returns an unsubscribe function. |
+| `onSpeech(cb)` | `() => void` | Subscribe to the live SSE feed. Returns an unsubscribe function. |
 | `status()` | `Status` | Bridge health (TCP connections, Playwright/MCP state, versions). |
 | `playwrightEndpoint()` | `string` | WebSocket URL of the bridge's Playwright server, for `browserType.connect()`. |
 
@@ -73,8 +73,8 @@ test('submit button is announced', async ({ page, speech }) => {
   await page.getByRole('button', { name: 'Submit' }).focus();
   await speech.waitForOutput('Submit, button'); // found even if it arrived before this line
 
-  const { utterances } = await speech.record(() => page.keyboard.press('Tab'));
-  expect(utterances.map((u) => u.text)).toContain('Name, edit, blank');
+  const { entries } = await speech.record(() => page.keyboard.press('Tab'));
+  expect(entries.map((e) => e.text)).toContain('Name, edit, blank');
 
   // Native input: a screen reader command (NVDA browse mode, next heading)
   await speech.pressKeys('h');
@@ -126,7 +126,7 @@ cursor. Use `mark` and `--since` instead.
 ```bash
 npx screenreader-speech-capture-client status [--wait-ready] [--timeout 120000]
 npx screenreader-speech-capture-client clear
-npx screenreader-speech-capture-client utterances [--since <seq>] [--limit <n>]
+npx screenreader-speech-capture-client speech [--since <seq>] [--limit <n>]
 npx screenreader-speech-capture-client text [--since <seq>]
 npx screenreader-speech-capture-client wait "Submit, button" [--regex] [--normalize] [--timeout 5000] [--since <seq>]
 npx screenreader-speech-capture-client wait-silence [--quiet-for 500] [--timeout 10000]

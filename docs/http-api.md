@@ -8,7 +8,7 @@ format for every endpoint (see [Errors](#errors)).
 ## Data model
 
 ```jsonc
-// Utterance
+// SpeechEntry
 {
   "id": "01JC…",                         // unique id
   "seq": 42,                             // increasing sequence number, never reused (survives clear)
@@ -26,10 +26,10 @@ format for every endpoint (see [Errors](#errors)).
 
 | Method & path | Description |
 |---|---|
-| `GET /api/v1/utterances?since=<seq>&limit=<n>` | List utterances with `seq > since` (oldest first). Response: `{ "utterances": [...], "truncated": false }`. `truncated` is `true` when `since` is older than the oldest entry still in the buffer. |
-| `DELETE /api/v1/utterances` | Clear the buffer. Call this between tests. |
-| `GET /api/v1/utterances/stream` | Server-Sent Events: one `utterance` event per new entry. |
-| `GET /api/v1/utterances/wait?contains=<text>&since=<seq>&timeoutMs=<n>` | Long-poll until an utterance with `seq > since` matches, then return it (also if it arrived before the request). `regex=<pattern>` can be used instead of `contains`, `normalize=1` ignores case and extra whitespace. Returns `408` (`TIMEOUT`) on timeout, with the utterances seen so far in `error.details.utterances`. |
+| `GET /api/v1/speech?since=<seq>&limit=<n>` | List speech entries and markers with `seq > since` (oldest first). `since` defaults to `0`, `limit` to `1000` (max `10000`). Response: `{ "entries": [...], "truncated": false }`. `truncated` is `true` when entries after `since` were dropped because the buffer was full. |
+| `DELETE /api/v1/speech` | Clear the buffer. Call this between tests. |
+| `GET /api/v1/speech/stream` | Server-Sent Events: one `entry` event per new entry (event `id` = `seq`) and a `clear` event after a clear. A reconnect with `Last-Event-ID` first gets the entries it missed from the buffer. A `: ping` comment every 15 s keeps the connection open. |
+| `GET /api/v1/speech/wait?contains=<text>&since=<seq>&timeoutMs=<n>` | Long-poll until a speech entry with `seq > since` matches, then return it (also if it arrived before the request). `regex=<pattern>` can be used instead of `contains`, `normalize=1` ignores case and extra whitespace. Markers never match. `since` defaults to `0`, `timeoutMs` to `5000` (max `300000`). Returns `408` (`TIMEOUT`) on timeout, with the entries seen so far in `error.details.entries`. |
 | `POST /api/v1/markers` `{ "label": "step 3" }` | Insert a marker into the timeline (shown in the UI, returned in lists). |
 | `POST /api/v1/set-focus` `{ "x": 640, "y": 12, "button": "left" }` | Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
 | `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | Native key presses: one chord, or a sequence with `delayMs` between them. |
@@ -59,10 +59,10 @@ format for every endpoint (see [Errors](#errors)).
 ```bash
 VM=http://my-test-vm:5151
 
-curl -X DELETE $VM/api/v1/utterances
-curl "$VM/api/v1/utterances?since=0"
-curl "$VM/api/v1/utterances/wait?contains=Submit%2C%20button&timeoutMs=5000"
-curl -N $VM/api/v1/utterances/stream
+curl -X DELETE $VM/api/v1/speech
+curl "$VM/api/v1/speech?since=0"
+curl "$VM/api/v1/speech/wait?contains=Submit%2C%20button&timeoutMs=5000"
+curl -N $VM/api/v1/speech/stream
 curl -X POST $VM/api/v1/input/keys -H 'content-type: application/json' -d '{"keys":"Insert+T"}'
 ```
 
@@ -76,8 +76,8 @@ Every error response has the same body:
 {
   "error": {
     "code": "TIMEOUT",                 // stable, machine-readable
-    "message": "No utterance matched \"Submit, button\" within 5000 ms",
-    "details": { "utterances": [ /* … */ ] }   // optional, depends on the code
+    "message": "No speech matched \"Submit, button\" within 5000 ms",
+    "details": { "entries": [ /* … */ ] }      // optional, depends on the code
   }
 }
 ```
@@ -86,7 +86,7 @@ Every error response has the same body:
 |---|---|---|
 | `400` | `INVALID_REQUEST` | Bad query or body (unknown key name, invalid regex, invalid config value). `details.field` names the field. |
 | `404` | `NOT_FOUND` | Unknown endpoint or service name. |
-| `408` | `TIMEOUT` | `wait` found no match in time. `details.utterances` holds the utterances seen so far. |
+| `408` | `TIMEOUT` | `wait` found no match in time. `details.entries` holds the entries seen so far. |
 | `409` | `INPUT_DISABLED` | Native input endpoint called, but input is off (`--no-input`, or not on Windows). |
 | `503` | `SERVICE_UNAVAILABLE` | The bridge is still starting, or a child service (Playwright / MCP) is not running. |
 | `500` | `INTERNAL` | Anything else. The bridge log has the details. |

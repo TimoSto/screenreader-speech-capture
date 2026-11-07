@@ -47,16 +47,16 @@ flowchart LR
 
     subgraph CORE["Application core"]
         APP["application<br/>use cases + ports"]
-        DOM["domain<br/>Utterance, Marker, Config, KeyChord"]
+        DOM["domain<br/>SpeechEntry, Marker, Config, KeyChord"]
         APP --> DOM
     end
 
     subgraph OUT["Driven adapters"]
         MEM["out/memory<br/>repository, event bus"]
-        JSONL["out/jsonl<br/>utterance log"]
         CFG["out/fs-config<br/>config.json"]
         SUP["out/playwright, out/mcp<br/>process supervisors"]
         ROBOT["out/robotjs<br/>InputInjector"]
+        LOG["out/log<br/>bridge log"]
         CLK["out/clock"]
     end
 
@@ -69,7 +69,7 @@ flowchart LR
     CLI --> APP
 
     MEM -. implements port .-> APP
-    JSONL -. implements port .-> APP
+    LOG -. implements port .-> APP
     CFG -. implements port .-> APP
     SUP -. implements port .-> APP
     ROBOT -. implements port .-> APP
@@ -78,26 +78,25 @@ flowchart LR
 
 ```
 packages/bridge/src/
-  domain/            Utterance, Marker, Config, KeyChord (key-name parsing + validation). Pure, no I/O.
+  domain/            SpeechEntry, Marker, Config, KeyChord (key-name parsing + validation). Pure, no I/O.
   application/
-    ports/in/        driving ports (use cases): RecordSpeech, QueryUtterances,
-                     WaitForUtterance, ClearUtterances, AddMarker, SendNativeInput,
+    ports/in/        driving ports (use cases): RecordSpeech, QuerySpeech,
+                     WaitForSpeech, ClearSpeech, AddMarker, SendNativeInput,
                      ManageConfig, ManageServices, GetStatus
-    ports/out/       driven ports: UtteranceRepository, UtteranceEventBus, ConfigStore,
-                     ProcessSupervisor, InputInjector, CodePageProvider, Clock
+    ports/out/       driven ports: SpeechRepository, SpeechEventBus, ConfigStore,
+                     ProcessSupervisor, InputInjector, Logger, Clock, IdGenerator
     services/        use-case implementations (only depend on domain + ports)
   adapters/
     in/tcp/          socket listener + wire-format parsers → RecordSpeech
     in/http/         REST + SSE routes → driving ports; serves the built UI
     in/cli/          flags / env → ManageConfig
     out/memory/      ring-buffer repository, in-process event bus
-    out/jsonl/       append-only utterance log
     out/fs-config/   config.json in %APPDATA%
     out/playwright/  supervisor for the Playwright server (installs the configured version)
     out/mcp/         supervisor for Playwright MCP
     out/robotjs/     InputInjector on @jitsi/robotjs (mouse click, key chords)
-    out/registry/    CodePageProvider: reads the ANSI code page for tcp.encoding=auto
-    out/clock/       system clock
+    out/log/         bridge log: console + file, prefixes, colours, rotation
+    out/clock/       system clock, ULID id generator
   main.ts            composition root: the only place adapters are wired to ports
 ```
 
@@ -108,7 +107,7 @@ knows the concrete adapters.
 **Extending:**
 
 - A different socket-voice wire format is a new parser in `adapters/in/tcp/`, selected with `tcp.format`.
-- Persistent storage (for example SQLite) is a new `UtteranceRepository` in `adapters/out/`.
+- Persistent storage (for example SQLite) is a new `SpeechRepository` in `adapters/out/`.
 - A different screen reader capture (for example an NVDA add-on instead of SAPI) is a new
   driving adapter calling `RecordSpeech`.
 - A different input method (for example direct `SendInput` through FFI, or the hypervisor's

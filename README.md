@@ -5,7 +5,7 @@ Capture what a screen reader **says**, and make it available to automated tests.
 `screenreader-speech-capture` is a bridge that runs on a Windows (VM) next to **JAWS** or **NVDA**.
 A third-party SAPI 5 voice, [`text-to-socket-engine`](https://github.com/AmadeusITGroup/Assistive-Webdriver/tree/master/components/text-to-socket-engine)
 (MIT, from Amadeus' Assistive-Webdriver), sends the screen reader's speech output to a TCP port
-instead of an audio device. The bridge listens on that port, records every utterance with timestamps
+instead of an audio device. The bridge listens on that port, records everything it says with timestamps
 and exposes the recording through an **HTTP API** and a **web UI**.
 
 The bridge also starts a **Playwright server** and **Playwright MCP**, so remote test runners and
@@ -58,8 +58,8 @@ flowchart LR
 
 ## What it does
 
-- **Records speech** from NVDA or JAWS, one utterance per spoken phrase, with timestamps.
-- **HTTP API + live stream** to read, wait for and clear utterances, plus a **web UI** to watch them.
+- **Records speech** from NVDA or JAWS, one entry per spoken phrase, with timestamps.
+- **HTTP API + live stream** to read, wait for and clear the recorded speech, plus a **web UI** to watch them.
 - **Test client**: a TypeScript library with a Playwright fixture (`waitForOutput('Submit, button')`)
   and a CLI for scripts and AI agents.
 - **Remote browser** on the screen reader's machine through a Playwright server and Playwright MCP.
@@ -80,7 +80,7 @@ screenreader-speech-capture
 ```
 
 3. In NVDA or JAWS, select the voice **"Text To Socket 127.0.0.1:4449"**.
-4. Open <http://localhost:5151> and make the screen reader speak. The utterances appear live.
+4. Open <http://localhost:5151> and make the screen reader speak. The text appears live.
 
 In your test project:
 
@@ -101,7 +101,7 @@ Details: [VM setup](docs/vm-setup.md), [Test client](docs/client.md).
 | Doc | What it covers |
 |---|---|
 | [VM setup](docs/vm-setup.md) | Requirements, socket voice, NVDA / JAWS setup, running the bridge on the VM |
-| [Speech capture](docs/speech-capture.md) | Wire format of the socket voice, how the bridge turns it into utterances, the buffer |
+| [Speech capture](docs/speech-capture.md) | Wire format of the socket voice, how the bridge turns it into speech entries, the buffer |
 | [HTTP API](docs/http-api.md) | Data model, endpoints, errors, versioning |
 | [Test client](docs/client.md) | Library, cursor, Playwright fixture, CLI and exit codes |
 | [Native input](docs/native-input.md) | Real clicks and key presses: when Playwright input isn't enough |
