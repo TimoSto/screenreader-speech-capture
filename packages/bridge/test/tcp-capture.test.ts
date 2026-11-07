@@ -1,0 +1,89 @@
+import net from 'node:net';
+import { afterEach, describe, expect, it } from 'vitest';
+import { BridgeLog } from '../src/adapters/out/log/log.js';
+import { DEFAULT_CONFIG, mergeConfig } from '../src/domain/config.js';
+import { startBridge, type Bridge } from '../src/main.js';
+
+const silentLog = () => new BridgeLog('error', []);
+const bridges: Bridge[] = [];
+
+async function start(patch: unknown = {}) {
+  const config = mergeConfig(mergeConfig(DEFAULT_CONFIG, { tcp: { port: 0 } }), patch);
+  const bridge = await startBridge({ config, version: '0.0.0-test', log: silentLog() });
+  bridges.push(bridge);
+  return bridge;
+}
+
+async function send(port: number, ...chunks: (string | Buffer)[]) {
+  const socket = net.connect(port, '127.0.0.1');
+  await new Promise<void>((resolve) => socket.once('connect', resolve));
+  for (const chunk of chunks) socket.write(chunk);
+  await new Promise<void>((resolve) => socket.end(resolve));
+  await new Promise((resolve) => socket.once('close', resolve));
+}
+
+async function eventually<T>(read: () => T, ok: (value: T) => boolean): Promise<T> {
+  for (let i = 0; i < 100; i++) {
+    const value = read();
+    if (ok(value)) return value;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  return read();
+}
+
+afterEach(async () => {
+  await Promise.all(bridges.splice(0).map((bridge) => bridge.stop()));
+});
+
+describe('TCP capture (real socket)', () => {
+  it('records what a socket voice sends', async () => {
+    const bridge = await start();
+    await send(bridge.tcpPort, 'voice=dev\r\nSubmit, button\r\n', 'Edit, Name, ', 'blank\r\n');
+
+    const entries = await eventually(
+      () => bridge.speech.list({ since: 0, limit: 10 }).entries,
+      (list) => list.length === 2,
+    );
+    expect(entries.map((e) => [e.text, e.voice])).toEqual([
+      ['Submit, button', 'dev'],
+      ['Edit, Name, blank', 'dev'],
+    ]);
+    expect(entries[0]!.connectionId).toBe(entries[1]!.connectionId);
+  });
+
+  it('decodes with the configured encoding and accepts parallel connections', async () => {
+    const bridge = await start({ tcp: { encoding: 'windows-1252' } });
+    await Promise.all([
+      send(bridge.tcpPort, Buffer.from([0x4d, 0xe4, 0x72, 0x7a, 0x0d, 0x0a])),
+      send(bridge.tcpPort, 'voice=b\r\nother\r\n'),
+    ]);
+    const entries = await eventually(
+      () => bridge.speech.list({ since: 0, limit: 10 }).entries,
+      (list) => list.length === 2,
+    );
+    expect(entries.map((e) => e.text).sort()).toEqual(['März', 'other']);
+    expect(new Set(entries.map((e) => e.connectionId)).size).toBe(2);
+  });
+
+  it('lists open connections and forgets closed ones', async () => {
+    const bridge = await start();
+    const socket = net.connect(bridge.tcpPort, '127.0.0.1');
+    socket.write('voice=open\r\n');
+    const open = await eventually(
+      () => bridge.recorder.connections(),
+      (list) => list[0]?.voice === 'open',
+    );
+    expect(open).toHaveLength(1);
+    socket.end();
+    await eventually(
+      () => bridge.recorder.connections(),
+      (list) => list.length === 0,
+    );
+    expect(bridge.recorder.connections()).toEqual([]);
+  });
+
+  it('fails to start when the port is in use', async () => {
+    const first = await start();
+    await expect(start({ tcp: { port: first.tcpPort } })).rejects.toThrow(/already in use/);
+  });
+});

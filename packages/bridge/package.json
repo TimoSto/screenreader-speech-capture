@@ -18,10 +18,11 @@
     "dev": "tsx watch src/cli.ts",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "ulid": "^3.0.2"
+  },
   "devDependencies": {
     "@screenreader-speech-capture/shared": "workspace:*",
-    "tsdown": "^0.23.7",
-    "tsx": "^4.23.15"
+    "tsdown": "^0.23.7"
   }
 }

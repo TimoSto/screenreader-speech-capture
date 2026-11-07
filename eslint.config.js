@@ -37,12 +37,16 @@ export default tseslint.config(
   },
   {
     files: ['packages/bridge/src/domain/**/*.ts'],
+    // Tests may wire real (in-memory) adapters; the rule is about production code.
+    ignores: ['**/*.test.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [nodeBuiltins, adapters, application] }],
     },
   },
   {
     files: ['packages/bridge/src/application/**/*.ts'],
+    // Tests may wire real (in-memory) adapters; the rule is about production code.
+    ignores: ['**/*.test.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [nodeBuiltins, adapters] }],
     },

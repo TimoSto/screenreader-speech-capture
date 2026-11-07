@@ -1,0 +1,13 @@
+{
+  "name": "fake-speech",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Development stand-in for the text-to-socket-engine SAPI voice: sends lines to the bridge's TCP port.",
+  "type": "module",
+  "bin": {
+    "fake-speech": "./src/fake-speech.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
