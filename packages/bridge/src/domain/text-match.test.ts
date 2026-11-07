@@ -5,12 +5,10 @@ import { createSpeechMatcher, normalizeText } from './text-match.js';
 
 function entry(text: string, kind: SpeechEntry['kind'] = 'speech'): SpeechEntry {
   return {
-    id: 'x',
     seq: 1,
     kind,
     text,
     receivedAt: new Date(0),
-    monotonicMs: 0,
     source: 'tcp',
     voice: null,
     connectionId: 1,

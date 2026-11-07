@@ -45,4 +45,5 @@ Common problems, what causes them and how to fix them. Start with
 |---|---|---|
 | JAWS stops talking after about 40 minutes | JAWS runs in demo mode without a license. | Restart Windows, reset the VM snapshot before each CI run, or license JAWS ([Screen reader licensing](vm-setup.md#screen-reader-licensing)). |
 | Lots of extra speech while typing | Typing echo is on. | Turn off *Speak typed characters / words* in NVDA, or the JAWS equivalent. |
+| The screen reader keeps reading the bridge console, in a loop | The console shows the speech (`--console-speech` is on), or a voice reconnects for every phrase so `connection … opened` lines keep coming. | Turn `--console-speech` off, keep the focus away from the console (start it minimized), or use `--log-level warn`. Read the speech in the log file instead ([Operations](operations.md#speech-text-stays-off-the-console)). |
 | The UI's own log rows get recorded | The UI is open on the VM and its announcements are on. | Open the UI from another machine, or keep the live log announcements off ([Web UI](web-ui.md#accessibility-of-the-ui-itself)). |

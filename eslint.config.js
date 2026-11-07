@@ -17,6 +17,19 @@ const application = {
   group: ['**/application/**'],
   message: 'The domain imports nothing from the outer layers.',
 };
+const services = {
+  group: ['**/application/services/**'],
+  message: 'Adapters talk to the application through ports, not the concrete services.',
+};
+// Relative imports between adapters look like `../../out/...`, so match them with a regex.
+const outAdapters = {
+  regex: '(^|/)(\\.\\./out|adapters/out)/',
+  message: 'Driving adapters must not import driven adapters. Wire them in main.ts.',
+};
+const inAdapters = {
+  regex: '(^|/)(\\.\\./in|adapters/in)/',
+  message: 'Driven adapters must not import driving adapters. Wire them in main.ts.',
+};
 
 export default tseslint.config(
   { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**'] },
@@ -37,14 +50,32 @@ export default tseslint.config(
   },
   {
     files: ['packages/bridge/src/domain/**/*.ts'],
+    // Tests may wire real (in-memory) adapters; the rule is about production code.
+    ignores: ['**/*.test.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [nodeBuiltins, adapters, application] }],
     },
   },
   {
     files: ['packages/bridge/src/application/**/*.ts'],
+    // Tests may wire real (in-memory) adapters; the rule is about production code.
+    ignores: ['**/*.test.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [nodeBuiltins, adapters] }],
+    },
+  },
+  {
+    files: ['packages/bridge/src/adapters/in/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [services, outAdapters] }],
+    },
+  },
+  {
+    files: ['packages/bridge/src/adapters/out/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [services, inAdapters] }],
     },
   },
   {

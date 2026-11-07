@@ -16,12 +16,12 @@ GitHub issues. This file only tracks milestones.
 
 - [x] pnpm monorepo, TypeScript, ESLint + Prettier, Vitest, `packages/shared` API contract
 - [x] Minimal Linux CI: jobs `lint` (lint, format, typecheck), `test`, all on Node 25 (`.nvmrc`), `build`
-- [ ] TCP listener: framing, `voice=<id>` header, decoding with the configured code page
-- [ ] In-memory ring buffer, `seq`, `truncated`
+- [x] TCP listener: framing, `voice=<id>` header, decoding with the configured code page
+- [x] In-memory buffer (capped), `seq`, `truncated`
 - [ ] HTTP API v1: speech, wait, markers, config, status, SSE stream
 - [ ] One error format, `bridge.version` / `apiVersion` in status
 - [ ] Lifecycle: startup order, graceful shutdown, bridge log
-- [ ] `fake-speech` tool for development
+- [x] `fake-speech` tool for development
 
 ### M2 Client ⬜
 

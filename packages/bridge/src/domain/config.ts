@@ -26,7 +26,13 @@ export interface Config {
   };
   readonly input: { readonly enabled: boolean };
   readonly buffer: { readonly maxEntries: number };
-  readonly log: { readonly level: LogLevel; readonly file: string | null };
+  readonly log: {
+    readonly level: LogLevel;
+    /** Bridge log file, `null` = default path. */
+    readonly file: string | null;
+    /** Also write the speech text to the console (feedback loop on the VM, see docs). */
+    readonly consoleSpeech: boolean;
+  };
 }
 
 export type ConfigPatch = { readonly [K in keyof Config]?: Partial<Config[K]> };
@@ -44,7 +50,7 @@ export const DEFAULT_CONFIG: Config = {
   mcp: { enabled: true, port: 8931, version: null },
   input: { enabled: true },
   buffer: { maxEntries: 10000 },
-  log: { level: 'info', file: null },
+  log: { level: 'info', file: null, consoleSpeech: false },
 };
 
 /** Checks one value and returns an error message, or `undefined` if it is valid. */
@@ -92,7 +98,7 @@ const SCHEMA: { readonly [S in keyof Config]: { readonly [K in keyof Config[S]]:
   mcp: { enabled: boolean, port, version: nullableString },
   input: { enabled: boolean },
   buffer: { maxEntries: integer(1, 1_000_000) },
-  log: { level: oneOf(LOG_LEVELS), file: nullableString },
+  log: { level: oneOf(LOG_LEVELS), file: nullableString, consoleSpeech: boolean },
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

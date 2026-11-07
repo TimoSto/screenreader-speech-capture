@@ -17,7 +17,7 @@ Precedence: **CLI flags > environment variables > config file > defaults**.
   "mcp":        { "enabled": true, "port": 8931, "version": null },
   "input":      { "enabled": true },
   "buffer":     { "maxEntries": 10000 },
-  "log":        { "level": "info", "file": null }                 // bridge log, null = default path
+  "log":        { "level": "info", "file": null, "consoleSpeech": false }  // bridge log, file null = default path
 }
 ```
 
@@ -43,4 +43,5 @@ CRLF-terminated lines, with an optional header line, as described in [Wire forma
 | `--no-input` | | Disable the native input endpoints. |
 | `--log-level <level>` | `info` | Level of the bridge's own log: `error`, `warn`, `info`, `debug`. |
 | `--bridge-log <path>` | `%LOCALAPPDATA%\screenreader-speech-capture\logs\bridge.log` | File for the bridge's own log (see [Operations](operations.md#logging)). |
+| `--console-speech` | off | Also write the received speech to the console. Causes a feedback loop when the console is on the VM ([Operations](operations.md#speech-text-stays-off-the-console)). |
 | `--config <path>` | `%APPDATA%\screenreader-speech-capture\config.json` | Use a different config file. |

@@ -83,26 +83,28 @@ packages/bridge/src/
     ports/in/        driving ports (use cases): RecordSpeech, QuerySpeech,
                      WaitForSpeech, ClearSpeech, AddMarker, SendNativeInput,
                      ManageConfig, ManageServices, GetStatus
-    ports/out/       driven ports: SpeechRepository, SpeechEventBus, ConfigStore,
-                     ProcessSupervisor, InputInjector, Logger, Clock, IdGenerator
+    ports/out/       driven ports: SpeechRepository, SpeechEventBus, CaptureStatusSource,
+                     ConfigStore, ProcessSupervisor, InputInjector, Logger, Clock
     services/        use-case implementations (only depend on domain + ports)
   adapters/
-    in/tcp/          socket listener + wire-format parsers → RecordSpeech
+    in/tcp/          socket listener + wire-format parsers → RecordSpeech;
+                     tracks its connections (CaptureStatusSource)
     in/http/         REST + SSE routes → driving ports; serves the built UI
     in/cli/          flags / env → ManageConfig
-    out/memory/      ring-buffer repository, in-process event bus
+    out/memory/      speech repository (capped list), in-process event bus
     out/fs-config/   config.json in %APPDATA%
     out/playwright/  supervisor for the Playwright server (installs the configured version)
     out/mcp/         supervisor for Playwright MCP
     out/robotjs/     InputInjector on @jitsi/robotjs (mouse click, key chords)
     out/log/         bridge log: console + file, prefixes, colours, rotation
-    out/clock/       system clock, ULID id generator
+    out/clock/       system clock
   main.ts            composition root: the only place adapters are wired to ports
 ```
 
 **Dependency rule:** `adapters → application → domain`. The domain imports nothing, the application
 imports only the domain and its own ports, and the adapters implement or call the ports. Only `main.ts`
-knows the concrete adapters.
+knows the concrete adapters. Adapters don't import the concrete services or each other (`in` ↔
+`out`). ESLint (`no-restricted-imports` in `eslint.config.js`) enforces all of this.
 
 **Extending:**
 
