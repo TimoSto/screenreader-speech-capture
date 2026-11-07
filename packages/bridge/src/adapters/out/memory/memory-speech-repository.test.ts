@@ -54,13 +54,4 @@ describe('MemorySpeechRepository', () => {
     expect(next.seq).toBe(4);
     expect(repo.list(0, 100)).toEqual({ entries: [next], truncated: false });
   });
-
-  it('drops entries when resized smaller', () => {
-    const repo = new MemorySpeechRepository(5);
-    fill(repo, 5);
-    repo.resize(2);
-    expect(texts(repo, 0)).toEqual(['t4', 't5']);
-    expect(repo.list(3, 100).truncated).toBe(false);
-    expect(repo.list(2, 100).truncated).toBe(true);
-  });
 });

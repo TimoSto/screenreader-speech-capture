@@ -8,7 +8,5 @@ export interface SpeechRepository {
   list(since: number, limit: number): SpeechPage;
   /** Removes all entries. `seq` keeps counting. */
   clear(): void;
-  /** Changes the capacity. Drops the oldest entries if there are too many. */
-  resize(maxEntries: number): void;
   stats(): BufferStats;
 }

@@ -12,7 +12,7 @@ export class MemorySpeechRepository implements SpeechRepository {
   /** Highest `seq` dropped because the list was full, since the last clear. */
   private droppedUpToSeq = 0;
 
-  constructor(private maxEntries: number) {}
+  constructor(private readonly maxEntries: number) {}
 
   add(entry: NewSpeechEntry): SpeechEntry {
     const stored: SpeechEntry = { ...entry, seq: this.nextSeq++ };
@@ -31,11 +31,6 @@ export class MemorySpeechRepository implements SpeechRepository {
   clear(): void {
     this.entries = [];
     this.droppedUpToSeq = 0;
-  }
-
-  resize(maxEntries: number): void {
-    this.maxEntries = maxEntries;
-    this.trim();
   }
 
   stats(): BufferStats {
