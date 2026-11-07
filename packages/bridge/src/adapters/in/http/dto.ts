@@ -31,29 +31,47 @@ export function toSpeechListDto(page: SpeechPage): SpeechListDto {
   };
 }
 
-export function toStatusDto(status: Status): StatusDto {
+// The mappers below list every field on purpose: a field added to the domain model doesn't reach
+// the API (for example a secret in the config) until it is added here and to the contract.
+
+export function toStatusDto({ bridge, tcp, buffer, input }: Status): StatusDto {
   return {
-    bridge: { ...status.bridge },
+    bridge: { version: bridge.version, apiVersion: bridge.apiVersion, state: bridge.state },
     tcp: {
-      ...status.tcp,
-      connections: status.tcp.connections.map((connection) => ({
-        ...connection,
-        connectedAt: connection.connectedAt.toISOString(),
+      listening: tcp.listening,
+      host: tcp.host,
+      port: tcp.port,
+      encoding: tcp.encoding,
+      connections: tcp.connections.map(({ id, voice, connectedAt }) => ({
+        id,
+        voice,
+        connectedAt: connectedAt.toISOString(),
       })),
     },
-    buffer: { ...status.buffer },
-    input: { ...status.input },
+    buffer: {
+      size: buffer.size,
+      maxEntries: buffer.maxEntries,
+      firstSeq: buffer.firstSeq,
+      lastSeq: buffer.lastSeq,
+    },
+    input: { enabled: input.enabled },
   };
 }
 
-export function toConfigDto(config: Config): ConfigDto {
+export function toConfigDto({ tcp, http, playwright, mcp, input, buffer, log }: Config): ConfigDto {
   return {
-    tcp: { ...config.tcp },
-    http: { ...config.http },
-    playwright: { ...config.playwright },
-    mcp: { ...config.mcp },
-    input: { ...config.input },
-    buffer: { ...config.buffer },
-    log: { ...config.log },
+    tcp: {
+      host: tcp.host,
+      port: tcp.port,
+      format: tcp.format,
+      encoding: tcp.encoding,
+      maxLineBytes: tcp.maxLineBytes,
+    },
+    http: { host: http.host, port: http.port },
+    playwright: { enabled: playwright.enabled, port: playwright.port, version: playwright.version },
+    mcp: { enabled: mcp.enabled, port: mcp.port, version: mcp.version },
+    input: { enabled: input.enabled },
+    buffer: { maxEntries: buffer.maxEntries },
+    log: { level: log.level, file: log.file, consoleSpeech: log.consoleSpeech },
   };
 }
