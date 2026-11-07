@@ -2,11 +2,29 @@
 import packageJson from '../package.json' with { type: 'json' };
 import { ListenError } from './adapters/in/tcp/tcp-listener.js';
 import { BridgeLog, consoleSink } from './adapters/out/log/log.js';
-import { DEFAULT_CONFIG } from './domain/config.js';
+import { DEFAULT_CONFIG, mergeConfig, type Config } from './domain/config.js';
 import { startBridge } from './main.js';
 
-// Flags, environment variables and the config file follow in a later step (docs/ROADMAP.md, M1).
-const config = DEFAULT_CONFIG;
+// Interim: a few environment variables until flags, all env vars and the config file land
+// (docs/configuration.md, ROADMAP M1 lifecycle).
+function configFromEnv(env: NodeJS.ProcessEnv): Config {
+  const port = env.SR_SPEECH_TCP_PORT;
+  return mergeConfig(DEFAULT_CONFIG, {
+    tcp: {
+      port: port === undefined ? undefined : Number(port),
+      encoding: env.SR_SPEECH_TCP_ENCODING,
+    },
+    log: { level: env.SR_SPEECH_LOG_LEVEL },
+  });
+}
+
+let config: Config;
+try {
+  config = configFromEnv(process.env);
+} catch (error) {
+  process.stderr.write(`screenreader-speech-capture: ${(error as Error).message}\n`);
+  process.exit(2);
+}
 const log = new BridgeLog(config.log.level, [consoleSink()]);
 
 try {
