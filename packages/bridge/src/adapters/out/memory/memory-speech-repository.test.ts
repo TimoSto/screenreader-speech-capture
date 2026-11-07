@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NewSpeechEntry } from '../../../domain/speech-entry.js';
-import { RingBufferRepository } from './ring-buffer-repository.js';
+import { MemorySpeechRepository } from './memory-speech-repository.js';
 
 const draft = (text: string): NewSpeechEntry => ({
   kind: 'speech',
@@ -11,16 +11,16 @@ const draft = (text: string): NewSpeechEntry => ({
   connectionId: 1,
 });
 
-function fill(repo: RingBufferRepository, count: number) {
+function fill(repo: MemorySpeechRepository, count: number) {
   for (let i = 1; i <= count; i++) repo.add(draft(`t${i}`));
 }
 
-const texts = (repo: RingBufferRepository, since: number, limit = 100) =>
+const texts = (repo: MemorySpeechRepository, since: number, limit = 100) =>
   repo.list(since, limit).entries.map((e) => e.text);
 
-describe('RingBufferRepository', () => {
+describe('MemorySpeechRepository', () => {
   it('assigns increasing seq and lists entries after since', () => {
-    const repo = new RingBufferRepository(10);
+    const repo = new MemorySpeechRepository(10);
     fill(repo, 3);
     expect(repo.list(0, 100).entries.map((e) => e.seq)).toEqual([1, 2, 3]);
     expect(texts(repo, 1)).toEqual(['t2', 't3']);
@@ -29,7 +29,7 @@ describe('RingBufferRepository', () => {
   });
 
   it('drops the oldest entries when full and reports truncated', () => {
-    const repo = new RingBufferRepository(3);
+    const repo = new MemorySpeechRepository(3);
     fill(repo, 5);
     expect(texts(repo, 0)).toEqual(['t3', 't4', 't5']);
     expect(repo.list(0, 100).truncated).toBe(true);
@@ -38,15 +38,15 @@ describe('RingBufferRepository', () => {
     expect(repo.stats()).toEqual({ size: 3, maxEntries: 3, firstSeq: 3, lastSeq: 5 });
   });
 
-  it('stays correct over many overflows (compaction)', () => {
-    const repo = new RingBufferRepository(4);
+  it('stays correct over many overflows', () => {
+    const repo = new MemorySpeechRepository(4);
     fill(repo, 1000);
     expect(texts(repo, 0)).toEqual(['t997', 't998', 't999', 't1000']);
     expect(texts(repo, 998)).toEqual(['t999', 't1000']);
   });
 
   it('keeps counting seq after clear, and clear is not truncation', () => {
-    const repo = new RingBufferRepository(2);
+    const repo = new MemorySpeechRepository(2);
     fill(repo, 3);
     repo.clear();
     expect(repo.stats()).toEqual({ size: 0, maxEntries: 2, firstSeq: null, lastSeq: null });
@@ -56,7 +56,7 @@ describe('RingBufferRepository', () => {
   });
 
   it('drops entries when resized smaller', () => {
-    const repo = new RingBufferRepository(5);
+    const repo = new MemorySpeechRepository(5);
     fill(repo, 5);
     repo.resize(2);
     expect(texts(repo, 0)).toEqual(['t4', 't5']);

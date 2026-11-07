@@ -3,7 +3,7 @@ import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { BridgeLog, consoleSink } from './adapters/out/log/log.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
-import { RingBufferRepository } from './adapters/out/memory/ring-buffer-repository.js';
+import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';
 import type { Clock } from './application/ports/out/clock.js';
 import { RecordSpeechService } from './application/services/record-speech-service.js';
 import { SpeechService } from './application/services/speech-service.js';
@@ -44,7 +44,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   log.always('bridge', startupMessage(config, version));
 
   const clock = options.clock ?? new SystemClock();
-  const repository = new RingBufferRepository(config.buffer.maxEntries);
+  const repository = new MemorySpeechRepository(config.buffer.maxEntries);
   const events = new InProcessEventBus((error) =>
     bridgeLogger.error(`event listener failed: ${String(error)}`),
   );

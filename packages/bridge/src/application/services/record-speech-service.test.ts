@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bus.js';
-import { RingBufferRepository } from '../../adapters/out/memory/ring-buffer-repository.js';
+import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
 import { SystemClock } from '../../adapters/out/clock/system-clock.js';
 import { MemoryLogger } from '../../../test/fakes.js';
 import type { SpeechEvent } from '../ports/out/speech-event-bus.js';
@@ -9,7 +9,7 @@ import { SpeechService } from './speech-service.js';
 
 function setup() {
   const clock = new SystemClock();
-  const repository = new RingBufferRepository(100);
+  const repository = new MemorySpeechRepository(100);
   const events = new InProcessEventBus();
   const published: SpeechEvent[] = [];
   events.subscribe((event) => published.push(event));

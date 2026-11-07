@@ -70,8 +70,9 @@ doesn't try to merge entries: one `Speak` call is one entry.
 
 ## Buffer
 
-The buffer is an in-memory ring with `buffer.maxEntries` entries (default 10 000). When it is
-full, the oldest entries are dropped. `GET /api/v1/status` reports `buffer.firstSeq` and
-`buffer.lastSeq`. A request with a `since` older than `firstSeq` returns `"truncated": true`
-so a test can tell that it missed something. Call `DELETE /api/v1/speech` between tests to keep
-the buffer small.
+The buffer is an in-memory list, oldest first, with at most `buffer.maxEntries` entries (default
+10 000). When it is full, the oldest entry is dropped for each new one. `GET /api/v1/status`
+reports `buffer.firstSeq` and `buffer.lastSeq`. If entries after a request's `since` were dropped
+this way, the response has `"truncated": true`, so a test can tell that it missed something.
+Entries removed by a clear don't count. Call `DELETE /api/v1/speech` between tests to keep the
+buffer small.
