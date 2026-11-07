@@ -19,9 +19,9 @@ GitHub issues. This file only tracks milestones.
 - [x] TCP listener: framing, `voice=<id>` header, decoding with the configured code page
 - [x] In-memory buffer (capped), `seq`, `truncated`
 - [x] HTTP API v1: speech, wait, markers, status, SSE stream, `GET /config`
-- [ ] HTTP API v1: `PUT /config` with the config file and live re-apply
+- [x] HTTP API v1: `PUT /config` with the config file and live re-apply
 - [x] One error format, `bridge.version` / `apiVersion` in status
-- [ ] Lifecycle: startup order, graceful shutdown, bridge log
+- [ ] Lifecycle: startup order, graceful shutdown, bridge log (CLI flags and env vars done)
 - [x] `fake-speech` tool for development
 
 ### M2 Client ⬜
@@ -77,9 +77,9 @@ GitHub issues. This file only tracks milestones.
 | Screen reader setup | [vm-setup.md](vm-setup.md#screen-reader-setup) | ⬜ | Not yet verified on a real VM |
 | Running on the VM | [vm-setup.md](vm-setup.md#running-on-the-vm) | ⬜ | Not yet verified on a real VM |
 | Speech capture | [speech-capture.md](speech-capture.md) | ⬜ | M1 |
-| HTTP API | [http-api.md](http-api.md) | 🚧 | M1: all but `PUT /config` |
+| HTTP API | [http-api.md](http-api.md) | 🚧 | M1 done; native input and services come with M3/M4 |
 | Operations | [operations.md](operations.md) | ⬜ | M1 |
-| Configuration | [configuration.md](configuration.md) | ⬜ | M1 |
+| Configuration | [configuration.md](configuration.md) | 🚧 | Flags, env, config file and `PUT /config` done; the services' settings take effect with M3/M4 |
 | Test client | [client.md](client.md) | ⬜ | M2, fixture in M3 |
 | Remote Playwright & MCP | [playwright-mcp.md](playwright-mcp.md) | ⬜ | M3 |
 | Native input | [native-input.md](native-input.md) | ⬜ | M4 |

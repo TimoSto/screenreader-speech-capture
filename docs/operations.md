@@ -8,7 +8,8 @@ How the bridge starts, stops and recovers, and what it logs. For where to run it
 The bridge starts in this order:
 
 1. **Load the configuration** (flags > environment > config file > defaults). Invalid values stop
-   the start with an error that names the setting.
+   the start with an error that names the flag, variable or config file and the setting (exit code
+   `2`). A setting that a flag or variable takes over from the config file is logged as a warning.
 2. **TCP listener** for the socket voice. It starts first so that no speech is lost while the rest
    is still starting. If the port is in use, the bridge exits (see
    [Speech capture](speech-capture.md#listening-and-connections)).

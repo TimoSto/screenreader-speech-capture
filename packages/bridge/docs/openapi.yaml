@@ -208,13 +208,53 @@ paths:
       tags: [bridge]
       operationId: getConfig
       summary: The active configuration
-      description: Read-only for now. `PUT /config` is not implemented yet.
+      description: Defaults, then the config file, then flags and environment variables.
       responses:
         '200':
           description: The configuration.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Config' }
+    put:
+      tags: [bridge]
+      operationId: updateConfig
+      summary: Change settings, live and in the config file
+      description: |
+        Takes any subset of the configuration. The whole patch is checked first, then applied to
+        the running bridge, then saved to the config file (only the file's own settings plus the
+        patch, never values from flags or environment variables). If a part can't take the
+        change, for example because a new port is in use, the parts that already took it are
+        undone, nothing is saved and the answer is `400` naming the setting.
+
+        Changing `tcp.*` restarts the TCP listener. Changing `http.*` moves the API: the answer
+        still comes from the old address, and open SSE streams are closed. A flag or environment
+        variable still wins on the next start (the bridge log warns about it).
+
+        The body must be `application/json` (`400` with `field: content-type` otherwise).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConfigPatch' }
+            example: { tcp: { port: 4450 }, log: { level: debug } }
+      responses:
+        '200':
+          description: The new configuration.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Config' }
+        '400':
+          description: |
+            Invalid or unknown setting, a port that is in use (`field: tcp.port` / `http.port`), or
+            a body that is not JSON. `error.details.field` names it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorBody' }
+              example:
+                error:
+                  code: INVALID_REQUEST
+                  message: 'tcp.port: Cannot listen on 127.0.0.1:4450: the port is already in use (is another bridge running?)'
+                  details: { field: tcp.port }
 
 components:
   parameters:
@@ -387,6 +427,56 @@ components:
             consoleSpeech:
               type: boolean
               description: Also write the speech text to the console.
+
+    ConfigPatch:
+      type: object
+      description: |
+        Any subset of `Config` (`PUT /config`). Settings left out keep their value; unknown ones
+        are rejected. Ranges as in `Config`.
+      additionalProperties: false
+      properties:
+        tcp:
+          type: object
+          additionalProperties: false
+          properties:
+            host: { type: string }
+            port: { type: integer, minimum: 0, maximum: 65535 }
+            format: { type: string, enum: [text-to-socket] }
+            encoding: { type: string }
+            maxLineBytes: { type: integer, minimum: 1024, maximum: 16777216 }
+        http:
+          type: object
+          additionalProperties: false
+          properties:
+            host: { type: string }
+            port: { type: integer, minimum: 0, maximum: 65535 }
+        playwright: { $ref: '#/components/schemas/ServiceConfigPatch' }
+        mcp: { $ref: '#/components/schemas/ServiceConfigPatch' }
+        input:
+          type: object
+          additionalProperties: false
+          properties:
+            enabled: { type: boolean }
+        buffer:
+          type: object
+          additionalProperties: false
+          properties:
+            maxEntries: { type: integer, minimum: 1, maximum: 1000000 }
+        log:
+          type: object
+          additionalProperties: false
+          properties:
+            level: { type: string, enum: [error, warn, info, debug] }
+            file: { type: [string, 'null'] }
+            consoleSpeech: { type: boolean }
+
+    ServiceConfigPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled: { type: boolean }
+        port: { type: integer, minimum: 0, maximum: 65535 }
+        version: { type: [string, 'null'] }
 
     ServiceConfig:
       type: object

@@ -4,10 +4,19 @@ All settings of the bridge: CLI flags, environment variables and the config file
 
 Precedence: **CLI flags > environment variables > config file > defaults**.
 
-- Config file: `%APPDATA%\screenreader-speech-capture\config.json`
+- Config file: `%APPDATA%\screenreader-speech-capture\config.json` (on Linux and macOS, for
+  development: `$XDG_CONFIG_HOME` or `~/.config`, then `screenreader-speech-capture/config.json`).
+  `--config <path>` / `SR_SPEECH_CONFIG` selects another file. It holds only the settings saved so
+  far; everything else comes from the defaults.
 - Environment variables: `SR_SPEECH_` + the flag name in upper snake case, for example
-  `SR_SPEECH_TCP_PORT=4449`, `SR_SPEECH_HTTP_PORT=5151`, `SR_SPEECH_NO_MCP=1`.
-- The **Settings** page in the UI edits the config file through `PUT /api/v1/config`.
+  `SR_SPEECH_TCP_PORT=4449`, `SR_SPEECH_HTTP_PORT=5151`, `SR_SPEECH_NO_MCP=1`. Switches
+  (`SR_SPEECH_NO_MCP`, `SR_SPEECH_CONSOLE_SPEECH`, …) are on with `1`, `true`, `yes` or `on`;
+  `0`, `false`, `no`, `off` or empty count as not set.
+- The **Settings** page in the UI edits the configuration through `PUT /api/v1/config`.
+- An invalid value stops the start with an error that names the flag, the variable or the config
+  file, and the setting (exit code `2`).
+- If a flag or variable sets something the config file also sets, the bridge log warns at startup:
+  `[config] WARN tcp.port: the config file sets 4449, but SR_SPEECH_TCP_PORT sets 4450, which wins`.
 
 ```jsonc
 {
@@ -25,6 +34,35 @@ Precedence: **CLI flags > environment variables > config file > defaults**.
 CRLF-terminated lines, with an optional header line, as described in [Wire format](speech-capture.md#wire-format).
 `tcp.encoding` is the code page used to decode them (default `windows-1252`).
 `log` is explained in [Operations](operations.md#logging).
+
+## Changing settings
+
+`PUT /api/v1/config` takes any subset of the settings, as JSON:
+
+```sh
+curl -X PUT $VM/api/v1/config -H 'content-type: application/json' -d '{"tcp":{"port":4450}}'
+```
+
+- The whole patch is checked first. An invalid value changes nothing and answers `400` with
+  `details.field`.
+- The change applies to the running bridge right away, then the patch is saved to the config file.
+  The file keeps its own settings plus the patch, never values from flags or environment variables.
+- If one part can't take the change (for example the new port is in use: `400`, `field:
+  "tcp.port"`), the parts that already took it are undone and nothing is saved.
+- Updates run one at a time, and every changed setting is logged under `[config]`.
+- A flag or variable still wins on the **next start**. Changing such a setting works for the
+  running bridge, and the log warns: `[config] WARN tcp.port: saved to …\config.json, but
+  --tcp-port overrides it on the next start`.
+
+What each section does when it changes:
+
+| Section | Effect |
+|---|---|
+| `tcp` | The TCP listener restarts on the new settings, which closes the open connections. The voice reconnects on its next `Speak`. If the new port can't be used, the listener stays on the old one. |
+| `http` | The API and UI move to the new address. A new port is bound before the old one closes, so a port in use leaves everything as it was. The answer to the `PUT` still comes from the old address; open SSE streams are closed (clients reconnect). |
+| `buffer` | `maxEntries` applies at once. A smaller value drops the oldest entries (they count as `truncated`). |
+| `log` | The level applies at once. A new `file` or `consoleSpeech` switches the log output. |
+| `playwright`, `mcp`, `input` | Saved, and shown by `GET /config` and `status`. They take effect once the child services (M3) and native input (M4) exist. |
 
 ## CLI flags
 
@@ -45,3 +83,4 @@ CRLF-terminated lines, with an optional header line, as described in [Wire forma
 | `--bridge-log <path>` | `%LOCALAPPDATA%\screenreader-speech-capture\logs\bridge.log` | File for the bridge's own log (see [Operations](operations.md#logging)). |
 | `--console-speech` | off | Also write the received speech to the console. Causes a feedback loop when the console is on the VM ([Operations](operations.md#speech-text-stays-off-the-console)). |
 | `--config <path>` | `%APPDATA%\screenreader-speech-capture\config.json` | Use a different config file. |
+| `-h`, `--help` / `-v`, `--version` | | Show the options / the version. |
