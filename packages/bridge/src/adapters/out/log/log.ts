@@ -62,11 +62,22 @@ export function formatLogLines(
   return message.split(/\r?\n/).map((line) => head + line);
 }
 
-/** Where formatted lines go. `colour` says whether this sink wants ANSI colours. */
+/**
+ * Where formatted lines go. `colour`: the sink wants ANSI colours. `speech`: the sink accepts
+ * the `speech` channel (the text the screen reader said).
+ */
 export interface LogSink {
   readonly colour: boolean;
+  readonly speech: boolean;
   write(line: string): void;
 }
+
+/**
+ * `log`: what the bridge does. `speech`: the text the screen reader said. Speech is kept off the
+ * console by default, because a screen reader reading the console would speak it again and the
+ * bridge would log it again, in an endless loop (docs/operations.md#logging).
+ */
+export type LogChannel = 'log' | 'speech';
 
 /**
  * Decides whether a console stream gets colours: `NO_COLOR` turns them off, `FORCE_COLOR`
@@ -80,13 +91,19 @@ export function wantsColour(isTTY: boolean | undefined, env: NodeJS.ProcessEnv):
   return isTTY === true;
 }
 
+export interface ConsoleSinkOptions {
+  /** Also write the speech channel to the console. Off by default (feedback loop). */
+  speech?: boolean;
+  stream?: NodeJS.WriteStream;
+  env?: NodeJS.ProcessEnv;
+}
+
 /** Console sink on stdout. */
-export function consoleSink(
-  stream: NodeJS.WriteStream = process.stdout,
-  env: NodeJS.ProcessEnv = process.env,
-): LogSink {
+export function consoleSink(options: ConsoleSinkOptions = {}): LogSink {
+  const { speech = false, stream = process.stdout, env = process.env } = options;
   return {
     colour: wantsColour(stream.isTTY, env),
+    speech,
     write: (line) => void stream.write(`${line}\n`),
   };
 }
@@ -116,24 +133,27 @@ export class BridgeLog {
     if (index !== -1) this.sinks.splice(index, 1);
   }
 
-  for(prefix: LogPrefix): Logger {
-    const log = (level: LogLevel) => (message: string) => this.write(prefix, level, message);
+  for(prefix: LogPrefix, options: { channel?: LogChannel } = {}): Logger {
+    const channel = options.channel ?? 'log';
+    const log = (level: LogLevel) => (message: string) =>
+      this.write(prefix, level, message, channel);
     return { error: log('error'), warn: log('warn'), info: log('info'), debug: log('debug') };
   }
 
   /** Writes an INFO line whatever the level is (for the startup line). */
   always(prefix: LogPrefix, message: string): void {
-    this.emit(prefix, 'info', message);
+    this.emit(prefix, 'info', message, 'log');
   }
 
-  private write(prefix: LogPrefix, level: LogLevel, message: string): void {
+  private write(prefix: LogPrefix, level: LogLevel, message: string, channel: LogChannel): void {
     if (LEVEL_RANK[level] > LEVEL_RANK[this.level]) return;
-    this.emit(prefix, level, message);
+    this.emit(prefix, level, message, channel);
   }
 
-  private emit(prefix: LogPrefix, level: LogLevel, message: string): void {
+  private emit(prefix: LogPrefix, level: LogLevel, message: string, channel: LogChannel): void {
     const time = this.now();
     for (const sink of this.sinks) {
+      if (channel === 'speech' && !sink.speech) continue;
       for (const line of formatLogLines(prefix, level, time, message, sink.colour)) {
         sink.write(line);
       }

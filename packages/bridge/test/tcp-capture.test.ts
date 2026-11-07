@@ -65,6 +65,27 @@ describe('TCP capture (real socket)', () => {
     expect(new Set(entries.map((e) => e.connectionId)).size).toBe(2);
   });
 
+  it('keeps the speech text off the console but writes it to the file sink', async () => {
+    const console: string[] = [];
+    const file: string[] = [];
+    const log = new BridgeLog('debug', [
+      { colour: false, speech: false, write: (l) => console.push(l) },
+      { colour: false, speech: true, write: (l) => file.push(l) },
+    ]);
+    const config = mergeConfig(DEFAULT_CONFIG, { tcp: { port: 0 }, log: { level: 'debug' } });
+    const bridge = await startBridge({ config, version: '0.0.0-test', log });
+    bridges.push(bridge);
+
+    await send(bridge.tcpPort, 'Hello\r\n');
+    await eventually(
+      () => file,
+      (lines) => lines.some((line) => line.includes('Hello')),
+    );
+    expect(file.some((line) => line.endsWith('DEBUG #1 (connection 1) Hello'))).toBe(true);
+    expect(console.filter((line) => line.includes('Hello'))).toEqual([]);
+    expect(console.some((line) => line.includes('connection 1 opened'))).toBe(true);
+  });
+
   it('lists open connections and forgets closed ones', async () => {
     const bridge = await start();
     const socket = net.connect(bridge.tcpPort, '127.0.0.1');

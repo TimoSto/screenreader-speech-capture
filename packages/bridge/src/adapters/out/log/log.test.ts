@@ -53,8 +53,8 @@ describe('BridgeLog', () => {
     const plain: string[] = [];
     const coloured: string[] = [];
     const sinks: LogSink[] = [
-      { colour: false, write: (l) => plain.push(l) },
-      { colour: true, write: (l) => coloured.push(l) },
+      { colour: false, speech: false, write: (l) => plain.push(l) },
+      { colour: true, speech: false, write: (l) => coloured.push(l) },
     ];
     const log = new BridgeLog('info', sinks, () => time);
     const logger = log.for('config');
@@ -74,11 +74,37 @@ describe('BridgeLog', () => {
     const lines: string[] = [];
     const log = new BridgeLog(
       'error',
-      [{ colour: false, write: (l) => lines.push(l) }],
+      [{ colour: false, speech: false, write: (l) => lines.push(l) }],
       () => time,
     );
     log.for('bridge').info('hidden');
     log.always('bridge', 'starting');
     expect(lines).toEqual(['[bridge]            2026-11-07T14:03:10.002Z INFO  starting']);
+  });
+
+  it('writes the speech channel only to sinks that accept it, still filtered by level', () => {
+    const console: string[] = [];
+    const file: string[] = [];
+    const log = new BridgeLog(
+      'info',
+      [
+        { colour: false, speech: false, write: (l) => console.push(l) },
+        { colour: false, speech: true, write: (l) => file.push(l) },
+      ],
+      () => time,
+    );
+    const transcript = log.for('speech-capture', { channel: 'speech' });
+    transcript.debug('below the level');
+    log.setLevel('debug');
+    transcript.debug('#1 (connection 1) Hello');
+    log.for('speech-capture').info('connection 1 opened');
+
+    expect(console).toEqual([
+      '[speech-capture]    2026-11-07T14:03:10.002Z INFO  connection 1 opened',
+    ]);
+    expect(file).toEqual([
+      '[speech-capture]    2026-11-07T14:03:10.002Z DEBUG #1 (connection 1) Hello',
+      '[speech-capture]    2026-11-07T14:03:10.002Z INFO  connection 1 opened',
+    ]);
   });
 });

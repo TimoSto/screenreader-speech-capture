@@ -52,16 +52,27 @@ Speech capture and the HTTP API keep working while a child service is down.
 
 The **bridge log** records what the bridge itself does: start/stop, TCP connects/disconnects,
 config changes, warnings (cut lines), errors and child service output. Settings: `--bridge-log
-<path>` / `log.file`, `--log-level` / `log.level`. The speech itself is not written to a file. It
-lives in the in-memory [buffer](speech-capture.md#buffer).
+<path>` / `log.file`, `--log-level` / `log.level`. The recorded speech itself lives in the
+in-memory [buffer](speech-capture.md#buffer).
 
 Bridge log details:
 
 - written to the console **and** to a file. The default file is
-  `%LOCALAPPDATA%\screenreader-speech-capture\logs\bridge.log`,
+  `%LOCALAPPDATA%\screenreader-speech-capture\logs\bridge.log`. The first line always shows the
+  version, the log level and the file, whatever the level is,
 - levels: `error`, `warn`, `info` (default), `debug`. `debug` also logs every received line and
   every HTTP request,
 - the file is rotated at 10 MB, and the last 5 files are kept.
+
+### Speech text stays off the console
+
+At `debug`, the received lines (what the screen reader said) go **only to the log file**, never to
+the console. On the VM, the screen reader reads new text in the focused console. If the console
+showed the speech, that text would be spoken through the socket voice, recorded, logged and read
+again, in an endless loop.
+
+`--console-speech` / `log.consoleSpeech` (env `SR_SPEECH_CONSOLE_SPEECH=1`) also writes the speech
+to the console. Only use it when the console is **not** on the VM's desktop, for example over SSH.
 
 ### Line format
 
@@ -88,7 +99,7 @@ message.
 |---|---|---|
 | `[bridge]` | bold white | Startup, shutdown, service supervision (restarts, crashes) |
 | `[config]` | grey | Loading and changing the configuration |
-| `[speech-capture]` | green | TCP listener: connections, cut lines, encoding fallback, received lines (`debug`) |
+| `[speech-capture]` | green | TCP listener: connections, cut lines, received lines (`debug`, file only, see above) |
 | `[http-api]` | blue | HTTP server and requests (`debug`), SSE clients |
 | `[native-input]` | magenta | Clicks and key presses |
 | `[playwright-server]` | cyan | Output of the Playwright server child process |

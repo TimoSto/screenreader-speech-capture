@@ -15,7 +15,7 @@ export interface ConfigDto {
   mcp: { enabled: boolean; port: number; version: string | null };
   input: { enabled: boolean };
   buffer: { maxEntries: number };
-  log: { level: LogLevel; file: string | null };
+  log: { level: LogLevel; file: string | null; consoleSpeech: boolean };
 }
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };

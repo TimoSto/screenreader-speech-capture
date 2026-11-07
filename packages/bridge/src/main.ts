@@ -26,16 +26,23 @@ export interface Bridge {
   stop(): Promise<void>;
 }
 
+function startupMessage(config: Config, version: string): string {
+  const { level, file, consoleSpeech } = config.log;
+  let message = `starting, version ${version}, log level ${level}`;
+  if (file !== null) message += `, log file ${file}`;
+  if (level !== 'debug') return `${message} (speech text is logged at debug)`;
+  if (consoleSpeech) return `${message} (speech text also on the console)`;
+  return file === null
+    ? `${message} (speech text is not shown: no log file)`
+    : `${message} (speech text goes to the log file only, not to the console)`;
+}
+
 export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   const { config, version } = options;
   const log = options.log ?? new BridgeLog(config.log.level, [consoleSink()]);
   const bridgeLogger = log.for('bridge');
-  // Always written, so the console shows which version and log level are running.
-  log.always(
-    'bridge',
-    `starting, version ${version}, log level ${config.log.level}` +
-      (config.log.level === 'debug' ? '' : ' (set SR_SPEECH_LOG_LEVEL=debug to see the speech)'),
-  );
+  // Always written, so the console shows which version, log level and log file are in use.
+  log.always('bridge', startupMessage(config, version));
 
   const clock = options.clock ?? new SystemClock();
   const ids = new UlidGenerator();
@@ -50,6 +57,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     clock,
     ids,
     logger: log.for('speech-capture'),
+    transcript: log.for('speech-capture', { channel: 'speech' }),
   });
   const speech = new SpeechService({ repository, events, clock, ids });
 
