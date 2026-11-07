@@ -10,8 +10,7 @@ format for every endpoint (see [Errors](#errors)).
 ```jsonc
 // SpeechEntry
 {
-  "id": "01JC…",                         // unique id
-  "seq": 42,                             // increasing sequence number, never reused (survives clear)
+  "seq": 42,                             // increasing sequence number: survives clear, restarts at 1 with the bridge
   "kind": "speech",                      // "speech" | "marker"
   "text": "Submit, button",
   "receivedAt": "2026-11-07T14:03:12.345Z",

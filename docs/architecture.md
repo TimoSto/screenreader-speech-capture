@@ -84,7 +84,7 @@ packages/bridge/src/
                      WaitForSpeech, ClearSpeech, AddMarker, SendNativeInput,
                      ManageConfig, ManageServices, GetStatus
     ports/out/       driven ports: SpeechRepository, SpeechEventBus, ConfigStore,
-                     ProcessSupervisor, InputInjector, Logger, Clock, IdGenerator
+                     ProcessSupervisor, InputInjector, Logger, Clock
     services/        use-case implementations (only depend on domain + ports)
   adapters/
     in/tcp/          socket listener + wire-format parsers → RecordSpeech
@@ -96,7 +96,7 @@ packages/bridge/src/
     out/mcp/         supervisor for Playwright MCP
     out/robotjs/     InputInjector on @jitsi/robotjs (mouse click, key chords)
     out/log/         bridge log: console + file, prefixes, colours, rotation
-    out/clock/       system clock, ULID id generator
+    out/clock/       system clock
   main.ts            composition root: the only place adapters are wired to ports
 ```
 

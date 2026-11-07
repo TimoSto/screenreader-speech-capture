@@ -3,7 +3,6 @@ import type { NewSpeechEntry } from '../../../domain/speech-entry.js';
 import { RingBufferRepository } from './ring-buffer-repository.js';
 
 const draft = (text: string): NewSpeechEntry => ({
-  id: text,
   kind: 'speech',
   text,
   receivedAt: new Date(0),

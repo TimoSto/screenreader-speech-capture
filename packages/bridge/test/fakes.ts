@@ -1,5 +1,4 @@
 import type { Clock, TimerHandle } from '../src/application/ports/out/clock.js';
-import type { IdGenerator } from '../src/application/ports/out/id-generator.js';
 import type { Logger } from '../src/application/ports/out/logger.js';
 
 /** Clock under test control: time only moves with `advance()`. */
@@ -37,13 +36,6 @@ export class FakeClock implements Clock {
 
   pendingTimers(): number {
     return this.timers.length;
-  }
-}
-
-export class SequentialIds implements IdGenerator {
-  private n = 0;
-  next(): string {
-    return `id-${++this.n}`;
   }
 }
 

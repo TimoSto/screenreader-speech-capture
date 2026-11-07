@@ -5,7 +5,6 @@ import { createSpeechMatcher, normalizeText } from './text-match.js';
 
 function entry(text: string, kind: SpeechEntry['kind'] = 'speech'): SpeechEntry {
   return {
-    id: 'x',
     seq: 1,
     kind,
     text,

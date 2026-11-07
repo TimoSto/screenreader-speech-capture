@@ -1,7 +1,6 @@
 // Composition root: the only place that knows the concrete adapters (docs/architecture.md).
 import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
-import { UlidGenerator } from './adapters/out/clock/ulid-generator.js';
 import { BridgeLog, consoleSink } from './adapters/out/log/log.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
 import { RingBufferRepository } from './adapters/out/memory/ring-buffer-repository.js';
@@ -45,7 +44,6 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   log.always('bridge', startupMessage(config, version));
 
   const clock = options.clock ?? new SystemClock();
-  const ids = new UlidGenerator();
   const repository = new RingBufferRepository(config.buffer.maxEntries);
   const events = new InProcessEventBus((error) =>
     bridgeLogger.error(`event listener failed: ${String(error)}`),
@@ -55,11 +53,10 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     repository,
     events,
     clock,
-    ids,
     logger: log.for('speech-capture'),
     transcript: log.for('speech-capture', { channel: 'speech' }),
   });
-  const speech = new SpeechService({ repository, events, clock, ids });
+  const speech = new SpeechService({ repository, events, clock });
 
   // The TCP listener starts first, so no speech is lost while the rest starts.
   const tcp = new TcpListener(recorder, log.for('speech-capture'));

@@ -1,6 +1,5 @@
 /** One recorded speech line (`kind: "speech"`) or a marker set through the API. */
 export interface SpeechEntry {
-  readonly id: string;
   /** Increasing sequence number, never reused (survives clear). */
   readonly seq: number;
   readonly kind: 'speech' | 'marker';

@@ -1,7 +1,5 @@
 /** One recorded speech entry or marker, as returned by the API. */
 export interface SpeechEntryDto {
-  /** Unique id (ULID). */
-  id: string;
   /** Increasing sequence number, never reused (survives clear). */
   seq: number;
   kind: 'speech' | 'marker';

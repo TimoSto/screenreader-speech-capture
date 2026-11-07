@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bus.js';
 import { RingBufferRepository } from '../../adapters/out/memory/ring-buffer-repository.js';
-import { FakeClock, MemoryLogger, SequentialIds } from '../../../test/fakes.js';
+import { FakeClock, MemoryLogger } from '../../../test/fakes.js';
 import type { SpeechEvent } from '../ports/out/speech-event-bus.js';
 import { RecordSpeechService } from './record-speech-service.js';
 import { SpeechService } from './speech-service.js';
@@ -14,16 +14,14 @@ function setup() {
   events.subscribe((event) => published.push(event));
   const logger = new MemoryLogger();
   const transcript = new MemoryLogger();
-  const ids = new SequentialIds();
   const recorder = new RecordSpeechService({
     repository,
     events,
     clock,
-    ids,
     logger,
     transcript,
   });
-  const speech = new SpeechService({ repository, events, clock, ids });
+  const speech = new SpeechService({ repository, events, clock });
   return { clock, recorder, speech, published, logger, transcript };
 }
 
@@ -37,7 +35,6 @@ describe('RecordSpeechService', () => {
 
     const [entry] = speech.list({ since: 0, limit: 10 }).entries;
     expect(entry).toEqual({
-      id: 'id-1',
       seq: 1,
       kind: 'speech',
       text: 'Submit, button',

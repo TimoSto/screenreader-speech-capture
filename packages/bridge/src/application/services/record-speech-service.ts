@@ -1,7 +1,6 @@
 import type { ConnectionInfo } from '../ports/in/get-status.js';
 import type { RecordSpeech } from '../ports/in/record-speech.js';
 import type { Clock } from '../ports/out/clock.js';
-import type { IdGenerator } from '../ports/out/id-generator.js';
 import type { Logger } from '../ports/out/logger.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
@@ -17,7 +16,6 @@ export interface RecordSpeechDeps {
   repository: SpeechRepository;
   events: SpeechEventBus;
   clock: Clock;
-  ids: IdGenerator;
   logger: Logger;
   /** Receives the recorded text. Kept apart from `logger` so it can stay off the console. */
   transcript: Logger;
@@ -58,9 +56,8 @@ export class RecordSpeechService implements RecordSpeech {
   }
 
   record(connectionId: number, text: string): void {
-    const { repository, events, clock, ids, transcript } = this.deps;
+    const { repository, events, clock, transcript } = this.deps;
     const entry = repository.add({
-      id: ids.next(),
       kind: 'speech',
       text,
       receivedAt: clock.now(),
