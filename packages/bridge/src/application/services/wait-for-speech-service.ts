@@ -72,6 +72,10 @@ export class WaitForSpeechService implements WaitForSpeech {
     });
   }
 
+  /**
+   * Rejects all pending waits, and every later one, with `SERVICE_UNAVAILABLE`. Lifecycle, so
+   * not part of the `WaitForSpeech` port: only the composition root calls it.
+   */
   shutdown(): void {
     this.closed = true;
     for (const fail of [...this.pending]) fail(unavailable());
