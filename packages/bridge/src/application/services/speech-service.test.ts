@@ -65,3 +65,29 @@ describe('SpeechService', () => {
     expect(published.at(-1)).toEqual({ type: 'clear' });
   });
 });
+
+describe('SpeechService.watch', () => {
+  it('replays entries after since, then follows new events until stopped', () => {
+    const { speech } = setup();
+    speech.record({ text: 'one', voice: null, connectionId: 1 });
+    speech.record({ text: 'two', voice: null, connectionId: 1 });
+    const seen: string[] = [];
+    const stop = speech.watch(1, (event) =>
+      seen.push(event.type === 'entry' ? event.entry.text : 'clear'),
+    );
+    speech.record({ text: 'three', voice: null, connectionId: 1 });
+    speech.clear();
+    stop();
+    speech.record({ text: 'four', voice: null, connectionId: 1 });
+    expect(seen).toEqual(['two', 'three', 'clear']);
+  });
+
+  it('only follows new events without since', () => {
+    const { speech } = setup();
+    speech.record({ text: 'one', voice: null, connectionId: 1 });
+    const seen: number[] = [];
+    speech.watch(null, (event) => event.type === 'entry' && seen.push(event.entry.seq));
+    speech.record({ text: 'two', voice: null, connectionId: 1 });
+    expect(seen).toEqual([2]);
+  });
+});
