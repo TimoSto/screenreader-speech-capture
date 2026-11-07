@@ -1,0 +1,27 @@
+{
+  "name": "screenreader-speech-capture",
+  "version": "0.0.0",
+  "description": "Capture what a screen reader says (JAWS / NVDA via a SAPI 5 socket voice) and expose it over HTTP for automated tests.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "bin": {
+    "screenreader-speech-capture": "./dist/cli.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsx watch src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@screenreader-speech-capture/shared": "workspace:*",
+    "tsdown": "^0.23.7",
+    "tsx": "^4.23.15"
+  }
+}

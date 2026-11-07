@@ -12,14 +12,15 @@ GitHub issues. This file only tracks milestones.
 - [x] Identify the SAPI socket voice and document its wire format (`text-to-socket-engine`)
 - [x] Design docs: architecture, API, client, native input, UI, operations
 
-### M1 Capture core ⬜
+### M1 Capture core 🚧
 
-- [ ] pnpm monorepo, TypeScript, lint, test setup, `packages/shared` API contract
-- [ ] TCP listener: framing, `voice=<id>` header, encoding incl. `auto` (code page from the registry)
+- [x] pnpm monorepo, TypeScript, ESLint + Prettier, Vitest, `packages/shared` API contract
+- [x] Minimal Linux CI: jobs `lint` (lint, format, typecheck), `test` (Node 22 + 24), `build`
+- [ ] TCP listener: framing, `voice=<id>` header, decoding with the configured code page
 - [ ] In-memory ring buffer, `seq`, `truncated`
-- [ ] HTTP API v1: utterances, wait, markers, config, status, SSE stream
+- [ ] HTTP API v1: speech, wait, markers, config, status, SSE stream
 - [ ] One error format, `bridge.version` / `apiVersion` in status
-- [ ] Lifecycle: startup order, graceful shutdown, bridge log, utterance log (JSONL)
+- [ ] Lifecycle: startup order, graceful shutdown, bridge log
 - [ ] `fake-speech` tool for development
 
 ### M2 Client ⬜
@@ -54,7 +55,7 @@ GitHub issues. This file only tracks milestones.
 
 ### M7 Distribution ⬜
 
-- [ ] CI on Linux + a Windows runner
+- [ ] CI: Windows runner (Linux CI exists since M1)
 - [ ] Changesets with a fixed version group, npm publish from CI
 - [ ] Smoke test on a real VM (NVDA + socket voice + Chrome)
 
@@ -62,6 +63,8 @@ GitHub issues. This file only tracks milestones.
 
 - [ ] Optional shared-secret auth token
 - [ ] Optional persistent storage (for example SQLite) / session export
+- [ ] Maybe: detect the VM's ANSI code page from the registry (`tcp.encoding=auto`), so VMs with
+  another code page or the "Use Unicode UTF-8" setting work without `--tcp-encoding`
 
 ## State per topic
 

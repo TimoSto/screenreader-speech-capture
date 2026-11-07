@@ -43,7 +43,7 @@ project and links into `docs/`.
 - **CI** runs on every PR (`main` is protected and only changes through PRs):
   - Linux: lint, type check, unit and integration tests, UI build, client tests against a bridge
     fed by `fake-speech`,
-  - Windows runner: the Windows-only adapters (robotjs input, code page from the registry) and a
+  - Windows runner: the Windows-only adapter (robotjs input) and a
     bridge start with the Playwright server.
 - The **smoke test on a real VM** (NVDA + socket voice + Chrome) runs by hand before a release
   until there is a VM that CI can use.

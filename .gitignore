@@ -1,0 +1,14 @@
+# dependencies
+node_modules/
+
+# build output (anchored: src/**/out/ folders are hexagon source code, not build output)
+dist/
+/out/
+/packages/*/out/
+/tools/*/out/
+
+# test output
+coverage/
+
+*.log
+.DS_Store

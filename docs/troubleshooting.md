@@ -7,15 +7,15 @@ Common problems, what causes them and how to fix them. Start with
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| No utterances arrive, `tcp.connections` is empty | The screen reader doesn't use the socket voice. | Select **"Text To Socket 127.0.0.1:4449"** as the voice ([Screen reader setup](vm-setup.md#screen-reader-setup)). |
+| No speech arrives, `tcp.connections` is empty | The screen reader doesn't use the socket voice. | Select **"Text To Socket 127.0.0.1:4449"** as the voice ([Screen reader setup](vm-setup.md#screen-reader-setup)). |
 | | The voice sends to another port than the bridge listens on. | Compare the port in the voice's display name with `--tcp-port`. |
-| | The bridge started after the screen reader spoke, and the engine gave up on that text. | Nothing to fix: the next utterance opens a new connection. Start the bridge before the screen reader if you need the first words. |
+| | The bridge started after the screen reader spoke, and the engine gave up on that text. | Nothing to fix: the next `Speak` call opens a new connection. Start the bridge before the screen reader if you need the first words. |
 | The socket voice is not in the screen reader's voice list | SAPI keeps separate voice lists for 32-bit and 64-bit programs, and the voice is only registered for one. | Check both control panels (`%windir%\SysWOW64\Speech\SpeechUX\sapi.cpl` for 32 bit, `%windir%\System32\Speech\SpeechUX\sapi.cpl` for 64 bit). Run `text-to-socket-engine-register` again in an **administrator** prompt and restart the screen reader ([Socket voice setup](vm-setup.md#socket-voice-setup)). |
 | Characters are wrong, or arrive as `?` | The text is decoded with the wrong code page, or the code page can't represent the character. | Check `tcp.encoding` in `status`. Set `--tcp-encoding` to the VM's code page. Characters outside the ANSI code page can't be fixed on the bridge side ([Wire format](speech-capture.md#wire-format)). |
-| The first utterance of a connection is missing | It looked like `voice=<id>` and was taken as the header. | Rare. Give voices a header so the first line is always the header. |
-| `truncated: true` in a response | The buffer was full and dropped entries you asked for. | `clear()` between tests, or raise `buffer.maxUtterances`. |
+| The first line of a connection is missing | It looked like `voice=<id>` and was taken as the header. | Rare. Give voices a header so the first line is always the header. |
+| `truncated: true` in a response | The buffer was full and dropped entries you asked for. | `clear()` between tests, or raise `buffer.maxEntries`. |
 | Text differs from what you expected (`"Submit button"` instead of `"Submit, button"`) | Wording depends on screen reader, version, language and verbosity. | Use `normalize`, a regex, or record the real text once and assert on that. See [Limitations](limitations.md). |
-| Utterances you never heard are in the log | Speech that the screen reader interrupted is still recorded. | Expected. Use `waitForSilence()` and assert on the last utterances. |
+| Speech you never heard is recorded | Speech that the screen reader interrupted is still recorded. | Expected. Use `waitForSilence()` and assert on the last entries. |
 
 ## Browser and input
 
@@ -44,5 +44,5 @@ Common problems, what causes them and how to fix them. Start with
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | JAWS stops talking after about 40 minutes | JAWS runs in demo mode without a license. | Restart Windows, reset the VM snapshot before each CI run, or license JAWS ([Screen reader licensing](vm-setup.md#screen-reader-licensing)). |
-| Lots of extra utterances while typing | Typing echo is on. | Turn off *Speak typed characters / words* in NVDA, or the JAWS equivalent. |
+| Lots of extra speech while typing | Typing echo is on. | Turn off *Speak typed characters / words* in NVDA, or the JAWS equivalent. |
 | The UI's own log rows get recorded | The UI is open on the VM and its announcements are on. | Open the UI from another machine, or keep the live log announcements off ([Web UI](web-ui.md#accessibility-of-the-ui-itself)). |
