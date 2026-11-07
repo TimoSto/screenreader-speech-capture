@@ -3,6 +3,7 @@ import { SystemClock } from '../../adapters/out/clock/system-clock.js';
 import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bus.js';
 import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
 import type { AppError } from '../../domain/errors.js';
+import { WAIT_TIMEOUT_MS } from '../ports/in/wait-for-speech.js';
 import { SpeechService } from './speech-service.js';
 import { WaitForSpeechService } from './wait-for-speech-service.js';
 
@@ -101,6 +102,20 @@ describe('WaitForSpeechService', () => {
     await expect(waits.wait({ contains: 'x', since: 0, timeoutMs: 1000 })).rejects.toMatchObject({
       code: 'SERVICE_UNAVAILABLE',
     });
+  });
+
+  it('defaults since and timeoutMs, and checks their range', async () => {
+    const { waits, say } = setup();
+    say('Submit');
+    await expect(waits.wait({ contains: 'Submit' })).resolves.toMatchObject({
+      entry: { seq: 1 },
+    });
+    const result = settle(waits.wait({ contains: 'never' }));
+    await vi.advanceTimersByTimeAsync(WAIT_TIMEOUT_MS.default);
+    expect(result.value).toMatchObject({ status: 'timeout' });
+    await expect(
+      waits.wait({ contains: 'x', timeoutMs: WAIT_TIMEOUT_MS.max + 1 }),
+    ).rejects.toMatchObject({ details: { field: 'timeoutMs' } });
   });
 
   it('rejects invalid match options', async () => {

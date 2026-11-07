@@ -1,10 +1,14 @@
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import type { TextMatchOptions } from '../../../domain/text-match.js';
 
+/** How long `wait` waits: the default and the most a caller may ask for. */
+export const WAIT_TIMEOUT_MS = { default: 5000, max: 300_000 } as const;
+
 export interface WaitOptions extends TextMatchOptions {
-  /** Only entries with `seq > since` count, including ones already in the buffer. */
-  since: number;
-  timeoutMs: number;
+  /** Only entries with `seq > since` count, including ones already in the buffer. Default `0`. */
+  since?: number | undefined;
+  /** Default and maximum: `WAIT_TIMEOUT_MS`. */
+  timeoutMs?: number | undefined;
   /** Aborts the wait, for example when the HTTP client disconnects. */
   signal?: AbortSignal | undefined;
 }
@@ -26,7 +30,7 @@ export type WaitResult =
 export interface WaitForSpeech {
   /**
    * Resolves with the first matching speech entry, or with `timeout` when none arrived in
-   * time. Rejects with `INVALID_REQUEST` for bad match options, `SERVICE_UNAVAILABLE` on
+   * time. Rejects with `INVALID_REQUEST` for bad match or range options, `SERVICE_UNAVAILABLE` on
    * shutdown, or the signal's reason when aborted.
    */
   wait(options: WaitOptions): Promise<WaitResult>;

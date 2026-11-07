@@ -25,19 +25,15 @@ export class Router {
   }
 }
 
-/** An integer query parameter, `fallback` if it is missing. */
-export function intParam(
-  url: URL,
-  name: string,
-  { fallback, min, max }: { fallback: number; min: number; max: number },
-): number {
+/**
+ * An integer query parameter, `undefined` if it is missing. Only the syntax is checked here:
+ * defaults and ranges are use-case rules, applied by the application.
+ */
+export function intParam(url: URL, name: string): number | undefined {
   const raw = url.searchParams.get(name);
-  if (raw === null || raw === '') return fallback;
-  const value = Number(raw);
-  if (!Number.isInteger(value) || value < min || value > max) {
-    throw invalidField(name, `must be an integer from ${min} to ${max}`);
-  }
-  return value;
+  if (raw === null || raw === '') return undefined;
+  if (!/^-?\d+$/.test(raw)) throw invalidField(name, 'must be an integer');
+  return Number(raw);
 }
 
 /** A string query parameter, `undefined` if it is missing. */

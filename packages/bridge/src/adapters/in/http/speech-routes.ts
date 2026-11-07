@@ -19,8 +19,6 @@ export interface SpeechRoutesDeps {
   pingMs: number;
 }
 
-const MAX_SEQ = Number.MAX_SAFE_INTEGER;
-
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -46,9 +44,8 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
 
   router
     .add('GET', `${API_PREFIX}/speech`, ({ res, url }) => {
-      const since = intParam(url, 'since', { fallback: 0, min: 0, max: MAX_SEQ });
-      const limit = intParam(url, 'limit', { fallback: 1000, min: 1, max: 10000 });
-      sendJson(res, 200, toSpeechListDto(speech.list({ since, limit })));
+      const page = speech.list({ since: intParam(url, 'since'), limit: intParam(url, 'limit') });
+      sendJson(res, 200, toSpeechListDto(page));
     })
     .add('DELETE', `${API_PREFIX}/speech`, ({ res }) => {
       speech.clear();
@@ -73,8 +70,8 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
           contains: stringParam(url, 'contains'),
           regex: stringParam(url, 'regex'),
           normalize: booleanParam(url, 'normalize'),
-          since: intParam(url, 'since', { fallback: 0, min: 0, max: MAX_SEQ }),
-          timeoutMs: intParam(url, 'timeoutMs', { fallback: 5000, min: 0, max: 300_000 }),
+          since: intParam(url, 'since'),
+          timeoutMs: intParam(url, 'timeoutMs'),
           signal: controller.signal,
         });
       } catch (error) {

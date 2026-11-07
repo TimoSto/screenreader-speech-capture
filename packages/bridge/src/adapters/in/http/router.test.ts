@@ -3,21 +3,20 @@ import { AppError } from '../../../domain/errors.js';
 import { booleanParam, intParam, Router } from './router.js';
 
 const url = (query: string) => new URL(`http://bridge/x?${query}`);
-const range = { fallback: 7, min: 0, max: 10 };
-
 describe('intParam', () => {
-  it('uses the fallback when missing or empty', () => {
-    expect(intParam(url(''), 'n', range)).toBe(7);
-    expect(intParam(url('n='), 'n', range)).toBe(7);
+  it('is undefined when missing or empty', () => {
+    expect(intParam(url(''), 'n')).toBeUndefined();
+    expect(intParam(url('n='), 'n')).toBeUndefined();
   });
 
-  it('parses integers in range', () => {
-    expect(intParam(url('n=0'), 'n', range)).toBe(0);
-    expect(intParam(url('n=10'), 'n', range)).toBe(10);
+  it('parses integers, leaving the range to the application', () => {
+    expect(intParam(url('n=0'), 'n')).toBe(0);
+    expect(intParam(url('n=-1'), 'n')).toBe(-1);
+    expect(intParam(url('n=10000'), 'n')).toBe(10000);
   });
 
-  it.each(['11', '-1', '1.5', 'abc'])('rejects %s, naming the field', (value) => {
-    expect(() => intParam(url(`n=${value}`), 'n', range)).toThrow(
+  it.each(['1.5', 'abc', '1e3', ' 1'])('rejects %s, naming the field', (value) => {
+    expect(() => intParam(url(`n=${encodeURIComponent(value)}`), 'n')).toThrow(
       expect.objectContaining({ code: 'INVALID_REQUEST', details: { field: 'n' } }) as Error,
     );
   });

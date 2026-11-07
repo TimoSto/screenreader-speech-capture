@@ -3,6 +3,7 @@ import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bu
 import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
 import { SystemClock } from '../../adapters/out/clock/system-clock.js';
 import type { SpeechEvent } from '../ports/out/speech-event-bus.js';
+import { LIST_LIMIT } from '../ports/in/query-speech.js';
 import { SpeechService } from './speech-service.js';
 
 function setup() {
@@ -55,6 +56,17 @@ describe('SpeechService', () => {
 
   it('rejects empty markers', () => {
     expect(() => setup().speech.addMarker('  ')).toThrow(/label/);
+  });
+
+  it('lists with default since and limit, and checks their range', () => {
+    const { speech } = setup();
+    for (let i = 0; i < 3; i++) speech.record({ text: `l${i}`, voice: null, connectionId: 1 });
+    expect(speech.list().entries.map((e) => e.seq)).toEqual([1, 2, 3]);
+    for (const options of [{ limit: 0 }, { limit: LIST_LIMIT.max + 1 }, { since: -1 }]) {
+      expect(() => speech.list(options)).toThrow(
+        expect.objectContaining({ code: 'INVALID_REQUEST' }) as Error,
+      );
+    }
   });
 
   it('clears and publishes a clear event', () => {

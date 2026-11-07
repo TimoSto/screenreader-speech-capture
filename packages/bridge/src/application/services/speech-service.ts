@@ -1,10 +1,10 @@
 import type { SpeechPage } from '../../domain/speech-buffer.js';
 import type { SpeechListener } from '../../domain/speech-event.js';
 import type { NewSpeechEntry, SpeechEntry } from '../../domain/speech-entry.js';
-import { invalidField } from '../../domain/errors.js';
+import { intOption, invalidField } from '../../domain/errors.js';
 import type { AddMarker } from '../ports/in/add-marker.js';
 import type { ClearSpeech } from '../ports/in/clear-speech.js';
-import type { QuerySpeech } from '../ports/in/query-speech.js';
+import { LIST_LIMIT, type ListOptions, type QuerySpeech } from '../ports/in/query-speech.js';
 import type { CapturedSpeech, RecordSpeech } from '../ports/in/record-speech.js';
 import type { WatchSpeech } from '../ports/in/watch-speech.js';
 import type { Clock } from '../ports/out/clock.js';
@@ -33,14 +33,24 @@ export class SpeechService
     this.add({ kind: 'speech', text, source: 'tcp', voice, connectionId });
   }
 
-  list(options: { since: number; limit: number }): SpeechPage {
-    return this.deps.repository.list(options.since, options.limit);
+  list(options: ListOptions = {}): SpeechPage {
+    const since = intOption('since', options.since, {
+      fallback: 0,
+      min: 0,
+      max: Number.MAX_SAFE_INTEGER,
+    });
+    const limit = intOption('limit', options.limit, {
+      fallback: LIST_LIMIT.default,
+      min: 1,
+      max: LIST_LIMIT.max,
+    });
+    return this.deps.repository.list(since, limit);
   }
 
   watch(since: number | null, listener: SpeechListener): () => void {
     // Replay and subscription in one synchronous block: nothing is missed or sent twice.
     if (since !== null) {
-      for (const entry of this.deps.repository.list(since, Number.MAX_SAFE_INTEGER).entries) {
+      for (const entry of this.deps.repository.list(since).entries) {
         listener({ type: 'entry', entry });
       }
     }

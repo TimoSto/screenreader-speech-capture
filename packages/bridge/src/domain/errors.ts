@@ -24,3 +24,16 @@ export class AppError extends Error {
 export function invalidField(field: string, message: string): AppError {
   return new AppError('INVALID_REQUEST', `${field}: ${message}`, { field });
 }
+
+/** `value` (`fallback` if it is missing), checked to be an integer from `min` to `max`. */
+export function intOption(
+  field: string,
+  value: number | undefined,
+  { fallback, min, max }: { fallback: number; min: number; max: number },
+): number {
+  if (value === undefined) return fallback;
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw invalidField(field, `must be an integer from ${min} to ${max}`);
+  }
+  return value;
+}

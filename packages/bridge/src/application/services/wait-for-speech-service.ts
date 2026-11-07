@@ -1,6 +1,11 @@
-import { AppError } from '../../domain/errors.js';
+import { AppError, intOption } from '../../domain/errors.js';
 import { createSpeechMatcher, type TextMatchOptions } from '../../domain/text-match.js';
-import type { WaitForSpeech, WaitOptions, WaitResult } from '../ports/in/wait-for-speech.js';
+import {
+  WAIT_TIMEOUT_MS,
+  type WaitForSpeech,
+  type WaitOptions,
+  type WaitResult,
+} from '../ports/in/wait-for-speech.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
 
@@ -34,11 +39,21 @@ export class WaitForSpeechService implements WaitForSpeech {
   // synchronous block, so no entry slips through in between.
   async wait(options: WaitOptions): Promise<WaitResult> {
     if (this.closed) throw unavailable();
-    const { since, timeoutMs, signal } = options;
+    const { signal } = options;
+    const since = intOption('since', options.since, {
+      fallback: 0,
+      min: 0,
+      max: Number.MAX_SAFE_INTEGER,
+    });
+    const timeoutMs = intOption('timeoutMs', options.timeoutMs, {
+      fallback: WAIT_TIMEOUT_MS.default,
+      min: 0,
+      max: WAIT_TIMEOUT_MS.max,
+    });
     const matches = createSpeechMatcher(options);
     if (signal?.aborted) throw abortReason(signal);
 
-    const seen = [...this.deps.repository.list(since, Number.MAX_SAFE_INTEGER).entries];
+    const seen = [...this.deps.repository.list(since).entries];
     const found = seen.find(matches);
     if (found) return { status: 'matched', entry: found };
 
