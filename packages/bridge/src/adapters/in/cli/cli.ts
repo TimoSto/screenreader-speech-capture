@@ -11,11 +11,15 @@ function flag(value: string | undefined): boolean | undefined {
 }
 
 function configFromEnv(env: NodeJS.ProcessEnv): Config {
-  const port = env.SR_SPEECH_TCP_PORT;
+  const number = (value: string | undefined) => (value === undefined ? undefined : Number(value));
   return mergeConfig(DEFAULT_CONFIG, {
     tcp: {
-      port: port === undefined ? undefined : Number(port),
+      port: number(env.SR_SPEECH_TCP_PORT),
       encoding: env.SR_SPEECH_TCP_ENCODING,
+    },
+    http: {
+      host: env.SR_SPEECH_HOST,
+      port: number(env.SR_SPEECH_HTTP_PORT),
     },
     log: {
       level: env.SR_SPEECH_LOG_LEVEL,

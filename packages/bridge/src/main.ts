@@ -1,4 +1,6 @@
 // Composition root: the only place that knows the concrete adapters (docs/architecture.md).
+import { API_VERSION } from '@screenreader-speech-capture/shared';
+import { HttpServer } from './adapters/in/http/http-server.js';
 import { ListenError } from './adapters/in/net/listen.js';
 import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
@@ -13,7 +15,10 @@ import type { ClearSpeech } from './application/ports/in/clear-speech.js';
 import type { QuerySpeech } from './application/ports/in/query-speech.js';
 import type { CaptureStatusSource } from './application/ports/out/capture-status.js';
 import type { Clock } from './application/ports/out/clock.js';
+import { ConfigService } from './application/services/config-service.js';
 import { SpeechService } from './application/services/speech-service.js';
+import { StatusService } from './application/services/status-service.js';
+import { WaitForSpeechService } from './application/services/wait-for-speech-service.js';
 import type { Config } from './domain/config.js';
 
 export interface BridgeOptions {
@@ -25,10 +30,13 @@ export interface BridgeOptions {
    */
   sinks?: LogSink[];
   clock?: Clock;
+  /** Interval of the SSE `: ping` comment. Default 15 s. */
+  ssePingMs?: number;
 }
 
 export interface Bridge {
   readonly tcpPort: number;
+  readonly httpPort: number;
   readonly speech: QuerySpeech & ClearSpeech & AddMarker;
   readonly capture: CaptureStatusSource;
   stop(): Promise<void>;
@@ -72,26 +80,62 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
 
   logSpeechTranscript(events, log.for('speech-capture', { channel: 'speech' }));
   const speech = new SpeechService({ repository, events, clock });
+  const waits = new WaitForSpeechService({ repository, events });
+  const configService = new ConfigService(config);
 
-  // The TCP listener starts first, so no speech is lost while the rest starts.
   const tcp = new TcpListener(speech, clock, log.for('speech-capture'));
+  const status = new StatusService({
+    capture: tcp,
+    repository,
+    config: configService,
+    version,
+    apiVersion: API_VERSION,
+  });
+  const http = new HttpServer({
+    speech,
+    waits,
+    status,
+    config: configService,
+    logger: log.for('http-api'),
+    ...(options.ssePingMs === undefined ? {} : { pingMs: options.ssePingMs }),
+  });
+
+  const failed = (error: unknown) =>
+    bridgeLogger.error(error instanceof ListenError ? error.message : String(error));
+
+  // Startup order (docs/operations.md#startup): the TCP listener first, so no speech is lost
+  // while the rest starts, then HTTP.
   let tcpPort: number;
+  let httpPort: number;
   try {
     tcpPort = await tcp.start(config.tcp);
   } catch (error) {
-    bridgeLogger.error(error instanceof ListenError ? error.message : String(error));
+    failed(error);
+    throw error;
+  }
+  try {
+    httpPort = await http.start(config.http);
+  } catch (error) {
+    failed(error);
+    await tcp.stop();
     throw error;
   }
 
+  status.setState('ready');
   bridgeLogger.info('ready');
 
   return {
     tcpPort,
+    httpPort,
     speech,
     capture: tcp,
     async stop() {
+      status.setState('stopping');
       bridgeLogger.info('stopping');
       try {
+        // Pending waits answer 503 before the HTTP server closes their connections.
+        waits.shutdown();
+        await http.stop();
         await tcp.stop();
       } catch (error) {
         bridgeLogger.error(`shutdown failed: ${String(error)}`);
