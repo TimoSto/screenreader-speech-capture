@@ -1,7 +1,7 @@
 import type { SpeechPage } from '../../domain/speech-buffer.js';
 import type { SpeechListener } from '../../domain/speech-event.js';
 import type { NewSpeechEntry, SpeechEntry } from '../../domain/speech-entry.js';
-import { intOption, invalidField } from '../../domain/errors.js';
+import { invalidField } from '../../domain/errors.js';
 import type { AddMarker } from '../ports/in/add-marker.js';
 import type { ClearSpeech } from '../ports/in/clear-speech.js';
 import { LIST_LIMIT, type ListOptions, type QuerySpeech } from '../ports/in/query-speech.js';
@@ -10,6 +10,7 @@ import type { WatchSpeech } from '../ports/in/watch-speech.js';
 import type { Clock } from '../ports/out/clock.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
+import { intOption } from './int-option.js';
 
 export interface SpeechServiceDeps {
   repository: SpeechRepository;

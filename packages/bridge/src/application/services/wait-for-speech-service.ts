@@ -1,4 +1,4 @@
-import { AppError, intOption } from '../../domain/errors.js';
+import { AppError } from '../../domain/errors.js';
 import { createSpeechMatcher, type TextMatchOptions } from '../../domain/text-match.js';
 import {
   WAIT_TIMEOUT_MS,
@@ -8,6 +8,7 @@ import {
 } from '../ports/in/wait-for-speech.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
+import { intOption } from './int-option.js';
 
 export interface WaitForSpeechDeps {
   repository: SpeechRepository;
