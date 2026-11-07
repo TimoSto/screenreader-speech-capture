@@ -2,6 +2,7 @@
 import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { BridgeLog, consoleSink } from './adapters/out/log/log.js';
+import { logSpeechTranscript } from './adapters/out/log/speech-transcript.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
 import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';
 import type { Clock } from './application/ports/out/clock.js';
@@ -54,8 +55,8 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     events,
     clock,
     logger: log.for('speech-capture'),
-    transcript: log.for('speech-capture', { channel: 'speech' }),
   });
+  logSpeechTranscript(events, log.for('speech-capture', { channel: 'speech' }));
   const speech = new SpeechService({ repository, events, clock });
 
   // The TCP listener starts first, so no speech is lost while the rest starts.

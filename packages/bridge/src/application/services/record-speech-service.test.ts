@@ -14,16 +14,14 @@ function setup() {
   const published: SpeechEvent[] = [];
   events.subscribe((event) => published.push(event));
   const logger = new MemoryLogger();
-  const transcript = new MemoryLogger();
   const recorder = new RecordSpeechService({
     repository,
     events,
     clock,
     logger,
-    transcript,
   });
   const speech = new SpeechService({ repository, events, clock });
-  return { recorder, speech, published, logger, transcript };
+  return { recorder, speech, published, logger };
 }
 
 beforeEach(() => {
@@ -56,10 +54,9 @@ describe('RecordSpeechService', () => {
     expect(published).toEqual([{ type: 'entry', entry }]);
   });
 
-  it('logs the recorded text to the transcript only, not to the normal log', () => {
-    const { recorder, logger, transcript } = setup();
+  it('keeps the recorded text out of the normal log', () => {
+    const { recorder, logger } = setup();
     recorder.record(recorder.connectionOpened(), 'Submit, button');
-    expect(transcript.lines).toEqual(['debug #1 (connection 1) Submit, button']);
     expect(logger.lines.filter((line) => line.includes('Submit'))).toEqual([]);
   });
 

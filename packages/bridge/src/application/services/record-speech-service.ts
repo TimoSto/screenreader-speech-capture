@@ -17,8 +17,6 @@ export interface RecordSpeechDeps {
   events: SpeechEventBus;
   clock: Clock;
   logger: Logger;
-  /** Receives the recorded text. Kept apart from `logger` so it can stay off the console. */
-  transcript: Logger;
 }
 
 /**
@@ -56,7 +54,7 @@ export class RecordSpeechService implements RecordSpeech {
   }
 
   record(connectionId: number, text: string): void {
-    const { repository, events, clock, transcript } = this.deps;
+    const { repository, events, clock } = this.deps;
     const entry = repository.add({
       kind: 'speech',
       text,
@@ -65,7 +63,6 @@ export class RecordSpeechService implements RecordSpeech {
       voice: this.open.get(connectionId)?.voice ?? null,
       connectionId,
     });
-    transcript.debug(`#${entry.seq} (connection ${connectionId}) ${text}`);
     events.publish({ type: 'entry', entry });
   }
 
