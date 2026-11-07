@@ -144,3 +144,66 @@ export function changedSections(a: Config, b: Config): (keyof Config)[] {
     (section) => JSON.stringify(a[section]) !== JSON.stringify(b[section]),
   );
 }
+
+/** One setting as `section.key`, for example `tcp.port`. */
+export type ConfigField = `${string}.${string}`;
+
+/** The settings in a (partial) configuration, as `section.key` → value. */
+export function configFields(config: ConfigPatch): Map<ConfigField, unknown> {
+  const fields = new Map<ConfigField, unknown>();
+  for (const [section, values] of Object.entries(config)) {
+    for (const [key, value] of Object.entries(values ?? {})) {
+      if (value !== undefined) fields.set(`${section}.${key}`, value);
+    }
+  }
+  return fields;
+}
+
+/**
+ * Checks a partial configuration (a request body, the config file) like `mergeConfig` and
+ * returns it without `undefined` values. Throws `INVALID_REQUEST` naming the field.
+ */
+export function validatePatch(patch: unknown): ConfigPatch {
+  if (patch === undefined || patch === null) return {};
+  mergeConfig(DEFAULT_CONFIG, patch);
+  const result: Record<string, Record<string, unknown>> = {};
+  for (const [field, value] of configFields(patch as ConfigPatch)) {
+    const [section, key] = field.split('.') as [string, string];
+    (result[section] ??= {})[key] = value;
+  }
+  return result as ConfigPatch;
+}
+
+/** `patch` on top of `base`, both partial configurations (for the config file's content). */
+export function mergePatch(base: ConfigPatch, patch: ConfigPatch): ConfigPatch {
+  const result: Record<string, Record<string, unknown>> = {};
+  for (const source of [base, patch]) {
+    for (const [field, value] of configFields(source)) {
+      const [section, key] = field.split('.') as [string, string];
+      (result[section] ??= {})[key] = value;
+    }
+  }
+  return result as ConfigPatch;
+}
+
+/** The settings whose values differ between `a` and `b`. */
+export function changedFields(
+  a: Config,
+  b: Config,
+): { field: ConfigField; from: unknown; to: unknown }[] {
+  const before = configFields(a);
+  return [...configFields(b)]
+    .filter(([field, to]) => before.get(field) !== to)
+    .map(([field, to]) => ({ field, from: before.get(field), to }));
+}
+
+/** The settings that `overrides` (flags, environment) sets although the config file has them. */
+export function overriddenFields(
+  file: ConfigPatch,
+  overrides: ConfigPatch,
+): { field: ConfigField; file: unknown; override: unknown }[] {
+  const inFile = configFields(file);
+  return [...configFields(overrides)]
+    .filter(([field]) => inFile.has(field))
+    .map(([field, override]) => ({ field, file: inFile.get(field), override }));
+}
