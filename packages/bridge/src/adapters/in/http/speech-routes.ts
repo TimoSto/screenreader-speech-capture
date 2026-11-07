@@ -3,10 +3,9 @@ import { API_PREFIX } from '@screenreader-speech-capture/shared';
 import type { AddMarker } from '../../../application/ports/in/add-marker.js';
 import type { ClearSpeech } from '../../../application/ports/in/clear-speech.js';
 import type { QuerySpeech } from '../../../application/ports/in/query-speech.js';
-import type { WaitForSpeech } from '../../../application/ports/in/wait-for-speech.js';
+import type { WaitForSpeech, WaitResult } from '../../../application/ports/in/wait-for-speech.js';
 import type { WatchSpeech } from '../../../application/ports/in/watch-speech.js';
 import { AppError, invalidField } from '../../../domain/errors.js';
-import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import type { SpeechEvent } from '../../../domain/speech-event.js';
 import { toSpeechEntryDto, toSpeechListDto } from './dto.js';
 import { booleanParam, intParam, readJson, sendJson, stringParam, type Router } from './router.js';
@@ -68,9 +67,9 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
       res.on('close', () => {
         if (!res.writableEnded) controller.abort();
       });
-      let entry: SpeechEntry;
+      let result: WaitResult;
       try {
-        entry = await waits.wait({
+        result = await waits.wait({
           contains: stringParam(url, 'contains'),
           regex: stringParam(url, 'regex'),
           normalize: booleanParam(url, 'normalize'),
@@ -81,16 +80,14 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
       } catch (error) {
         // Nobody left to answer, and a client hanging up is not an error.
         if (controller.signal.aborted) return;
-        if (error instanceof AppError && error.code === 'TIMEOUT') {
-          const entries = (error.details?.entries ?? []) as SpeechEntry[];
-          throw new AppError(error.code, error.message, {
-            ...error.details,
-            entries: entries.map(toSpeechEntryDto),
-          });
-        }
         throw error;
       }
-      sendJson(res, 200, toSpeechEntryDto(entry));
+      if (result.status === 'timeout') {
+        throw new AppError('TIMEOUT', result.message, {
+          entries: result.seen.map(toSpeechEntryDto),
+        });
+      }
+      sendJson(res, 200, toSpeechEntryDto(result.entry));
     })
     .add('GET', `${API_PREFIX}/speech/stream`, ({ req, res }) => {
       const since = lastEventId(req);

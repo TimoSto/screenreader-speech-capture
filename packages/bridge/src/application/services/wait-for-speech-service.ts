@@ -1,7 +1,6 @@
 import { AppError } from '../../domain/errors.js';
-import type { SpeechEntry } from '../../domain/speech-entry.js';
 import { createSpeechMatcher, type TextMatchOptions } from '../../domain/text-match.js';
-import type { WaitForSpeech, WaitOptions } from '../ports/in/wait-for-speech.js';
+import type { WaitForSpeech, WaitOptions, WaitResult } from '../ports/in/wait-for-speech.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
 
@@ -33,7 +32,7 @@ export class WaitForSpeechService implements WaitForSpeech {
 
   // No `await` before the subscription: the buffer check and the subscription run in one
   // synchronous block, so no entry slips through in between.
-  async wait(options: WaitOptions): Promise<SpeechEntry> {
+  async wait(options: WaitOptions): Promise<WaitResult> {
     if (this.closed) throw unavailable();
     const { since, timeoutMs, signal } = options;
     const matches = createSpeechMatcher(options);
@@ -41,9 +40,9 @@ export class WaitForSpeechService implements WaitForSpeech {
 
     const seen = [...this.deps.repository.list(since, Number.MAX_SAFE_INTEGER).entries];
     const found = seen.find(matches);
-    if (found) return found;
+    if (found) return { status: 'matched', entry: found };
 
-    return new Promise<SpeechEntry>((resolve, reject) => {
+    return new Promise<WaitResult>((resolve, reject) => {
       const finish = () => {
         unsubscribe();
         clearTimeout(timer);
@@ -61,11 +60,12 @@ export class WaitForSpeechService implements WaitForSpeech {
         seen.push(event.entry);
         if (!matches(event.entry)) return;
         finish();
-        resolve(event.entry);
+        resolve({ status: 'matched', entry: event.entry });
       });
       const timer = setTimeout(() => {
+        finish();
         const message = `No speech matched ${describe(options)} within ${timeoutMs} ms`;
-        fail(new AppError('TIMEOUT', message, { entries: seen }));
+        resolve({ status: 'timeout', seen, message });
       }, timeoutMs);
       signal?.addEventListener('abort', onAbort, { once: true });
       this.pending.add(fail);

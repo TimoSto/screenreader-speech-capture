@@ -9,10 +9,25 @@ export interface WaitOptions extends TextMatchOptions {
   signal?: AbortSignal | undefined;
 }
 
+/**
+ * The outcome of a wait. A timeout is an expected result, not a failure, so it carries its
+ * data in a typed shape instead of an error's `details`.
+ */
+export type WaitResult =
+  | { status: 'matched'; entry: SpeechEntry }
+  | {
+      status: 'timeout';
+      /** Everything seen after `since`, oldest first. */
+      seen: SpeechEntry[];
+      /** For example `No speech matched "Submit" within 5000 ms`. */
+      message: string;
+    };
+
 export interface WaitForSpeech {
   /**
-   * Resolves with the first matching speech entry. Rejects with `TIMEOUT` (with
-   * `details.entries`: everything seen after `since`) or `SERVICE_UNAVAILABLE` on shutdown.
+   * Resolves with the first matching speech entry, or with `timeout` when none arrived in
+   * time. Rejects with `INVALID_REQUEST` for bad match options, `SERVICE_UNAVAILABLE` on
+   * shutdown, or the signal's reason when aborted.
    */
-  wait(options: WaitOptions): Promise<SpeechEntry>;
+  wait(options: WaitOptions): Promise<WaitResult>;
 }

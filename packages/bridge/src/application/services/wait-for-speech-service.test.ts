@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SystemClock } from '../../adapters/out/clock/system-clock.js';
 import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bus.js';
 import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
-import { AppError } from '../../domain/errors.js';
+import type { AppError } from '../../domain/errors.js';
 import { SpeechService } from './speech-service.js';
 import { WaitForSpeechService } from './wait-for-speech-service.js';
 
@@ -34,7 +34,7 @@ describe('WaitForSpeechService', () => {
     say('Submit, button');
     await expect(
       waits.wait({ contains: 'Submit', since: 0, timeoutMs: 1000 }),
-    ).resolves.toMatchObject({ seq: 1, text: 'Submit, button' });
+    ).resolves.toMatchObject({ status: 'matched', entry: { seq: 1, text: 'Submit, button' } });
   });
 
   it('waits for a matching entry that arrives later', async () => {
@@ -42,7 +42,10 @@ describe('WaitForSpeechService', () => {
     const result = waits.wait({ regex: '^Edit', since: 0, timeoutMs: 1000 });
     say('Submit, button');
     say('Edit, Name');
-    await expect(result).resolves.toMatchObject({ seq: 2, text: 'Edit, Name' });
+    await expect(result).resolves.toMatchObject({
+      status: 'matched',
+      entry: { seq: 2, text: 'Edit, Name' },
+    });
   });
 
   it('only counts entries after since', async () => {
@@ -50,7 +53,7 @@ describe('WaitForSpeechService', () => {
     say('Submit');
     const result = waits.wait({ contains: 'submit', normalize: true, since: 1, timeoutMs: 1000 });
     say('SUBMIT  again');
-    await expect(result).resolves.toMatchObject({ seq: 2 });
+    await expect(result).resolves.toMatchObject({ status: 'matched', entry: { seq: 2 } });
   });
 
   it('never matches markers', async () => {
@@ -58,7 +61,7 @@ describe('WaitForSpeechService', () => {
     const result = settle(waits.wait({ contains: 'step', since: 0, timeoutMs: 1000 }));
     speech.addMarker('step 1');
     await vi.advanceTimersByTimeAsync(1000);
-    expect((result.error as AppError).code).toBe('TIMEOUT');
+    expect(result.value).toMatchObject({ status: 'timeout' });
   });
 
   it('times out with every entry seen after since', async () => {
@@ -69,14 +72,10 @@ describe('WaitForSpeechService', () => {
     await vi.advanceTimersByTimeAsync(499);
     expect(result.done).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
-    const error = result.error as AppError;
-    expect(error).toBeInstanceOf(AppError);
-    expect(error.code).toBe('TIMEOUT');
-    expect(error.message).toBe('No speech matched "three" within 500 ms');
-    expect((error.details!.entries as { text: string }[]).map((e) => e.text)).toEqual([
-      'one',
-      'two',
-    ]);
+    const timeout = result.value;
+    if (timeout?.status !== 'timeout') throw new Error('expected a timeout');
+    expect(timeout.message).toBe('No speech matched "three" within 500 ms');
+    expect(timeout.seen.map((e) => e.text)).toEqual(['one', 'two']);
   });
 
   it('stops listening when aborted', async () => {
