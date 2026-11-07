@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bus.js';
 import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
 import { SystemClock } from '../../adapters/out/clock/system-clock.js';
-import type { SpeechEvent } from '../ports/out/speech-event-bus.js';
+import type { SpeechEvent } from '../../domain/speech-event.js';
 import { LIST_LIMIT } from '../ports/in/query-speech.js';
 import { SpeechService } from './speech-service.js';
 
