@@ -63,9 +63,58 @@ Bridge log details:
   `%LOCALAPPDATA%\screenreader-speech-capture\logs\bridge.log`,
 - levels: `error`, `warn`, `info` (default), `debug`. `debug` also logs every received line and
   every HTTP request,
-- one line per entry: `2026-11-07T14:03:12.345Z INFO  [tcp] connection 3 opened (voice=null)`,
-- output of the child services is added with a prefix (`[playwright]`, `[mcp]`),
 - the file is rotated at 10 MB, and the last 5 files are kept.
+
+### Line format
+
+Every line starts with a **prefix** in square brackets that names the part of the bridge it comes
+from. Prefixes are padded with spaces to the length of the longest one, so the rest of the line
+always starts in the same column:
+
+```
+[bridge]            2026-11-07T14:03:10.002Z INFO  starting, version 0.3.0, config C:\Users\test\AppData\Roaming\screenreader-speech-capture\config.json
+[speech-capture]    2026-11-07T14:03:10.015Z INFO  listening on 127.0.0.1:4449, encoding windows-1252 (auto)
+[http-api]          2026-11-07T14:03:10.031Z INFO  listening on 0.0.0.0:5151
+[playwright-server] 2026-11-07T14:03:11.410Z INFO  Listening on ws://0.0.0.0:3000/
+[playwright-mcp]    2026-11-07T14:03:11.622Z INFO  Listening on http://0.0.0.0:8931
+[bridge]            2026-11-07T14:03:11.623Z INFO  ready
+[speech-capture]    2026-11-07T14:03:12.345Z INFO  connection 3 opened (voice=null)
+[native-input]      2026-11-07T14:03:15.100Z INFO  keys Insert+T
+[playwright-server] 2026-11-07T14:03:20.733Z ERROR browserType.launch: Executable doesn't exist
+```
+
+After the prefix comes the timestamp (ISO 8601, UTC), the level (padded to 5 characters) and the
+message.
+
+| Prefix | Colour (console) | Source |
+|---|---|---|
+| `[bridge]` | bold white | Startup, shutdown, service supervision (restarts, crashes) |
+| `[config]` | grey | Loading and changing the configuration |
+| `[speech-capture]` | green | TCP listener: connections, cut lines, encoding fallback, received lines (`debug`) |
+| `[http-api]` | blue | HTTP server and requests (`debug`), SSE clients |
+| `[native-input]` | magenta | Clicks and key presses |
+| `[playwright-server]` | cyan | Output of the Playwright server child process |
+| `[playwright-mcp]` | bright blue | Output of the Playwright MCP child process |
+
+Levels have their own colours: `ERROR` red, `WARN` yellow, `INFO` default, `DEBUG` grey. Red and
+yellow are not used for prefixes, so errors and warnings stand out.
+
+Rules:
+
+- The padding width is the length of the longest prefix in this table (`[playwright-server]`,
+  19 characters) plus one space. It is fixed, not computed from the lines written so far, so every
+  line in the console and in the file lines up.
+- Output of the child processes is read line by line. Each line gets the prefix of its service
+  (stdout as `INFO`, stderr as `WARN`), so a multi-line stack trace stays aligned.
+- Messages never contain line breaks of their own. Line breaks inside a message (for example an
+  error stack) are written as separate lines with the same prefix, timestamp and level.
+- Colours use the standard 16 ANSI colours, so they work in Windows Terminal, the classic console
+  (Windows 10+) and CI logs. Only the prefix (including its brackets) and the level are coloured,
+  not the message.
+- Colours are only written to the **console**, and only when it is a terminal. The log file never
+  contains colour codes. `NO_COLOR=1` turns colours off, `FORCE_COLOR=1` turns them on even when
+  the output is not a terminal (for example in CI). The padding is counted without colour codes,
+  so alignment doesn't change.
 
 ## Restarting the bridge
 
