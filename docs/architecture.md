@@ -103,7 +103,8 @@ packages/bridge/src/
 
 **Dependency rule:** `adapters → application → domain`. The domain imports nothing, the application
 imports only the domain and its own ports, and the adapters implement or call the ports. Only `main.ts`
-knows the concrete adapters.
+knows the concrete adapters. Adapters don't import the concrete services or each other (`in` ↔
+`out`). ESLint (`no-restricted-imports` in `eslint.config.js`) enforces all of this.
 
 **Extending:**
 
