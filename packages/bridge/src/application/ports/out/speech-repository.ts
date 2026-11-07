@@ -1,17 +1,5 @@
+import type { BufferStats, SpeechPage } from '../../../domain/speech-buffer.js';
 import type { NewSpeechEntry, SpeechEntry } from '../../../domain/speech-entry.js';
-
-export interface SpeechPage {
-  entries: SpeechEntry[];
-  /** `true` when entries after `since` were dropped because the buffer was full. */
-  truncated: boolean;
-}
-
-export interface BufferStats {
-  size: number;
-  maxEntries: number;
-  firstSeq: number | null;
-  lastSeq: number | null;
-}
 
 /** Stores speech entries and assigns their `seq`. */
 export interface SpeechRepository {

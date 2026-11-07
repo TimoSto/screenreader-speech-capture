@@ -1,8 +1,5 @@
-import type {
-  BufferStats,
-  SpeechPage,
-  SpeechRepository,
-} from '../../../application/ports/out/speech-repository.js';
+import type { SpeechRepository } from '../../../application/ports/out/speech-repository.js';
+import type { BufferStats, SpeechPage } from '../../../domain/speech-buffer.js';
 import type { NewSpeechEntry, SpeechEntry } from '../../../domain/speech-entry.js';
 
 /**

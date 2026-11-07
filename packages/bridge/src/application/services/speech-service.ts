@@ -1,3 +1,4 @@
+import type { SpeechPage } from '../../domain/speech-buffer.js';
 import type { SpeechEntry } from '../../domain/speech-entry.js';
 import { invalidField } from '../../domain/errors.js';
 import type { AddMarker } from '../ports/in/add-marker.js';
@@ -5,7 +6,7 @@ import type { ClearSpeech } from '../ports/in/clear-speech.js';
 import type { QuerySpeech } from '../ports/in/query-speech.js';
 import type { Clock } from '../ports/out/clock.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
-import type { SpeechPage, SpeechRepository } from '../ports/out/speech-repository.js';
+import type { SpeechRepository } from '../ports/out/speech-repository.js';
 
 export interface SpeechServiceDeps {
   repository: SpeechRepository;

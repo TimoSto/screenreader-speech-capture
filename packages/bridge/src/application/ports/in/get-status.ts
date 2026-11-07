@@ -1,4 +1,4 @@
-import type { BufferStats } from '../out/speech-repository.js';
+import type { BufferStats } from '../../../domain/speech-buffer.js';
 
 export type BridgeState = 'starting' | 'ready' | 'stopping';
 
