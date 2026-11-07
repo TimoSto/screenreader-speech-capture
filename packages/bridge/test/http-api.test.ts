@@ -5,6 +5,7 @@ import type {
   StatusDto,
 } from '@screenreader-speech-capture/shared';
 import { API_VERSION } from '@screenreader-speech-capture/shared';
+import { once } from 'node:events';
 import net from 'node:net';
 import { describe, expect, it } from 'vitest';
 import type { Bridge } from '../src/main.js';
@@ -14,6 +15,21 @@ const api = (bridge: Bridge, path: string) => `http://127.0.0.1:${bridge.httpPor
 
 async function json<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
+}
+
+const postJson = (body: string): RequestInit => ({
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body,
+});
+
+/** Sends `request` as raw bytes and resolves with the status line of the answer. */
+async function rawStatusLine(port: number, request: string): Promise<string> {
+  const socket = net.connect(port, '127.0.0.1');
+  socket.write(request);
+  const [data] = (await once(socket, 'data')) as [Buffer];
+  socket.destroy();
+  return data.toString('latin1').split('\r\n')[0]!;
 }
 
 async function errorOf(response: Response) {
@@ -79,10 +95,10 @@ describe('HTTP API', () => {
     expect(cleared.status).toBe(204);
     expect((await json<SpeechListDto>(await fetch(api(bridge, '/speech')))).entries).toEqual([]);
 
-    const marker = await fetch(api(bridge, '/markers'), {
-      method: 'POST',
-      body: JSON.stringify({ label: 'after clear' }),
-    });
+    const marker = await fetch(
+      api(bridge, '/markers'),
+      postJson(JSON.stringify({ label: 'after clear' })),
+    );
     expect((await json<SpeechEntryDto>(marker)).seq).toBe(3);
   });
 
@@ -114,13 +130,44 @@ describe('HTTP API', () => {
       connectionId: null,
     });
 
-    const missing = await fetch(api(bridge, '/markers'), { method: 'POST', body: '{}' });
+    const missing = await fetch(api(bridge, '/markers'), postJson('{}'));
     expect(missing.status).toBe(400);
     expect((await errorOf(missing)).details).toEqual({ field: 'label' });
 
-    const broken = await fetch(api(bridge, '/markers'), { method: 'POST', body: '{"label":' });
+    const broken = await fetch(api(bridge, '/markers'), postJson('{"label":'));
     expect(broken.status).toBe(400);
     expect((await errorOf(broken)).details).toEqual({ field: 'body' });
+
+    // Answered from the declared length, before any of the body is read.
+    const tooLarge = await rawStatusLine(
+      bridge.httpPort,
+      'POST /api/v1/markers HTTP/1.1\r\nHost: x\r\ncontent-type: application/json\r\n' +
+        `content-length: ${1024 * 1024 + 1}\r\n\r\n`,
+    );
+    expect(tooLarge).toBe('HTTP/1.1 400 Bad Request');
+  });
+
+  it('only takes markers sent as application/json', async () => {
+    const bridge = await start();
+    // What a web page can send cross-origin without a CORS preflight.
+    const response = await fetch(api(bridge, '/markers'), {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain' },
+      body: JSON.stringify({ label: 'from a web page' }),
+    });
+    expect(response.status).toBe(400);
+    expect((await errorOf(response)).details).toEqual({ field: 'content-type' });
+    expect(bridge.speech.list().entries).toEqual([]);
+  });
+
+  it('answers a request URL that does not parse with 400 and keeps running', async () => {
+    const bridge = await start();
+    const statusLine = await rawStatusLine(
+      bridge.httpPort,
+      'GET http://[ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n',
+    );
+    expect(statusLine).toBe('HTTP/1.1 400 Bad Request');
+    expect((await fetch(api(bridge, '/status'))).status).toBe(200);
   });
 
   it('long-polls with wait until a matching line arrives', async () => {
@@ -205,6 +252,33 @@ describe('HTTP API', () => {
     resumed.close();
     expect(resumed.text).not.toContain('"three"');
     expect(resumed.text).toMatch(/^id: 4\nevent: entry\n/);
+  });
+
+  it('sends a truncated event before the replay when missed entries were dropped', async () => {
+    const bridge = await start({ buffer: { maxEntries: 2 } });
+    await send(bridge.tcpPort, 'one\r\ntwo\r\nthree\r\n');
+    await eventually(
+      () => bridge.speech.list().entries.at(-1)?.seq,
+      (seq) => seq === 3,
+    );
+    const resumed = await openStream(bridge, { 'last-event-id': '0' });
+    await eventually(
+      () => resumed.text,
+      (text) => text.includes('"three"'),
+    );
+    resumed.close();
+    const frames = resumed.text.split('\n\n').filter((frame) => frame !== '');
+    expect(frames[0]).toBe('event: truncated\ndata: {}');
+    expect(frames.slice(1).map((frame) => frame.split('\n')[0])).toEqual(['id: 2', 'id: 3']);
+  });
+
+  it('rejects a Last-Event-ID that is not a plain seq', async () => {
+    const bridge = await start();
+    const response = await fetch(api(bridge, '/speech/stream'), {
+      headers: { 'last-event-id': '1e3' },
+    });
+    expect(response.status).toBe(400);
+    expect((await errorOf(response)).details).toEqual({ field: 'Last-Event-ID' });
   });
 
   it('sends a ping comment on idle SSE streams', async () => {

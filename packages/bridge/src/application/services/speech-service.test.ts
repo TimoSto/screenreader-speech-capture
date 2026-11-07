@@ -6,12 +6,12 @@ import type { SpeechEvent } from '../../domain/speech-event.js';
 import { LIST_LIMIT } from '../ports/in/query-speech.js';
 import { SpeechService } from './speech-service.js';
 
-function setup() {
+function setup(maxEntries = 100) {
   const events = new InProcessEventBus();
   const published: SpeechEvent[] = [];
   events.subscribe((event) => published.push(event));
   const speech = new SpeechService({
-    repository: new MemorySpeechRepository(100),
+    repository: new MemorySpeechRepository(maxEntries),
     events,
     clock: new SystemClock(),
   });
@@ -92,6 +92,15 @@ describe('SpeechService.watch', () => {
     stop();
     speech.record({ text: 'four', voice: null, connectionId: 1 });
     expect(seen).toEqual(['two', 'three', 'clear']);
+  });
+
+  it('reports truncated before the replay when entries after since were dropped', () => {
+    const { speech } = setup(2);
+    for (const text of ['one', 'two', 'three'])
+      speech.record({ text, voice: null, connectionId: 1 });
+    const seen: string[] = [];
+    speech.watch(0, (event) => seen.push(event.type === 'entry' ? event.entry.text : event.type));
+    expect(seen).toEqual(['truncated', 'two', 'three']);
   });
 
   it('only follows new events without since', () => {

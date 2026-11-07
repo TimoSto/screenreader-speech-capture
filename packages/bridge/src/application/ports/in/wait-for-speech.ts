@@ -21,7 +21,10 @@ export type WaitResult =
   | { status: 'matched'; entry: SpeechEntry }
   | {
       status: 'timeout';
-      /** Everything seen after `since`, oldest first. */
+      /**
+       * Everything seen after `since`, oldest first. A clear during the wait doesn't remove
+       * entries from it: they show what the screen reader said while the wait was open.
+       */
       seen: SpeechEntry[];
       /** For example `No speech matched "Submit" within 5000 ms`. */
       message: string;

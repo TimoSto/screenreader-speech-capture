@@ -30,14 +30,28 @@ export function booleanParam(url: URL, name: string): boolean | undefined {
 
 export const MAX_BODY_BYTES = 1024 * 1024;
 
+/**
+ * Rejects a body that isn't declared as `application/json`. Besides being the contract, this
+ * keeps web pages from sending it cross-origin: a browser only sends a JSON content type after
+ * a CORS preflight, which the bridge doesn't answer.
+ */
+export function requireJson(req: http.IncomingMessage): void {
+  const type = (req.headers['content-type'] ?? '').split(';')[0]!.trim().toLowerCase();
+  if (type !== 'application/json') throw invalidField('content-type', 'must be application/json');
+}
+
+const tooLarge = () => invalidField('body', `must be at most ${MAX_BODY_BYTES} bytes`);
+
 /** Reads the request body as JSON. */
 export async function readJson(req: http.IncomingMessage): Promise<unknown> {
+  // Checked before reading, so the client gets the 400 instead of a reset connection. A chunked
+  // body that grows too large is cut off while it is read.
+  if (Number(req.headers['content-length'] ?? 0) > MAX_BODY_BYTES) throw tooLarge();
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of req as AsyncIterable<Buffer>) {
     size += chunk.length;
-    if (size > MAX_BODY_BYTES)
-      throw invalidField('body', `must be at most ${MAX_BODY_BYTES} bytes`);
+    if (size > MAX_BODY_BYTES) throw tooLarge();
     chunks.push(chunk);
   }
   try {

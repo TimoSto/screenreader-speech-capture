@@ -4,21 +4,19 @@ import type { AddMarker } from '../../../application/ports/in/add-marker.js';
 import type { ClearSpeech } from '../../../application/ports/in/clear-speech.js';
 import type { QuerySpeech } from '../../../application/ports/in/query-speech.js';
 import type { WaitForSpeech, WaitResult } from '../../../application/ports/in/wait-for-speech.js';
-import type { WatchSpeech } from '../../../application/ports/in/watch-speech.js';
+import type { WatchEvent, WatchSpeech } from '../../../application/ports/in/watch-speech.js';
 import { AppError, invalidField } from '../../../domain/errors.js';
-import type { SpeechEvent } from '../../../domain/speech-event.js';
 import { toSpeechEntryDto, toSpeechListDto } from './dto.js';
-import { booleanParam, intParam, readJson, stringParam } from './request.js';
+import { booleanParam, intParam, readJson, requireJson, stringParam } from './request.js';
 import { sendJson } from './response.js';
 import type { Router } from './router.js';
+import type { SseHub } from './sse.js';
 
 export interface SpeechRoutesDeps {
   speech: QuerySpeech & ClearSpeech & AddMarker & WatchSpeech;
   waits: WaitForSpeech;
-  /** Open SSE responses, so the server can end them on shutdown. */
-  streams: Set<http.ServerResponse>;
-  /** Interval of the `: ping` comment on SSE streams. */
-  pingMs: number;
+  /** The open SSE streams. */
+  sse: SseHub;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -26,8 +24,8 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 /** The SSE frame for one event (docs/http-api.md, `GET /speech/stream`). */
-function sseFrame(event: SpeechEvent): string {
-  if (event.type === 'clear') return 'event: clear\ndata: {}\n\n';
+function sseFrame(event: WatchEvent): string {
+  if (event.type !== 'entry') return `event: ${event.type}\ndata: {}\n\n`;
   const data = JSON.stringify(toSpeechEntryDto(event.entry));
   return `id: ${event.entry.seq}\nevent: entry\ndata: ${data}\n\n`;
 }
@@ -36,13 +34,13 @@ function sseFrame(event: SpeechEvent): string {
 function lastEventId(req: http.IncomingMessage): number | null {
   const raw = req.headers['last-event-id'];
   if (raw === undefined || raw === '') return null;
-  const value = Number(raw);
-  if (!Number.isInteger(value) || value < 0) throw invalidField('Last-Event-ID', 'must be a seq');
+  const value = typeof raw === 'string' && /^\d+$/.test(raw) ? Number(raw) : NaN;
+  if (!Number.isSafeInteger(value)) throw invalidField('Last-Event-ID', 'must be a seq');
   return value;
 }
 
 export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
-  const { speech, waits, streams, pingMs } = deps;
+  const { speech, waits, sse } = deps;
 
   router
     .add('GET', `${API_PREFIX}/speech`, ({ res, url }) => {
@@ -54,6 +52,7 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
       res.writeHead(204).end();
     })
     .add('POST', `${API_PREFIX}/markers`, async ({ req, res }) => {
+      requireJson(req);
       const body = await readJson(req);
       if (!isObject(body) || typeof body.label !== 'string') {
         throw invalidField('label', 'must be a string');
@@ -90,20 +89,9 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
     })
     .add('GET', `${API_PREFIX}/speech/stream`, ({ req, res }) => {
       const since = lastEventId(req);
-      res.writeHead(200, {
-        'content-type': 'text/event-stream; charset=utf-8',
-        'cache-control': 'no-cache',
-        connection: 'keep-alive',
-      });
-      res.flushHeaders();
-      const stop = speech.watch(since, (event) => res.write(sseFrame(event)));
-      const ping = setInterval(() => res.write(': ping\n\n'), pingMs);
-      ping.unref();
-      streams.add(res);
-      res.on('close', () => {
-        stop();
-        clearInterval(ping);
-        streams.delete(res);
-      });
+      // `close` is emitted asynchronously, so `unwatch` is set by then, even if the replay
+      // already overflowed the stream.
+      const send = sse.open(res, () => unwatch());
+      const unwatch = speech.watch(since, (event) => send(sseFrame(event)));
     });
 }

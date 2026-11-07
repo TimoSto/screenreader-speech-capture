@@ -132,15 +132,20 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     async stop() {
       status.setState('stopping');
       bridgeLogger.info('stopping');
-      try {
-        // Pending waits answer 503 before the HTTP server closes their connections.
-        waits.shutdown();
-        await http.stop();
-        await tcp.stop();
-      } catch (error) {
-        bridgeLogger.error(`shutdown failed: ${String(error)}`);
-        throw error;
+      // Pending waits answer 503 before the HTTP server closes their connections.
+      waits.shutdown();
+      // Each listener stops even if the one before it failed.
+      const errors: unknown[] = [];
+      for (const listener of [http, tcp]) {
+        try {
+          await listener.stop();
+        } catch (error) {
+          bridgeLogger.error(`shutdown failed: ${String(error)}`);
+          errors.push(error);
+        }
       }
+      if (errors.length === 1) throw errors[0];
+      if (errors.length > 1) throw new AggregateError(errors, 'shutdown failed');
       bridgeLogger.info('stopped');
     },
   };

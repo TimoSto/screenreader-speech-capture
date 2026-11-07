@@ -1,12 +1,11 @@
 import type { SpeechPage } from '../../domain/speech-buffer.js';
-import type { SpeechListener } from '../../domain/speech-event.js';
 import type { NewSpeechEntry, SpeechEntry } from '../../domain/speech-entry.js';
 import { invalidField } from '../../domain/errors.js';
 import type { AddMarker } from '../ports/in/add-marker.js';
 import type { ClearSpeech } from '../ports/in/clear-speech.js';
 import { LIST_LIMIT, type ListOptions, type QuerySpeech } from '../ports/in/query-speech.js';
 import type { CapturedSpeech, RecordSpeech } from '../ports/in/record-speech.js';
-import type { WatchSpeech } from '../ports/in/watch-speech.js';
+import type { WatchListener, WatchSpeech } from '../ports/in/watch-speech.js';
 import type { Clock } from '../ports/out/clock.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
@@ -48,12 +47,12 @@ export class SpeechService
     return this.deps.repository.list(since, limit);
   }
 
-  watch(since: number | null, listener: SpeechListener): () => void {
+  watch(since: number | null, listener: WatchListener): () => void {
     // Replay and subscription in one synchronous block: nothing is missed or sent twice.
     if (since !== null) {
-      for (const entry of this.deps.repository.list(since).entries) {
-        listener({ type: 'entry', entry });
-      }
+      const { entries, truncated } = this.deps.repository.list(since);
+      if (truncated) listener({ type: 'truncated' });
+      for (const entry of entries) listener({ type: 'entry', entry });
     }
     return this.deps.events.subscribe(listener);
   }
