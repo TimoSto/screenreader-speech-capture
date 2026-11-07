@@ -3,6 +3,7 @@ import type {
   SpeechEntryDto,
   SpeechListDto,
   StatusDto,
+  WaitResultDto,
 } from '@screenreader-speech-capture/shared';
 import { API_VERSION } from '@screenreader-speech-capture/shared';
 import { once } from 'node:events';
@@ -178,10 +179,13 @@ describe('HTTP API', () => {
 
     const response = await pending;
     expect(response.status).toBe(200);
-    expect(await json<SpeechEntryDto>(response)).toMatchObject({ seq: 2, text: 'SUBMIT, button' });
+    expect(await json<WaitResultDto>(response)).toMatchObject({
+      matched: true,
+      entry: { seq: 2, text: 'SUBMIT, button' },
+    });
   });
 
-  it('answers 408 TIMEOUT with the entries seen so far', async () => {
+  it('answers a timeout with 200, matched false and the entries seen so far', async () => {
     const bridge = await start();
     await send(bridge.tcpPort, 'Name, edit\r\n');
     await eventually(
@@ -189,12 +193,12 @@ describe('HTTP API', () => {
       (entries) => entries.length === 1,
     );
     const response = await fetch(api(bridge, '/speech/wait?regex=%5ESubmit&timeoutMs=50'));
-    expect(response.status).toBe(408);
-    const error = await errorOf(response);
-    expect(error.code).toBe('TIMEOUT');
-    expect(error.message).toBe('No speech matched /^Submit/ within 50 ms');
-    const entries = error.details!.entries as SpeechEntryDto[];
-    expect(entries.map((e) => [e.text, typeof e.receivedAt])).toEqual([['Name, edit', 'string']]);
+    expect(response.status).toBe(200);
+    const result = await json<WaitResultDto>(response);
+    if (result.matched) throw new Error('expected no match');
+    expect(result.entries.map((e) => [e.text, typeof e.receivedAt])).toEqual([
+      ['Name, edit', 'string'],
+    ]);
   });
 
   it('drops a wait quietly when the client disconnects', async () => {

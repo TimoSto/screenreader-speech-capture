@@ -22,6 +22,13 @@ export interface SpeechListDto {
   hasMore: boolean;
 }
 
+/**
+ * `GET /api/v1/speech/wait`, always `200`: the first matching entry, or, when none matched in
+ * time, every entry seen after `since` (oldest first).
+ */
+export type WaitResultDto =
+  { matched: true; entry: SpeechEntryDto } | { matched: false; entries: SpeechEntryDto[] };
+
 /** `POST /api/v1/markers` */
 export interface MarkerRequestDto {
   label: string;

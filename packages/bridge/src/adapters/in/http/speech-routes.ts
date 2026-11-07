@@ -5,8 +5,8 @@ import type { ClearSpeech } from '../../../application/ports/in/clear-speech.js'
 import type { QuerySpeech } from '../../../application/ports/in/query-speech.js';
 import type { WaitForSpeech, WaitResult } from '../../../application/ports/in/wait-for-speech.js';
 import type { WatchEvent, WatchSpeech } from '../../../application/ports/in/watch-speech.js';
-import { AppError, invalidField } from '../../../domain/errors.js';
-import { toSpeechEntryDto, toSpeechListDto } from './dto.js';
+import { invalidField } from '../../../domain/errors.js';
+import { toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from './dto.js';
 import { booleanParam, intParam, readJson, requireJson, stringParam } from './request.js';
 import { sendJson } from './response.js';
 import type { Router } from './router.js';
@@ -80,12 +80,9 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
         if (controller.signal.aborted) return;
         throw error;
       }
-      if (result.status === 'timeout') {
-        throw new AppError('TIMEOUT', result.message, {
-          entries: result.seen.map(toSpeechEntryDto),
-        });
-      }
-      sendJson(res, 200, toSpeechEntryDto(result.entry));
+      // A timeout is an expected answer, not an error: `408` would invite clients and proxies
+      // to repeat the request.
+      sendJson(res, 200, toWaitResultDto(result));
     })
     .add('GET', `${API_PREFIX}/speech/stream`, ({ req, res }) => {
       const since = lastEventId(req);

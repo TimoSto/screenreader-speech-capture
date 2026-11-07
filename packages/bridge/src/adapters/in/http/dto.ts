@@ -3,8 +3,10 @@ import type {
   SpeechEntryDto,
   SpeechListDto,
   StatusDto,
+  WaitResultDto,
 } from '@screenreader-speech-capture/shared';
 import type { Status } from '../../../application/ports/in/get-status.js';
+import type { WaitResult } from '../../../application/ports/in/wait-for-speech.js';
 import type { Config } from '../../../domain/config.js';
 import type { SpeechPage } from '../../../domain/speech-buffer.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
@@ -29,6 +31,12 @@ export function toSpeechListDto(page: SpeechPage): SpeechListDto {
     truncated: page.truncated,
     hasMore: page.hasMore,
   };
+}
+
+export function toWaitResultDto(result: WaitResult): WaitResultDto {
+  return result.status === 'matched'
+    ? { matched: true, entry: toSpeechEntryDto(result.entry) }
+    : { matched: false, entries: result.seen.map(toSpeechEntryDto) };
 }
 
 // The mappers below list every field on purpose: a field added to the domain model doesn't reach

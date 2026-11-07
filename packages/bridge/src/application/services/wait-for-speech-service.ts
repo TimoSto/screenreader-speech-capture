@@ -1,5 +1,5 @@
 import { AppError } from '../../domain/errors.js';
-import { createSpeechMatcher, type TextMatchOptions } from '../../domain/text-match.js';
+import { createSpeechMatcher } from '../../domain/text-match.js';
 import {
   WAIT_TIMEOUT_MS,
   type WaitForSpeech,
@@ -13,10 +13,6 @@ import { intOption } from './int-option.js';
 export interface WaitForSpeechDeps {
   repository: SpeechRepository;
   events: SpeechEventBus;
-}
-
-function describe({ contains, regex }: TextMatchOptions): string {
-  return regex !== undefined ? `/${regex}/` : `"${contains}"`;
 }
 
 function abortReason(signal: AbortSignal): Error {
@@ -80,8 +76,7 @@ export class WaitForSpeechService implements WaitForSpeech {
       });
       const timer = setTimeout(() => {
         finish();
-        const message = `No speech matched ${describe(options)} within ${timeoutMs} ms`;
-        resolve({ status: 'timeout', seen, message });
+        resolve({ status: 'timeout', seen });
       }, timeoutMs);
       signal?.addEventListener('abort', onAbort, { once: true });
       this.pending.add(fail);

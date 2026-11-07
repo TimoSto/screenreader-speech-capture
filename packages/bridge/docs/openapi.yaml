@@ -68,9 +68,13 @@ paths:
       operationId: waitForSpeech
       summary: Wait for a matching speech entry (long-poll)
       description: |
-        Returns the first speech entry with `seq > since` that matches, including one that is
+        Waits for the first speech entry with `seq > since` that matches, including one that is
         already in the buffer. Exactly one of `contains` and `regex` is required. Markers never
         match. Closing the request stops the wait.
+
+        Answers `200` both on a match and on timeout; `matched` tells them apart. A timeout is an
+        expected answer, not an error (a `408` would make browsers and proxies repeat the
+        request).
       parameters:
         - name: contains
           in: query
@@ -92,21 +96,27 @@ paths:
           schema: { type: integer, minimum: 0, maximum: 300000, default: 5000 }
       responses:
         '200':
-          description: The matching entry.
+          description: The matching entry, or every entry seen after `since` on timeout.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/SpeechEntry' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '408':
-          description: No match in time. `error.details.entries` holds every entry seen after `since`.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/TimeoutErrorBody' }
-              example:
-                error:
-                  code: TIMEOUT
-                  message: No speech matched "Submit, button" within 5000 ms
-                  details:
+              schema: { $ref: '#/components/schemas/WaitResult' }
+              examples:
+                matched:
+                  summary: A match
+                  value:
+                    matched: true
+                    entry:
+                      seq: 42
+                      kind: speech
+                      text: Submit, button
+                      receivedAt: '2026-11-07T14:03:13.012Z'
+                      source: tcp
+                      voice: ssc5000
+                      connectionId: 3
+                timeout:
+                  summary: No match in time
+                  value:
+                    matched: false
                     entries:
                       - seq: 41
                         kind: speech
@@ -115,6 +125,7 @@ paths:
                         source: tcp
                         voice: ssc5000
                         connectionId: 3
+        '400': { $ref: '#/components/responses/InvalidRequest' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
   /speech/stream:
@@ -390,14 +401,14 @@ components:
     ErrorCode:
       type: string
       description: Stable, machine-readable. New codes may be added in minor versions.
-      enum: [INVALID_REQUEST, NOT_FOUND, TIMEOUT, INPUT_DISABLED, SERVICE_UNAVAILABLE, INTERNAL]
+      enum: [INVALID_REQUEST, NOT_FOUND, INPUT_DISABLED, SERVICE_UNAVAILABLE, INTERNAL]
 
     ErrorBody:
       type: object
       description: |
         Body of every error response. HTTP status per code: `INVALID_REQUEST` 400, `NOT_FOUND`
-        404 (also for unknown endpoints), `TIMEOUT` 408, `INPUT_DISABLED` 409,
-        `SERVICE_UNAVAILABLE` 503, `INTERNAL` 500.
+        404 (also for unknown endpoints), `INPUT_DISABLED` 409, `SERVICE_UNAVAILABLE` 503,
+        `INTERNAL` 500.
       required: [error]
       properties:
         error:
@@ -410,18 +421,19 @@ components:
               type: object
               additionalProperties: true
 
-    TimeoutErrorBody:
-      allOf:
-        - $ref: '#/components/schemas/ErrorBody'
+    WaitResult:
+      description: The answer of `GET /speech/wait`. `matched` tells a match from a timeout.
+      oneOf:
         - type: object
+          required: [matched, entry]
           properties:
-            error:
-              type: object
-              properties:
-                details:
-                  type: object
-                  required: [entries]
-                  properties:
-                    entries:
-                      type: array
-                      items: { $ref: '#/components/schemas/SpeechEntry' }
+            matched: { const: true }
+            entry: { $ref: '#/components/schemas/SpeechEntry' }
+        - type: object
+          required: [matched, entries]
+          properties:
+            matched: { const: false }
+            entries:
+              type: array
+              description: Every entry seen after `since`, oldest first.
+              items: { $ref: '#/components/schemas/SpeechEntry' }

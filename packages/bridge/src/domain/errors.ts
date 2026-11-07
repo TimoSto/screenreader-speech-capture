@@ -1,13 +1,8 @@
 /** Error codes of the application. The HTTP adapter maps them to status codes. */
 export type ErrorCode =
-  | 'INVALID_REQUEST'
-  | 'NOT_FOUND'
-  | 'TIMEOUT'
-  | 'INPUT_DISABLED'
-  | 'SERVICE_UNAVAILABLE'
-  | 'INTERNAL';
+  'INVALID_REQUEST' | 'NOT_FOUND' | 'INPUT_DISABLED' | 'SERVICE_UNAVAILABLE' | 'INTERNAL';
 
-/** An expected error with a stable code, for example a bad request or a timeout. */
+/** An expected error with a stable code, for example a bad request. */
 export class AppError extends Error {
   override readonly name = 'AppError';
 

@@ -30,7 +30,7 @@ format for every endpoint (see [Errors](#errors)).
 | `GET /api/v1/speech?since=<seq>&limit=<n>` | List speech entries and markers with `seq > since` (oldest first). `since` defaults to `0`, `limit` to `1000` (max `10000`). Response: `{ "entries": [...], "truncated": false, "hasMore": false }`. `truncated` is `true` when entries after `since` were dropped because the buffer was full. `hasMore` is `true` when more entries follow: ask again with the last entry's `seq` as `since`. |
 | `DELETE /api/v1/speech` | Clear the buffer (`204`, no body). Call this between tests. |
 | `GET /api/v1/speech/stream` | Server-Sent Events: one `entry` event per new entry (event `id` = `seq`) and a `clear` event after a clear. A reconnect with `Last-Event-ID` first gets the entries it missed from the buffer, preceded by a `truncated` event if some of them were already dropped because the buffer was full. A `: ping` comment every 15 s keeps the connection open. A client that stops reading is disconnected once about 1 MiB is waiting for it; it reconnects with `Last-Event-ID`. |
-| `GET /api/v1/speech/wait?contains=<text>&since=<seq>&timeoutMs=<n>` | Long-poll until a speech entry with `seq > since` matches, then return it (also if it arrived before the request). `regex=<pattern>` can be used instead of `contains`, `normalize=1` ignores case and extra whitespace. Markers never match. `since` defaults to `0`, `timeoutMs` to `5000` (max `300000`). Returns `408` (`TIMEOUT`) on timeout, with the entries seen so far in `error.details.entries`. |
+| `GET /api/v1/speech/wait?contains=<text>&since=<seq>&timeoutMs=<n>` | Long-poll until a speech entry with `seq > since` matches (also if it arrived before the request). `regex=<pattern>` can be used instead of `contains`, `normalize=1` ignores case and extra whitespace. Markers never match. `since` defaults to `0`, `timeoutMs` to `5000` (max `300000`). Always `200`: `{ "matched": true, "entry": {...} }`, or on timeout `{ "matched": false, "entries": [...] }` with every entry seen after `since`. A timeout is an expected answer, not an error (a `408` would make browsers and proxies repeat the request). |
 | `POST /api/v1/markers` `{ "label": "step 3" }` | Insert a marker into the timeline (shown in the UI, returned in lists). Requires `content-type: application/json` (a web page can't send that cross-origin without a CORS preflight). Returns `201` with the new entry. |
 | `POST /api/v1/set-focus` `{ "x": 640, "y": 12, "button": "left" }` | Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
 | `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | Native key presses: one chord, or a sequence with `delayMs` between them. |
@@ -78,9 +78,9 @@ Every error response has the same body:
 ```jsonc
 {
   "error": {
-    "code": "TIMEOUT",                 // stable, machine-readable
-    "message": "No speech matched \"Submit, button\" within 5000 ms",
-    "details": { "entries": [ /* … */ ] }      // optional, depends on the code
+    "code": "INVALID_REQUEST",         // stable, machine-readable
+    "message": "limit: must be an integer from 1 to 10000",
+    "details": { "field": "limit" }    // optional, depends on the code
   }
 }
 ```
@@ -89,7 +89,6 @@ Every error response has the same body:
 |---|---|---|
 | `400` | `INVALID_REQUEST` | Bad query or body (unknown key name, invalid regex, invalid config value). `details.field` names the field. |
 | `404` | `NOT_FOUND` | Unknown endpoint or service name. |
-| `408` | `TIMEOUT` | `wait` found no match in time. `details.entries` holds the entries seen so far. |
 | `409` | `INPUT_DISABLED` | Native input endpoint called, but input is off (`--no-input`, or not on Windows). |
 | `503` | `SERVICE_UNAVAILABLE` | The bridge is still starting, or a child service (Playwright / MCP) is not running. |
 | `500` | `INTERNAL` | Anything else. The bridge log has the details. |

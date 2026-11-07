@@ -75,7 +75,6 @@ describe('WaitForSpeechService', () => {
     await vi.advanceTimersByTimeAsync(1);
     const timeout = result.value;
     if (timeout?.status !== 'timeout') throw new Error('expected a timeout');
-    expect(timeout.message).toBe('No speech matched "three" within 500 ms');
     expect(timeout.seen.map((e) => e.text)).toEqual(['one', 'two']);
   });
 
