@@ -6,7 +6,7 @@ import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { fileSink } from './adapters/out/log/file-sink.js';
 import { BridgeLog, consoleSink, type LogSink } from './adapters/out/log/log.js';
-import { defaultLogFile } from './adapters/out/log/paths.js';
+import { defaultLogFile } from './adapters/out/paths.js';
 import { logSpeechTranscript } from './adapters/out/log/speech-transcript.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
 import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';

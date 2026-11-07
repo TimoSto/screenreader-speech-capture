@@ -1,4 +1,4 @@
-import type { Config } from '../../../domain/config.js';
+import type { ConfigPatch } from '../../../domain/config.js';
 
 /** The config file. */
 export interface ConfigStore {
@@ -6,5 +6,6 @@ export interface ConfigStore {
   readonly location: string;
   /** The saved (partial) configuration, or `undefined` if there is no file yet. */
   load(): Promise<unknown>;
-  save(config: Config): Promise<void>;
+  /** Saves the file's own settings (never values from flags or environment variables). */
+  save(file: ConfigPatch): Promise<void>;
 }

@@ -19,3 +19,20 @@ export function defaultLogFile(
   const base = env.XDG_STATE_HOME ?? path.posix.join(home, '.local', 'state');
   return path.posix.join(base, APP, 'logs', 'bridge.log');
 }
+
+/**
+ * Default config file: `%APPDATA%\screenreader-speech-capture\config.json` on Windows,
+ * `$XDG_CONFIG_HOME` (or `~/.config`) elsewhere, for development.
+ */
+export function defaultConfigFile(
+  platform: NodeJS.Platform = process.platform,
+  env: NodeJS.ProcessEnv = process.env,
+  home: string = os.homedir(),
+): string {
+  if (platform === 'win32') {
+    const base = env.APPDATA ?? path.win32.join(home, 'AppData', 'Roaming');
+    return path.win32.join(base, APP, 'config.json');
+  }
+  const base = env.XDG_CONFIG_HOME ?? path.posix.join(home, '.config');
+  return path.posix.join(base, APP, 'config.json');
+}
