@@ -15,4 +15,6 @@ export interface WaitForSpeech {
    * `details.entries`: everything seen after `since`) or `SERVICE_UNAVAILABLE` on shutdown.
    */
   wait(options: WaitOptions): Promise<SpeechEntry>;
+  /** Rejects all pending waits, and every later one, with `SERVICE_UNAVAILABLE`. */
+  shutdown(): void;
 }
