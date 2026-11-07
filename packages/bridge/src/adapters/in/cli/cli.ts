@@ -1,11 +1,7 @@
 #!/usr/bin/env node
-import packageJson from '../package.json' with { type: 'json' };
-import { ListenError } from './adapters/in/tcp/tcp-listener.js';
-import { fileSink } from './adapters/out/log/file-sink.js';
-import { BridgeLog, consoleSink } from './adapters/out/log/log.js';
-import { defaultLogFile } from './adapters/out/log/paths.js';
-import { DEFAULT_CONFIG, mergeConfig, type Config } from './domain/config.js';
-import { startBridge } from './main.js';
+import packageJson from '../../../../package.json' with { type: 'json' };
+import { DEFAULT_CONFIG, mergeConfig, type Config } from '../../../domain/config.js';
+import { startBridge } from '../../../main.js';
 
 // Interim: a few environment variables until flags, all env vars and the config file land
 // (docs/configuration.md, ROADMAP M1 lifecycle).
@@ -23,7 +19,7 @@ function configFromEnv(env: NodeJS.ProcessEnv): Config {
     },
     log: {
       level: env.SR_SPEECH_LOG_LEVEL,
-      file: env.SR_SPEECH_BRIDGE_LOG ?? defaultLogFile(),
+      file: env.SR_SPEECH_BRIDGE_LOG,
       consoleSpeech: flag(env.SR_SPEECH_CONSOLE_SPEECH),
     },
   });
@@ -36,13 +32,10 @@ try {
   process.stderr.write(`screenreader-speech-capture: ${(error as Error).message}\n`);
   process.exit(2);
 }
-const log = new BridgeLog(config.log.level, [
-  consoleSink({ speech: config.log.consoleSpeech }),
-  ...(config.log.file === null ? [] : [fileSink(config.log.file)]),
-]);
 
+// startBridge and stop() write their own failures to the bridge log.
 try {
-  const bridge = await startBridge({ config, version: packageJson.version, log });
+  const bridge = await startBridge({ config, version: packageJson.version });
 
   let stopping = false;
   const shutdown = () => {
@@ -50,15 +43,10 @@ try {
     stopping = true;
     bridge.stop().then(
       () => process.exit(0),
-      (error: unknown) => {
-        log.for('bridge').error(`shutdown failed: ${String(error)}`);
-        process.exit(1);
-      },
+      () => process.exit(1),
     );
   };
   for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(signal, shutdown);
-} catch (error) {
-  const message = error instanceof ListenError ? error.message : String(error);
-  log.for('bridge').error(message);
+} catch {
   process.exit(1);
 }

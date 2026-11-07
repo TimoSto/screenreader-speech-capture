@@ -1,7 +1,9 @@
 // Composition root: the only place that knows the concrete adapters (docs/architecture.md).
-import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
+import { ListenError, TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
-import { BridgeLog, consoleSink } from './adapters/out/log/log.js';
+import { fileSink } from './adapters/out/log/file-sink.js';
+import { BridgeLog, consoleSink, type LogSink } from './adapters/out/log/log.js';
+import { defaultLogFile } from './adapters/out/log/paths.js';
 import { logSpeechTranscript } from './adapters/out/log/speech-transcript.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
 import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';
@@ -16,21 +18,23 @@ import type { Config } from './domain/config.js';
 export interface BridgeOptions {
   config: Config;
   version: string;
-  /** Defaults to a console log with `config.log.level`. */
-  log?: BridgeLog;
+  /**
+   * Where the bridge log goes. Defaults to the console and `config.log.file` (`null`: the default
+   * log file). Tests pass their own sinks.
+   */
+  sinks?: LogSink[];
   clock?: Clock;
 }
 
 export interface Bridge {
-  readonly log: BridgeLog;
   readonly tcpPort: number;
   readonly speech: QuerySpeech & ClearSpeech & AddMarker;
   readonly capture: CaptureStatusSource;
   stop(): Promise<void>;
 }
 
-function startupMessage(config: Config, version: string): string {
-  const { level, file, consoleSpeech } = config.log;
+function startupMessage(config: Config, version: string, file: string | null): string {
+  const { level, consoleSpeech } = config.log;
   let message = `starting, version ${version}, log level ${level}`;
   if (file !== null) message += `, log file ${file}`;
   if (level !== 'debug') return `${message} (speech text is logged at debug)`;
@@ -40,12 +44,24 @@ function startupMessage(config: Config, version: string): string {
     : `${message} (speech text goes to the log file only, not to the console)`;
 }
 
+function defaultSinks(config: Config): { sinks: LogSink[]; file: string } {
+  const file = config.log.file ?? defaultLogFile();
+  return { sinks: [consoleSink({ speech: config.log.consoleSpeech }), fileSink(file)], file };
+}
+
+/**
+ * Starts the bridge. A failure to start is written to the bridge log before the promise rejects,
+ * and so is a failure to stop.
+ */
 export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   const { config, version } = options;
-  const log = options.log ?? new BridgeLog(config.log.level, [consoleSink()]);
+  const { sinks, file } = options.sinks
+    ? { sinks: options.sinks, file: null }
+    : defaultSinks(config);
+  const log = new BridgeLog(config.log.level, sinks);
   const bridgeLogger = log.for('bridge');
   // Always written, so the console shows which version, log level and log file are in use.
-  log.always('bridge', startupMessage(config, version));
+  log.always('bridge', startupMessage(config, version, file));
 
   const clock = options.clock ?? new SystemClock();
   const repository = new MemorySpeechRepository(config.buffer.maxEntries);
@@ -58,18 +74,28 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
 
   // The TCP listener starts first, so no speech is lost while the rest starts.
   const tcp = new TcpListener(speech, clock, log.for('speech-capture'));
-  const tcpPort = await tcp.start(config.tcp);
+  let tcpPort: number;
+  try {
+    tcpPort = await tcp.start(config.tcp);
+  } catch (error) {
+    bridgeLogger.error(error instanceof ListenError ? error.message : String(error));
+    throw error;
+  }
 
   bridgeLogger.info('ready');
 
   return {
-    log,
     tcpPort,
     speech,
     capture: tcp,
     async stop() {
       bridgeLogger.info('stopping');
-      await tcp.stop();
+      try {
+        await tcp.stop();
+      } catch (error) {
+        bridgeLogger.error(`shutdown failed: ${String(error)}`);
+        throw error;
+      }
       bridgeLogger.info('stopped');
     },
   };

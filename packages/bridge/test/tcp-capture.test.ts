@@ -1,15 +1,13 @@
 import net from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
-import { BridgeLog } from '../src/adapters/out/log/log.js';
 import { DEFAULT_CONFIG, mergeConfig } from '../src/domain/config.js';
 import { startBridge, type Bridge } from '../src/main.js';
 
-const silentLog = () => new BridgeLog('error', []);
 const bridges: Bridge[] = [];
 
 async function start(patch: unknown = {}) {
   const config = mergeConfig(mergeConfig(DEFAULT_CONFIG, { tcp: { port: 0 } }), patch);
-  const bridge = await startBridge({ config, version: '0.0.0-test', log: silentLog() });
+  const bridge = await startBridge({ config, version: '0.0.0-test', sinks: [] });
   bridges.push(bridge);
   return bridge;
 }
@@ -68,12 +66,12 @@ describe('TCP capture (real socket)', () => {
   it('keeps the speech text off the console but writes it to the file sink', async () => {
     const console: string[] = [];
     const file: string[] = [];
-    const log = new BridgeLog('debug', [
-      { colour: false, speech: false, write: (l) => console.push(l) },
-      { colour: false, speech: true, write: (l) => file.push(l) },
-    ]);
+    const sinks = [
+      { colour: false, speech: false, write: (l: string) => console.push(l) },
+      { colour: false, speech: true, write: (l: string) => file.push(l) },
+    ];
     const config = mergeConfig(DEFAULT_CONFIG, { tcp: { port: 0 }, log: { level: 'debug' } });
-    const bridge = await startBridge({ config, version: '0.0.0-test', log });
+    const bridge = await startBridge({ config, version: '0.0.0-test', sinks });
     bridges.push(bridge);
 
     await send(bridge.tcpPort, 'Hello\r\n');
