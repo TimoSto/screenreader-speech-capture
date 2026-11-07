@@ -1,0 +1,48 @@
+# Troubleshooting
+
+Common problems, what causes them and how to fix them. Start with
+`npx screenreader-speech-capture-client status` and the [bridge log](operations.md#logging).
+
+## Speech
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| No utterances arrive, `tcp.connections` is empty | The screen reader doesn't use the socket voice. | Select **"Text To Socket 127.0.0.1:4449"** as the voice ([Screen reader setup](vm-setup.md#screen-reader-setup)). |
+| | The voice sends to another port than the bridge listens on. | Compare the port in the voice's display name with `--tcp-port`. |
+| | The bridge started after the screen reader spoke, and the engine gave up on that text. | Nothing to fix: the next utterance opens a new connection. Start the bridge before the screen reader if you need the first words. |
+| The socket voice is not in the screen reader's voice list | SAPI keeps separate voice lists for 32-bit and 64-bit programs, and the voice is only registered for one. | Check both control panels (`%windir%\SysWOW64\Speech\SpeechUX\sapi.cpl` for 32 bit, `%windir%\System32\Speech\SpeechUX\sapi.cpl` for 64 bit). Run `text-to-socket-engine-register` again in an **administrator** prompt and restart the screen reader ([Socket voice setup](vm-setup.md#socket-voice-setup)). |
+| Characters are wrong, or arrive as `?` | The text is decoded with the wrong code page, or the code page can't represent the character. | Check `tcp.encoding` in `status`. Set `--tcp-encoding` to the VM's code page. Characters outside the ANSI code page can't be fixed on the bridge side ([Wire format](speech-capture.md#wire-format)). |
+| The first utterance of a connection is missing | It looked like `voice=<id>` and was taken as the header. | Rare. Give voices a header so the first line is always the header. |
+| `truncated: true` in a response | The buffer was full and dropped entries you asked for. | `clear()` between tests, or raise `buffer.maxUtterances`. |
+| Text differs from what you expected (`"Submit button"` instead of `"Submit, button"`) | Wording depends on screen reader, version, language and verbosity. | Use `normalize`, a regex, or record the real text once and assert on that. See [Limitations](limitations.md). |
+| Utterances you never heard are in the log | Speech that the screen reader interrupted is still recorded. | Expected. Use `waitForSilence()` and assert on the last utterances. |
+
+## Browser and input
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| The browser opens, but the screen reader says nothing about the page | The browser runs **headless** (no window). | Pass `headless: false` (the fixture does it) ([Playwright server](playwright-mcp.md#playwright-server)). |
+| | The browser window is not the **foreground** window. | `setFocus(page)` or CLI `focus` ([Native input](native-input.md)). |
+| Nothing works after an RDP session | The disconnected RDP session has no active desktop: no input, no foreground window. | Use the hypervisor console or VNC. Don't leave the VM on a disconnected RDP session ([Running on the VM](vm-setup.md#running-on-the-vm)). |
+| Screen reader commands (`H`, `Insert+T`) do nothing | They were sent with Playwright (`page.keyboard`), which the screen reader never sees. | Use `pressKeys()` / CLI `press` ([Native input](native-input.md)). |
+| `pressKeys` / `focus` returns `409 INPUT_DISABLED` | Native input is off. | Remove `--no-input`. Native input only works on Windows. |
+| Native clicks land in the wrong place | Display scaling, browser zoom, or several monitors. | See the caveats in [Native input](native-input.md). |
+| Native input does nothing at all | The bridge runs elevated or as a service, or the screen is locked. | Run non-elevated in the logged-in, unlocked user session. |
+
+## Versions and services
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `browserType.connect` fails with a protocol / version error | The client's Playwright version differs from the server's. | Set `--playwright-version` to the version of your test project. `status` shows the server's version. |
+| The client throws `IncompatibleBridgeError` (CLI exit code `2`) | Bridge and client have different API major versions. | Update the older one. Bridge and client use the same version numbers ([Versioning](http-api.md#versioning)). |
+| `status` shows Playwright or MCP as `failed` | The service crashed 5 times in a row. | Look at the bridge log for its output, then restart it ([Operations](operations.md#child-service-crashes)). |
+| MCP clients from other machines are rejected | MCP only accepts some hosts. | The bridge starts MCP with `--allowed-hosts *`. If you start MCP yourself, add that flag. |
+| The bridge exits right after start: port in use | Another bridge (or another program) already uses the port. | Stop the other process or change the port. For the TCP port, change the voice too. |
+
+## Screen reader
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| JAWS stops talking after about 40 minutes | JAWS runs in demo mode without a license. | Restart Windows, reset the VM snapshot before each CI run, or license JAWS ([Screen reader licensing](vm-setup.md#screen-reader-licensing)). |
+| Lots of extra utterances while typing | Typing echo is on. | Turn off *Speak typed characters / words* in NVDA, or the JAWS equivalent. |
+| The UI's own log rows get recorded | The UI is open on the VM and its announcements are on. | Open the UI from another machine, or keep the live log announcements off ([Web UI](web-ui.md#accessibility-of-the-ui-itself)). |
