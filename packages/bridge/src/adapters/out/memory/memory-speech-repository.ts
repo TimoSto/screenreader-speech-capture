@@ -12,7 +12,7 @@ export class MemorySpeechRepository implements SpeechRepository {
   /** Highest `seq` dropped because the list was full, since the last clear. */
   private droppedUpToSeq = 0;
 
-  constructor(private readonly maxEntries: number) {}
+  constructor(private maxEntries: number) {}
 
   add(entry: NewSpeechEntry): SpeechEntry {
     const stored: SpeechEntry = { ...entry, seq: this.nextSeq++ };
@@ -28,6 +28,15 @@ export class MemorySpeechRepository implements SpeechRepository {
       truncated: since < this.droppedUpToSeq,
       hasMore: limit !== undefined && after.length > limit,
     };
+  }
+
+  /**
+   * Changes the cap (`buffer.maxEntries`). A smaller one drops the oldest entries right away, and
+   * they count as truncated like any other dropped entry.
+   */
+  setMaxEntries(maxEntries: number): void {
+    this.maxEntries = maxEntries;
+    this.trim();
   }
 
   clear(): void {
