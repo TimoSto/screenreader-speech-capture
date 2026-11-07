@@ -3,11 +3,13 @@ import type { NewSpeechEntry, SpeechEntry } from '../../domain/speech-entry.js';
 import { invalidField } from '../../domain/errors.js';
 import type { AddMarker } from '../ports/in/add-marker.js';
 import type { ClearSpeech } from '../ports/in/clear-speech.js';
-import type { QuerySpeech } from '../ports/in/query-speech.js';
+import { LIST_LIMIT, type ListOptions, type QuerySpeech } from '../ports/in/query-speech.js';
 import type { CapturedSpeech, RecordSpeech } from '../ports/in/record-speech.js';
+import type { WatchListener, WatchSpeech } from '../ports/in/watch-speech.js';
 import type { Clock } from '../ports/out/clock.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
+import { intOption } from './int-option.js';
 
 export interface SpeechServiceDeps {
   repository: SpeechRepository;
@@ -22,15 +24,37 @@ export const MAX_MARKER_LENGTH = 1000;
  * and `receivedAt` from the clock, and is published on the event bus
  * (docs/speech-capture.md#from-line-to-speech-entry).
  */
-export class SpeechService implements RecordSpeech, QuerySpeech, ClearSpeech, AddMarker {
+export class SpeechService
+  implements RecordSpeech, QuerySpeech, ClearSpeech, AddMarker, WatchSpeech
+{
   constructor(private readonly deps: SpeechServiceDeps) {}
 
   record({ text, voice, connectionId }: CapturedSpeech): void {
     this.add({ kind: 'speech', text, source: 'tcp', voice, connectionId });
   }
 
-  list(options: { since: number; limit: number }): SpeechPage {
-    return this.deps.repository.list(options.since, options.limit);
+  list(options: ListOptions = {}): SpeechPage {
+    const since = intOption('since', options.since, {
+      fallback: 0,
+      min: 0,
+      max: Number.MAX_SAFE_INTEGER,
+    });
+    const limit = intOption('limit', options.limit, {
+      fallback: LIST_LIMIT.default,
+      min: 1,
+      max: LIST_LIMIT.max,
+    });
+    return this.deps.repository.list(since, limit);
+  }
+
+  watch(since: number | null, listener: WatchListener): () => void {
+    // Replay and subscription in one synchronous block: nothing is missed or sent twice.
+    if (since !== null) {
+      const { entries, truncated } = this.deps.repository.list(since);
+      if (truncated) listener({ type: 'truncated' });
+      for (const entry of entries) listener({ type: 'entry', entry });
+    }
+    return this.deps.events.subscribe(listener);
   }
 
   clear(): void {

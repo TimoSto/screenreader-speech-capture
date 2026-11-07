@@ -21,10 +21,12 @@ export class MemorySpeechRepository implements SpeechRepository {
     return stored;
   }
 
-  list(since: number, limit: number): SpeechPage {
+  list(since: number, limit?: number): SpeechPage {
+    const after = this.entries.filter((entry) => entry.seq > since);
     return {
-      entries: this.entries.filter((entry) => entry.seq > since).slice(0, limit),
+      entries: limit === undefined ? after : after.slice(0, limit),
       truncated: since < this.droppedUpToSeq,
+      hasMore: limit !== undefined && after.length > limit,
     };
   }
 

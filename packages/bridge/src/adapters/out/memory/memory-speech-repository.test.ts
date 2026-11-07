@@ -28,6 +28,15 @@ describe('MemorySpeechRepository', () => {
     expect(texts(repo, 3)).toEqual([]);
   });
 
+  it('reports hasMore while entries after the page remain', () => {
+    const repo = new MemorySpeechRepository(10);
+    fill(repo, 3);
+    expect(repo.list(0, 2).hasMore).toBe(true);
+    expect(repo.list(2, 2).hasMore).toBe(false);
+    expect(repo.list(0, 3).hasMore).toBe(false);
+    expect(repo.list(3, 2).hasMore).toBe(false);
+  });
+
   it('drops the oldest entries when full and reports truncated', () => {
     const repo = new MemorySpeechRepository(3);
     fill(repo, 5);
@@ -52,6 +61,6 @@ describe('MemorySpeechRepository', () => {
     expect(repo.stats()).toEqual({ size: 0, maxEntries: 2, firstSeq: null, lastSeq: null });
     const next = repo.add(draft('after'));
     expect(next.seq).toBe(4);
-    expect(repo.list(0, 100)).toEqual({ entries: [next], truncated: false });
+    expect(repo.list(0, 100)).toEqual({ entries: [next], truncated: false, hasMore: false });
   });
 });

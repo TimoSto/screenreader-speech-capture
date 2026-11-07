@@ -18,7 +18,16 @@ export interface SpeechListDto {
   entries: SpeechEntryDto[];
   /** `true` when entries after `since` were dropped because the buffer was full. */
   truncated: boolean;
+  /** `true` when there are more entries: ask again with the last entry's `seq` as `since`. */
+  hasMore: boolean;
 }
+
+/**
+ * `GET /api/v1/speech/wait`, always `200`: the first matching entry, or, when none matched in
+ * time, every entry seen after `since` (oldest first).
+ */
+export type WaitResultDto =
+  { matched: true; entry: SpeechEntryDto } | { matched: false; entries: SpeechEntryDto[] };
 
 /** `POST /api/v1/markers` */
 export interface MarkerRequestDto {

@@ -1,37 +1,6 @@
 import net from 'node:net';
-import { afterEach, describe, expect, it } from 'vitest';
-import { DEFAULT_CONFIG, mergeConfig } from '../src/domain/config.js';
-import { startBridge, type Bridge } from '../src/main.js';
-
-const bridges: Bridge[] = [];
-
-async function start(patch: unknown = {}) {
-  const config = mergeConfig(mergeConfig(DEFAULT_CONFIG, { tcp: { port: 0 } }), patch);
-  const bridge = await startBridge({ config, version: '0.0.0-test', sinks: [] });
-  bridges.push(bridge);
-  return bridge;
-}
-
-async function send(port: number, ...chunks: (string | Buffer)[]) {
-  const socket = net.connect(port, '127.0.0.1');
-  await new Promise<void>((resolve) => socket.once('connect', resolve));
-  for (const chunk of chunks) socket.write(chunk);
-  await new Promise<void>((resolve) => socket.end(resolve));
-  await new Promise((resolve) => socket.once('close', resolve));
-}
-
-async function eventually<T>(read: () => T, ok: (value: T) => boolean): Promise<T> {
-  for (let i = 0; i < 100; i++) {
-    const value = read();
-    if (ok(value)) return value;
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-  return read();
-}
-
-afterEach(async () => {
-  await Promise.all(bridges.splice(0).map((bridge) => bridge.stop()));
-});
+import { describe, expect, it } from 'vitest';
+import { eventually, send, start } from './helpers.js';
 
 describe('TCP capture (real socket)', () => {
   it('records what a socket voice sends', async () => {
@@ -70,9 +39,7 @@ describe('TCP capture (real socket)', () => {
       { colour: false, speech: false, write: (l: string) => console.push(l) },
       { colour: false, speech: true, write: (l: string) => file.push(l) },
     ];
-    const config = mergeConfig(DEFAULT_CONFIG, { tcp: { port: 0 }, log: { level: 'debug' } });
-    const bridge = await startBridge({ config, version: '0.0.0-test', sinks });
-    bridges.push(bridge);
+    const bridge = await start({ log: { level: 'debug' } }, { sinks });
 
     await send(bridge.tcpPort, 'Hello\r\n');
     await eventually(

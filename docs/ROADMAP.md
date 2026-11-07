@@ -18,8 +18,9 @@ GitHub issues. This file only tracks milestones.
 - [x] Minimal Linux CI: jobs `lint` (lint, format, typecheck), `test`, all on Node 25 (`.nvmrc`), `build`
 - [x] TCP listener: framing, `voice=<id>` header, decoding with the configured code page
 - [x] In-memory buffer (capped), `seq`, `truncated`
-- [ ] HTTP API v1: speech, wait, markers, config, status, SSE stream
-- [ ] One error format, `bridge.version` / `apiVersion` in status
+- [x] HTTP API v1: speech, wait, markers, status, SSE stream, `GET /config`
+- [ ] HTTP API v1: `PUT /config` with the config file and live re-apply
+- [x] One error format, `bridge.version` / `apiVersion` in status
 - [ ] Lifecycle: startup order, graceful shutdown, bridge log
 - [x] `fake-speech` tool for development
 
@@ -76,7 +77,7 @@ GitHub issues. This file only tracks milestones.
 | Screen reader setup | [vm-setup.md](vm-setup.md#screen-reader-setup) | ⬜ | Not yet verified on a real VM |
 | Running on the VM | [vm-setup.md](vm-setup.md#running-on-the-vm) | ⬜ | Not yet verified on a real VM |
 | Speech capture | [speech-capture.md](speech-capture.md) | ⬜ | M1 |
-| HTTP API | [http-api.md](http-api.md) | ⬜ | M1 |
+| HTTP API | [http-api.md](http-api.md) | 🚧 | M1: all but `PUT /config` |
 | Operations | [operations.md](operations.md) | ⬜ | M1 |
 | Configuration | [configuration.md](configuration.md) | ⬜ | M1 |
 | Test client | [client.md](client.md) | ⬜ | M2, fixture in M3 |

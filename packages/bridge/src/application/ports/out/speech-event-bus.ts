@@ -1,8 +1,4 @@
-import type { SpeechEntry } from '../../../domain/speech-entry.js';
-
-export type SpeechEvent = { type: 'entry'; entry: SpeechEntry } | { type: 'clear' };
-
-export type SpeechListener = (event: SpeechEvent) => void;
+import type { SpeechEvent, SpeechListener } from '../../../domain/speech-event.js';
 
 /** In-process notifications about new entries and clears (SSE, `wait`, UI). */
 export interface SpeechEventBus {

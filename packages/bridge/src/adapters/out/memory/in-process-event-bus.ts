@@ -1,8 +1,5 @@
-import type {
-  SpeechEvent,
-  SpeechEventBus,
-  SpeechListener,
-} from '../../../application/ports/out/speech-event-bus.js';
+import type { SpeechEventBus } from '../../../application/ports/out/speech-event-bus.js';
+import type { SpeechEvent, SpeechListener } from '../../../domain/speech-event.js';
 
 /** Synchronous in-process event bus. A failing listener doesn't stop the others. */
 export class InProcessEventBus implements SpeechEventBus {

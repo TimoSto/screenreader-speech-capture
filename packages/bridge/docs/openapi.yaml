@@ -1,0 +1,439 @@
+openapi: 3.1.0
+info:
+  title: screenreader-speech-capture bridge API
+  version: '1.0'
+  summary: Capture what a screen reader says and read it over HTTP.
+  description: |
+    REST + Server-Sent Events API of the bridge. `info.version` is the API version that
+    `GET /status` reports as `bridge.apiVersion` (`<major>.<minor>`; minor versions only add things).
+    The prose reference is `docs/http-api.md`. The types match `packages/shared`.
+
+    This file describes the endpoints the bridge serves today. Not implemented yet:
+    `PUT /config`, `POST /set-focus`, `POST /input/keys`, `POST /services/{name}/{action}`.
+
+    Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
+    of their HTTP status.
+  license:
+    name: UNLICENSED
+servers:
+  - url: http://localhost:5151/api/v1
+    description: Bridge on this machine (default HTTP port 5151)
+  - url: http://{vm}:{port}/api/v1
+    description: Bridge on a test VM
+    variables:
+      vm:
+        default: my-test-vm
+      port:
+        default: '5151'
+tags:
+  - name: speech
+    description: Recorded speech and markers
+  - name: bridge
+    description: Status and configuration
+
+paths:
+  /speech:
+    get:
+      tags: [speech]
+      operationId: listSpeech
+      summary: List speech entries and markers
+      description: |
+        Entries with `seq > since`, oldest first. Page through the buffer by asking again with
+        the last entry's `seq` as `since` while `hasMore` is `true`.
+      parameters:
+        - $ref: '#/components/parameters/Since'
+        - name: limit
+          in: query
+          description: Maximum number of entries in the response.
+          schema: { type: integer, minimum: 1, maximum: 10000, default: 1000 }
+      responses:
+        '200':
+          description: One page of entries.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SpeechList' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+    delete:
+      tags: [speech]
+      operationId: clearSpeech
+      summary: Clear the buffer
+      description: Removes all entries. `seq` keeps counting. Call this between tests.
+      responses:
+        '204':
+          description: Cleared.
+
+  /speech/wait:
+    get:
+      tags: [speech]
+      operationId: waitForSpeech
+      summary: Wait for a matching speech entry (long-poll)
+      description: |
+        Waits for the first speech entry with `seq > since` that matches, including one that is
+        already in the buffer. Exactly one of `contains` and `regex` is required. Markers never
+        match. Closing the request stops the wait.
+
+        Answers `200` both on a match and on timeout; `matched` tells them apart. A timeout is an
+        expected answer, not an error (a `408` would make browsers and proxies repeat the
+        request).
+      parameters:
+        - name: contains
+          in: query
+          description: Substring to look for.
+          schema: { type: string, minLength: 1 }
+          example: Submit, button
+        - name: regex
+          in: query
+          description: Regular expression (JavaScript syntax, `u` flag) to look for, instead of `contains`.
+          schema: { type: string }
+          example: ^Submit
+        - name: normalize
+          in: query
+          description: Ignore case and extra whitespace.
+          schema: { type: string, enum: ['1', 'true', '0', 'false'] }
+        - $ref: '#/components/parameters/Since'
+        - name: timeoutMs
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 300000, default: 5000 }
+      responses:
+        '200':
+          description: The matching entry, or every entry seen after `since` on timeout.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WaitResult' }
+              examples:
+                matched:
+                  summary: A match
+                  value:
+                    matched: true
+                    entry:
+                      seq: 42
+                      kind: speech
+                      text: Submit, button
+                      receivedAt: '2026-11-07T14:03:13.012Z'
+                      source: tcp
+                      voice: ssc5000
+                      connectionId: 3
+                timeout:
+                  summary: No match in time
+                  value:
+                    matched: false
+                    entries:
+                      - seq: 41
+                        kind: speech
+                        text: Name, edit
+                        receivedAt: '2026-11-07T14:03:12.345Z'
+                        source: tcp
+                        voice: ssc5000
+                        connectionId: 3
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /speech/stream:
+    get:
+      tags: [speech]
+      operationId: streamSpeech
+      summary: Stream new entries (Server-Sent Events)
+      description: |
+        One `entry` event per new entry, with the event `id` set to its `seq` and the entry as
+        JSON `data`. After a clear, a `clear` event with `data: {}`. A `: ping` comment every
+        15 s keeps the connection open.
+
+        A reconnect with `Last-Event-ID` first gets the buffered entries after that `seq`, then
+        the live ones, with nothing missed or repeated in between. If some of the missed entries
+        were already dropped because the buffer was full, a `truncated` event with `data: {}`
+        comes before them.
+
+        A client that stops reading is disconnected once about 1 MiB is waiting for it. It
+        reconnects with `Last-Event-ID`.
+
+        ```
+        id: 42
+        event: entry
+        data: {"seq":42,"kind":"speech","text":"Submit, button",...}
+
+        event: clear
+        data: {}
+
+        event: truncated
+        data: {}
+        ```
+      parameters:
+        - name: Last-Event-ID
+          in: header
+          description: '`seq` of the last entry received before a reconnect.'
+          schema: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: The event stream. It stays open until the client or the bridge closes it.
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+
+  /markers:
+    post:
+      tags: [speech]
+      operationId: addMarker
+      summary: Insert a marker into the timeline
+      description: |
+        The body must be sent as `application/json` (`400` with `field: content-type` otherwise),
+        so a web page can't add markers cross-origin without a CORS preflight. At most 1 MiB.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MarkerRequest' }
+      responses:
+        '201':
+          description: The new marker entry.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SpeechEntry' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+
+  /status:
+    get:
+      tags: [bridge]
+      operationId: getStatus
+      summary: Bridge state, versions, TCP connections and buffer
+      responses:
+        '200':
+          description: The current status.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Status' }
+
+  /config:
+    get:
+      tags: [bridge]
+      operationId: getConfig
+      summary: The active configuration
+      description: Read-only for now. `PUT /config` is not implemented yet.
+      responses:
+        '200':
+          description: The configuration.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Config' }
+
+components:
+  parameters:
+    Since:
+      name: since
+      in: query
+      description: Only entries with `seq` greater than this.
+      schema: { type: integer, minimum: 0, default: 0 }
+
+  responses:
+    InvalidRequest:
+      description: Bad query or body. `error.details.field` names the field.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorBody' }
+          example:
+            error:
+              code: INVALID_REQUEST
+              message: 'limit: must be an integer from 1 to 10000'
+              details: { field: limit }
+    ServiceUnavailable:
+      description: The bridge is shutting down.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorBody' }
+
+  schemas:
+    SpeechEntry:
+      type: object
+      description: One recorded speech line or a marker.
+      required: [seq, kind, text, receivedAt, source, voice, connectionId]
+      properties:
+        seq:
+          type: integer
+          minimum: 1
+          description: Increasing sequence number. Survives clear, restarts at 1 with the bridge.
+        kind: { type: string, enum: [speech, marker] }
+        text: { type: string }
+        receivedAt:
+          type: string
+          format: date-time
+          description: When the bridge received the line (UTC).
+        source:
+          type: string
+          enum: [tcp, api]
+          description: '`tcp` for speech, `api` for markers.'
+        voice:
+          type: [string, 'null']
+          description: Header (`voice=<id>`) of the sending voice, `null` if not set or for markers.
+        connectionId:
+          type: [integer, 'null']
+          description: TCP connection that delivered it, `null` for markers.
+      example:
+        seq: 42
+        kind: speech
+        text: Submit, button
+        receivedAt: '2026-11-07T14:03:12.345Z'
+        source: tcp
+        voice: ssc5000
+        connectionId: 3
+
+    SpeechList:
+      type: object
+      required: [entries, truncated, hasMore]
+      properties:
+        entries:
+          type: array
+          items: { $ref: '#/components/schemas/SpeechEntry' }
+        truncated:
+          type: boolean
+          description: '`true` when entries after `since` were dropped because the buffer was full.'
+        hasMore:
+          type: boolean
+          description: "`true` when more entries follow: ask again with the last entry's `seq` as `since`."
+
+    MarkerRequest:
+      type: object
+      required: [label]
+      properties:
+        label:
+          type: string
+          description: Marker text. Trimmed, must not be empty, at most 1000 characters.
+          example: step 3
+
+    Status:
+      type: object
+      required: [bridge, tcp, buffer, input]
+      properties:
+        bridge:
+          type: object
+          required: [version, apiVersion, state]
+          properties:
+            version: { type: string, description: Package version of the bridge., example: 0.3.0 }
+            apiVersion:
+              { type: string, description: '`<major>.<minor>` of this API.', example: '1.0' }
+            state: { type: string, enum: [starting, ready, stopping] }
+        tcp:
+          type: object
+          required: [listening, host, port, encoding, connections]
+          properties:
+            listening: { type: boolean }
+            host: { type: string }
+            port: { type: integer }
+            encoding: { type: string, description: Code page used to decode the socket voice. }
+            connections:
+              type: array
+              description: Open connections, oldest first.
+              items:
+                type: object
+                required: [id, voice, connectedAt]
+                properties:
+                  id: { type: integer }
+                  voice: { type: [string, 'null'] }
+                  connectedAt: { type: string, format: date-time }
+        buffer:
+          type: object
+          required: [size, maxEntries, firstSeq, lastSeq]
+          properties:
+            size: { type: integer }
+            maxEntries: { type: integer }
+            firstSeq: { type: [integer, 'null'] }
+            lastSeq: { type: [integer, 'null'] }
+        input:
+          type: object
+          required: [enabled]
+          properties:
+            enabled: { type: boolean }
+
+    Config:
+      type: object
+      description: The bridge configuration (docs/configuration.md).
+      required: [tcp, http, playwright, mcp, input, buffer, log]
+      properties:
+        tcp:
+          type: object
+          required: [host, port, format, encoding, maxLineBytes]
+          properties:
+            host: { type: string }
+            port: { type: integer, minimum: 0, maximum: 65535 }
+            format: { type: string, enum: [text-to-socket] }
+            encoding:
+              { type: string, description: TextDecoder label of the socket voice's code page. }
+            maxLineBytes: { type: integer, minimum: 1024, maximum: 16777216 }
+        http:
+          type: object
+          required: [host, port]
+          properties:
+            host: { type: string }
+            port: { type: integer, minimum: 0, maximum: 65535 }
+        playwright: { $ref: '#/components/schemas/ServiceConfig' }
+        mcp: { $ref: '#/components/schemas/ServiceConfig' }
+        input:
+          type: object
+          required: [enabled]
+          properties:
+            enabled: { type: boolean }
+        buffer:
+          type: object
+          required: [maxEntries]
+          properties:
+            maxEntries: { type: integer, minimum: 1, maximum: 1000000 }
+        log:
+          type: object
+          required: [level, file, consoleSpeech]
+          properties:
+            level: { type: string, enum: [error, warn, info, debug] }
+            file:
+              type: [string, 'null']
+              description: Bridge log file, `null` = default path.
+            consoleSpeech:
+              type: boolean
+              description: Also write the speech text to the console.
+
+    ServiceConfig:
+      type: object
+      required: [enabled, port, version]
+      properties:
+        enabled: { type: boolean }
+        port: { type: integer, minimum: 0, maximum: 65535 }
+        version:
+          type: [string, 'null']
+          description: '`null` = bundled version.'
+
+    ErrorCode:
+      type: string
+      description: Stable, machine-readable. New codes may be added in minor versions.
+      enum: [INVALID_REQUEST, NOT_FOUND, INPUT_DISABLED, SERVICE_UNAVAILABLE, INTERNAL]
+
+    ErrorBody:
+      type: object
+      description: |
+        Body of every error response. HTTP status per code: `INVALID_REQUEST` 400, `NOT_FOUND`
+        404 (also for unknown endpoints), `INPUT_DISABLED` 409, `SERVICE_UNAVAILABLE` 503,
+        `INTERNAL` 500.
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { $ref: '#/components/schemas/ErrorCode' }
+            message: { type: string }
+            details:
+              type: object
+              additionalProperties: true
+
+    WaitResult:
+      description: The answer of `GET /speech/wait`. `matched` tells a match from a timeout.
+      oneOf:
+        - type: object
+          required: [matched, entry]
+          properties:
+            matched: { const: true }
+            entry: { $ref: '#/components/schemas/SpeechEntry' }
+        - type: object
+          required: [matched, entries]
+          properties:
+            matched: { const: false }
+            entries:
+              type: array
+              description: Every entry seen after `since`, oldest first.
+              items: { $ref: '#/components/schemas/SpeechEntry' }
