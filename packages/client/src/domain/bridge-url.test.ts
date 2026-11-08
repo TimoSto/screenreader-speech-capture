@@ -5,6 +5,7 @@ import {
   normalizeBridgeUrl,
   overridesStored,
   parseClientConfig,
+  parseConfigKey,
   pickBridgeUrl,
 } from './bridge-url.js';
 
@@ -72,5 +73,13 @@ describe('pickBridgeUrl', () => {
   it('overridesStored tells when the stored value cannot win', () => {
     expect(overridesStored({ env: 'http://env:1' })).toBe(true);
     expect(overridesStored({ explicit: '', env: '' })).toBe(false);
+  });
+});
+
+describe('parseConfigKey', () => {
+  it('accepts known keys and rejects others', () => {
+    expect(parseConfigKey('url')).toBe('url');
+    expect(() => parseConfigKey('colour')).toThrow(ClientConfigError);
+    expect(() => parseConfigKey('toString')).toThrow(ClientConfigError);
   });
 });

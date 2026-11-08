@@ -1,21 +1,13 @@
 import { parseArgs } from 'node:util';
-import {
-  ClientConfigError,
-  normalizeBridgeUrl,
-  resolveBridgeUrl,
-  URL_ENV,
-  type ClientConfigStore,
-  type Resolved,
-  type ValueSource,
-} from '../../../index.js';
+import type { ManageClientConfig } from '../../../application/ports/in/manage-client-config.js';
+import { ClientConfigError, URL_ENV, type ValueSource } from '../../../domain/bridge-url.js';
 
 /** Exit codes (docs/client.md#cli-for-agents). */
 export const EXIT = { ok: 0, timeout: 1, bridge: 2, usage: 3 } as const;
 
 export interface CliIo {
-  env: NodeJS.ProcessEnv;
-  /** Where `config` reads and writes the per-user settings. */
-  store: ClientConfigStore;
+  /** The per-user settings behind `config` and the bridge URL. */
+  config: ManageClientConfig;
   stdout: (text: string) => void;
   stderr: (text: string) => void;
   version: string;
@@ -31,10 +23,6 @@ const SOURCE_LABEL: Record<ValueSource, string> = {
   config: 'config file',
   default: 'default',
 };
-
-/** Keys `config` can set. Each one is checked and normalised before it is written. */
-const KEYS = { url: (value: string) => normalizeBridgeUrl(value) } as const;
-type Key = keyof typeof KEYS;
 
 export function helpText(): string {
   return `Usage: ${NAME} <command> [options]
@@ -116,46 +104,38 @@ interface Globals {
 }
 
 async function config(args: string[], globals: Globals, io: CliIo): Promise<number> {
-  const { store } = io;
-  const file = store.location;
+  const { config } = io;
+  const file = config.location;
+  const explicit = { url: globals.url };
   const out = (json: unknown, text: string) =>
     io.stdout(globals.json ? `${JSON.stringify(json)}\n` : `${text}\n`);
-  const resolveKey = (_key: Key): Promise<Resolved> =>
-    resolveBridgeUrl({ explicit: globals.url, env: io.env, store });
 
   const [action, ...rest] = args;
   switch (action) {
     case 'set': {
       const [key, value] = expectArgs(rest, 2, 'config set <key> <value>');
-      const k = expectKey(key);
-      const normalized = KEYS[k](value);
-      await store.save({ [k]: normalized });
-      out({ key: k, value: normalized, file }, `Saved ${k} = ${normalized} to ${file}`);
-      const env = io.env[URL_ENV];
-      if (k === 'url' && env !== undefined && env !== '') {
-        io.stderr(`Note: ${URL_ENV}=${env} is set and takes precedence over the config file.\n`);
+      const result = await config.set(key, value);
+      out({ ...result, file }, `Saved ${result.key} = ${result.value} to ${file}`);
+      if (result.shadowedBy === 'env') {
+        io.stderr(`Note: ${URL_ENV} is set and takes precedence over the config file.\n`);
       }
       return EXIT.ok;
     }
     case 'get': {
       const [key] = expectArgs(rest, 1, 'config get <key>');
-      const k = expectKey(key);
-      const { value, source } = await resolveKey(k);
-      out({ key: k, value, source }, `${value} (${SOURCE_LABEL[source]})`);
+      const result = await config.get(key, explicit);
+      out(result, `${result.value} (${SOURCE_LABEL[result.source]})`);
       return EXIT.ok;
     }
     case 'unset': {
       const [key] = expectArgs(rest, 1, 'config unset <key>');
-      const k = expectKey(key);
-      await store.save({ [k]: undefined });
-      out({ key: k, file }, `Removed ${k} from ${file}`);
+      const result = await config.unset(key);
+      out({ ...result, file }, `Removed ${result.key} from ${file}`);
       return EXIT.ok;
     }
     case 'list': {
       expectArgs(rest, 0, 'config list');
-      const entries = await Promise.all(
-        (Object.keys(KEYS) as Key[]).map(async (k) => ({ key: k, ...(await resolveKey(k)) })),
-      );
+      const entries = await config.list(explicit);
       out(
         { file, settings: entries },
         [
@@ -183,9 +163,4 @@ type Args<N extends number, T extends string[] = []> = T['length'] extends N
 function expectArgs<N extends 0 | 1 | 2>(args: string[], count: N, usage: string): Args<N> {
   if (args.length !== count) throw new UsageError(`Usage: ${NAME} ${usage}`);
   return args as Args<N>;
-}
-
-function expectKey(key: string): Key {
-  if (Object.hasOwn(KEYS, key)) return key as Key;
-  throw new UsageError(`Unknown config key "${key}". Known keys: ${Object.keys(KEYS).join(', ')}.`);
 }

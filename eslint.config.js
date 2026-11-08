@@ -31,27 +31,8 @@ const inAdapters = {
   message: 'Driven adapters must not import driving adapters. Wire them in main.ts.',
 };
 
-const clientNodeBuiltins = {
-  group: ['node:*'],
-  message: 'The client core, application and ports do no I/O. Put this in an adapter.',
-};
-const clientOuter = {
-  regex: '(^|/)(application|ports|adapters)/',
-  message: 'The client core imports nothing from the outer layers.',
-};
-const clientAdapters = {
-  regex: '(^|/)adapters/',
-  message: 'Only src/index.ts (the composition root) knows the concrete client adapters.',
-};
-const clientOutAdapters = {
-  regex: outAdapters.regex,
-  message: 'Client driving adapters must not import driven adapters. Wire them in src/index.ts.',
-};
-// The CLI and the Playwright fixture must offer what the library offers, so they go through it.
-const clientPublicApiOnly = {
-  regex: '(^|/)(core|application|ports)/',
-  message: 'Client driving adapters (CLI, fixture) use only the public API in src/index.ts.',
-};
+/** Both hexagons (bridge and client) follow the same layout and rules. */
+const hexagon = (layer) => `packages/{bridge,client}/src/${layer}/**/*.ts`;
 
 export default tseslint.config(
   { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**'] },
@@ -71,7 +52,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/bridge/src/domain/**/*.ts'],
+    files: [hexagon('domain')],
     // Tests may wire real (in-memory) adapters; the rule is about production code.
     ignores: ['**/*.test.ts'],
     rules: {
@@ -79,7 +60,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/bridge/src/application/**/*.ts'],
+    files: [hexagon('application')],
     // Tests may wire real (in-memory) adapters; the rule is about production code.
     ignores: ['**/*.test.ts'],
     rules: {
@@ -87,46 +68,17 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/bridge/src/adapters/in/**/*.ts'],
+    files: [hexagon('adapters/in')],
     ignores: ['**/*.test.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [services, outAdapters] }],
     },
   },
   {
-    files: ['packages/bridge/src/adapters/out/**/*.ts'],
+    files: [hexagon('adapters/out')],
     ignores: ['**/*.test.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [services, inAdapters] }],
-    },
-  },
-  // Client: hexagonal-lite (docs/architecture.md#client-hexagonal-lite).
-  {
-    files: ['packages/client/src/core/**/*.ts'],
-    ignores: ['**/*.test.ts'],
-    rules: {
-      'no-restricted-imports': ['error', { patterns: [clientNodeBuiltins, clientOuter] }],
-    },
-  },
-  {
-    files: ['packages/client/src/application/**/*.ts', 'packages/client/src/ports/**/*.ts'],
-    ignores: ['**/*.test.ts'],
-    rules: {
-      'no-restricted-imports': ['error', { patterns: [clientNodeBuiltins, clientAdapters] }],
-    },
-  },
-  {
-    files: ['packages/client/src/adapters/in/**/*.ts'],
-    ignores: ['**/*.test.ts'],
-    rules: {
-      'no-restricted-imports': ['error', { patterns: [clientOutAdapters, clientPublicApiOnly] }],
-    },
-  },
-  {
-    files: ['packages/client/src/adapters/out/**/*.ts'],
-    ignores: ['**/*.test.ts'],
-    rules: {
-      'no-restricted-imports': ['error', { patterns: [inAdapters] }],
     },
   },
   {

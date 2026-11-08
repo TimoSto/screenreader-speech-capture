@@ -1,4 +1,4 @@
-import type { ClientConfig, ClientConfigPatch } from '../core/bridge-url.js';
+import type { ClientConfig, ClientConfigPatch } from '../../../domain/bridge-url.js';
 
 /** Where the client's per-user settings live (driven port). */
 export interface ClientConfigStore {

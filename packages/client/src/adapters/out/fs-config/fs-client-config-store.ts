@@ -5,8 +5,8 @@ import {
   parseClientConfig,
   type ClientConfig,
   type ClientConfigPatch,
-} from '../../../core/bridge-url.js';
-import type { ClientConfigStore } from '../../../ports/config-store.js';
+} from '../../../domain/bridge-url.js';
+import type { ClientConfigStore } from '../../../application/ports/out/client-config-store.js';
 
 /**
  * The client config file (docs/client.md#bridge-url): JSON, one per user. Keys this version

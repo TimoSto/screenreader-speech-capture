@@ -38,9 +38,10 @@ CI (`.github/workflows/ci.yml`) runs on every push: lint + format:check + typech
 
 ## Architecture
 
-### Bridge: hexagonal, enforced by ESLint
+### Hexagonal packages (bridge, client), enforced by ESLint
 
-`packages/bridge/src/`:
+`packages/bridge/src/` and `packages/client/src/` share one layout and one rule set (client
+details in `docs/architecture.md`). The bridge:
 
 - `domain/` — pure model (speech entries, buffer, config, text matching, errors). No I/O, imports
   nothing from outer layers.
@@ -51,22 +52,17 @@ CI (`.github/workflows/ci.yml`) runs on every push: lint + format:check + typech
 - `main.ts` — the composition root and the **only** place that knows concrete adapters and
   services.
 
-`no-restricted-imports` in `eslint.config.js` enforces: domain/application must not import `node:*`
-or adapters; adapters must not import concrete services; `in` adapters must not import `out`
-adapters and vice versa. Test files (`*.test.ts`) are exempt. When adding a feature, add a port and
+The client has the same layers: `ManageClientConfig` / `ClientConfigService` / `FsClientConfigStore`,
+the CLI as a driving adapter, and `main.ts` also exporting the pre-wired public API (`index.ts`
+re-exports it).
+
+`no-restricted-imports` in `eslint.config.js` (blocks built with `hexagon(layer)`, for both
+packages) enforces: domain/application must not import `node:*` or adapters; adapters must not
+import concrete services; `in` adapters must not import `out` adapters and vice versa. Test files (`*.test.ts`) are exempt. When adding a feature, add a port and
 wire it in `main.ts` rather than reaching across layers.
 
 Relative imports use `.js` extensions (ESM), and type-only imports must use `import type`
 (`consistent-type-imports` is an error).
-
-### Client: hexagonal-lite
-
-`packages/client/src/`: `core/` (pure rules), `application/` (use cases on core + ports, ports
-passed in, no `process.env`), `ports/`, `adapters/in` (CLI, later the Playwright fixture) and
-`adapters/out` (fs config, later HTTP). `index.ts` is the composition root and public API: the only
-place that picks the default adapters. There are no driving-port interfaces and no `main.ts`.
-Driving adapters may only import the public API (`src/index.ts`), so the CLI stays in parity with
-the library. Enforced by `no-restricted-imports` like the bridge; details in `docs/architecture.md`.
 
 ### Shared contract
 

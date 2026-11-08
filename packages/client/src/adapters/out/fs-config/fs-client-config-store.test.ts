@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ClientConfigError } from '../../../core/bridge-url.js';
+import { ClientConfigError } from '../../../domain/bridge-url.js';
 import { FsClientConfigStore } from './fs-client-config-store.js';
 
 let dir: string;

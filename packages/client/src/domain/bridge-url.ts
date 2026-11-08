@@ -85,3 +85,18 @@ export function pickBridgeUrl(sources: UrlSources): Resolved {
   if (isSet(sources.stored)) return { value: sources.stored, source: 'config' };
   return { value: DEFAULT_BRIDGE_URL, source: 'default' };
 }
+
+/** Keys the client config stores, each with the check that normalises a value before saving. */
+export const CONFIG_KEYS = {
+  url: (value: string) => normalizeBridgeUrl(value),
+} as const satisfies Record<keyof ClientConfig, (value: string) => string>;
+
+export type ConfigKey = keyof typeof CONFIG_KEYS;
+
+/** Checks a key name given by a user. */
+export function parseConfigKey(key: string): ConfigKey {
+  if (Object.hasOwn(CONFIG_KEYS, key)) return key as ConfigKey;
+  throw new ClientConfigError(
+    `Unknown config key "${key}". Known keys: ${Object.keys(CONFIG_KEYS).join(', ')}.`,
+  );
+}
