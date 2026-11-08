@@ -36,13 +36,13 @@ format for every endpoint (see [Errors](#errors)).
 | `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | Native key presses: one chord, or a sequence with `delayMs` between them. |
 | `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. `PUT` takes any subset as `application/json`, applies it to the running bridge, saves it to the config file and answers with the new configuration. Changing ports restarts the affected listeners; after an `http.*` change the answer still comes from the old address. See [Changing settings](configuration.md#changing-settings). |
 | `GET /api/v1/status` | Bridge and API version, state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, native input available. |
-| `POST /api/v1/services/{playwright\|mcp}/{start\|stop\|restart}` | Control the child services. |
+| `POST /api/v1/services/{playwright\|mcp}/{start\|stop\|restart}` | Control the child services (`mcp` comes with M3 step 2). Requires `content-type: application/json`, no body. `start` / `restart` answer once the service runs (or has failed) with its status, as in `status`. `restart` also resets the crash count of a `failed` service. A disabled service answers `503` to `start` / `restart`, an unknown name `404`. |
 
 `GET /api/v1/status` example:
 
 ```jsonc
 {
-  "bridge": { "version": "0.3.0", "apiVersion": "1.2", "state": "ready" },
+  "bridge": { "version": "0.3.0", "apiVersion": "1.1", "state": "ready" },
   "tcp": {
     "listening": true,
     "host": "127.0.0.1",
@@ -51,8 +51,8 @@ format for every endpoint (see [Errors](#errors)).
     "connections": [{ "id": 3, "voice": null, "connectedAt": "2026-11-07T14:01:02.000Z" }]
   },
   "buffer": { "size": 120, "maxEntries": 10000, "firstSeq": 223, "lastSeq": 342 },
-  "playwright": { "state": "running", "version": "1.56.1", "port": 3000, "restarts": 0 },
-  "mcp": { "state": "running", "version": "0.0.40", "port": 8931 },
+  "playwright": { "state": "running", "version": "1.65.0", "port": 3000, "restarts": 0, "exitCode": null },
+  "mcp": { "state": "running", "version": "0.0.40", "port": 8931, "restarts": 0, "exitCode": null },
   "input": { "enabled": true }
 }
 ```

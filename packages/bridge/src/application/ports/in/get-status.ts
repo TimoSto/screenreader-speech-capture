@@ -1,4 +1,5 @@
 import type { ConnectionInfo } from '../../../domain/capture.js';
+import type { ServiceStatus } from '../../../domain/service.js';
 import type { BufferStats } from '../../../domain/speech-buffer.js';
 
 export type BridgeState = 'starting' | 'ready' | 'stopping';
@@ -13,6 +14,7 @@ export interface Status {
     connections: ConnectionInfo[];
   };
   buffer: BufferStats;
+  playwright: ServiceStatus;
   input: { enabled: boolean };
 }
 

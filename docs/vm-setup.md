@@ -13,7 +13,7 @@ On the Windows machine or VM that runs the screen reader:
 | Node.js ≥ 22.12 | Includes `npx`. The bridge doesn't start on older versions. (The [client](client.md) on your own machine needs only Node ≥ 20.) |
 | JAWS **or** NVDA | Both can use SAPI 5 voices. JAWS without a license runs in 40-minute demo mode (see [Running on the VM](#running-on-the-vm)). |
 | [`text-to-socket-engine`](https://www.npmjs.com/package/text-to-socket-engine) | The SAPI 5 voice that forwards speech text over TCP. Registering it needs an administrator prompt (see [Socket voice setup](#socket-voice-setup)). |
-| Playwright browsers | Installed on first run, or with `npx playwright install`. Branded Chrome / Edge are recommended. |
+| Playwright browsers | Playwright's Chromium is installed automatically ([Install](playwright-mcp.md#install)). Branded Chrome / Edge are recommended; install them yourself (their installers need administrator rights). |
 | [`@jitsi/robotjs`](https://www.npmjs.com/package/@jitsi/robotjs) | Native mouse / keyboard input. A dependency of the bridge with prebuilt Windows binaries, so no build tools are needed. |
 
 For development you also need [pnpm](https://pnpm.io/) (see [Development](development.md)).

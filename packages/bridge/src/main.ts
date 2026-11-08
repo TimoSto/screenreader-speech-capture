@@ -10,7 +10,9 @@ import { BridgeLog, consoleSink, type LogSink } from './adapters/out/log/log.js'
 import { logSpeechTranscript } from './adapters/out/log/speech-transcript.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
 import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';
-import { defaultConfigFile, defaultLogFile } from './adapters/out/paths.js';
+import { defaultConfigFile, defaultLogFile, defaultPlaywrightDir } from './adapters/out/paths.js';
+import { playwrightServer } from './adapters/out/playwright/playwright-server.js';
+import type { Prepare } from './adapters/out/process/child-process-supervisor.js';
 import type { AddMarker } from './application/ports/in/add-marker.js';
 import type { ClearSpeech } from './application/ports/in/clear-speech.js';
 import type { QuerySpeech } from './application/ports/in/query-speech.js';
@@ -18,7 +20,9 @@ import type { CaptureStatusSource } from './application/ports/out/capture-status
 import type { Clock } from './application/ports/out/clock.js';
 import type { ConfigStore } from './application/ports/out/config-store.js';
 import type { Logger } from './application/ports/out/logger.js';
+import type { ServiceSettings } from './application/ports/out/process-supervisor.js';
 import { ConfigService } from './application/services/config-service.js';
+import { ServicesService } from './application/services/services-service.js';
 import { SpeechService } from './application/services/speech-service.js';
 import { StatusService } from './application/services/status-service.js';
 import { WaitForSpeechService } from './application/services/wait-for-speech-service.js';
@@ -34,6 +38,7 @@ import {
   type ConfigPatch,
 } from './domain/config.js';
 import { AppError } from './domain/errors.js';
+import type { RestartPolicy } from './domain/service.js';
 
 export interface BridgeOptions {
   version: string;
@@ -52,6 +57,12 @@ export interface BridgeOptions {
   clock?: Clock;
   /** Interval of the SSE `: ping` comment. Default 15 s. */
   ssePingMs?: number;
+  /** Where Playwright versions are installed. Default: `defaultPlaywrightDir()`. */
+  playwrightDir?: string;
+  /** Replaces the Playwright install and `run-server` command (tests). */
+  playwrightLaunch?: Prepare;
+  /** Restart delays of the child services (tests). */
+  restartPolicy?: RestartPolicy;
 }
 
 export interface Bridge {
@@ -128,6 +139,13 @@ function listenFailed(section: 'tcp' | 'http', error: unknown): unknown {
 
 const show = (value: unknown) => JSON.stringify(value);
 
+/** The Playwright server listens on the same interface as the HTTP API (`--host`). */
+const playwrightSettings = (config: Config): ServiceSettings => ({
+  host: config.http.host,
+  port: config.playwright.port,
+  version: config.playwright.version,
+});
+
 /**
  * Starts the bridge. An invalid setting rejects with a `ConfigError` before anything starts.
  * Any other failure to start is written to the bridge log before the promise rejects, and so is
@@ -176,10 +194,24 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     pinned: new Map([...configFields(overrides).keys()].map((field) => [field, sourceOf(field)])),
   });
 
+  const playwright = playwrightServer({
+    settings: playwrightSettings(config),
+    cacheRoot: options.playwrightDir ?? defaultPlaywrightDir(),
+    logger: bridgeLogger,
+    output: log.for('playwright-server'),
+    ...(options.playwrightLaunch ? { launch: options.playwrightLaunch } : {}),
+    ...(options.restartPolicy ? { policy: options.restartPolicy } : {}),
+  });
+  const services = new ServicesService({
+    supervisors: new Map([['playwright', playwright]]),
+    config: () => configService.get(),
+  });
+
   const tcp = new TcpListener(speech, clock, log.for('speech-capture'));
   const status = new StatusService({
     capture: tcp,
     repository,
+    playwright,
     config: () => configService.get(),
     version,
     apiVersion: API_VERSION,
@@ -189,6 +221,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     waits,
     status,
     config: configService,
+    services,
     logger: log.for('http-api'),
     ...(options.ssePingMs === undefined ? {} : { pingMs: options.ssePingMs }),
   });
@@ -250,10 +283,34 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     for (const sink of sinks) log.addSink(sink);
   });
 
-  status.setState('ready');
-  bridgeLogger.info('ready');
+  // Last, because it never fails: the steps before it are not undone because of it.
+  configService.onChange(async (next, previous) => {
+    const changed = changedSections(previous, next);
+    const hostChanged = changed.includes('http') && next.http.host !== previous.http.host;
+    if (!changed.includes('playwright') && !hostChanged) return;
+    playwright.reconfigure(playwrightSettings(next));
+    // Not awaited: an install can take minutes. `status` shows the progress.
+    if (next.playwright.enabled) {
+      playwright.restart().catch((error: unknown) => {
+        bridgeLogger.error(`playwright restart failed: ${String(error)}`);
+      });
+    } else {
+      await playwright.stop();
+    }
+  });
 
   let stopping: Promise<void> | undefined;
+
+  // Child services start in the background, so the API is usable during an install. The bridge
+  // is `ready` once each enabled service is running or has failed (docs/operations.md#startup).
+  const ready = () => {
+    if (stopping !== undefined) return;
+    status.setState('ready');
+    bridgeLogger.info('ready');
+  };
+  const enabled = config.playwright.enabled ? [playwright] : [];
+  if (enabled.length === 0) ready();
+  else void Promise.all(enabled.map((service) => service.start())).then(ready);
 
   return {
     get tcpPort() {
@@ -276,11 +333,12 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     bridgeLogger.info(reason === undefined ? 'stopping' : `stopping (${reason})`);
     // Pending waits answer 503 before the HTTP server closes their connections.
     waits.shutdown();
-    // Each listener stops even if the one before it failed.
+    // Each part stops even if the one before it failed. The child services go last
+    // (docs/operations.md#shutdown); their whole process tree is killed.
     const errors: unknown[] = [];
-    for (const listener of [http, tcp]) {
+    for (const part of [http, tcp, playwright]) {
       try {
-        await listener.stop();
+        await part.stop();
       } catch (error) {
         bridgeLogger.error(`shutdown failed: ${String(error)}`);
         errors.push(error);

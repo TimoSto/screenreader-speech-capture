@@ -1,6 +1,5 @@
 import net from 'node:net';
 import { afterEach } from 'vitest';
-import type { LogSink } from '../src/adapters/out/log/log.js';
 import {
   DEFAULT_CONFIG,
   mergeConfig,
@@ -9,13 +8,19 @@ import {
   type Config,
   type ConfigPatch,
 } from '../src/domain/config.js';
-import { startBridge, type Bridge } from '../src/main.js';
+import { startBridge, type Bridge, type BridgeOptions } from '../src/main.js';
 import { MemoryConfigStore } from './fakes.js';
 
 /** Free loopback ports, plus `patch`: what tests pass like flags. */
 export function testOverrides(patch: unknown = {}): ConfigPatch {
   return mergePatch(
-    { tcp: { port: 0 }, http: { host: '127.0.0.1', port: 0 } },
+    {
+      tcp: { port: 0 },
+      http: { host: '127.0.0.1', port: 0 },
+      // No real Playwright install in tests; services tests enable it with a fake launch.
+      playwright: { enabled: false },
+      mcp: { enabled: false },
+    },
     validatePatch(patch),
   );
 }
@@ -37,14 +42,18 @@ afterEach(async () => {
  */
 export async function start(
   patch: unknown = {},
-  options: { sinks?: LogSink[]; ssePingMs?: number; store?: MemoryConfigStore } = {},
+  options: { store?: MemoryConfigStore } & Pick<
+    BridgeOptions,
+    'sinks' | 'ssePingMs' | 'playwrightLaunch' | 'restartPolicy'
+  > = {},
 ): Promise<Bridge> {
+  const { store, sinks, ...rest } = options;
   const bridge = await startBridge({
     version: '0.0.0-test',
     overrides: testOverrides(patch),
-    configStore: options.store ?? new MemoryConfigStore(),
-    sinks: options.sinks ?? [],
-    ...(options.ssePingMs === undefined ? {} : { ssePingMs: options.ssePingMs }),
+    configStore: store ?? new MemoryConfigStore(),
+    sinks: sinks ?? [],
+    ...rest,
   });
   bridges.push(bridge);
   return bridge;

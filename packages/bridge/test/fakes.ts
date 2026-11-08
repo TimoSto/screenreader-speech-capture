@@ -1,6 +1,11 @@
 import type { ConfigStore } from '../src/application/ports/out/config-store.js';
 import type { Logger } from '../src/application/ports/out/logger.js';
+import type {
+  ProcessSupervisor,
+  ServiceSettings,
+} from '../src/application/ports/out/process-supervisor.js';
 import type { ConfigPatch } from '../src/domain/config.js';
+import type { ServiceState, ServiceStatus } from '../src/domain/service.js';
 
 /** Logger that keeps its messages, as `"<level> <message>"`. */
 export class MemoryLogger implements Logger {
@@ -27,5 +32,40 @@ export class MemoryConfigStore implements ConfigStore {
     if (this.failSave) return Promise.reject(new Error('disk full'));
     this.saved = file;
     return Promise.resolve();
+  }
+}
+
+/** Supervisor that records its calls and goes straight to `running` / `stopped`. */
+export class FakeSupervisor implements ProcessSupervisor {
+  readonly calls: string[] = [];
+  settings: ServiceSettings = { host: '0.0.0.0', port: 3000, version: null };
+  private state: ServiceState = 'stopped';
+
+  start(): Promise<void> {
+    this.calls.push('start');
+    this.state = 'running';
+    return Promise.resolve();
+  }
+
+  stop(): Promise<void> {
+    this.calls.push('stop');
+    this.state = 'stopped';
+    return Promise.resolve();
+  }
+
+  restart(): Promise<void> {
+    this.calls.push('restart');
+    this.state = 'running';
+    return Promise.resolve();
+  }
+
+  reconfigure(settings: ServiceSettings): void {
+    this.calls.push('reconfigure');
+    this.settings = settings;
+  }
+
+  status(): ServiceStatus {
+    const { port, version } = this.settings;
+    return { state: this.state, version: version ?? '1.0.0', port, restarts: 0, exitCode: null };
   }
 }

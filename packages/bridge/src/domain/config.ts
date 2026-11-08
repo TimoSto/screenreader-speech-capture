@@ -69,6 +69,17 @@ const nonEmptyString: Check = (value) =>
   typeof value === 'string' && value.trim() !== '' ? undefined : 'must be a non-empty string';
 const nullableString: Check = (value) =>
   value === null ? undefined : nonEmptyString(value) && 'must be a non-empty string or null';
+/**
+ * An exact npm version (`1.56.1`, `1.57.0-beta-1`). Service versions end up on an
+ * `npm install` command line, so nothing else may get through.
+ */
+export function isExactVersion(value: unknown): value is string {
+  return typeof value === 'string' && /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(value);
+}
+const nullableVersion: Check = (value) =>
+  value === null || isExactVersion(value)
+    ? undefined
+    : 'must be an exact version like 1.56.1, or null';
 const oneOf =
   (values: readonly string[]): Check =>
   (value) =>
@@ -94,8 +105,8 @@ const SCHEMA: { readonly [S in keyof Config]: { readonly [K in keyof Config[S]]:
     maxLineBytes: integer(1024, 16 * 1024 * 1024),
   },
   http: { host: nonEmptyString, port },
-  playwright: { enabled: boolean, port, version: nullableString },
-  mcp: { enabled: boolean, port, version: nullableString },
+  playwright: { enabled: boolean, port, version: nullableVersion },
+  mcp: { enabled: boolean, port, version: nullableVersion },
   input: { enabled: boolean },
   buffer: { maxEntries: integer(1, 1_000_000) },
   log: { level: oneOf(LOG_LEVELS), file: nullableString, consoleSpeech: boolean },

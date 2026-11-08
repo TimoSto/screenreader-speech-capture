@@ -32,9 +32,9 @@ GitHub issues. This file only tracks milestones.
 - [x] Live feed: `onSpeech` (SSE) and CLI `tail`
 - [x] Stored bridge URL per user (`config set url`), used by CLI, library and fixture
 
-### M3 Playwright & MCP ⬜
+### M3 Playwright & MCP 🚧
 
-- [ ] Supervisor for the Playwright server with selectable version, process-tree kill, restart backoff
+- [x] Supervisor for the Playwright server with selectable version, process-tree kill, restart backoff
 - [ ] Supervisor for Playwright MCP (`--allowed-hosts`)
 - [ ] Playwright fixture (`connectOptions`, `headless: false`, clear before each test, transcript attachment)
 
@@ -80,11 +80,11 @@ GitHub issues. This file only tracks milestones.
 | Screen reader setup | [vm-setup.md](vm-setup.md#screen-reader-setup) | ⬜ | Not yet verified on a real VM |
 | Running on the VM | [vm-setup.md](vm-setup.md#running-on-the-vm) | ⬜ | Not yet verified on a real VM |
 | Speech capture | [speech-capture.md](speech-capture.md) | ⬜ | M1 |
-| HTTP API | [http-api.md](http-api.md) | 🚧 | M1 done; native input and services come with M3/M4 |
-| Operations | [operations.md](operations.md) | 🚧 | M1 done (startup, shutdown, bridge log); child services come with M3 |
-| Configuration | [configuration.md](configuration.md) | 🚧 | Flags, env, config file and `PUT /config` done; the services' settings take effect with M3/M4 |
+| HTTP API | [http-api.md](http-api.md) | 🚧 | M1 done, Playwright service in M3; MCP and native input come with M3/M4 |
+| Operations | [operations.md](operations.md) | 🚧 | Startup, shutdown, bridge log and the Playwright server supervisor done; MCP comes with M3 |
+| Configuration | [configuration.md](configuration.md) | 🚧 | Flags, env, config file, `PUT /config` and `playwright.*` done; `mcp` and `input` take effect with M3/M4 |
 | Test client | [client.md](client.md) | 🚧 | Library, CLI, version check and live feed done; fixture in M3, native input in M4 |
-| Remote Playwright & MCP | [playwright-mcp.md](playwright-mcp.md) | ⬜ | M3 |
+| Remote Playwright & MCP | [playwright-mcp.md](playwright-mcp.md) | 🚧 | Playwright server done (install, supervision); MCP next |
 | Native input | [native-input.md](native-input.md) | ⬜ | M4 |
 | Web UI | [web-ui.md](web-ui.md) | ⬜ | M5 |
 | Agents | [agents.md](agents.md) | ⬜ | M6 |
@@ -100,8 +100,10 @@ GitHub issues. This file only tracks milestones.
 - **License:** which one (MIT would match `text-to-socket-engine`)?
 - **Screen reader key:** do `Insert` and `CapsLock` work as held modifiers through robotjs, so NVDA
   and JAWS see `Insert+T`? Check on a real VM early in M4.
-- **Default versions:** which Playwright and Playwright MCP versions the bridge bundles, and how
-  often to update them.
+- **Default versions:** Playwright is a pinned constant (`DEFAULT_PLAYWRIGHT_VERSION`, 1.65.0).
+  Still open: the MCP default, and how often to update both.
+- **Windows job object:** tie the child services to the bridge's process, so a hard kill of the
+  bridge ends them too (see [Shutdown](operations.md#shutdown)).
 - **JAWS in CI:** license the VM, or reset a snapshot before each run (demo mode stops after 40 minutes)?
 - **NVDA bitness:** newer NVDA versions may run as 64-bit. Check that the 64-bit voice registration
   covers it.

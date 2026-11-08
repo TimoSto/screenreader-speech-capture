@@ -26,6 +26,7 @@ describe.skipIf(process.platform === 'win32')('CLI lifecycle (real process)', ()
         'tsx',
         cli,
         ...['--tcp-port', '0', '--http-port', '0', '--host', '127.0.0.1'],
+        ...['--no-playwright', '--no-mcp'],
         ...['--config', path.join(dir, 'config.json'), '--bridge-log', logFile],
       ],
       { cwd: bridgeDir, env: { ...process.env, NO_COLOR: '1' }, stdio: ['ignore', 'pipe', 'pipe'] },

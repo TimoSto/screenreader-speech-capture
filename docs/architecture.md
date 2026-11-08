@@ -54,7 +54,7 @@ flowchart LR
     subgraph OUT["Driven adapters"]
         MEM["out/memory<br/>repository, event bus"]
         CFG["out/fs-config<br/>config.json"]
-        SUP["out/playwright, out/mcp<br/>process supervisors"]
+        SUP["out/process, out/playwright, out/mcp<br/>process supervisors"]
         ROBOT["out/robotjs<br/>InputInjector"]
         LOG["out/log<br/>bridge log"]
         CLK["out/clock"]
@@ -94,7 +94,9 @@ packages/bridge/src/
     in/cli/          flags / env → startup overrides (win over the config file)
     out/memory/      speech repository (capped list), in-process event bus
     out/fs-config/   config.json in %APPDATA%
-    out/playwright/  supervisor for the Playwright server (installs the configured version)
+    out/process/     generic supervisor (ProcessSupervisor): spawn, readiness, restarts
+                     with backoff, process-tree kill
+    out/playwright/  the Playwright server on that supervisor (installs the configured version)
     out/mcp/         supervisor for Playwright MCP
     out/robotjs/     InputInjector on @jitsi/robotjs (mouse click, key chords)
     out/log/         bridge log: console + file, prefixes, colours, rotation

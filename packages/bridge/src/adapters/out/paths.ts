@@ -36,3 +36,20 @@ export function defaultConfigFile(
   const base = env.XDG_CONFIG_HOME ?? path.posix.join(home, '.config');
   return path.posix.join(base, APP, 'config.json');
 }
+
+/**
+ * Where the bridge installs Playwright versions: `%LOCALAPPDATA%\screenreader-speech-capture\
+ * playwright` on Windows, `$XDG_CACHE_HOME` (or `~/.cache`) elsewhere, for development.
+ */
+export function defaultPlaywrightDir(
+  platform: NodeJS.Platform = process.platform,
+  env: NodeJS.ProcessEnv = process.env,
+  home: string = os.homedir(),
+): string {
+  if (platform === 'win32') {
+    const base = env.LOCALAPPDATA ?? path.win32.join(home, 'AppData', 'Local');
+    return path.win32.join(base, APP, 'playwright');
+  }
+  const base = env.XDG_CACHE_HOME ?? path.posix.join(home, '.cache');
+  return path.posix.join(base, APP, 'playwright');
+}
