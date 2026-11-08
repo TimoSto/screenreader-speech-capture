@@ -1,6 +1,6 @@
 {
   "name": "screenreader-speech-capture-client",
-  "version": "0.0.0",
+  "version": "0.0.1-preview.0",
   "description": "Test client for the screenreader-speech-capture bridge: library, Playwright fixture and CLI.",
   "license": "UNLICENSED",
   "type": "module",
