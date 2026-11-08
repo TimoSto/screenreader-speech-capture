@@ -102,7 +102,10 @@ status.
   For a while, the bridge serves both.
 - `GET /api/v1/status` returns `bridge.version` (the package version) and `bridge.apiVersion`
   (`<major>.<minor>` of the API). Minor versions only add things (endpoints, fields, error codes).
-- The bridge and client packages are released together with the **same version number**.
+- The bridge and client packages are **versioned independently**: a package is only released when
+  it changes, and its semver covers its own surface (for the bridge also CLI flags and the config
+  file). Whether a client works with a bridge depends only on `apiVersion`, not on the package
+  versions.
 - The client checks `apiVersion` on its first call:
   - **different major version:** error (`IncompatibleBridgeError`, CLI exit code `2`),
   - **bridge older than the client (minor):** error only when a function needs something the

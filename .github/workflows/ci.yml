@@ -3,7 +3,9 @@ name: CI
 on:
   # Every push to any branch. The check runs also show up on the branch's PR,
   # so there is no extra pull_request trigger (it would run everything twice).
+  # Tag pushes (releases) don't need a run.
   push:
+    branches: ['**']
 
 permissions:
   contents: read
@@ -53,3 +55,20 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+
+  # Shows what the manual Publish workflow would release from this branch
+  # (see docs/development.md#releases).
+  determine-version:
+    name: Determine versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # all commits and tags
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm release:determine-version

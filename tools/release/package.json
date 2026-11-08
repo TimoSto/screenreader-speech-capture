@@ -1,0 +1,10 @@
+{
+  "name": "release",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Release tooling: checks PR titles and derives each package's next version from the commit titles since its last tag.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

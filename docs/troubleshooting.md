@@ -43,7 +43,7 @@ Common problems, what causes them and how to fix them. Start with
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `browserType.connect` fails with a protocol / version error | The client's Playwright version differs from the server's. | Set `--playwright-version` to the version of your test project. `status` shows the server's version. |
-| The client throws `IncompatibleBridgeError` (CLI exit code `2`) | Bridge and client have different API major versions. | Update the older one. Bridge and client use the same version numbers ([Versioning](http-api.md#versioning)). |
+| The client throws `IncompatibleBridgeError` (CLI exit code `2`) | Bridge and client have different API major versions. | Compare `apiVersion` in `status` with the client's and update the older one. The package versions of bridge and client don't have to match ([Versioning](http-api.md#versioning)). |
 | `status` shows Playwright or MCP as `failed` | The service crashed 5 times in a row. | Look at the bridge log for its output, then restart it ([Operations](operations.md#child-service-crashes)). |
 | MCP clients from other machines are rejected | MCP only accepts some hosts. | The bridge starts MCP with `--allowed-hosts *`. If you start MCP yourself, add that flag. |
 | The bridge exits right after start: port in use | Another bridge (or another program) already uses the port. | Stop the other process or change the port. For the TCP port, change the voice too. |

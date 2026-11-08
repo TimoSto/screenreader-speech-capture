@@ -11,7 +11,8 @@ to the bridge's HTTP API and contains:
 - an **agent skill** (see [Agent skill](agents.md#agent-skill)).
 
 On its first call, the client checks the bridge's API version and throws `IncompatibleBridgeError`
-if the major version differs (see [Versioning](http-api.md#versioning)).
+if the major version differs (see [Versioning](http-api.md#versioning)). The client's package
+version doesn't have to match the bridge's.
 
 It only uses `fetch` (Node ≥ 20) and depends only on `packages/shared`. `@playwright/test` is an
 optional peer dependency, needed only for the fixture and `setFocus(page)`.

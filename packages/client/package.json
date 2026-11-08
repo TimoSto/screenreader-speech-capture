@@ -1,6 +1,6 @@
 {
   "name": "screenreader-speech-capture-client",
-  "version": "0.0.1-preview.0",
+  "version": "0.0.0-dev",
   "description": "Test client for the screenreader-speech-capture bridge: library, Playwright fixture and CLI.",
   "license": "UNLICENSED",
   "type": "module",
@@ -23,5 +23,10 @@
   "devDependencies": {
     "@screenreader-speech-capture/shared": "workspace:*",
     "tsdown": "0.23.7"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TimoSto/screenreader-speech-capture.git",
+    "directory": "packages/client"
   }
 }
