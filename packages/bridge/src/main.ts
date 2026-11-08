@@ -22,6 +22,7 @@ import { SpeechService } from './application/services/speech-service.js';
 import { StatusService } from './application/services/status-service.js';
 import { WaitForSpeechService } from './application/services/wait-for-speech-service.js';
 import {
+  changedSections,
   configFields,
   DEFAULT_CONFIG,
   mergeConfig,
@@ -137,14 +138,13 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   } = await loadConfig(store, options.overrides, sourceOf);
 
   const ownSinks = options.sinks === undefined;
-  let { sinks, file } = ownSinks
-    ? defaultSinks(config)
-    : { sinks: options.sinks ?? [], file: null as string | null };
+  const initial = ownSinks ? defaultSinks(config) : { sinks: options.sinks ?? [], file: null };
+  let sinks = initial.sinks;
   const log = new BridgeLog(config.log.level, sinks);
   const bridgeLogger = log.for('bridge');
   const configLogger = log.for('config');
   // Always written, so the console shows which version, config, log level and log file are in use.
-  log.always('bridge', startupMessage(config, version, store.location, file));
+  log.always('bridge', startupMessage(config, version, store.location, initial.file));
 
   for (const { field, file: saved, override } of overriddenFields(savedFile, overrides)) {
     configLogger.warn(
@@ -209,10 +209,8 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
 
   // Live re-apply of PUT /api/v1/config (docs/configuration.md#changing-settings). Each step
   // leaves its part as it was when it fails, and ConfigService undoes the steps before it.
-  const changed = (section: keyof Config, next: Config, previous: Config) =>
-    show(next[section]) !== show(previous[section]);
   configService.onChange(async (next, previous) => {
-    if (!changed('tcp', next, previous)) return;
+    if (!changedSections(previous, next).includes('tcp')) return;
     // The port it had, which differs from the setting when that was 0.
     const before = { ...previous.tcp, port: tcpPort };
     await tcp.stop();
@@ -224,7 +222,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     }
   });
   configService.onChange(async (next, previous) => {
-    if (!changed('http', next, previous)) return;
+    if (!changedSections(previous, next).includes('http')) return;
     try {
       httpPort = await http.restart(next.http);
     } catch (error) {
@@ -241,7 +239,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
       return;
     }
     for (const sink of sinks) log.removeSink(sink);
-    ({ sinks, file } = defaultSinks(next));
+    sinks = defaultSinks(next).sinks;
     for (const sink of sinks) log.addSink(sink);
   });
 
