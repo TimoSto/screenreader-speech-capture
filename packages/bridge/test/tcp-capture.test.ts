@@ -63,6 +63,19 @@ describe('TCP capture (real socket)', () => {
     expect(bridge.capture.captureStatus().listener).toMatchObject({ listening: false });
   });
 
+  it('stops once when stop() is called twice, logging the reason', async () => {
+    const lines: string[] = [];
+    const sinks = [{ colour: false, speech: false, write: (l: string) => lines.push(l) }];
+    const bridge = await start({}, { sinks });
+
+    const first = bridge.stop('SIGTERM');
+    expect(bridge.stop()).toBe(first);
+    await first;
+    const bridgeLines = lines.filter((line) => line.startsWith('[bridge]'));
+    expect(bridgeLines.filter((line) => line.endsWith('INFO  stopping (SIGTERM)'))).toHaveLength(1);
+    expect(bridgeLines.filter((line) => line.endsWith('INFO  stopped'))).toHaveLength(1);
+  });
+
   it('lists open connections and forgets closed ones', async () => {
     const bridge = await start();
     const socket = net.connect(bridge.tcpPort, '127.0.0.1');
