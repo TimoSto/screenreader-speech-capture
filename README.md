@@ -113,7 +113,7 @@ Details: [VM setup](docs/vm-setup.md), [Test client](docs/client.md).
 | [Troubleshooting](docs/troubleshooting.md) | Common problems and fixes |
 | [Limitations](docs/limitations.md) | What this project can't do |
 | [Security](docs/security.md) | Risks of the open ports |
-| [Architecture](docs/architecture.md) | Why Node.js, monorepo, hexagonal bridge, UI structure |
+| [Architecture](docs/architecture.md) | Why Node.js, monorepo, hexagonal bridge and client, UI structure |
 | [Development](docs/development.md) | Building, testing without Windows, CI and releases |
 | [Roadmap](docs/ROADMAP.md) | Milestones, state per topic, open questions |
 

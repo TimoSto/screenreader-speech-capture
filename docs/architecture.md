@@ -116,6 +116,33 @@ knows the concrete adapters. Adapters don't import the concrete services or each
 - A different input method (for example direct `SendInput` through FFI, or the hypervisor's
   keyboard API) is a new `InputInjector`.
 
+## Client: hexagonal
+
+The client uses the bridge's layout and the same ESLint rules (see the dependency rule above). The
+CLI and the Playwright fixture are **driving adapters on the same in-ports as the library**, so they
+can't drift from it (see [Test client](client.md)).
+
+```
+packages/client/src/
+  domain/              bridge URL validation + precedence, config keys (later: cursor, matching,
+                       version compatibility)
+  application/
+    ports/in/          ManageClientConfig (later: SpeechCapture, the library's functions)
+    ports/out/         ClientConfigStore (later: BridgeApi, Clock)
+    services/          ClientConfigService (later: SpeechCaptureService)
+  adapters/
+    in/cli/            argv → in-ports → stdout + exit code; parsing and output only
+    out/fs-config/     client.json in %APPDATA% / ~/.config, atomic writes
+  main.ts              composition root: createClientConfig(env), the only place that knows the
+                       concrete adapters and reads process.env
+  index.ts             public API: re-exports from main.ts, in-port types and domain types
+```
+
+Unlike the bridge, the client is also used as a library, so the in-port interfaces are its public
+types (users can fake them in their own tests). Users don't call `main.ts` functions explicitly
+for the speech client: the public `SpeechCaptureClient` class (M2) lives in `main.ts` and passes the
+default adapters to the service, so `new SpeechCaptureClient()` just works.
+
 ## UI: SvelteKit, hexagonal-lite
 
 ```

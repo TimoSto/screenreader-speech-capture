@@ -31,6 +31,9 @@ const inAdapters = {
   message: 'Driven adapters must not import driving adapters. Wire them in main.ts.',
 };
 
+/** Both hexagons (bridge and client) follow the same layout and rules. */
+const hexagon = (layer) => `packages/{bridge,client}/src/${layer}/**/*.ts`;
+
 export default tseslint.config(
   { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**'] },
   js.configs.recommended,
@@ -49,7 +52,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/bridge/src/domain/**/*.ts'],
+    files: [hexagon('domain')],
     // Tests may wire real (in-memory) adapters; the rule is about production code.
     ignores: ['**/*.test.ts'],
     rules: {
@@ -57,7 +60,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/bridge/src/application/**/*.ts'],
+    files: [hexagon('application')],
     // Tests may wire real (in-memory) adapters; the rule is about production code.
     ignores: ['**/*.test.ts'],
     rules: {
@@ -65,14 +68,14 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/bridge/src/adapters/in/**/*.ts'],
+    files: [hexagon('adapters/in')],
     ignores: ['**/*.test.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [services, outAdapters] }],
     },
   },
   {
-    files: ['packages/bridge/src/adapters/out/**/*.ts'],
+    files: [hexagon('adapters/out')],
     ignores: ['**/*.test.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [services, inAdapters] }],

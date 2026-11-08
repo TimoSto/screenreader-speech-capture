@@ -38,9 +38,10 @@ CI (`.github/workflows/ci.yml`) runs on every push: lint + format:check + typech
 
 ## Architecture
 
-### Bridge: hexagonal, enforced by ESLint
+### Hexagonal packages (bridge, client), enforced by ESLint
 
-`packages/bridge/src/`:
+`packages/bridge/src/` and `packages/client/src/` share one layout and one rule set (client
+details in `docs/architecture.md`). The bridge:
 
 - `domain/` — pure model (speech entries, buffer, config, text matching, errors). No I/O, imports
   nothing from outer layers.
@@ -51,9 +52,13 @@ CI (`.github/workflows/ci.yml`) runs on every push: lint + format:check + typech
 - `main.ts` — the composition root and the **only** place that knows concrete adapters and
   services.
 
-`no-restricted-imports` in `eslint.config.js` enforces: domain/application must not import `node:*`
-or adapters; adapters must not import concrete services; `in` adapters must not import `out`
-adapters and vice versa. Test files (`*.test.ts`) are exempt. When adding a feature, add a port and
+The client has the same layers: `ManageClientConfig` / `ClientConfigService` / `FsClientConfigStore`,
+the CLI as a driving adapter, and `main.ts` also exporting the pre-wired public API (`index.ts`
+re-exports it).
+
+`no-restricted-imports` in `eslint.config.js` (blocks built with `hexagon(layer)`, for both
+packages) enforces: domain/application must not import `node:*` or adapters; adapters must not
+import concrete services; `in` adapters must not import `out` adapters and vice versa. Test files (`*.test.ts`) are exempt. When adding a feature, add a port and
 wire it in `main.ts` rather than reaching across layers.
 
 Relative imports use `.js` extensions (ESM), and type-only imports must use `import type`

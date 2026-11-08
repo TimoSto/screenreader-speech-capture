@@ -1,14 +1,18 @@
+// Public API of screenreader-speech-capture-client.
+export { createClientConfig } from './main.js';
+export type {
+  ConfigValue,
+  ExplicitValues,
+  ManageClientConfig,
+  SetResult,
+} from './application/ports/in/manage-client-config.js';
 export {
   ClientConfigError,
   DEFAULT_BRIDGE_URL,
   normalizeBridgeUrl,
-  readClientConfig,
-  resolveBridgeUrl,
   URL_ENV,
-  writeClientConfig,
   type ClientConfig,
-  type Resolved,
-  type ResolveOptions,
+  type ConfigKey,
   type ValueSource,
-} from './config/client-config.js';
-export { CONFIG_PATH_ENV, clientConfigFile } from './config/paths.js';
+} from './domain/bridge-url.js';
+export { CONFIG_PATH_ENV, clientConfigFile } from './adapters/out/fs-config/paths.js';
