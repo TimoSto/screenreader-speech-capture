@@ -167,34 +167,34 @@ importers:
   .:
     devDependencies:
       '@eslint/js':
-        specifier: ^10.0.1
+        specifier: 10.0.1
         version: 10.0.1(eslint@10.14.0)
       '@types/node':
-        specifier: ^22.20.5
+        specifier: 22.20.5
         version: 22.20.5
       eslint:
-        specifier: ^10.14.0
+        specifier: 10.14.0
         version: 10.14.0
       eslint-config-prettier:
-        specifier: ^10.1.8
+        specifier: 10.1.8
         version: 10.1.8(eslint@10.14.0)
       globals:
-        specifier: ^17.14.0
+        specifier: 17.14.0
         version: 17.14.0
       prettier:
-        specifier: ^3.9.10
+        specifier: 3.9.10
         version: 3.9.10
       tsx:
-        specifier: ^4.23.15
+        specifier: 4.23.15
         version: 4.23.15
       typescript:
-        specifier: ~6.0.3
+        specifier: 6.0.3
         version: 6.0.3
       typescript-eslint:
-        specifier: ^8.72.1
+        specifier: 8.72.1
         version: 8.72.1(eslint@10.14.0)(typescript@6.0.3)
       vitest:
-        specifier: ^5.1.0
+        specifier: 5.1.0
         version: 5.1.0(@types/node@22.20.5)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15))
 
   packages/bridge:
@@ -203,10 +203,12 @@ importers:
         specifier: workspace:*
         version: link:../shared
       tsdown:
-        specifier: ^0.23.7
+        specifier: 0.23.7
         version: 0.23.7(tsx@4.23.15)(typescript@6.0.3)
 
   packages/shared: {}
+
+  tools/fake-speech: {}
 
 packages:
 

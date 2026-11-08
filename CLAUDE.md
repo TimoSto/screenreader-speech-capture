@@ -28,6 +28,10 @@ pnpm build               # tsdown bundles the bridge CLI to packages/bridge/dist
 pnpm fake-speech --port 4449   # stands in for the SAPI socket voice; no Windows needed
 ```
 
+Dependencies are pinned to exact versions. Never use version ranges (`^`, `~`, `>=`, `*`, …) in
+any `package.json`; `.npmrc` sets `save-exact=true` so `pnpm add` writes exact versions. Internal
+packages use `workspace:*`.
+
 CI (`.github/workflows/ci.yml`) runs on every push: lint + format:check + typecheck, test, build.
 `main` only changes through PRs.
 

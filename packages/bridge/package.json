@@ -20,6 +20,6 @@
   },
   "devDependencies": {
     "@screenreader-speech-capture/shared": "workspace:*",
-    "tsdown": "^0.23.7"
+    "tsdown": "0.23.7"
   }
 }
