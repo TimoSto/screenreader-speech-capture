@@ -2,5 +2,6 @@
 export interface Clock {
   /** Milliseconds, only compared with other values of `now()`. */
   now(): number;
-  sleep(ms: number): Promise<void>;
+  /** Resolves after `ms`, or rejects at once with the abort reason when `signal` aborts. */
+  sleep(ms: number, signal?: AbortSignal): Promise<void>;
 }

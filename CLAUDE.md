@@ -10,7 +10,7 @@ records it and exposes it over an HTTP API + SSE (default 5151) for automated te
 The docs in `docs/` describe the full planned design (UI, client, Playwright/MCP supervisors, native
 input); much of it is **not implemented yet**. Check `docs/ROADMAP.md` for what exists — currently
 `packages/bridge`, `packages/shared` and `tools/fake-speech` are real (M1 capture core), and
-`packages/client` has the M2 library, version check and CLI (no SSE `onSpeech` / `tail` yet).
+`packages/client` has the M2 library, version check, CLI and SSE live feed (`onSpeech` / `tail`).
 
 ## Commands
 
@@ -53,7 +53,8 @@ details in `docs/architecture.md`). The bridge:
   services.
 
 The client has the same layers: `ManageClientConfig` / `ClientConfigService` / `FsClientConfigStore`,
-`SpeechCapture` / `SpeechCaptureService` / `FetchBridgeApi` (waits poll `GET /speech`), the CLI as a
+`SpeechCapture` / `SpeechCaptureService` / `FetchBridgeApi` (waits poll `GET /speech`; `onSpeech`
+reads the SSE stream with its own parser and reconnects with `Last-Event-ID`), the CLI as a
 driving adapter, and `main.ts` also exporting the pre-wired public API (`index.ts`
 re-exports it).
 

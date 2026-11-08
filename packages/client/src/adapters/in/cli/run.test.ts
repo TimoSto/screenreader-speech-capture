@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FakeBridgeApi, FakeClock } from '../../../../test/fakes.js';
 import type {
   ExplicitValues,
@@ -69,6 +69,7 @@ async function run(
     stdout: (t) => (stdout += t),
     stderr: (t) => (stderr += t),
     version: '1.2.3',
+    interrupt: () => new AbortController().signal,
   });
   return { code, stdout, stderr };
 }
@@ -301,4 +302,90 @@ it('works end to end with the real config file', async () => {
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
+});
+
+describe('tail', () => {
+  /** Starts `tail`; `stop()` presses Ctrl+C and resolves with the exit code. */
+  function tail(args: string[], speech = fakeSpeech()) {
+    const output = { stdout: '', stderr: '' };
+    const controller = new AbortController();
+    const done = runCli(['tail', ...args], {
+      config: fakeConfig().config,
+      speech: speech.speech,
+      stdout: (t) => (output.stdout += t),
+      stderr: (t) => (output.stderr += t),
+      version: '1.2.3',
+      interrupt: () => controller.signal,
+    });
+    const stop = async () => {
+      controller.abort();
+      return done;
+    };
+    return { ...speech, output, done, stop };
+  }
+
+  it('prints speech, markers and clears live until Ctrl+C', async () => {
+    const t = tail([]);
+    t.api.speak('old');
+    await vi.waitFor(() => expect(t.api.openStreams).toBe(1));
+    t.api.speak('Submit, button');
+    await t.api.mark('step 1');
+    await t.api.clear();
+    await vi.waitFor(() => expect(t.output.stdout).toContain('cleared'));
+    expect(await t.stop()).toBe(EXIT.ok);
+    expect(t.output).toEqual({
+      stdout: '#2 Submit, button\n#3 [marker] step 1\n--- buffer cleared ---\n',
+      stderr: '',
+    });
+    expect(t.api.openStreams).toBe(0);
+  });
+
+  it('--json prints one event per line; --since replays first', async () => {
+    const speech = fakeSpeech();
+    speech.api.speak('a', 'b');
+    const t = tail(['--json', '--since', '1'], speech);
+    await vi.waitFor(() => expect(t.api.openStreams).toBe(1));
+    await t.api.clear();
+    await vi.waitFor(() => expect(t.output.stdout.split('\n')).toHaveLength(3));
+    await t.stop();
+    const events = t.output.stdout
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line) as unknown);
+    expect(events).toEqual([
+      { type: 'entry', entry: expect.objectContaining({ seq: 2, text: 'b' }) as unknown },
+      { type: 'clear' },
+    ]);
+    expect(t.api.calls).toContain('stream 1');
+  });
+
+  it('reports a lost connection on stderr and goes on', async () => {
+    const t = tail([]);
+    await vi.waitFor(() => expect(t.api.openStreams).toBe(1));
+    t.api.dropStreams(new BridgeUnreachableError('http://vm:5151'));
+    await vi.waitFor(() =>
+      expect(t.api.calls.filter((c) => c.startsWith('stream'))).toHaveLength(2),
+    );
+    t.api.speak('back');
+    await vi.waitFor(() => expect(t.output.stdout).toBe('#1 back\n'));
+    expect(await t.stop()).toBe(EXIT.ok);
+    expect(t.output.stderr).toMatch(/not reachable.*, reconnecting\n$/);
+  });
+
+  it('exits 2 when the bridge is unreachable at the start or incompatible', async () => {
+    const unreachable = fakeSpeech();
+    unreachable.api.failures = [new BridgeUnreachableError('http://vm:5151')];
+    expect(await tail([], unreachable).done).toBe(EXIT.bridge);
+
+    const incompatible = fakeSpeech();
+    incompatible.api.apiVersion = '2.0';
+    const other = tail([], incompatible);
+    expect(await other.done).toBe(EXIT.bridge);
+    expect(other.output.stderr).toContain('API 2.0');
+  });
+
+  it('rejects arguments and foreign options', async () => {
+    expect((await run(['tail', 'x'])).code).toBe(EXIT.usage);
+    expect((await run(['tail', '--limit', '3'])).code).toBe(EXIT.usage);
+  });
 });

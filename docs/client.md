@@ -100,10 +100,36 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `setFocus(page, { target? })` | `void` | Make the page's browser window the OS foreground window with a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
 | `click({ x, y })` | `void` | Native click at screen coordinates (`POST /api/v1/set-focus`). |
 | `pressKeys(keys, { delayMs? })` | `void` | Native key presses, for screen reader commands (`'Insert+T'`, `['h', 'h']`). |
-| `onSpeech(cb)` | `() => void` | Subscribe to the live SSE feed. Returns an unsubscribe function. |
+| `onSpeech(cb, { since?, includeMarkers?, onClear?, onTruncated?, onError? })` | `() => void` | Subscribe to the live feed (see [Live feed](#live-feed)). `cb` gets every new speech entry as the bridge receives it. Returns an unsubscribe function. |
 | `status()` | `BridgeStatus` | Bridge health (TCP connections, Playwright/MCP state, versions). |
 | `waitForReady({ timeout? })` | `BridgeStatus` | Wait until the bridge answers and is `ready` (default `timeout` 120000 ms). Throws `BridgeNotReadyError` on timeout. |
 | `playwrightEndpoint()` | `string` | WebSocket URL of the bridge's Playwright server, for `browserType.connect()`. |
+
+### Live feed
+
+`onSpeech` keeps a connection to [`GET /speech/stream`](http-api.md#endpoints) (Server-Sent
+Events) open and calls `cb` for every new entry, with no polling:
+
+```ts
+const stop = sr.onSpeech((entry) => console.log(entry.text), {
+  onError: (error, { retrying }) => console.warn(error.message, retrying ? '(reconnecting)' : ''),
+});
+// …
+stop();
+```
+
+- It starts with the entries that arrive after the call. `since: <seq>` first replays the buffered
+  entries after that `seq` (`since: 0`: the whole buffer).
+- Markers are left out unless `includeMarkers: true`. `onClear` is called after a clear,
+  `onTruncated` when entries of a replay were already dropped from the bridge's full buffer.
+- It doesn't move the [cursor](#the-cursor): waits work the same with or without a feed.
+- A lost connection is reconnected by itself (after 250 ms, doubling up to 5 s), and the bridge
+  replays what was missed, so nothing is lost or repeated. After a bridge restart (`seq` starts at
+  1 again) the feed starts from the new bridge's first entry. If no data, not even the bridge's
+  15 s ping, arrives for 45 s, the connection counts as lost.
+- `onError(error, { retrying })`: `retrying: true` for a lost connection or an exception thrown by
+  a callback (the feed goes on); `retrying: false` when the feed has stopped for good
+  (`IncompatibleBridgeError`, an HTTP `4xx`, an invalid bridge URL).
 
 ### Errors
 
@@ -187,7 +213,7 @@ npx screenreader-speech-capture-client wait-silence [--quiet-for 500] [--timeout
 npx screenreader-speech-capture-client mark "before tab"   # prints the marker's seq
 npx screenreader-speech-capture-client focus --x 640 --y 12  # native click
 npx screenreader-speech-capture-client press "Insert+T"      # native keys; several args = sequence
-npx screenreader-speech-capture-client tail                # live feed until Ctrl+C (NDJSON with --json)
+npx screenreader-speech-capture-client tail [--since <seq>]  # live feed until Ctrl+C (NDJSON with --json)
 ```
 
 Exit codes, so agents can branch on them without parsing output:
@@ -203,5 +229,13 @@ With `--json`, `wait` prints `{ "matched": true, "entry": {...} }`, or on timeou
 `{ "matched": false, "entries": [...] }` with the speech seen (the same shapes as
 [`GET /speech/wait`](http-api.md#endpoints)). `mark` prints the marker's `seq`, or the whole entry
 with `--json`.
+
+`tail` prints each entry as it arrives (`#12 Submit, button`, markers included) until Ctrl+C or
+`SIGTERM`, then exits with `0`. A closed pipe (`tail --json | head -3`) ends it too, once the next
+line is written. By default it shows only new speech; `--since
+<seq>` first prints the buffered entries after `seq`. With `--json` it prints one event per line:
+`{"type":"entry","entry":{...}}`, `{"type":"clear"}` and `{"type":"truncated"}`. If the bridge is
+not reachable at the start it exits with `2`; a connection lost later is reconnected (with a note
+on stderr) without losing entries.
 
 For the typical agent loop, see [Agents](agents.md#agent-loop).

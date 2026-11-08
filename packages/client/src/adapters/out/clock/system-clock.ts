@@ -6,7 +6,7 @@ export class SystemClock implements Clock {
     return performance.now();
   }
 
-  async sleep(ms: number): Promise<void> {
-    await setTimeout(ms);
+  async sleep(ms: number, signal?: AbortSignal): Promise<void> {
+    await setTimeout(ms, undefined, signal ? { signal } : undefined);
   }
 }

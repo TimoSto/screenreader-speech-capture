@@ -24,12 +24,12 @@ GitHub issues. This file only tracks milestones.
 - [x] Lifecycle: startup order, graceful shutdown, bridge log, CLI flags and env vars
 - [x] `fake-speech` tool for development
 
-### M2 Client 🚧
+### M2 Client ✅
 
 - [x] Library: cursor, `waitForOutput` / `waitForSequence` / `waitForSilence` / `record`, `normalize`
 - [x] Version check against the bridge
 - [x] CLI with `--json` and exit codes
-- [ ] Live feed: `onSpeech` (SSE) and CLI `tail`
+- [x] Live feed: `onSpeech` (SSE) and CLI `tail`
 - [x] Stored bridge URL per user (`config set url`), used by CLI, library and fixture
 
 ### M3 Playwright & MCP ⬜
@@ -82,7 +82,7 @@ GitHub issues. This file only tracks milestones.
 | HTTP API | [http-api.md](http-api.md) | 🚧 | M1 done; native input and services come with M3/M4 |
 | Operations | [operations.md](operations.md) | 🚧 | M1 done (startup, shutdown, bridge log); child services come with M3 |
 | Configuration | [configuration.md](configuration.md) | 🚧 | Flags, env, config file and `PUT /config` done; the services' settings take effect with M3/M4 |
-| Test client | [client.md](client.md) | 🚧 | Library, CLI and version check done; `onSpeech` / `tail` open, fixture in M3, native input in M4 |
+| Test client | [client.md](client.md) | 🚧 | Library, CLI, version check and live feed done; fixture in M3, native input in M4 |
 | Remote Playwright & MCP | [playwright-mcp.md](playwright-mcp.md) | ⬜ | M3 |
 | Native input | [native-input.md](native-input.md) | ⬜ | M4 |
 | Web UI | [web-ui.md](web-ui.md) | ⬜ | M5 |

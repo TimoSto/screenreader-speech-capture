@@ -1,4 +1,4 @@
-import type { BridgeStatus, SpeechEntry } from '../../../domain/speech-entry.js';
+import type { BridgeStatus, SpeechEntry, SpeechFeedEvent } from '../../../domain/speech-entry.js';
 
 /** One page of `GET /api/v1/speech`. */
 export interface SpeechPage {
@@ -19,4 +19,13 @@ export interface BridgeApi {
   listSpeech(query: { since: number; limit?: number }): Promise<SpeechPage>;
   clear(): Promise<void>;
   mark(label: string): Promise<SpeechEntry>;
+  /**
+   * One connection to the live feed (`GET /api/v1/speech/stream`). With `lastEventId` the bridge
+   * first replays the buffered entries with `seq > lastEventId`. The iterable ends or throws when
+   * the connection drops; `signal` closes it.
+   */
+  streamSpeech(options: {
+    lastEventId: number | null;
+    signal: AbortSignal;
+  }): AsyncIterable<SpeechFeedEvent>;
 }
