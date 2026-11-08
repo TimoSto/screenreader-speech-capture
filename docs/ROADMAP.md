@@ -12,7 +12,7 @@ GitHub issues. This file only tracks milestones.
 - [x] Identify the SAPI socket voice and document its wire format (`text-to-socket-engine`)
 - [x] Design docs: architecture, API, client, native input, UI, operations
 
-### M1 Capture core 🚧
+### M1 Capture core ✅
 
 - [x] pnpm monorepo, TypeScript, ESLint + Prettier, Vitest, `packages/shared` API contract
 - [x] Minimal Linux CI: jobs `lint` (lint, format, typecheck), `test`, all on Node 25 (`.nvmrc`), `build`
@@ -21,7 +21,7 @@ GitHub issues. This file only tracks milestones.
 - [x] HTTP API v1: speech, wait, markers, status, SSE stream, `GET /config`
 - [x] HTTP API v1: `PUT /config` with the config file and live re-apply
 - [x] One error format, `bridge.version` / `apiVersion` in status
-- [ ] Lifecycle: startup order, graceful shutdown, bridge log (CLI flags and env vars done)
+- [x] Lifecycle: startup order, graceful shutdown, bridge log, CLI flags and env vars
 - [x] `fake-speech` tool for development
 
 ### M2 Client ⬜
@@ -78,7 +78,7 @@ GitHub issues. This file only tracks milestones.
 | Running on the VM | [vm-setup.md](vm-setup.md#running-on-the-vm) | ⬜ | Not yet verified on a real VM |
 | Speech capture | [speech-capture.md](speech-capture.md) | ⬜ | M1 |
 | HTTP API | [http-api.md](http-api.md) | 🚧 | M1 done; native input and services come with M3/M4 |
-| Operations | [operations.md](operations.md) | ⬜ | M1 |
+| Operations | [operations.md](operations.md) | 🚧 | M1 done (startup, shutdown, bridge log); child services come with M3 |
 | Configuration | [configuration.md](configuration.md) | 🚧 | Flags, env, config file and `PUT /config` done; the services' settings take effect with M3/M4 |
 | Test client | [client.md](client.md) | ⬜ | M2, fixture in M3 |
 | Remote Playwright & MCP | [playwright-mcp.md](playwright-mcp.md) | ⬜ | M3 |

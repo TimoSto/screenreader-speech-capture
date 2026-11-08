@@ -24,17 +24,33 @@ first step of a CI job.
 
 ## Shutdown
 
-On Ctrl+C, closing the console window, or Windows log off / shutdown, the bridge:
+The bridge stops gracefully on Ctrl+C (`SIGINT`), Ctrl+Break (`SIGBREAK`, Windows), closing the
+console window (`SIGHUP`) and `SIGTERM`. The bridge log names the signal
+(`[bridge] INFO stopping (SIGINT)`). The bridge:
 
 1. stops accepting new HTTP and TCP connections and ends open SSE streams and `wait` requests
    (they get `503`),
 2. stops the child services and **kills their whole process tree**. On Windows, killing a process
    does not kill its children, so without this the browsers started by the Playwright server would
    stay open. The bridge uses `taskkill /T /F /PID <pid>`,
-3. writes any buffered lines of the bridge log to disk,
+3. writes any buffered console output. The log file is written line by line as it goes, so it is
+   always complete,
 4. exits with code `0` (or `1` if something failed on the way).
 
-If a shutdown step hangs, the bridge exits anyway after 10 seconds.
+If a shutdown step hangs, the bridge exits anyway after 10 seconds with code `1`. A second signal
+while it stops (Ctrl+C again) exits at once with code `1`. A signal that arrives while the bridge
+is still starting stops it as soon as it has started.
+
+If the bridge crashes (an uncaught exception or unhandled promise rejection), the error and its
+stack go into the bridge log, and the bridge stops as above and exits with code `1`.
+
+Limits on Windows:
+
+- Closing the console window gives a program about 5 seconds before Windows ends it, which is
+  less than the 10-second limit above.
+- At log off and system shutdown, Windows ends console programs without a signal, so the bridge
+  cannot stop gracefully. Nothing is lost from the log file (see step 3). The child services
+  (M3) must be tied to the bridge's process so that they end with it.
 
 ## Child service crashes
 

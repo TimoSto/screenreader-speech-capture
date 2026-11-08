@@ -17,6 +17,7 @@ import type { QuerySpeech } from './application/ports/in/query-speech.js';
 import type { CaptureStatusSource } from './application/ports/out/capture-status.js';
 import type { Clock } from './application/ports/out/clock.js';
 import type { ConfigStore } from './application/ports/out/config-store.js';
+import type { Logger } from './application/ports/out/logger.js';
 import { ConfigService } from './application/services/config-service.js';
 import { SpeechService } from './application/services/speech-service.js';
 import { StatusService } from './application/services/status-service.js';
@@ -58,7 +59,13 @@ export interface Bridge {
   readonly httpPort: number;
   readonly speech: QuerySpeech & ClearSpeech & AddMarker;
   readonly capture: CaptureStatusSource;
-  stop(): Promise<void>;
+  /** The `[bridge]` log, for lifecycle messages from outside (signals, crashes). */
+  readonly log: Logger;
+  /**
+   * Stops the bridge (docs/operations.md#shutdown). `reason`, for example the signal, goes into
+   * the log. Calling it again returns the same shutdown.
+   */
+  stop(reason?: string): Promise<void>;
 }
 
 /** A setting from flags, the environment or the config file is invalid. Nothing was started. */
@@ -246,6 +253,8 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   status.setState('ready');
   bridgeLogger.info('ready');
 
+  let stopping: Promise<void> | undefined;
+
   return {
     get tcpPort() {
       return tcpPort;
@@ -255,24 +264,30 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     },
     speech,
     capture: tcp,
-    async stop() {
-      status.setState('stopping');
-      bridgeLogger.info('stopping');
-      // Pending waits answer 503 before the HTTP server closes their connections.
-      waits.shutdown();
-      // Each listener stops even if the one before it failed.
-      const errors: unknown[] = [];
-      for (const listener of [http, tcp]) {
-        try {
-          await listener.stop();
-        } catch (error) {
-          bridgeLogger.error(`shutdown failed: ${String(error)}`);
-          errors.push(error);
-        }
-      }
-      if (errors.length === 1) throw errors[0];
-      if (errors.length > 1) throw new AggregateError(errors, 'shutdown failed');
-      bridgeLogger.info('stopped');
+    log: bridgeLogger,
+    stop(reason?: string) {
+      stopping ??= shutdown(reason);
+      return stopping;
     },
   };
+
+  async function shutdown(reason: string | undefined): Promise<void> {
+    status.setState('stopping');
+    bridgeLogger.info(reason === undefined ? 'stopping' : `stopping (${reason})`);
+    // Pending waits answer 503 before the HTTP server closes their connections.
+    waits.shutdown();
+    // Each listener stops even if the one before it failed.
+    const errors: unknown[] = [];
+    for (const listener of [http, tcp]) {
+      try {
+        await listener.stop();
+      } catch (error) {
+        bridgeLogger.error(`shutdown failed: ${String(error)}`);
+        errors.push(error);
+      }
+    }
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) throw new AggregateError(errors, 'shutdown failed');
+    bridgeLogger.info('stopped');
+  }
 }
