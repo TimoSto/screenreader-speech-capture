@@ -108,7 +108,7 @@ failed halfway.
 
 The **GitHub releases are the changelog**: one per package and stable version, with the commit
 titles grouped into breaking changes, features and fixes. There is no `CHANGELOG.md`. Run
-`pnpm release:version` for a local dry run (it needs the tags), and
+`pnpm release:determine-version` for a local dry run (it needs the tags), and
 `PR_TITLE='feat(bridge): …' pnpm release:check-title` to check a title.
 
 **One-time setup:** on npmjs.com, for each package, open **Settings → Trusted Publisher → GitHub

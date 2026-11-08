@@ -40,7 +40,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - id: versions
-        run: pnpm release:version --out release-notes
+        run: pnpm release:determine-version --out release-notes
       - uses: actions/upload-artifact@v4
         with:
           name: release-notes
