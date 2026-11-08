@@ -7,7 +7,7 @@ to the bridge's HTTP API and contains:
 
 - a **TypeScript library** (`SpeechCaptureClient`) for Playwright or any other Node test runner,
 - a **Playwright fixture** (`/playwright` subpath export),
-- a **CLI** (`screenreader-speech-capture-client`, alias `sr-speech`) with the same functions, for AI agents and shell scripts,
+- a **CLI** (`screenreader-speech-capture-client`) with the same functions, for AI agents and shell scripts,
 - an **agent skill** (see [Agent skill](agents.md#agent-skill)).
 
 On its first call, the client checks the bridge's API version and throws `IncompatibleBridgeError`
@@ -20,13 +20,52 @@ optional peer dependency, needed only for the fixture and `setFocus(page)`.
 pnpm add -D screenreader-speech-capture-client
 ```
 
+## Bridge URL
+
+Set the bridge URL once per user, and the CLI, the library and the fixture all use it:
+
+```bash
+npx screenreader-speech-capture-client config set url http://my-test-vm:5151
+```
+
+The library, the fixture and the CLI use the first of these that is set:
+
+1. passed explicitly: `baseUrl` (library), `speechCaptureUrl` (fixture) or `--url` (CLI)
+2. env `SR_SPEECH_URL` (handy in CI)
+3. `url` in the client config file
+4. `http://localhost:5151`
+
+The client config file is separate from the [bridge's config file](configuration.md), so a bridge
+and a client on the same machine never share settings:
+
+| OS | Path |
+|---|---|
+| Windows | `%APPDATA%\screenreader-speech-capture\client.json` |
+| Linux, macOS | `$XDG_CONFIG_HOME` (or `~/.config`), then `screenreader-speech-capture/client.json` |
+
+Env `SR_SPEECH_CLIENT_CONFIG` points the client at a different file.
+
+| Command | Description |
+|---|---|
+| `config set url <url>` | Store the URL. Only `http://` and `https://` are accepted, and a trailing slash is removed. It does not contact the bridge: use `status` for that. |
+| `config get url` | Print the URL in use and where it comes from (`--url`, `SR_SPEECH_URL`, config file or default). With `--json`: `{ key, value, source }`. |
+| `config unset url` | Remove the stored URL. |
+| `config list` | All settings with their source. |
+| `config path` | The path of the config file. |
+
+An invalid URL or a broken config file gives exit code `3` and an error that names the file.
+
 ## Library
 
 ```ts
 import { SpeechCaptureClient } from 'screenreader-speech-capture-client';
 
-const sr = new SpeechCaptureClient({ baseUrl: 'http://my-test-vm:5151' }); // or env SR_SPEECH_URL
+const sr = new SpeechCaptureClient(); // URL from SR_SPEECH_URL or the config file, see Bridge URL
+const vm = new SpeechCaptureClient({ baseUrl: 'http://my-test-vm:5151' }); // or pass it explicitly
 ```
+
+The client reads the config file once, on its first request, and only if no explicit URL or
+`SR_SPEECH_URL` is set.
 
 ### The cursor
 
@@ -89,7 +128,7 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   workers: 1,
   use: {
-    speechCaptureUrl: 'http://my-test-vm:5151', // fixture option (or env SR_SPEECH_URL)
+    speechCaptureUrl: 'http://my-test-vm:5151', // optional, see Bridge URL
     channel: 'chrome',                          // or 'msedge': the browsers real users run
   },
 });
@@ -112,18 +151,15 @@ The fixture:
 
 ## CLI for agents
 
-The package installs two names for the same CLI:
+The CLI command has the same name as the package, `screenreader-speech-capture-client`, so
+`npx screenreader-speech-capture-client` works even where nothing is installed.
 
-| Command | Use it when |
-|---|---|
-| `screenreader-speech-capture-client` | Always works with `npx`, even where nothing is installed, because it's the same as the package name. **Use this one in agent prompts, scripts and CI.** |
-| `sr-speech` | Short alias. Only available when the package is installed (in the project, or globally with `npm i -g`). |
-
-Every command takes `--url` (or env `SR_SPEECH_URL`, default `http://localhost:5151`) and `--json`
-for machine-readable output. A CLI call has no memory between invocations, so there is no
+Every command takes `--url` (overrides the [stored bridge URL](#bridge-url)) and `--json` for
+machine-readable output. A CLI call has no memory between invocations, so there is no
 cursor. Use `mark` and `--since` instead.
 
 ```bash
+npx screenreader-speech-capture-client config set url http://my-test-vm:5151   # once, see Bridge URL
 npx screenreader-speech-capture-client status [--wait-ready] [--timeout 120000]
 npx screenreader-speech-capture-client clear
 npx screenreader-speech-capture-client speech [--since <seq>] [--limit <n>]
@@ -134,9 +170,6 @@ npx screenreader-speech-capture-client mark "before tab"   # prints the marker's
 npx screenreader-speech-capture-client focus --x 640 --y 12  # native click
 npx screenreader-speech-capture-client press "Insert+T"      # native keys; several args = sequence
 npx screenreader-speech-capture-client tail                # live feed until Ctrl+C (NDJSON with --json)
-
-# installed, same commands with the alias:
-sr-speech wait "Submit, button"
 ```
 
 Exit codes, so agents can branch on them without parsing output:
@@ -146,6 +179,6 @@ Exit codes, so agents can branch on them without parsing output:
 | `0` | Success (for `wait`: match found) |
 | `1` | Timeout / no match |
 | `2` | Bridge not reachable, HTTP error, or incompatible bridge version |
-| `3` | Invalid usage |
+| `3` | Invalid usage or invalid client config |
 
 For the typical agent loop, see [Agents](agents.md#agent-loop).

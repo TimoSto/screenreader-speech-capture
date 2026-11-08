@@ -206,6 +206,15 @@ importers:
         specifier: 0.23.7
         version: 0.23.7(tsx@4.23.15)(typescript@6.0.3)
 
+  packages/client:
+    devDependencies:
+      '@screenreader-speech-capture/shared':
+        specifier: workspace:*
+        version: link:../shared
+      tsdown:
+        specifier: 0.23.7
+        version: 0.23.7(tsx@4.23.15)(typescript@6.0.3)
+
   packages/shared: {}
 
   tools/fake-speech: {}
