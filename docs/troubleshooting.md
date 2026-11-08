@@ -3,6 +3,15 @@
 Common problems, what causes them and how to fix them. Start with
 `npx screenreader-speech-capture-client status` and the [bridge log](operations.md#logging).
 
+## Connection
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `status` exits with code `2`, or `curl http://<vm-ip>:5151/...` times out, but `http://localhost:5151` works on the VM | The Windows firewall drops the requests, often without ever showing a prompt. | Add the firewall rule and remove `node.exe` Block rules ([Firewall](vm-setup.md#firewall)). |
+| The bridge URL doesn't answer, even on the VM | It is the hypervisor host's address (for example `192.168.122.1` with libvirt), not the VM's. | Use an address from the bridge's `reachable at` log line or from `ipconfig` on the VM ([Firewall](vm-setup.md#firewall)). |
+| `connection refused` | The bridge isn't running, or listens on `127.0.0.1` only. | Start it, check `--host`, and read the [bridge log](operations.md#logging). |
+| The bridge doesn't start at all | Node.js is older than 22.12. | Install a current Node.js LTS ([Requirements](vm-setup.md#requirements)). |
+
 ## Speech
 
 | Symptom | Likely cause | Fix |

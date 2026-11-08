@@ -9,7 +9,8 @@ On the Windows machine or VM that runs the screen reader:
 | Requirement | Notes |
 |---|---|
 | Windows 10 / 11 | Physical or VM. Needs an interactive, unlocked desktop session (see [Running on the VM](#running-on-the-vm)). |
-| Node.js ≥ 20 | Includes `npx`. |
+| A firewall rule for the bridge's ports | **Required.** Windows may block the ports without asking (see [Firewall](#firewall)). |
+| Node.js ≥ 22.12 | Includes `npx`. The bridge doesn't start on older versions. (The [client](client.md) on your own machine needs only Node ≥ 20.) |
 | JAWS **or** NVDA | Both can use SAPI 5 voices. JAWS without a license runs in 40-minute demo mode (see [Running on the VM](#running-on-the-vm)). |
 | [`text-to-socket-engine`](https://www.npmjs.com/package/text-to-socket-engine) | The SAPI 5 voice that forwards speech text over TCP. Registering it needs an administrator prompt (see [Socket voice setup](#socket-voice-setup)). |
 | Playwright browsers | Installed on first run, or with `npx playwright install`. Branded Chrome / Edge are recommended. |
@@ -123,9 +124,45 @@ Set up the VM like this:
 
 ### Firewall
 
-Open the ports that are reached remotely (the speech TCP port stays on loopback):
+**This step is required.** Without it, the bridge works on the VM itself (`localhost`), but other
+machines can't reach it, and you get no error message: their requests just time out.
+
+Don't wait for Windows to ask. The "Allow access" prompt often doesn't appear:
+
+- **Windows Server** doesn't show it by default,
+- it can be turned off (`Get-NetFirewallProfile | Select-Object Name, NotifyOnListen`),
+- it appears only once per program path, so a new Node or `npx` path is blocked without a prompt.
+
+In an **administrator** PowerShell, open the ports that are reached remotely (the speech TCP port
+stays on loopback). `-Profile Any` includes the *Public* profile, which Windows usually uses for a
+hypervisor's virtual network:
 
 ```powershell
 New-NetFirewallRule -DisplayName "screenreader-speech-capture" `
-  -Direction Inbound -Protocol TCP -LocalPort 5151,3000,8931 -Action Allow
+  -Direction Inbound -Protocol TCP -LocalPort 5151,3000,8931 -Action Allow -Profile Any
 ```
+
+If someone answered the prompt with *Cancel*, Windows created **Block** rules for `node.exe`.
+Block wins over Allow, so remove them:
+
+```powershell
+Get-NetFirewallRule -Direction Inbound -Action Block |
+  Where-Object DisplayName -like '*node*' | Remove-NetFirewallRule
+```
+
+**Check it from the machine that runs the tests**, not from the VM. Use one of the URLs from the
+bridge's `listening on …, reachable at …` log line:
+
+```bash
+curl http://<vm-ip>:5151/api/v1/status
+```
+
+| Result | Meaning |
+|---|---|
+| JSON | Works. Store the URL with `config set url` ([Bridge URL](client.md#bridge-url)). |
+| Times out | The firewall drops the request: the rule is missing, or a Block rule wins. |
+| Connection refused | Nothing listens there: the bridge isn't running, or it listens on `127.0.0.1` only (`--host`). |
+
+With libvirt / KVM, the VM's address is something like `192.168.122.177`. `192.168.122.1` is the
+**host's** address on that network (the VM's gateway), not the VM's. Run `ipconfig` on the VM or
+`virsh net-dhcp-leases default` on the host to find the VM's address.
