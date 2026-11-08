@@ -54,6 +54,17 @@ describe('MemorySpeechRepository', () => {
     expect(texts(repo, 998)).toEqual(['t999', 't1000']);
   });
 
+  it('drops the oldest entries at once when maxEntries shrinks, and keeps more when it grows', () => {
+    const repo = new MemorySpeechRepository(5);
+    fill(repo, 5);
+    repo.setMaxEntries(2);
+    expect(repo.stats()).toEqual({ size: 2, maxEntries: 2, firstSeq: 4, lastSeq: 5 });
+    expect(repo.list(0).truncated).toBe(true);
+    repo.setMaxEntries(4);
+    fill(repo, 2);
+    expect(repo.stats()).toMatchObject({ size: 4, firstSeq: 4, lastSeq: 7 });
+  });
+
   it('keeps counting seq after clear, and clear is not truncation', () => {
     const repo = new MemorySpeechRepository(2);
     fill(repo, 3);

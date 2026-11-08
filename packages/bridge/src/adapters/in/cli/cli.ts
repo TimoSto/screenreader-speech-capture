@@ -1,45 +1,39 @@
 #!/usr/bin/env node
 import packageJson from '../../../../package.json' with { type: 'json' };
-import { DEFAULT_CONFIG, mergeConfig, type Config } from '../../../domain/config.js';
-import { startBridge } from '../../../main.js';
+import { ConfigError, startBridge } from '../../../main.js';
+import { helpText, parseCli, UsageError } from './options.js';
 
-// Interim: a few environment variables until flags, all env vars and the config file land
-// (docs/configuration.md, ROADMAP M1 lifecycle).
-function flag(value: string | undefined): boolean | undefined {
-  if (value === undefined || value === '') return undefined;
-  return !['0', 'false', 'no', 'off'].includes(value.toLowerCase());
-}
-
-function configFromEnv(env: NodeJS.ProcessEnv): Config {
-  const number = (value: string | undefined) => (value === undefined ? undefined : Number(value));
-  return mergeConfig(DEFAULT_CONFIG, {
-    tcp: {
-      port: number(env.SR_SPEECH_TCP_PORT),
-      encoding: env.SR_SPEECH_TCP_ENCODING,
-    },
-    http: {
-      host: env.SR_SPEECH_HOST,
-      port: number(env.SR_SPEECH_HTTP_PORT),
-    },
-    log: {
-      level: env.SR_SPEECH_LOG_LEVEL,
-      file: env.SR_SPEECH_BRIDGE_LOG,
-      consoleSpeech: flag(env.SR_SPEECH_CONSOLE_SPEECH),
-    },
-  });
-}
-
-let config: Config;
-try {
-  config = configFromEnv(process.env);
-} catch (error) {
-  process.stderr.write(`screenreader-speech-capture: ${(error as Error).message}\n`);
+const fail = (message: string): never => {
+  process.stderr.write(`screenreader-speech-capture: ${message}\n`);
   process.exit(2);
+};
+
+let options: ReturnType<typeof parseCli>;
+try {
+  options = parseCli(process.argv.slice(2), process.env);
+} catch (error) {
+  if (!(error instanceof UsageError)) throw error;
+  options = fail(`${error.message}\nRun with --help to see the options.`);
 }
 
-// startBridge and stop() write their own failures to the bridge log.
+if (options.help) {
+  process.stdout.write(helpText());
+  process.exit(0);
+}
+if (options.version) {
+  process.stdout.write(`${packageJson.version}\n`);
+  process.exit(0);
+}
+
+// startBridge and stop() write their own failures to the bridge log. An invalid setting is
+// found before the log exists, so it goes to stderr.
 try {
-  const bridge = await startBridge({ config, version: packageJson.version });
+  const bridge = await startBridge({
+    version: packageJson.version,
+    overrides: options.overrides,
+    overrideSources: options.sources,
+    ...(options.configFile === undefined ? {} : { configFile: options.configFile }),
+  });
 
   let stopping = false;
   const shutdown = () => {
@@ -51,6 +45,7 @@ try {
     );
   };
   for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(signal, shutdown);
-} catch {
+} catch (error) {
+  if (error instanceof ConfigError) fail(error.message);
   process.exit(1);
 }
