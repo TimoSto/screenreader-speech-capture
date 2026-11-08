@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { FsClientConfigStore } from '../../out/fs-config/fs-client-config-store.js';
 import { EXIT, runCli } from './run.js';
 
 let dir: string;
@@ -20,7 +21,8 @@ async function run(args: string[], env: NodeJS.ProcessEnv = {}) {
   let stdout = '';
   let stderr = '';
   const code = await runCli(args, {
-    env: { SR_SPEECH_CLIENT_CONFIG: file, ...env },
+    env,
+    store: new FsClientConfigStore(file),
     stdout: (t) => (stdout += t),
     stderr: (t) => (stderr += t),
     version: '1.2.3',

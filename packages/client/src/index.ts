@@ -2,13 +2,16 @@ export {
   ClientConfigError,
   DEFAULT_BRIDGE_URL,
   normalizeBridgeUrl,
-  readClientConfig,
-  resolveBridgeUrl,
   URL_ENV,
-  writeClientConfig,
   type ClientConfig,
+  type ClientConfigPatch,
   type Resolved,
-  type ResolveOptions,
   type ValueSource,
-} from './config/client-config.js';
-export { CONFIG_PATH_ENV, clientConfigFile } from './config/paths.js';
+} from './core/bridge-url.js';
+export type { ClientConfigStore } from './ports/config-store.js';
+export { CONFIG_PATH_ENV, clientConfigFile } from './adapters/out/fs-config/paths.js';
+export {
+  defaultClientConfigStore,
+  resolveBridgeUrl,
+  type ResolveOptions,
+} from './resolve-bridge-url.js';

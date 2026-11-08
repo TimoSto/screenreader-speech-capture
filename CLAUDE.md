@@ -59,6 +59,14 @@ wire it in `main.ts` rather than reaching across layers.
 Relative imports use `.js` extensions (ESM), and type-only imports must use `import type`
 (`consistent-type-imports` is an error).
 
+### Client: hexagonal-lite
+
+`packages/client/src/`: `core/` (pure), `ports/`, `adapters/in` (CLI, later the Playwright fixture)
+and `adapters/out` (fs config, later HTTP). The top-level files (`index.ts`, `resolve-bridge-url.ts`)
+wire the default adapters. Driving adapters may only import the public API (`src/index.ts`), so the
+CLI stays in parity with the library. Enforced by `no-restricted-imports` like the bridge; details
+in `docs/architecture.md`.
+
 ### Shared contract
 
 `packages/shared` holds only the HTTP API DTOs (exported from `src/index.ts`, consumed as TS

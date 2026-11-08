@@ -4,17 +4,18 @@ import {
   normalizeBridgeUrl,
   resolveBridgeUrl,
   URL_ENV,
-  writeClientConfig,
+  type ClientConfigStore,
   type Resolved,
   type ValueSource,
-} from '../config/client-config.js';
-import { clientConfigFile } from '../config/paths.js';
+} from '../../../index.js';
 
 /** Exit codes (docs/client.md#cli-for-agents). */
 export const EXIT = { ok: 0, timeout: 1, bridge: 2, usage: 3 } as const;
 
 export interface CliIo {
   env: NodeJS.ProcessEnv;
+  /** Where `config` reads and writes the per-user settings. */
+  store: ClientConfigStore;
   stdout: (text: string) => void;
   stderr: (text: string) => void;
   version: string;
@@ -115,11 +116,12 @@ interface Globals {
 }
 
 async function config(args: string[], globals: Globals, io: CliIo): Promise<number> {
-  const file = clientConfigFile(undefined, io.env);
+  const { store } = io;
+  const file = store.location;
   const out = (json: unknown, text: string) =>
     io.stdout(globals.json ? `${JSON.stringify(json)}\n` : `${text}\n`);
   const resolveKey = (_key: Key): Promise<Resolved> =>
-    resolveBridgeUrl({ explicit: globals.url, env: io.env, file });
+    resolveBridgeUrl({ explicit: globals.url, env: io.env, store });
 
   const [action, ...rest] = args;
   switch (action) {
@@ -127,7 +129,7 @@ async function config(args: string[], globals: Globals, io: CliIo): Promise<numb
       const [key, value] = expectArgs(rest, 2, 'config set <key> <value>');
       const k = expectKey(key);
       const normalized = KEYS[k](value);
-      await writeClientConfig({ [k]: normalized }, file);
+      await store.save({ [k]: normalized });
       out({ key: k, value: normalized, file }, `Saved ${k} = ${normalized} to ${file}`);
       const env = io.env[URL_ENV];
       if (k === 'url' && env !== undefined && env !== '') {
@@ -145,7 +147,7 @@ async function config(args: string[], globals: Globals, io: CliIo): Promise<numb
     case 'unset': {
       const [key] = expectArgs(rest, 1, 'config unset <key>');
       const k = expectKey(key);
-      await writeClientConfig({ [k]: undefined }, file);
+      await store.save({ [k]: undefined });
       out({ key: k, file }, `Removed ${k} from ${file}`);
       return EXIT.ok;
     }

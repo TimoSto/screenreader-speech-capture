@@ -116,6 +116,31 @@ knows the concrete adapters. Adapters don't import the concrete services or each
 - A different input method (for example direct `SendInput` through FFI, or the hypervisor's
   keyboard API) is a new `InputInjector`.
 
+## Client: hexagonal-lite
+
+The client package is a library first. The CLI and the Playwright fixture are **driving adapters on
+top of the library's public API**, so they can't drift from it (see [Test client](client.md)).
+
+```
+packages/client/src/
+  core/              pure logic, no I/O: bridge URL precedence + validation (later: cursor, matching,
+                     version check)
+  ports/             driven ports: ClientConfigStore (later: BridgeApi, Clock)
+  adapters/
+    out/fs-config/   client.json in %APPDATA% / ~/.config, atomic writes
+    in/cli/          argv → library calls → stdout + exit code
+  resolve-bridge-url.ts, index.ts
+                     wiring and public API: the only place that knows the concrete adapters
+```
+
+There is no separate use-case layer or `main.ts`: the library's public functions (later the
+`SpeechCaptureClient` methods) *are* the use cases, and users wire the client themselves with
+`new SpeechCaptureClient(options)`. Default adapters are chosen at the top level of `src/`.
+
+**Dependency rule** (ESLint, as for the bridge): `core` imports no `node:*`, ports or adapters;
+`ports` import only `core`; `adapters/in` (CLI, fixture) import only the public API (`src/index.ts`),
+never `core`, `ports` or `adapters/out`; `adapters/out` don't import `adapters/in`. Tests are exempt.
+
 ## UI: SvelteKit, hexagonal-lite
 
 ```

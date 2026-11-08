@@ -31,6 +31,25 @@ const inAdapters = {
   message: 'Driven adapters must not import driving adapters. Wire them in main.ts.',
 };
 
+const clientNodeBuiltins = {
+  group: ['node:*'],
+  message: 'The client core and ports do no I/O. Put this in an adapter.',
+};
+const clientOuter = {
+  regex: '(^|/)(ports|adapters)/',
+  message: 'The client core imports nothing from ports or adapters.',
+};
+const clientOutAdapters = {
+  regex: outAdapters.regex,
+  message:
+    'Client driving adapters must not import driven adapters. Wire them in src/ (top level).',
+};
+// The CLI and the Playwright fixture must offer what the library offers, so they go through it.
+const clientPublicApiOnly = {
+  regex: '(^|/)(core|ports)/',
+  message: 'Client driving adapters (CLI, fixture) use only the public API in src/index.ts.',
+};
+
 export default tseslint.config(
   { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**'] },
   js.configs.recommended,
@@ -76,6 +95,35 @@ export default tseslint.config(
     ignores: ['**/*.test.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [services, inAdapters] }],
+    },
+  },
+  // Client: hexagonal-lite (docs/architecture.md#client-hexagonal-lite).
+  {
+    files: ['packages/client/src/core/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [clientNodeBuiltins, clientOuter] }],
+    },
+  },
+  {
+    files: ['packages/client/src/ports/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [clientNodeBuiltins, adapters] }],
+    },
+  },
+  {
+    files: ['packages/client/src/adapters/in/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [clientOutAdapters, clientPublicApiOnly] }],
+    },
+  },
+  {
+    files: ['packages/client/src/adapters/out/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [inAdapters] }],
     },
   },
   {
