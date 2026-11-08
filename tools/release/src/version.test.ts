@@ -41,9 +41,9 @@ describe('nextVersion', () => {
     ['0.0.1-preview.5', 'minor', 'preview', '0.1.0-preview.0'],
     ['0.1.0-preview.0', 'patch', 'preview', '0.1.0-preview.1'],
     ['0.1.0-preview.0', 'minor', 'preview', '0.1.0-preview.1'],
-    // Breaking while 0.x is a minor bump.
-    ['0.1.0-preview.1', 'major', 'preview', '0.1.0-preview.2'],
-    ['0.1.3', 'major', 'preview', '0.2.0-preview.0'],
+    // Breaking is always a major bump, also while 0.x.
+    ['0.1.0-preview.1', 'major', 'preview', '1.0.0-preview.0'],
+    ['0.1.3', 'major', 'preview', '1.0.0-preview.0'],
     ['1.2.0-preview.1', 'major', 'preview', '2.0.0-preview.0'],
     ['2.0.0-preview.1', 'major', 'preview', '2.0.0-preview.2'],
     // From a stable version into the channel.
@@ -56,7 +56,8 @@ describe('nextVersion', () => {
     ['1.2.3', 'patch', null, '1.2.4'],
     ['1.2.3', 'minor', null, '1.3.0'],
     ['1.2.3', 'major', null, '2.0.0'],
-    ['0.4.1', 'major', null, '0.5.0'],
+    ['0.4.1', 'major', null, '1.0.0'],
+    ['0.0.1-preview.5', 'major', null, '1.0.0'],
   ])('%s + %s (channel %s) → %s', (last, bump, channel, expected) => {
     expect(formatVersion(nextVersion(v(last), bump, channel))).toBe(expected);
   });
