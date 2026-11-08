@@ -123,23 +123,35 @@ top of the library's public API**, so they can't drift from it (see [Test client
 
 ```
 packages/client/src/
-  core/              pure logic, no I/O: bridge URL precedence + validation (later: cursor, matching,
-                     version check)
+  core/              pure rules, no I/O: bridge URL validation + precedence (later: cursor,
+                     matching, version compatibility)
+  application/       use cases on core + ports, no I/O: resolveBridgeUrl (later: the
+                     SpeechCaptureClient logic: waits, record, version check)
   ports/             driven ports: ClientConfigStore (later: BridgeApi, Clock)
   adapters/
     out/fs-config/   client.json in %APPDATA% / ~/.config, atomic writes
-    in/cli/          argv → library calls → stdout + exit code
-  resolve-bridge-url.ts, index.ts
-                     wiring and public API: the only place that knows the concrete adapters
+    in/cli/          argv → public API → stdout + exit code
+  index.ts           composition root + public API: the only place that knows the concrete
+                     adapters and reads process.env
 ```
 
-There is no separate use-case layer or `main.ts`: the library's public functions (later the
-`SpeechCaptureClient` methods) *are* the use cases, and users wire the client themselves with
-`new SpeechCaptureClient(options)`. Default adapters are chosen at the top level of `src/`.
+The layers are the same as the bridge's, but lighter:
 
-**Dependency rule** (ESLint, as for the bridge): `core` imports no `node:*`, ports or adapters;
-`ports` import only `core`; `adapters/in` (CLI, fixture) import only the public API (`src/index.ts`),
-never `core`, `ports` or `adapters/out`; `adapters/out` don't import `adapters/in`. Tests are exempt.
+- **No driving-port interfaces** in front of the use cases. The application functions are called
+  directly, because no adapter would ever swap them out.
+- **No separate `main.ts`.** Library users create the client themselves, so the default wiring
+  (which store, which env) lives in the public functions in `index.ts`. The application layer
+  always gets its ports and values passed in, so it can be tested with fakes.
+
+**Dependency rule** (ESLint, as for the bridge):
+
+- `core` imports no `node:*` and nothing from `application`, `ports` or `adapters`.
+- `application` and `ports` import no `node:*` and no adapters.
+- `adapters/in` (CLI, fixture) import only the public API (`src/index.ts`). They never import
+  `core`, `application`, `ports` or `adapters/out` directly, so the CLI can't drift from the
+  library.
+- `adapters/out` don't import `adapters/in`.
+- Tests are exempt.
 
 ## UI: SvelteKit, hexagonal-lite
 

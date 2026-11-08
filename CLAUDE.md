@@ -61,11 +61,12 @@ Relative imports use `.js` extensions (ESM), and type-only imports must use `imp
 
 ### Client: hexagonal-lite
 
-`packages/client/src/`: `core/` (pure), `ports/`, `adapters/in` (CLI, later the Playwright fixture)
-and `adapters/out` (fs config, later HTTP). The top-level files (`index.ts`, `resolve-bridge-url.ts`)
-wire the default adapters. Driving adapters may only import the public API (`src/index.ts`), so the
-CLI stays in parity with the library. Enforced by `no-restricted-imports` like the bridge; details
-in `docs/architecture.md`.
+`packages/client/src/`: `core/` (pure rules), `application/` (use cases on core + ports, ports
+passed in, no `process.env`), `ports/`, `adapters/in` (CLI, later the Playwright fixture) and
+`adapters/out` (fs config, later HTTP). `index.ts` is the composition root and public API: the only
+place that picks the default adapters. There are no driving-port interfaces and no `main.ts`.
+Driving adapters may only import the public API (`src/index.ts`), so the CLI stays in parity with
+the library. Enforced by `no-restricted-imports` like the bridge; details in `docs/architecture.md`.
 
 ### Shared contract
 

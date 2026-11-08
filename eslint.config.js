@@ -33,20 +33,23 @@ const inAdapters = {
 
 const clientNodeBuiltins = {
   group: ['node:*'],
-  message: 'The client core and ports do no I/O. Put this in an adapter.',
+  message: 'The client core, application and ports do no I/O. Put this in an adapter.',
 };
 const clientOuter = {
-  regex: '(^|/)(ports|adapters)/',
-  message: 'The client core imports nothing from ports or adapters.',
+  regex: '(^|/)(application|ports|adapters)/',
+  message: 'The client core imports nothing from the outer layers.',
+};
+const clientAdapters = {
+  regex: '(^|/)adapters/',
+  message: 'Only src/index.ts (the composition root) knows the concrete client adapters.',
 };
 const clientOutAdapters = {
   regex: outAdapters.regex,
-  message:
-    'Client driving adapters must not import driven adapters. Wire them in src/ (top level).',
+  message: 'Client driving adapters must not import driven adapters. Wire them in src/index.ts.',
 };
 // The CLI and the Playwright fixture must offer what the library offers, so they go through it.
 const clientPublicApiOnly = {
-  regex: '(^|/)(core|ports)/',
+  regex: '(^|/)(core|application|ports)/',
   message: 'Client driving adapters (CLI, fixture) use only the public API in src/index.ts.',
 };
 
@@ -106,10 +109,10 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/client/src/ports/**/*.ts'],
+    files: ['packages/client/src/application/**/*.ts', 'packages/client/src/ports/**/*.ts'],
     ignores: ['**/*.test.ts'],
     rules: {
-      'no-restricted-imports': ['error', { patterns: [clientNodeBuiltins, adapters] }],
+      'no-restricted-imports': ['error', { patterns: [clientNodeBuiltins, clientAdapters] }],
     },
   },
   {
