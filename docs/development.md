@@ -62,7 +62,7 @@ from the commit titles. PRs are squash-merged, so the commit title is the **PR t
 | --- | --- |
 | `feat(bridge): …` | minor |
 | `fix(client): …`, `perf(…): …` | patch |
-| `<any type>(…)!: …` | breaking: major, but **minor while the version is 0.x** |
+| `<any type>(…)!: …` | major (breaking change), also from 0.x: the first `!` releases `1.0.0` |
 | `refactor`, `docs`, `test`, `chore`, `ci`, `build`, `revert` | no release |
 
 - Scopes: `bridge` and `client` select the packages. `shared`, `fake-speech`, `release` and `deps`

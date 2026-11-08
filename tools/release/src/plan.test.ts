@@ -74,7 +74,7 @@ describe('renderNotes', () => {
       { sha: 'd'.repeat(40), subject: 'refactor(bridge)!: rename `--port` (#30)' },
       ...commits,
     ]);
-    expect(plan.version).toBe('0.2.0');
+    expect(plan.version).toBe('1.0.0');
     expect(renderNotes(plan)).toBe(
       [
         '### Breaking changes',

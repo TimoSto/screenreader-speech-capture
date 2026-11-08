@@ -52,20 +52,18 @@ function covers(v: Version, bump: Bump): boolean {
 /**
  * The version after `last` for a release with this bump.
  *
- * - While the major version is 0, a breaking change is a minor bump.
  * - With a `channel` (prerelease id), versions are prereleases: a prerelease whose base already
  *   covers the bump only counts up (`0.1.0-preview.0` + fix → `0.1.0-preview.1`), otherwise the
- *   base moves (`0.1.0-preview.1` + breaking at 1.x → `2.0.0-preview.0`).
+ *   base moves (`0.1.0-preview.1` + breaking → `1.0.0-preview.0`).
  * - Without a channel, a prerelease whose base covers the bump is released as that base.
  */
 export function nextVersion(last: Version, bump: Bump, channel: string | null): Version {
-  const effective = bump === 'major' && last.major === 0 ? 'minor' : bump;
   const base = { ...last, pre: null };
-  const covered = last.pre !== null && covers(last, effective);
-  if (channel === null) return covered ? base : increment(base, effective);
+  const covered = last.pre !== null && covers(last, bump);
+  if (channel === null) return covered ? base : increment(base, bump);
   if (covered) {
     const n = last.pre?.id === channel ? last.pre.n + 1 : 0;
     return { ...base, pre: { id: channel, n } };
   }
-  return { ...increment(base, effective), pre: { id: channel, n: 0 } };
+  return { ...increment(base, bump), pre: { id: channel, n: 0 } };
 }
