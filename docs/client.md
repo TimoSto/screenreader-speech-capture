@@ -71,11 +71,16 @@ The client reads the config file once, on its first request, and only if no expl
 
 Speech often arrives **before** your code starts waiting for it: the screen reader reacts to
 `focus()` within milliseconds. So waiting can't start "from now". Instead every client keeps a
-**cursor** (a `seq`):
+**cursor**: the `seq` of the last entry it consumed. `seq` is the ID of one entry
+([data model](http-api.md#data-model)), and the cursor is the client's read position. Every function
+with a `since` option uses the cursor as its default `since`, so it looks at entries with
+`seq > cursor`.
 
-- `clear()` sets the cursor to the end of the buffer (the fixture calls it before each test).
+- A new client starts at `0`. `clear()` empties the buffer and sets the cursor back to `0`. `seq`
+  survives a clear, so everything in the buffer after that is newer than the clear. The fixture
+  calls `clear()` before each test.
 - `waitForOutput` / `waitForSequence` search **from the cursor**, so speech that already arrived
-  is found. On a match the cursor moves past the matched entry, so the next wait only sees
+  is found. On a match the cursor moves to the matched entry, so the next wait only sees
   what came after it.
 - `mark()` and an explicit `since` option let you control the range yourself.
 - `cursor()` returns the current value, `setCursor(seq)` sets it.
@@ -84,20 +89,32 @@ Speech often arrives **before** your code starts waiting for it: the screen read
 
 | Function | Returns | Description |
 |---|---|---|
-| `getSpeech({ since?, limit?, includeMarkers? })` | `SpeechEntry[]` | Recorded speech entries, oldest first. `since` defaults to the cursor. |
-| `getText({ since?, separator? })` | `string` | All speech since `since` (default: the cursor), joined into one string. Handy for snapshot assertions. |
+| `getSpeech({ since?, limit?, includeMarkers? })` | `SpeechEntry[]` | Recorded speech entries, oldest first. `since` defaults to the cursor, `includeMarkers` to `false`. |
+| `getText({ since?, separator? })` | `string` | All speech since `since` (default: the cursor), joined into one string (`separator` default `'\n'`). Handy for snapshot assertions. |
 | `clear()` | `void` | Clear the buffer and reset the cursor. |
-| `waitForOutput(match, { timeout?, since?, normalize? })` | `SpeechEntry` | Wait until a speech entry after the cursor (or `since`) matches, then move the cursor past it. `match` is a `string` (substring), a `RegExp` or a predicate `(u) => boolean`. `normalize: true` ignores case and extra whitespace. Throws `SpeechTimeoutError` (with the entries seen so far) on timeout. Default `timeout`: 5000 ms. |
+| `waitForOutput(match, { timeout?, since?, normalize? })` | `SpeechEntry` | Wait until a speech entry after the cursor (or `since`) matches, then move the cursor past it. `match` is a `string` (substring), a `RegExp` or a predicate `(u) => boolean`. `normalize: true` ignores case and extra whitespace. Markers never match. Throws `SpeechTimeoutError` (with the speech seen so far in `entries`) on timeout. Default `timeout`: 5000 ms. |
 | `waitForSequence(matches[], { timeout?, since?, normalize? })` | `SpeechEntry[]` | Wait until the matches occur in this order (other entries may come in between). Moves the cursor past the last match. |
-| `waitForSilence({ quietFor?, timeout? })` | `void` | Wait until nothing has been spoken for `quietFor` ms (default 500). Useful before asserting on "everything that was said". |
-| `record(fn)` | `{ result, entries }` | Run `fn` and return everything spoken while it ran (waits for silence at the end, then moves the cursor to the end). |
+| `waitForSilence({ quietFor?, timeout? })` | `void` | Wait until nothing new has been spoken for `quietFor` ms (default 500), counted from the call. Throws `SpeechTimeoutError` if speech goes on until `timeout` (default 10000 ms). Useful before asserting on "everything that was said". |
+| `record(fn, { quietFor?, timeout? })` | `{ result, entries }` | Run `fn` and return everything spoken while it ran (waits for silence at the end, then moves the cursor to the end). |
 | `mark(label)` | `SpeechEntry` | Insert a marker. Its `seq` can be used as `since`. |
 | `setFocus(page, { target? })` | `void` | Make the page's browser window the OS foreground window with a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
 | `click({ x, y })` | `void` | Native click at screen coordinates (`POST /api/v1/set-focus`). |
 | `pressKeys(keys, { delayMs? })` | `void` | Native key presses, for screen reader commands (`'Insert+T'`, `['h', 'h']`). |
 | `onSpeech(cb)` | `() => void` | Subscribe to the live SSE feed. Returns an unsubscribe function. |
-| `status()` | `Status` | Bridge health (TCP connections, Playwright/MCP state, versions). |
+| `status()` | `BridgeStatus` | Bridge health (TCP connections, Playwright/MCP state, versions). |
+| `waitForReady({ timeout? })` | `BridgeStatus` | Wait until the bridge answers and is `ready` (default `timeout` 120000 ms). Throws `BridgeNotReadyError` on timeout. |
 | `playwrightEndpoint()` | `string` | WebSocket URL of the bridge's Playwright server, for `browserType.connect()`. |
+
+### Errors
+
+| Error | When |
+|---|---|
+| `SpeechTimeoutError` | A wait ended without a match. `entries` holds the speech seen while waiting. |
+| `BridgeNotReadyError` | `waitForReady` timed out. |
+| `BridgeUnreachableError` | No connection to the bridge (wrong URL, bridge not running, network). |
+| `BridgeHttpError` | The bridge answered with an [error](http-api.md#errors): `status`, `code`, `details`. |
+| `IncompatibleBridgeError` | The bridge has another major API version (see [Versioning](http-api.md#versioning)). |
+| `ClientConfigError` | Invalid bridge URL or client config file. |
 
 ## Playwright fixture
 
@@ -156,14 +173,15 @@ The CLI command has the same name as the package, `screenreader-speech-capture-c
 
 Every command takes `--url` (overrides the [stored bridge URL](#bridge-url)) and `--json` for
 machine-readable output. A CLI call has no memory between invocations, so there is no
-cursor. Use `mark` and `--since` instead.
+cursor: `--since` defaults to `0`, which means everything since the last `clear`. Use `mark` and
+`--since` to look at a smaller range.
 
 ```bash
 npx screenreader-speech-capture-client config set url http://my-test-vm:5151   # once, see Bridge URL
 npx screenreader-speech-capture-client status [--wait-ready] [--timeout 120000]
 npx screenreader-speech-capture-client clear
-npx screenreader-speech-capture-client speech [--since <seq>] [--limit <n>]
-npx screenreader-speech-capture-client text [--since <seq>]
+npx screenreader-speech-capture-client speech [--since <seq>] [--limit <n>] [--include-markers]
+npx screenreader-speech-capture-client text [--since <seq>] [--separator <s>]
 npx screenreader-speech-capture-client wait "Submit, button" [--regex] [--normalize] [--timeout 5000] [--since <seq>]
 npx screenreader-speech-capture-client wait-silence [--quiet-for 500] [--timeout 10000]
 npx screenreader-speech-capture-client mark "before tab"   # prints the marker's seq
@@ -177,8 +195,13 @@ Exit codes, so agents can branch on them without parsing output:
 | Code | Meaning |
 |---|---|
 | `0` | Success (for `wait`: match found) |
-| `1` | Timeout / no match |
+| `1` | Timeout / no match (also `status --wait-ready` and `wait-silence`) |
 | `2` | Bridge not reachable, HTTP error, or incompatible bridge version |
 | `3` | Invalid usage or invalid client config |
+
+With `--json`, `wait` prints `{ "matched": true, "entry": {...} }`, or on timeout
+`{ "matched": false, "entries": [...] }` with the speech seen (the same shapes as
+[`GET /speech/wait`](http-api.md#endpoints)). `mark` prints the marker's `seq`, or the whole entry
+with `--json`.
 
 For the typical agent loop, see [Agents](agents.md#agent-loop).

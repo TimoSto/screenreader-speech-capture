@@ -1,6 +1,15 @@
 import { parseArgs } from 'node:util';
 import type { ManageClientConfig } from '../../../application/ports/in/manage-client-config.js';
+import type { SpeechCapture } from '../../../application/ports/in/speech-capture.js';
 import { ClientConfigError, URL_ENV, type ValueSource } from '../../../domain/bridge-url.js';
+import {
+  BridgeHttpError,
+  BridgeNotReadyError,
+  BridgeUnreachableError,
+  IncompatibleBridgeError,
+  SpeechTimeoutError,
+} from '../../../domain/errors.js';
+import type { BridgeStatus, SpeechEntry } from '../../../domain/speech-entry.js';
 
 /** Exit codes (docs/client.md#cli-for-agents). */
 export const EXIT = { ok: 0, timeout: 1, bridge: 2, usage: 3 } as const;
@@ -8,6 +17,8 @@ export const EXIT = { ok: 0, timeout: 1, bridge: 2, usage: 3 } as const;
 export interface CliIo {
   /** The per-user settings behind `config` and the bridge URL. */
   config: ManageClientConfig;
+  /** A client for the bridge at `url` (`--url`), or at the configured URL if `undefined`. */
+  speech: (url: string | undefined) => SpeechCapture;
   stdout: (text: string) => void;
   stderr: (text: string) => void;
   version: string;
@@ -28,6 +39,21 @@ export function helpText(): string {
   return `Usage: ${NAME} <command> [options]
 
 Commands:
+  status [--wait-ready] [--timeout <ms>]
+                         Bridge health and versions; --wait-ready waits until it is ready
+                         (default timeout 120000)
+  clear                  Clear the speech buffer
+  speech [--since <seq>] [--limit <n>] [--include-markers]
+                         Recorded speech entries, oldest first
+  text [--since <seq>] [--separator <s>]
+                         All speech joined into one text (one line per entry)
+  wait <text> [--regex] [--normalize] [--since <seq>] [--timeout <ms>]
+                         Wait until speech contains <text> (or matches the regex);
+                         also finds speech that arrived before the call (default timeout 5000)
+  wait-silence [--quiet-for <ms>] [--timeout <ms>]
+                         Wait until nothing was spoken for --quiet-for ms (default 500, 10000)
+  mark <label>           Insert a marker and print its seq, for --since
+
   config set url <url>   Store the bridge URL for this user
   config get url         Show the bridge URL in use and where it comes from
   config unset url       Remove the stored bridge URL
@@ -40,7 +66,10 @@ Options:
   -h, --help    Show this help
   -v, --version Show the version
 
-Exit codes: 0 success, 1 timeout / no match, 2 bridge not reachable, 3 invalid usage or config.
+--since <seq> takes a seq printed by mark (default 0: everything since the last clear).
+
+Exit codes: 0 success, 1 timeout / no match, 2 bridge not reachable, HTTP error or
+incompatible bridge, 3 invalid usage or config.
 `;
 }
 
@@ -57,6 +86,18 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
       io.stderr(`${NAME}: ${error.message}\n`);
       return EXIT.usage;
     }
+    if (error instanceof BridgeNotReadyError) {
+      io.stderr(`${NAME}: ${error.message}\n`);
+      return EXIT.timeout;
+    }
+    if (
+      error instanceof BridgeUnreachableError ||
+      error instanceof BridgeHttpError ||
+      error instanceof IncompatibleBridgeError
+    ) {
+      io.stderr(`${NAME}: ${error.message}\n`);
+      return EXIT.bridge;
+    }
     throw error;
   }
 }
@@ -67,12 +108,7 @@ async function dispatch(argv: readonly string[], io: CliIo): Promise<number> {
     parsed = parseArgs({
       args: [...argv],
       allowPositionals: true,
-      options: {
-        url: { type: 'string' },
-        json: { type: 'boolean', default: false },
-        help: { type: 'boolean', short: 'h', default: false },
-        version: { type: 'boolean', short: 'v', default: false },
-      },
+      options: OPTIONS,
     });
   } catch (error) {
     throw new UsageError((error as Error).message);
@@ -88,19 +124,216 @@ async function dispatch(argv: readonly string[], io: CliIo): Promise<number> {
   }
 
   const [command, ...rest] = positionals;
-  switch (command) {
-    case 'config':
-      return config(rest, { url: values.url, json: values.json }, io);
-    case undefined:
-      throw new UsageError('Missing command.');
-    default:
-      throw new UsageError(`Unknown command "${command}".`);
+  if (command === undefined) throw new UsageError('Missing command.');
+  if (!isCommand(command)) throw new UsageError(`Unknown command "${command}".`);
+  checkOptions(command, values);
+  const globals = { url: values.url, json: values.json };
+  if (command === 'config') return config(rest, globals, io);
+  const ctx: Context = {
+    ...globals,
+    values,
+    speech: io.speech(values.url),
+    out: (json, text) => io.stdout(values.json ? `${JSON.stringify(json)}\n` : `${text}\n`),
+    io,
+  };
+  return SPEECH_COMMANDS[command](rest, ctx);
+}
+
+/** Every option; {@link COMMAND_OPTIONS} says which command takes which. */
+const OPTIONS = {
+  url: { type: 'string' },
+  json: { type: 'boolean', default: false },
+  help: { type: 'boolean', short: 'h', default: false },
+  version: { type: 'boolean', short: 'v', default: false },
+  since: { type: 'string' },
+  limit: { type: 'string' },
+  timeout: { type: 'string' },
+  'quiet-for': { type: 'string' },
+  'include-markers': { type: 'boolean' },
+  separator: { type: 'string' },
+  regex: { type: 'boolean' },
+  normalize: { type: 'boolean' },
+  'wait-ready': { type: 'boolean' },
+} as const;
+
+type Values = ReturnType<typeof parseArgs<{ options: typeof OPTIONS }>>['values'];
+type Option = keyof typeof OPTIONS;
+
+/** Options every command takes. */
+const GLOBAL_OPTIONS: readonly Option[] = ['url', 'json', 'help', 'version'];
+
+const COMMAND_OPTIONS = {
+  config: [],
+  status: ['wait-ready', 'timeout'],
+  clear: [],
+  speech: ['since', 'limit', 'include-markers'],
+  text: ['since', 'separator'],
+  wait: ['regex', 'normalize', 'since', 'timeout'],
+  'wait-silence': ['quiet-for', 'timeout'],
+  mark: [],
+} as const satisfies Record<string, readonly Option[]>;
+
+type Command = keyof typeof COMMAND_OPTIONS;
+
+const isCommand = (name: string): name is Command => Object.hasOwn(COMMAND_OPTIONS, name);
+
+function checkOptions(command: Command, values: Values): void {
+  const allowed: readonly Option[] = [...GLOBAL_OPTIONS, ...COMMAND_OPTIONS[command]];
+  for (const [name, value] of Object.entries(values)) {
+    if (value !== undefined && !allowed.includes(name as Option)) {
+      throw new UsageError(`"${command}" does not take --${name}.`);
+    }
   }
 }
 
 interface Globals {
   url: string | undefined;
   json: boolean;
+}
+
+interface Context extends Globals {
+  values: Values;
+  speech: SpeechCapture;
+  /** Prints `json` with --json, `text` otherwise. */
+  out: (json: unknown, text: string) => void;
+  io: CliIo;
+}
+
+const SPEECH_COMMANDS: Record<
+  Exclude<Command, 'config'>,
+  (args: string[], ctx: Context) => Promise<number>
+> = {
+  async status(args, { values, speech, out }) {
+    expectArgs(args, 0, 'status [--wait-ready] [--timeout <ms>]');
+    const timeout = optionalInt(values, 'timeout', 0);
+    if (!values['wait-ready'] && timeout !== undefined) {
+      throw new UsageError('--timeout needs --wait-ready.');
+    }
+    const status = values['wait-ready']
+      ? await speech.waitForReady({ timeout })
+      : await speech.status();
+    out(status, formatStatus(status));
+    return EXIT.ok;
+  },
+
+  async clear(args, { speech, out }) {
+    expectArgs(args, 0, 'clear');
+    await speech.clear();
+    out({ cleared: true }, 'Speech buffer cleared.');
+    return EXIT.ok;
+  },
+
+  async speech(args, { values, speech, out }) {
+    expectArgs(args, 0, 'speech [--since <seq>] [--limit <n>] [--include-markers]');
+    const entries = await speech.getSpeech({
+      since: optionalInt(values, 'since', 0) ?? 0,
+      limit: optionalInt(values, 'limit', 1),
+      includeMarkers: values['include-markers'] ?? false,
+    });
+    out({ entries }, entries.map(formatEntry).join('\n'));
+    return EXIT.ok;
+  },
+
+  async text(args, { values, speech, out }) {
+    expectArgs(args, 0, 'text [--since <seq>] [--separator <s>]');
+    const text = await speech.getText({
+      since: optionalInt(values, 'since', 0) ?? 0,
+      separator: values.separator,
+    });
+    out({ text }, text);
+    return EXIT.ok;
+  },
+
+  async wait(args, { values, speech, out, io, json }) {
+    const [text] = expectArgs(args, 1, 'wait <text> [--regex] [--normalize] [--timeout <ms>]');
+    if (text.trim() === '') throw new UsageError('The text to wait for must not be empty.');
+    let match: string | RegExp = text;
+    if (values.regex) {
+      try {
+        match = new RegExp(text, 'u');
+      } catch (error) {
+        throw new UsageError(`Invalid --regex: ${(error as Error).message}`);
+      }
+    }
+    try {
+      const entry = await speech.waitForOutput(match, {
+        since: optionalInt(values, 'since', 0) ?? 0,
+        timeout: optionalInt(values, 'timeout', 0),
+        normalize: values.normalize ?? false,
+      });
+      out({ matched: true, entry }, formatEntry(entry));
+      return EXIT.ok;
+    } catch (error) {
+      if (!(error instanceof SpeechTimeoutError)) throw error;
+      if (json) io.stdout(`${JSON.stringify({ matched: false, entries: error.entries })}\n`);
+      io.stderr(`${NAME}: ${error.message}.${seenText(error.entries)}\n`);
+      return EXIT.timeout;
+    }
+  },
+
+  async 'wait-silence'(args, { values, speech, out, io }) {
+    expectArgs(args, 0, 'wait-silence [--quiet-for <ms>] [--timeout <ms>]');
+    const quietFor = optionalInt(values, 'quiet-for', 1);
+    try {
+      await speech.waitForSilence({ quietFor, timeout: optionalInt(values, 'timeout', 0) });
+      out({ silent: true }, 'Silent.');
+      return EXIT.ok;
+    } catch (error) {
+      if (!(error instanceof SpeechTimeoutError)) throw error;
+      io.stderr(`${NAME}: ${error.message}.\n`);
+      return EXIT.timeout;
+    }
+  },
+
+  async mark(args, { speech, out }) {
+    const [label] = expectArgs(args, 1, 'mark <label>');
+    const entry = await speech.mark(label);
+    out(entry, String(entry.seq));
+    return EXIT.ok;
+  },
+};
+
+/** An integer option >= `min`, `undefined` if not given. */
+function optionalInt(values: Values, name: Option, min: number): number | undefined {
+  const raw = values[name];
+  if (raw === undefined) return undefined;
+  const value = Number(raw);
+  if (
+    typeof raw !== 'string' ||
+    !/^\d+$/.test(raw) ||
+    !Number.isSafeInteger(value) ||
+    value < min
+  ) {
+    throw new UsageError(`--${name} must be an integer >= ${min}, got "${String(raw)}".`);
+  }
+  return value;
+}
+
+function formatEntry(entry: SpeechEntry): string {
+  return entry.kind === 'marker'
+    ? `#${entry.seq} [marker] ${entry.text}`
+    : `#${entry.seq} ${entry.text}`;
+}
+
+function seenText(entries: SpeechEntry[]): string {
+  if (entries.length === 0) return ' No speech arrived.';
+  return ` Speech seen:\n${entries.map((e) => `  ${formatEntry(e)}`).join('\n')}`;
+}
+
+function formatStatus(status: BridgeStatus): string {
+  const { bridge, tcp, buffer, input } = status;
+  const connections = tcp.connections.length;
+  const range =
+    buffer.firstSeq === null
+      ? 'empty'
+      : `seq ${buffer.firstSeq}-${buffer.lastSeq ?? buffer.firstSeq}`;
+  return [
+    `bridge  ${bridge.version} (API ${bridge.apiVersion}), ${bridge.state}`,
+    `tcp     ${tcp.host}:${tcp.port} ${tcp.listening ? 'listening' : 'not listening'}, ` +
+      `${connections} voice connection${connections === 1 ? '' : 's'}, ${tcp.encoding}`,
+    `buffer  ${buffer.size} of ${buffer.maxEntries} entries (${range})`,
+    `input   ${input.enabled ? 'enabled' : 'disabled'}`,
+  ].join('\n');
 }
 
 async function config(args: string[], globals: Globals, io: CliIo): Promise<number> {

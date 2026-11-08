@@ -124,23 +124,25 @@ can't drift from it (see [Test client](client.md)).
 
 ```
 packages/client/src/
-  domain/              bridge URL validation + precedence, config keys (later: cursor, matching,
-                       version compatibility)
+  domain/              bridge URL validation + precedence, config keys, speech entry model,
+                       text matching + normalize, API version compatibility, errors
   application/
-    ports/in/          ManageClientConfig (later: SpeechCapture, the library's functions)
-    ports/out/         ClientConfigStore (later: BridgeApi, Clock)
-    services/          ClientConfigService (later: SpeechCaptureService)
+    ports/in/          ManageClientConfig, SpeechCapture (the library's functions)
+    ports/out/         ClientConfigStore, BridgeApi, Clock
+    services/          ClientConfigService, SpeechCaptureService (cursor, waits by polling)
   adapters/
     in/cli/            argv → in-ports → stdout + exit code; parsing and output only
     out/fs-config/     client.json in %APPDATA% / ~/.config, atomic writes
-  main.ts              composition root: createClientConfig(env), the only place that knows the
-                       concrete adapters and reads process.env
+    out/http/          BridgeApi on fetch, DTO ↔ domain mapping
+    out/clock/         system clock
+  main.ts              composition root: createClientConfig(env) and SpeechCaptureClient, the only
+                       place that knows the concrete adapters and reads process.env
   index.ts             public API: re-exports from main.ts, in-port types and domain types
 ```
 
 Unlike the bridge, the client is also used as a library, so the in-port interfaces are its public
 types (users can fake them in their own tests). Users don't call `main.ts` functions explicitly
-for the speech client: the public `SpeechCaptureClient` class (M2) lives in `main.ts` and passes the
+for the speech client: the public `SpeechCaptureClient` class lives in `main.ts` and passes the
 default adapters to the service, so `new SpeechCaptureClient()` just works.
 
 ## UI: SvelteKit, hexagonal-lite

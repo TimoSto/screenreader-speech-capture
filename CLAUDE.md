@@ -10,7 +10,7 @@ records it and exposes it over an HTTP API + SSE (default 5151) for automated te
 The docs in `docs/` describe the full planned design (UI, client, Playwright/MCP supervisors, native
 input); much of it is **not implemented yet**. Check `docs/ROADMAP.md` for what exists — currently
 `packages/bridge`, `packages/shared` and `tools/fake-speech` are real (M1 capture core), and
-`packages/client` has its config part (stored bridge URL, `config` CLI commands) from M2.
+`packages/client` has the M2 library, version check and CLI (no SSE `onSpeech` / `tail` yet).
 
 ## Commands
 
@@ -53,7 +53,8 @@ details in `docs/architecture.md`). The bridge:
   services.
 
 The client has the same layers: `ManageClientConfig` / `ClientConfigService` / `FsClientConfigStore`,
-the CLI as a driving adapter, and `main.ts` also exporting the pre-wired public API (`index.ts`
+`SpeechCapture` / `SpeechCaptureService` / `FetchBridgeApi` (waits poll `GET /speech`), the CLI as a
+driving adapter, and `main.ts` also exporting the pre-wired public API (`index.ts`
 re-exports it).
 
 `no-restricted-imports` in `eslint.config.js` (blocks built with `hexagon(layer)`, for both
@@ -83,7 +84,8 @@ live re-applies only the changed sections (see `changedSections` / `mergeConfig`
 - Unit tests sit next to the source (`src/**/*.test.ts`) and use in-memory fakes of driven ports
   (`packages/bridge/test/fakes.ts`).
 - Integration tests in `packages/bridge/test/` start a real bridge (real TCP + HTTP sockets,
-  temp config dir) via helpers in `test/helpers.ts`.
+  temp config dir) via helpers in `test/helpers.ts`. The client's `test/bridge.test.ts` reuses
+  those helpers; its unit tests use `packages/client/test/fakes.ts` (fake bridge + virtual clock).
 
 ## Docs conventions
 
