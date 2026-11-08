@@ -10,6 +10,7 @@ import type { Logger } from '../../../application/ports/out/logger.js';
 import type { Config } from '../../../domain/config.js';
 import { AppError } from '../../../domain/errors.js';
 import { listen } from '../net/listen.js';
+import { hostPort, isWildcard, reachableUrls } from '../net/reachable-urls.js';
 import { sendError } from './errors.js';
 import { Router } from './router.js';
 import { SseHub } from './sse.js';
@@ -34,11 +35,6 @@ const CLOSE_GRACE_MS = 1000;
 
 /** Bytes an SSE stream may hold for a client that stopped reading before it is closed. */
 const SSE_MAX_BUFFERED_BYTES = 1024 * 1024;
-
-/** `host:port` for a URL, with an IPv6 host in brackets. */
-function hostPort(host: string, port: number): string {
-  return host.includes(':') ? `[${host}]:${port}` : `${host}:${port}`;
-}
 
 /**
  * Driving adapter for the REST + SSE API (docs/http-api.md), on plain `node:http`.
@@ -134,7 +130,13 @@ export class HttpServer {
     }
     this.server = server;
     this.settings = { ...settings, port };
-    this.deps.logger.info(`listening on http://${hostPort(settings.host, port)}`);
+    // On 0.0.0.0, name the addresses clients can actually use (docs/operations.md#line-format).
+    const urls = reachableUrls('http', settings.host, port).join(', ');
+    this.deps.logger.info(
+      isWildcard(settings.host)
+        ? `listening on ${hostPort(settings.host, port)}, reachable at ${urls}`
+        : `listening on ${urls}`,
+    );
     return port;
   }
 

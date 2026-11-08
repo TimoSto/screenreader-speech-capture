@@ -100,7 +100,7 @@ always starts in the same column:
 ```
 [bridge]            2026-11-07T14:03:10.002Z INFO  starting, version 0.3.0, config C:\Users\test\AppData\Roaming\screenreader-speech-capture\config.json
 [speech-capture]    2026-11-07T14:03:10.015Z INFO  listening on 127.0.0.1:4449, encoding windows-1252
-[http-api]          2026-11-07T14:03:10.031Z INFO  listening on 0.0.0.0:5151
+[http-api]          2026-11-07T14:03:10.031Z INFO  listening on 0.0.0.0:5151, reachable at http://192.168.122.57:5151, http://localhost:5151
 [playwright-server] 2026-11-07T14:03:11.410Z INFO  Listening on ws://0.0.0.0:3000/
 [playwright-mcp]    2026-11-07T14:03:11.622Z INFO  Listening on http://0.0.0.0:8931
 [bridge]            2026-11-07T14:03:11.623Z INFO  ready
@@ -108,6 +108,10 @@ always starts in the same column:
 [native-input]      2026-11-07T14:03:15.100Z INFO  keys Insert+T
 [playwright-server] 2026-11-07T14:03:20.733Z ERROR browserType.launch: Executable doesn't exist
 ```
+
+On `0.0.0.0` (the default `--host`), the `http-api` line lists the URLs the API can be reached at:
+the machine's IPv4 addresses, then `localhost`. Use one of them as the client's
+[bridge URL](client.md#bridge-url).
 
 After the prefix comes the timestamp (ISO 8601, UTC), the level (padded to 5 characters) and the
 message.
