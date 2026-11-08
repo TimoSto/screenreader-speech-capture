@@ -48,7 +48,6 @@ project and links into `docs/`.
 - The **smoke test on a real VM** (NVDA + socket voice + Chrome) runs by hand before a release
   until there is a VM that CI can use.
 - **Releases** use [changesets](https://github.com/changesets/changesets). The bridge
-  (`screenreader-speech-capture`) and the client (`screenreader-speech-capture-client`) are in a
-  **fixed version group**, so they always have the same version (see
-  [Versioning](http-api.md#versioning)). Merging the changesets release PR publishes both to npm
-  from CI.
+  (`screenreader-speech-capture`) and the client (`screenreader-speech-capture-client`) are
+  **versioned independently** (see [Versioning](http-api.md#versioning)). Merging the changesets
+  release PR publishes the changed packages to npm from CI.

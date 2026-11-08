@@ -59,7 +59,7 @@ GitHub issues. This file only tracks milestones.
 ### M7 Distribution ⬜
 
 - [ ] CI: Windows runner (Linux CI exists since M1)
-- [ ] Changesets with a fixed version group, npm publish from CI
+- [ ] Changesets (bridge and client versioned independently), npm publish from CI
 - [ ] Smoke test on a real VM (NVDA + socket voice + Chrome)
 
 ### Later
