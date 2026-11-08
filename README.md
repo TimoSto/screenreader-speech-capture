@@ -40,7 +40,7 @@ flowchart LR
         Tests["Playwright tests"]
         Lib["client lib<br/>+ Playwright fixture"]
         Agent["AI agent<br/>(+ skill)"]
-        CLI["screenreader-speech-capture-client CLI<br/>(alias sr-speech)"]
+        CLI["screenreader-speech-capture-client CLI"]
 
         Tests --> Lib
         Agent -- "shell" --> CLI

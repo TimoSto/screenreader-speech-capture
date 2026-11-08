@@ -1,0 +1,27 @@
+{
+  "name": "screenreader-speech-capture-client",
+  "version": "0.0.0",
+  "description": "Test client for the screenreader-speech-capture bridge: library, Playwright fixture and CLI.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": "./dist/index.mjs"
+  },
+  "bin": {
+    "screenreader-speech-capture-client": "./dist/cli.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@screenreader-speech-capture/shared": "workspace:*",
+    "tsdown": "0.23.7"
+  }
+}

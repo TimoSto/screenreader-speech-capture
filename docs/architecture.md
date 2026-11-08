@@ -25,7 +25,7 @@ pnpm monorepo:
 packages/
   bridge/   Node/TS process: TCP listener, HTTP API, native input, process supervisor (hexagonal)
   ui/       SvelteKit app (adapter-static), served by the bridge (hexagonal-lite)
-  client/   npm lib + CLI (`screenreader-speech-capture-client` / `sr-speech`) + Playwright fixture
+  client/   npm lib + CLI (`screenreader-speech-capture-client`) + Playwright fixture
             + agent skill, for tests and agents
   shared/   HTTP API contract (DTO types), used by bridge, UI and client
 ```

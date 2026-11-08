@@ -28,7 +28,8 @@ GitHub issues. This file only tracks milestones.
 
 - [ ] Library: cursor, `waitForOutput` / `waitForSequence` / `waitForSilence` / `record`, `normalize`
 - [ ] Version check against the bridge
-- [ ] CLI with `--json` and exit codes (alias `sr-speech`)
+- [ ] CLI with `--json` and exit codes
+- [x] Stored bridge URL per user (`config set url`), used by CLI, library and fixture
 
 ### M3 Playwright & MCP ⬜
 

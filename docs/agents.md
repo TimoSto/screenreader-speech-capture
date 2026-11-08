@@ -8,7 +8,7 @@ Agents drive the browser through [Playwright MCP](playwright-mcp.md#playwright-m
 [CLI](client.md#cli-for-agents). A typical loop:
 
 ```bash
-export SR_SPEECH_URL=http://my-test-vm:5151
+npx screenreader-speech-capture-client config set url http://my-test-vm:5151   # once per user
 SEQ=$(npx screenreader-speech-capture-client mark step-1)
 # … act through Playwright MCP, or send a screen reader command:
 npx screenreader-speech-capture-client press h

@@ -9,7 +9,8 @@ A bridge that runs on a Windows VM next to JAWS/NVDA. A third-party SAPI 5 voice
 records it and exposes it over an HTTP API + SSE (default 5151) for automated tests and AI agents.
 The docs in `docs/` describe the full planned design (UI, client, Playwright/MCP supervisors, native
 input); much of it is **not implemented yet**. Check `docs/ROADMAP.md` for what exists — currently
-only `packages/bridge`, `packages/shared` and `tools/fake-speech` are real (M1 capture core).
+`packages/bridge`, `packages/shared` and `tools/fake-speech` are real (M1 capture core), and
+`packages/client` has its config part (stored bridge URL, `config` CLI commands) from M2.
 
 ## Commands
 
