@@ -1,0 +1,9 @@
+{
+  "mainBranch": "main",
+  "packages": [
+    { "scope": "bridge", "name": "screenreader-speech-capture", "dir": "packages/bridge" },
+    { "scope": "client", "name": "screenreader-speech-capture-client", "dir": "packages/client" }
+  ],
+  "sharedDirs": ["packages/shared"],
+  "otherScopes": ["shared", "fake-speech", "release", "deps"]
+}

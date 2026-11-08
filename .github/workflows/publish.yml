@@ -1,0 +1,144 @@
+name: Publish
+
+# Manual: Actions → Publish → Run workflow → pick the branch (see docs/development.md#releases).
+# - main: stable versions from the commit titles since each package's last tag, plus git tag and
+#   draft GitHub release.
+# - other branches: previews `<next>-<branch>.<run>` of the changed packages (npm dist-tag
+#   `preview-<branch>`), no tag, no GitHub release.
+# CI only *stages* the packages (`npm stage publish`, trusted publishing, no token). They go live
+# when the maintainer approves them on npmjs.com with 2FA. After that, run "Finalize releases" to
+# publish the draft GitHub releases.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  determine-version:
+    name: Determine versions
+    runs-on: ubuntu-latest
+    outputs:
+      bridge_version: ${{ steps.versions.outputs.bridge_version }}
+      bridge_npm_tag: ${{ steps.versions.outputs.bridge_npm_tag }}
+      bridge_release: ${{ steps.versions.outputs.bridge_release }}
+      client_version: ${{ steps.versions.outputs.client_version }}
+      client_npm_tag: ${{ steps.versions.outputs.client_npm_tag }}
+      client_release: ${{ steps.versions.outputs.client_release }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # all commits and tags
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - id: versions
+        run: pnpm release:version --out release-notes
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes
+          if-no-files-found: ignore
+
+  publish:
+    name: Publish ${{ matrix.scope }}
+    needs: determine-version
+    if: needs.determine-version.outputs.bridge_version != '' || needs.determine-version.outputs.client_version != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # tags and GitHub releases
+      id-token: write # npm trusted publishing (staging) + provenance
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scope: bridge
+            name: screenreader-speech-capture
+            dir: packages/bridge
+          - scope: client
+            name: screenreader-speech-capture-client
+            dir: packages/client
+    env:
+      VERSION: ${{ needs.determine-version.outputs[format('{0}_version', matrix.scope)] }}
+      NPM_TAG: ${{ needs.determine-version.outputs[format('{0}_npm_tag', matrix.scope)] }}
+      RELEASE: ${{ needs.determine-version.outputs[format('{0}_release', matrix.scope)] }}
+      TAG: ${{ matrix.name }}@${{ needs.determine-version.outputs[format('{0}_version', matrix.scope)] }}
+      GH_TOKEN: ${{ github.token }}
+    # Every step skips work that is already done, so "Re-run failed jobs" finishes a half-done
+    # release.
+    steps:
+      - if: env.VERSION == ''
+        run: echo "Nothing to publish for ${{ matrix.scope }}."
+      - if: env.VERSION != ''
+        uses: actions/checkout@v7
+      - if: env.VERSION != ''
+        uses: pnpm/action-setup@v6
+      - if: env.VERSION != ''
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - if: env.VERSION != ''
+        run: pnpm install --frozen-lockfile
+      - name: Install npm with staged publishing
+        if: env.VERSION != ''
+        run: npm install -g npm@11.15.0
+      - name: Set version and build
+        if: env.VERSION != ''
+        working-directory: ${{ matrix.dir }}
+        run: |
+          npm pkg set version="$VERSION"
+          pnpm run build
+      - name: Stage on npm
+        if: env.VERSION != ''
+        working-directory: ${{ matrix.dir }}
+        run: |
+          if npm view "$TAG" version >/dev/null 2>&1; then
+            echo "$TAG is already on npm."
+          elif [[ "$RELEASE" == 'true' ]] && git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            echo "Tag $TAG exists, so $TAG is already staged."
+          else
+            # pnpm pack rewrites workspace: specifiers. npm stages with OIDC (trusted publishing).
+            pnpm pack --out package.tgz
+            npm stage publish ./package.tgz --provenance --access public --tag "$NPM_TAG"
+          fi
+          {
+            echo "### \`$TAG\` is staged"
+            echo
+            echo "Approve it with 2FA on [npmjs.com](https://www.npmjs.com/package/${{ matrix.name }}) → Staged Packages, or with \`npm stage list ${{ matrix.name }}\` and \`npm stage approve <stage-id>\`."
+            if [[ "$RELEASE" == 'true' ]]; then
+              echo "Then run the **Finalize releases** workflow to publish the draft GitHub release."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Push tag
+        if: env.VERSION != '' && env.RELEASE == 'true'
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            echo "Tag $TAG exists."
+          else
+            git tag "$TAG" "$GITHUB_SHA"
+            git push origin "refs/tags/$TAG"
+          fi
+      - if: env.VERSION != '' && env.RELEASE == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes
+      - name: Create draft GitHub release
+        if: env.VERSION != '' && env.RELEASE == 'true'
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists."
+          else
+            gh release create "$TAG" --verify-tag --draft --latest=false \
+              --title "${{ matrix.scope }} $VERSION" \
+              --notes-file "release-notes/${{ matrix.scope }}.md"
+          fi

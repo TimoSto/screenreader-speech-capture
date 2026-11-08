@@ -34,7 +34,12 @@ any `package.json`; `.npmrc` sets `save-exact=true` so `pnpm add` writes exact v
 packages use `workspace:*`.
 
 CI (`.github/workflows/ci.yml`) runs on every push: lint + format:check + typecheck, test, build.
-`main` only changes through PRs.
+`main` only changes through squash-merged PRs. The PR title must be a Conventional Commit title
+whose scopes name the released packages (`feat(bridge): …`, `fix(bridge,client)!: …`). It decides
+the versions, which live only in git tags (package.json versions stay `0.0.0-dev`). Publishing is
+manual via the `Publish` workflow (stable from `main`, previews from other branches). CI only
+stages on npm; the maintainer approves with 2FA (rules in `docs/development.md#releases`, code in
+`tools/release`).
 
 ## Architecture
 
