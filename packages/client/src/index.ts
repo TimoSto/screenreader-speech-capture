@@ -13,6 +13,7 @@ export type {
 export type {
   GetSpeechOptions,
   GetTextOptions,
+  OnSpeechOptions,
   ReadyOptions,
   Recording,
   SilenceOptions,
@@ -40,6 +41,7 @@ export type {
   BridgeStatus,
   ServiceStatus,
   SpeechEntry,
+  SpeechFeedEvent,
 } from './domain/speech-entry.js';
 export { normalizeText, type SpeechMatch } from './domain/text-match.js';
 export { CONFIG_PATH_ENV, clientConfigFile } from './adapters/out/fs-config/paths.js';

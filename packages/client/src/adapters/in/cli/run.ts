@@ -22,6 +22,11 @@ export interface CliIo {
   stdout: (text: string) => void;
   stderr: (text: string) => void;
   version: string;
+  /**
+   * Takes over Ctrl+C for a command that runs until interrupted (`tail`): the returned signal
+   * aborts on SIGINT / SIGTERM (and when stdout is closed) instead of the process exiting.
+   */
+  interrupt: () => AbortSignal;
 }
 
 class UsageError extends Error {}
@@ -53,6 +58,8 @@ Commands:
   wait-silence [--quiet-for <ms>] [--timeout <ms>]
                          Wait until nothing was spoken for --quiet-for ms (default 500, 10000)
   mark <label>           Insert a marker and print its seq, for --since
+  tail [--since <seq>]   Print speech live as it arrives, until Ctrl+C (one JSON event per
+                         line with --json); --since first prints the buffered entries after <seq>
 
   config set url <url>   Store the bridge URL for this user
   config get url         Show the bridge URL in use and where it comes from
@@ -66,7 +73,8 @@ Options:
   -h, --help    Show this help
   -v, --version Show the version
 
---since <seq> takes a seq printed by mark (default 0: everything since the last clear).
+--since <seq> takes a seq printed by mark (default 0: everything since the last clear; for
+tail, default: only new speech).
 
 Exit codes: 0 success, 1 timeout / no match, 2 bridge not reachable, HTTP error or
 incompatible bridge, 3 invalid usage or config.
@@ -171,6 +179,7 @@ const COMMAND_OPTIONS = {
   wait: ['regex', 'normalize', 'since', 'timeout'],
   'wait-silence': ['quiet-for', 'timeout'],
   mark: [],
+  tail: ['since'],
 } as const satisfies Record<string, readonly Option[]>;
 
 type Command = keyof typeof COMMAND_OPTIONS;
@@ -290,6 +299,42 @@ const SPEECH_COMMANDS: Record<
     const entry = await speech.mark(label);
     out(entry, String(entry.seq));
     return EXIT.ok;
+  },
+
+  async tail(args, { values, speech, io, json }) {
+    expectArgs(args, 0, 'tail [--since <seq>]');
+    const since = optionalInt(values, 'since', 0);
+    // Unreachable or incompatible: exit 2 at once, like every other command. Later connection
+    // problems are retried.
+    await speech.status();
+    const signal = io.interrupt();
+    const print = (event: unknown, text: string) =>
+      io.stdout(json ? `${JSON.stringify(event)}\n` : `${text}\n`);
+    return new Promise<number>((resolve) => {
+      const finish = (code: number) => {
+        signal.removeEventListener('abort', interrupted);
+        stop();
+        resolve(code);
+      };
+      const interrupted = () => finish(EXIT.ok);
+      const stop = speech.onSpeech((entry) => print({ type: 'entry', entry }, formatEntry(entry)), {
+        since,
+        includeMarkers: true,
+        onClear: () => print({ type: 'clear' }, '--- buffer cleared ---'),
+        onTruncated: () => {
+          if (json) print({ type: 'truncated' }, '');
+          io.stderr(
+            `${NAME}: some entries were dropped from the bridge's buffer before they could be shown.\n`,
+          );
+        },
+        onError: (error, { retrying }) => {
+          io.stderr(`${NAME}: ${error.message}${retrying ? ', reconnecting' : ''}\n`);
+          if (!retrying) finish(EXIT.bridge);
+        },
+      });
+      if (signal.aborted) finish(EXIT.ok);
+      else signal.addEventListener('abort', interrupted, { once: true });
+    });
   },
 };
 

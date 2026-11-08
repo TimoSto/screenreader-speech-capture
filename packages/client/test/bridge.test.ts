@@ -1,7 +1,7 @@
 // The client against a real bridge (real TCP + HTTP sockets), fed like the socket voice.
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { freePort, send, start } from '../../bridge/test/helpers.js';
 import { EXIT, runCli } from '../src/adapters/in/cli/run.js';
 import {
@@ -20,6 +20,7 @@ async function bridge() {
   const url = `http://127.0.0.1:${b.httpPort}`;
   return {
     url,
+    tcpPort: b.tcpPort,
     say: (...lines: string[]) => send(b.tcpPort, lines.map((l) => `${l}\r\n`).join('')),
     client: () => new SpeechCaptureClient({ baseUrl: url, env }),
   };
@@ -34,6 +35,7 @@ async function cli(args: string[]) {
     stdout: (t) => (stdout += t),
     stderr: (t) => (stderr += t),
     version: '0.0.0',
+    interrupt: () => new AbortController().signal,
   });
   return { code, stdout, stderr };
 }
@@ -115,7 +117,95 @@ describe('library', () => {
   });
 });
 
+describe('onSpeech', () => {
+  it('delivers live speech, markers and clears over SSE', async () => {
+    const { say, client, tcpPort } = await bridge();
+    const sr = client();
+    await say('before');
+    const log: string[] = [];
+    const errors: Error[] = [];
+    const stop = sr.onSpeech((e) => log.push(`${e.seq} ${e.kind} ${e.text}`), {
+      includeMarkers: true,
+      onClear: () => log.push('clear'),
+      onError: (error) => errors.push(error),
+    });
+    onTestFinished(stop);
+    // Only new speech: wait until the feed is connected before speaking.
+    await vi.waitFor(async () => {
+      await sr.mark('ping');
+      expect(log.length).toBeGreaterThan(0);
+    });
+    log.length = 0;
+    await say('Submit, button');
+    await sr.clear();
+    // windows-1252, like the socket voice; the SSE body is UTF-8.
+    await send(tcpPort, Buffer.from('Ünïcode, edit\r\n', 'latin1'));
+    await vi.waitFor(() =>
+      expect(log).toEqual([
+        expect.stringMatching(/^\d+ speech Submit, button$/) as unknown,
+        'clear',
+        expect.stringMatching(/^\d+ speech Ünïcode, edit$/) as unknown,
+      ]),
+    );
+    expect(errors).toEqual([]);
+  });
+
+  it('reconnects to a restarted bridge and gets its speech from seq 1', async () => {
+    const port = await freePort();
+    const first = await start({ http: { port } });
+    const url = `http://127.0.0.1:${port}`;
+    const sr = new SpeechCaptureClient({ baseUrl: url, env });
+    const log: string[] = [];
+    const retries: boolean[] = [];
+    const stop = sr.onSpeech((e) => log.push(`${e.seq} ${e.text}`), {
+      since: 0,
+      onError: (_error, { retrying }) => retries.push(retrying),
+    });
+    onTestFinished(stop);
+    await send(first.tcpPort, 'one\r\ntwo\r\n');
+    await vi.waitFor(() => expect(log).toEqual(['1 one', '2 two']));
+
+    await first.stop();
+    const second = await start({ http: { port } });
+    await send(second.tcpPort, 'new bridge\r\n');
+    await vi.waitFor(() => expect(log).toEqual(['1 one', '2 two', '1 new bridge']), {
+      timeout: 5000,
+    });
+    expect(retries.length).toBeGreaterThan(0);
+    expect(retries.every(Boolean)).toBe(true);
+  });
+});
+
 describe('CLI', () => {
+  it('tail --json prints live events until interrupted', async () => {
+    const { url, say } = await bridge();
+    await say('old');
+    const controller = new AbortController();
+    let stdout = '';
+    const done = runCli(['tail', '--json', '--since', '0', '--url', url], {
+      config: createClientConfig(env),
+      speech: (u) => new SpeechCaptureClient({ baseUrl: u, env }),
+      stdout: (t) => (stdout += t),
+      stderr: () => undefined,
+      version: '0.0.0',
+      interrupt: () => controller.signal,
+    });
+    await vi.waitFor(() => expect(stdout).toContain('old'));
+    await say('new');
+    await vi.waitFor(() => expect(stdout).toContain('new'));
+    controller.abort();
+    expect(await done).toBe(EXIT.ok);
+    expect(
+      stdout
+        .trim()
+        .split('\n')
+        .map((l) => JSON.parse(l) as unknown),
+    ).toEqual([
+      { type: 'entry', entry: expect.objectContaining({ seq: 1, text: 'old' }) as unknown },
+      { type: 'entry', entry: expect.objectContaining({ seq: 2, text: 'new' }) as unknown },
+    ]);
+  });
+
   it('mark → speech → wait --since → text, with exit codes', async () => {
     const { url, say } = await bridge();
     await say('old');

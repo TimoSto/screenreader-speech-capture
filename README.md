@@ -52,9 +52,10 @@ flowchart LR
     Agent -- "MCP over HTTP" --> MCP
 ```
 
-> **Status: early design / work in progress.** Nothing is implemented yet. The docs describe the
-> planned architecture and interfaces. Ports, endpoints and flags may change. See the
-> [Roadmap](docs/ROADMAP.md) for what is done and what comes next.
+> **Status: work in progress.** Speech capture, the HTTP API and the test client (library, CLI,
+> live feed) work. The Playwright server and MCP, native input and the web UI are still design: the
+> docs describe the planned architecture and interfaces. Ports, endpoints and flags may change. See
+> the [Roadmap](docs/ROADMAP.md) for what is done and what comes next.
 
 ## What it does
 
@@ -95,6 +96,47 @@ test('submit button is announced', async ({ page, speech }) => {
 ```
 
 Details: [VM setup](docs/vm-setup.md), [Test client](docs/client.md).
+
+## Following speech live
+
+The bridge pushes every speech entry the moment it arrives, over
+[Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events)
+(SSE): one long-lived HTTP response that the bridge keeps writing to. The client wraps it, so you
+never parse the stream yourself, and it reconnects without losing an entry.
+
+```mermaid
+sequenceDiagram
+    participant SR as NVDA / JAWS<br/>+ socket voice
+    participant B as Bridge :5151
+    participant C as Client<br/>(onSpeech / tail)
+
+    C->>B: GET /api/v1/speech/stream
+    B-->>C: 200 text/event-stream (stays open)
+    SR->>B: "Submit, button" (TCP :4449)
+    B-->>C: id: 41, event: entry, data: {"seq":41, "text":"Submit, button", ...}
+    Note over B,C: ": ping" every 15 s keeps the connection open,<br/>"event: clear" follows a clear
+    Note over B,C: connection lost (network, bridge restart)
+    C->>B: GET /api/v1/speech/stream<br/>Last-Event-ID: 41
+    B-->>C: replays the entries after seq 41, then goes on live
+```
+
+From a shell or an agent (one JSON event per line with `--json`):
+
+```bash
+npx screenreader-speech-capture-client tail      # until Ctrl+C
+```
+
+From code:
+
+```ts
+const sr = new SpeechCaptureClient();
+const stop = sr.onSpeech((entry) => console.log(entry.text)); // call stop() to unsubscribe
+```
+
+Or the raw stream: `curl -N http://my-test-vm:5151/api/v1/speech/stream`.
+
+Details: [Test client → Live feed](docs/client.md#live-feed), wire format in
+[HTTP API](docs/http-api.md#endpoints).
 
 ## Documentation
 

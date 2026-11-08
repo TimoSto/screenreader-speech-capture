@@ -38,6 +38,26 @@ export interface ReadyOptions {
   timeout?: number | undefined;
 }
 
+export interface OnSpeechOptions {
+  /**
+   * First replay the buffered entries with `seq > since`, then go on live. Default: only entries
+   * that arrive after subscribing.
+   */
+  since?: number | undefined;
+  /** Also deliver markers. Default `false`. */
+  includeMarkers?: boolean | undefined;
+  /** The bridge's buffer was cleared. */
+  onClear?: (() => void) | undefined;
+  /** Some entries of a replay were already dropped because the bridge's buffer was full. */
+  onTruncated?: (() => void) | undefined;
+  /**
+   * A problem with the feed. With `retrying: true` the feed goes on: it reconnects by itself
+   * (a lost connection) or the error came from one of the callbacks. With `retrying: false` it
+   * has stopped for good (`IncompatibleBridgeError`, an HTTP `4xx`, an invalid bridge URL).
+   */
+  onError?: ((error: Error, info: { retrying: boolean }) => void) | undefined;
+}
+
 export interface Recording<T> {
   result: T;
   /** Speech spoken while `fn` ran and until silence, oldest first. */
@@ -87,6 +107,12 @@ export interface SpeechCapture {
    * moves the cursor to the end.
    */
   record<T>(fn: () => T | Promise<T>, options?: SilenceOptions): Promise<Recording<T>>;
+  /**
+   * Subscribes to the live feed (SSE): `listener` gets every new speech entry as the bridge
+   * receives it, until the returned function is called. Reconnects by itself after a lost
+   * connection, without losing or repeating entries. Does not move the cursor.
+   */
+  onSpeech(listener: (entry: SpeechEntry) => void, options?: OnSpeechOptions): () => void;
   /** The cursor: the `seq` of the last entry consumed. */
   cursor(): number;
   /** Sets the cursor, for example to a marker's `seq`. */

@@ -133,7 +133,7 @@ packages/client/src/
   adapters/
     in/cli/            argv → in-ports → stdout + exit code; parsing and output only
     out/fs-config/     client.json in %APPDATA% / ~/.config, atomic writes
-    out/http/          BridgeApi on fetch, DTO ↔ domain mapping
+    out/http/          BridgeApi on fetch (REST + SSE parser), DTO ↔ domain mapping
     out/clock/         system clock
   main.ts              composition root: createClientConfig(env) and SpeechCaptureClient, the only
                        place that knows the concrete adapters and reads process.env
