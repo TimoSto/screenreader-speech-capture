@@ -42,7 +42,9 @@ export default tseslint.config(
     languageOptions: {
       globals: globals.node,
       parserOptions: {
-        projectService: { allowDefaultProject: ['eslint.config.js'] },
+        projectService: {
+          allowDefaultProject: ['eslint.config.js', 'packages/*/test/fixtures/*.mjs'],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -79,6 +81,14 @@ export default tseslint.config(
     ignores: ['**/*.test.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [services, inAdapters] }],
+    },
+  },
+  {
+    // Helpers both sides may use (for example reachable URLs). They import no other adapter.
+    files: [hexagon('adapters/shared')],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [services, inAdapters, outAdapters] }],
     },
   },
   {

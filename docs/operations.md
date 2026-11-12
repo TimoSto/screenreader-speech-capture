@@ -14,11 +14,14 @@ The bridge starts in this order:
    is still starting. If the port is in use, the bridge exits (see
    [Speech capture](speech-capture.md#listening-and-connections)).
 3. **HTTP server** (API + UI).
-4. **Child services**: Playwright server and Playwright MCP, if enabled. If the configured
-   Playwright version is not installed yet, it is installed first, which can take a minute.
+4. **Child services**: Playwright server and Playwright MCP, if enabled. They start in the
+   background, so the API already answers meanwhile. If the configured Playwright version is not
+   installed yet, it is installed first, which can take a minute or two
+   ([Install](playwright-mcp.md#install)). A service is `running` once its port accepts
+   connections (at most 60 seconds after its process started, or it counts as a crash).
 
-`GET /api/v1/status` reports `bridge.state: "starting"` until all enabled services are running,
-then `"ready"`. Requests that need a service that isn't running yet get `503 SERVICE_UNAVAILABLE`.
+`GET /api/v1/status` reports `bridge.state: "starting"` until each enabled service is running (or
+has `failed`, so a broken service doesn't block forever: check its state), then `"ready"`.
 `screenreader-speech-capture-client status --wait-ready` waits for `ready`, which is useful as the
 first step of a CI job.
 
@@ -32,7 +35,8 @@ console window (`SIGHUP`) and `SIGTERM`. The bridge log names the signal
    (they get `503`),
 2. stops the child services and **kills their whole process tree**. On Windows, killing a process
    does not kill its children, so without this the browsers started by the Playwright server would
-   stay open. The bridge uses `taskkill /T /F /PID <pid>`,
+   stay open. The bridge uses `taskkill /T /F /PID <pid>`. On Linux and macOS each service runs in
+   its own process group, which gets `SIGTERM` and, 3 seconds later, `SIGKILL`,
 3. writes any buffered console output. The log file is written line by line as it goes, so it is
    always complete,
 4. exits with code `0` (or `1` if something failed on the way).
@@ -49,19 +53,24 @@ Limits on Windows:
 - Closing the console window gives a program about 5 seconds before Windows ends it, which is
   less than the 10-second limit above.
 - At log off and system shutdown, Windows ends console programs without a signal, so the bridge
-  cannot stop gracefully. Nothing is lost from the log file (see step 3). The child services
-  (M3) must be tied to the bridge's process so that they end with it.
+  cannot stop gracefully. Nothing is lost from the log file (see step 3).
+- The child services are not tied to the bridge's process yet (a Windows job object). If the
+  bridge is killed without a chance to stop (Task Manager, log off), the Playwright server and its
+  browsers can stay behind. End them by hand or log off.
 
 ## Child service crashes
 
 If the Playwright server or MCP exits unexpectedly:
 
-- the bridge restarts it with a growing delay (1 s, 2 s, 4 s, … up to 30 s),
-- `status` shows `state: "crashed"`, the exit code and `restarts` (number of restarts so far),
+- the bridge kills what is left of its process tree and restarts it with a growing delay (1 s,
+  2 s, 4 s, … up to 30 s). A failed install counts as a crash too,
+- `status` shows `state: "crashed"`, the `exitCode` (`null` when it was killed by a signal or
+  could not start) and `restarts` (restarts since the service was last started),
 - after **5 crashes in a row** (without 60 seconds of stable running in between), it stops trying.
-  The state stays `"failed"` until it is restarted by hand (`POST /api/v1/services/<name>/restart`
-  or the UI),
-- the last lines of the service's output are in the bridge log.
+  The state stays `"failed"` until the bridge restarts, or a `PUT /api/v1/config` change to the
+  service's settings restarts it,
+- the service's output is in the bridge log, line by line, and a `[bridge]` line says how it
+  ended: `[bridge] ERROR playwright exited with code 1, restart 2 in 2 s`.
 
 Speech capture and the HTTP API keep working while a child service is down.
 
@@ -102,6 +111,7 @@ always starts in the same column:
 [speech-capture]    2026-11-07T14:03:10.015Z INFO  listening on 127.0.0.1:4449, encoding windows-1252
 [http-api]          2026-11-07T14:03:10.031Z INFO  listening on 0.0.0.0:5151, reachable at http://192.168.122.57:5151, http://localhost:5151
 [playwright-server] 2026-11-07T14:03:11.410Z INFO  Listening on ws://0.0.0.0:3000/
+[bridge]            2026-11-07T14:03:11.497Z INFO  playwright running on 0.0.0.0:3000, reachable at ws://192.168.122.57:3000, ws://localhost:3000
 [playwright-mcp]    2026-11-07T14:03:11.622Z INFO  Listening on http://0.0.0.0:8931
 [bridge]            2026-11-07T14:03:11.623Z INFO  ready
 [speech-capture]    2026-11-07T14:03:12.345Z INFO  connection 3 opened (voice=null)
@@ -111,7 +121,8 @@ always starts in the same column:
 
 On `0.0.0.0` (the default `--host`), the `http-api` line lists the URLs the API can be reached at:
 the machine's IPv4 addresses, then `localhost`. Use one of them as the client's
-[bridge URL](client.md#bridge-url).
+[bridge URL](client.md#bridge-url). The `[bridge] playwright running on …` line does the same for
+the Playwright server: its `ws://` URLs are the `wsEndpoint` to connect to.
 
 After the prefix comes the timestamp (ISO 8601, UTC), the level (padded to 5 characters) and the
 message.

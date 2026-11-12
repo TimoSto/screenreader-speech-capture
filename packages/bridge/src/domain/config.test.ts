@@ -64,6 +64,20 @@ describe('mergeConfig', () => {
     expect(merged.tcp.encoding).toBe('shift_jis');
     expect(merged.mcp.version).toBe('0.0.40');
   });
+
+  it.each(['1.56', 'latest', '^1.56.1', '1.56.1 && calc', '1.56.1;x', ' 1.56.1'])(
+    'rejects the version %j',
+    (version) => {
+      expect(fieldOf(() => mergeConfig(DEFAULT_CONFIG, { playwright: { version } }))).toBe(
+        'playwright.version',
+      );
+    },
+  );
+
+  it('accepts prerelease versions', () => {
+    const merged = mergeConfig(DEFAULT_CONFIG, { playwright: { version: '1.57.0-beta-1' } });
+    expect(merged.playwright.version).toBe('1.57.0-beta-1');
+  });
 });
 
 describe('changedSections', () => {
@@ -97,10 +111,13 @@ describe('mergePatch', () => {
 
 describe('changedFields', () => {
   it('lists each changed setting with both values', () => {
-    const next = mergeConfig(DEFAULT_CONFIG, { tcp: { port: 1 }, playwright: { version: '1.0' } });
+    const next = mergeConfig(DEFAULT_CONFIG, {
+      tcp: { port: 1 },
+      playwright: { version: '1.0.0' },
+    });
     expect(changedFields(DEFAULT_CONFIG, next)).toEqual([
       { field: 'tcp.port', from: 4449, to: 1 },
-      { field: 'playwright.version', from: null, to: '1.0' },
+      { field: 'playwright.version', from: null, to: '1.0.0' },
     ]);
   });
 });

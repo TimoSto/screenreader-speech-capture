@@ -1,11 +1,13 @@
 import type { Config } from '../../domain/config.js';
 import type { BridgeState, GetStatus, Status } from '../ports/in/get-status.js';
 import type { CaptureStatusSource } from '../ports/out/capture-status.js';
+import type { ProcessSupervisor } from '../ports/out/process-supervisor.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
 
 export interface StatusServiceDeps {
   capture: CaptureStatusSource;
   repository: SpeechRepository;
+  playwright: Pick<ProcessSupervisor, 'status'>;
   /**
    * The active configuration. A getter, not the `ReadConfig` use case: services depend on
    * out-ports and values, not on other driving ports.
@@ -28,7 +30,7 @@ export class StatusService implements GetStatus {
   }
 
   status(): Status {
-    const { capture, repository, config, version, apiVersion } = this.deps;
+    const { capture, repository, playwright, config, version, apiVersion } = this.deps;
     const { listener, connections } = capture.captureStatus();
     const { tcp, input } = config();
     return {
@@ -41,6 +43,7 @@ export class StatusService implements GetStatus {
         connections,
       },
       buffer: repository.stats(),
+      playwright: playwright.status(),
       input: { enabled: input.enabled },
     };
   }

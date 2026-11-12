@@ -1,5 +1,6 @@
 import type {
   ConfigDto,
+  ServiceStatusDto,
   SpeechEntryDto,
   SpeechListDto,
   StatusDto,
@@ -8,6 +9,7 @@ import type {
 import type { Status } from '../../../application/ports/in/get-status.js';
 import type { WaitResult } from '../../../application/ports/in/wait-for-speech.js';
 import type { Config } from '../../../domain/config.js';
+import type { ServiceStatus } from '../../../domain/service.js';
 import type { SpeechPage } from '../../../domain/speech-buffer.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 
@@ -42,7 +44,17 @@ export function toWaitResultDto(result: WaitResult): WaitResultDto {
 // The mappers below list every field on purpose: a field added to the domain model doesn't reach
 // the API (for example a secret in the config) until it is added here and to the contract.
 
-export function toStatusDto({ bridge, tcp, buffer, input }: Status): StatusDto {
+export function toServiceStatusDto(service: ServiceStatus): ServiceStatusDto {
+  return {
+    state: service.state,
+    version: service.version,
+    port: service.port,
+    restarts: service.restarts,
+    exitCode: service.exitCode,
+  };
+}
+
+export function toStatusDto({ bridge, tcp, buffer, playwright, input }: Status): StatusDto {
   return {
     bridge: { version: bridge.version, apiVersion: bridge.apiVersion, state: bridge.state },
     tcp: {
@@ -62,6 +74,7 @@ export function toStatusDto({ bridge, tcp, buffer, input }: Status): StatusDto {
       firstSeq: buffer.firstSeq,
       lastSeq: buffer.lastSeq,
     },
+    playwright: toServiceStatusDto(playwright),
     input: { enabled: input.enabled },
   };
 }

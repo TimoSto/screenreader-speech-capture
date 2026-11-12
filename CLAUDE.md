@@ -11,6 +11,8 @@ The docs in `docs/` describe the full planned design (UI, client, Playwright/MCP
 input); much of it is **not implemented yet**. Check `docs/ROADMAP.md` for what exists — currently
 `packages/bridge`, `packages/shared` and `tools/fake-speech` are real (M1 capture core), and
 `packages/client` has the M2 library, version check, CLI and SSE live feed (`onSpeech` / `tail`).
+The bridge also supervises the Playwright server (M3 step 1: `adapters/out/process` is the generic
+supervisor, `adapters/out/playwright` installs and runs the configured version).
 
 ## Commands
 
@@ -89,6 +91,8 @@ live re-applies only the changed sections (see `changedSections` / `mergeConfig`
 
 - Unit tests sit next to the source (`src/**/*.test.ts`) and use in-memory fakes of driven ports
   (`packages/bridge/test/fakes.ts`).
+- Test bridges run with `playwright`/`mcp` disabled (`testOverrides`), so nothing is installed.
+  Service tests pass `playwrightLaunch` to run `test/fixtures/fake-service.mjs` instead.
 - Integration tests in `packages/bridge/test/` start a real bridge (real TCP + HTTP sockets,
   temp config dir) via helpers in `test/helpers.ts`. The client's `test/bridge.test.ts` reuses
   those helpers; its unit tests use `packages/client/test/fakes.ts` (fake bridge + virtual clock).

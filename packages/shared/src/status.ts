@@ -10,7 +10,10 @@ export interface ServiceStatusDto {
   state: 'stopped' | 'starting' | 'running' | 'crashed' | 'failed';
   version: string;
   port: number;
+  /** Restarts after crashes since the service was last started (bridge start or config change). */
   restarts: number;
+  /** Exit code of the last unexpected exit, `null` if there was none. Added in API 1.1. */
+  exitCode: number | null;
 }
 
 /** `GET /api/v1/status` */
@@ -24,7 +27,7 @@ export interface StatusDto {
     connections: ConnectionDto[];
   };
   buffer: { size: number; maxEntries: number; firstSeq: number | null; lastSeq: number | null };
-  /** Added in M3. */
+  /** Added in API 1.1. */
   playwright?: ServiceStatusDto;
   /** Added in M3. */
   mcp?: ServiceStatusDto;

@@ -7,4 +7,9 @@ There is **no authentication** by default. Anyone who can reach the ports can:
   such as `executablePath` and `args`, so access to port 3000 is effectively remote command execution,
 - control the desktop through the native input endpoints and a browser through MCP.
 
+Whoever can change the configuration also picks which published `playwright` version the bridge
+installs and runs, older ones with known issues included. That adds nothing to the access that port
+3000 already gives. The package name is fixed, the version must be an exact version number, and
+npm install scripts are off, so no other package and no command line text gets in.
+
 Use it only on isolated test VMs or networks. An optional shared-secret token is on the roadmap.

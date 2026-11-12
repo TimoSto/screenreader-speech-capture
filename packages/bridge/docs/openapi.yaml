@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: screenreader-speech-capture bridge API
-  version: '1.0'
+  version: '1.1'
   summary: Capture what a screen reader says and read it over HTTP.
   description: |
     REST + Server-Sent Events API of the bridge. `info.version` is the API version that
@@ -9,7 +9,9 @@ info:
     The prose reference is `docs/http-api.md`. The types match `packages/shared`.
 
     This file describes the endpoints the bridge serves today. Not implemented yet:
-    `PUT /config`, `POST /set-focus`, `POST /input/keys`, `POST /services/{name}/{action}`.
+    `POST /set-focus`, `POST /input/keys`.
+
+    Changes: 1.1 added `playwright` to `GET /status`.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -195,7 +197,7 @@ paths:
     get:
       tags: [bridge]
       operationId: getStatus
-      summary: Bridge state, versions, TCP connections and buffer
+      summary: Bridge state, versions, TCP connections, buffer and child services
       responses:
         '200':
           description: The current status.
@@ -377,6 +379,7 @@ components:
             maxEntries: { type: integer }
             firstSeq: { type: [integer, 'null'] }
             lastSeq: { type: [integer, 'null'] }
+        playwright: { $ref: '#/components/schemas/ServiceStatus' }
         input:
           type: object
           required: [enabled]
@@ -470,13 +473,44 @@ components:
             file: { type: [string, 'null'] }
             consoleSpeech: { type: boolean }
 
+    ServiceStatus:
+      type: object
+      description: A child service (docs/operations.md#child-service-crashes).
+      required: [state, version, port, restarts, exitCode]
+      properties:
+        state:
+          type: string
+          enum: [stopped, starting, running, crashed, failed]
+          description: |
+            `starting` includes the install. `crashed`: it exited and restarts after a delay.
+            `failed`: 5 crashes in a row; restart the bridge (or change the service's settings).
+        version:
+          {
+            type: string,
+            description: The version that runs (configured or bundled).,
+            example: 1.65.0,
+          }
+        port: { type: integer }
+        restarts:
+          {
+            type: integer,
+            description: Restarts after crashes since the service was last started (bridge start or config change).,
+          }
+        exitCode:
+          type: [integer, 'null']
+          description: Exit code of the last unexpected exit. `null` if none, or killed by a signal.
+
     ServiceConfigPatch:
       type: object
       additionalProperties: false
       properties:
         enabled: { type: boolean }
         port: { type: integer, minimum: 0, maximum: 65535 }
-        version: { type: [string, 'null'] }
+        version:
+          type: [string, 'null']
+          description: |
+            `null` = bundled. For `playwright` an exact version (`1.65.0`, pattern
+            `^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$`).
 
     ServiceConfig:
       type: object
@@ -486,7 +520,7 @@ components:
         port: { type: integer, minimum: 0, maximum: 65535 }
         version:
           type: [string, 'null']
-          description: '`null` = bundled version.'
+          description: '`null` = bundled version. For `playwright` an exact version like `1.65.0`.'
 
     ErrorCode:
       type: string

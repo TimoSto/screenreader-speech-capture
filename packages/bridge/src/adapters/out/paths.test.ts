@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultConfigFile, defaultLogFile } from './paths.js';
+import { defaultConfigFile, defaultLogFile, defaultPlaywrightDir } from './paths.js';
 
 describe('defaultLogFile', () => {
   it('uses %LOCALAPPDATA% on Windows', () => {
@@ -31,6 +31,27 @@ describe('defaultConfigFile', () => {
     );
     expect(defaultConfigFile('linux', {}, '/home/t')).toBe(
       '/home/t/.config/screenreader-speech-capture/config.json',
+    );
+  });
+});
+
+describe('defaultPlaywrightDir', () => {
+  it('uses %LOCALAPPDATA% on Windows', () => {
+    expect(
+      defaultPlaywrightDir(
+        'win32',
+        { LOCALAPPDATA: 'C:\\Users\\t\\AppData\\Local' },
+        'C:\\Users\\t',
+      ),
+    ).toBe('C:\\Users\\t\\AppData\\Local\\screenreader-speech-capture\\playwright');
+  });
+
+  it('uses XDG_CACHE_HOME or ~/.cache elsewhere', () => {
+    expect(defaultPlaywrightDir('linux', { XDG_CACHE_HOME: '/cache' }, '/home/t')).toBe(
+      '/cache/screenreader-speech-capture/playwright',
+    );
+    expect(defaultPlaywrightDir('linux', {}, '/home/t')).toBe(
+      '/home/t/.cache/screenreader-speech-capture/playwright',
     );
   });
 });

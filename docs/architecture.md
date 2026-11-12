@@ -54,7 +54,7 @@ flowchart LR
     subgraph OUT["Driven adapters"]
         MEM["out/memory<br/>repository, event bus"]
         CFG["out/fs-config<br/>config.json"]
-        SUP["out/playwright, out/mcp<br/>process supervisors"]
+        SUP["out/process, out/playwright, out/mcp<br/>process supervisors"]
         ROBOT["out/robotjs<br/>InputInjector"]
         LOG["out/log<br/>bridge log"]
         CLK["out/clock"]
@@ -82,7 +82,7 @@ packages/bridge/src/
   application/
     ports/in/        driving ports (use cases): RecordSpeech, QuerySpeech,
                      WaitForSpeech, ClearSpeech, AddMarker, SendNativeInput,
-                     ManageConfig, ManageServices, GetStatus
+                     ManageConfig, GetStatus
     ports/out/       driven ports: SpeechRepository, SpeechEventBus, CaptureStatusSource,
                      ConfigStore, ProcessSupervisor, InputInjector, Logger, Clock
     services/        use-case implementations (only depend on domain + ports)
@@ -91,10 +91,13 @@ packages/bridge/src/
                      tracks its connections (CaptureStatusSource)
     in/http/         REST + SSE routes → driving ports; serves the built UI
     in/net/          listen helper shared by the TCP and HTTP listeners
+    shared/net/      reachable URLs of a listener, used by in and out adapters
     in/cli/          flags / env → startup overrides (win over the config file)
     out/memory/      speech repository (capped list), in-process event bus
     out/fs-config/   config.json in %APPDATA%
-    out/playwright/  supervisor for the Playwright server (installs the configured version)
+    out/process/     generic supervisor (ProcessSupervisor): spawn, readiness, restarts
+                     with backoff, process-tree kill
+    out/playwright/  the Playwright server on that supervisor (installs the configured version)
     out/mcp/         supervisor for Playwright MCP
     out/robotjs/     InputInjector on @jitsi/robotjs (mouse click, key chords)
     out/log/         bridge log: console + file, prefixes, colours, rotation
