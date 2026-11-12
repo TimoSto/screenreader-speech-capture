@@ -37,7 +37,6 @@ import {
   type ConfigPatch,
 } from './domain/config.js';
 import { AppError } from './domain/errors.js';
-import type { RestartPolicy } from './domain/service.js';
 
 export interface BridgeOptions {
   version: string;
@@ -60,8 +59,6 @@ export interface BridgeOptions {
   playwrightDir?: string;
   /** Replaces the Playwright install and `run-server` command (tests). */
   playwrightLaunch?: Prepare;
-  /** Restart delays of the child services (tests). */
-  restartPolicy?: RestartPolicy;
 }
 
 export interface Bridge {
@@ -199,7 +196,6 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     logger: bridgeLogger,
     output: log.for('playwright-server'),
     ...(options.playwrightLaunch ? { launch: options.playwrightLaunch } : {}),
-    ...(options.restartPolicy ? { policy: options.restartPolicy } : {}),
   });
 
   const tcp = new TcpListener(speech, clock, log.for('speech-capture'));

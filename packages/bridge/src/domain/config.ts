@@ -70,7 +70,7 @@ const nonEmptyString: Check = (value) =>
 const nullableString: Check = (value) =>
   value === null ? undefined : nonEmptyString(value) && 'must be a non-empty string or null';
 /**
- * An exact npm version (`1.56.1`, `1.57.0-beta-1`). Service versions end up on an
+ * An exact npm version (`1.56.1`, `1.57.0-beta-1`). `playwright.version` ends up on an
  * `npm install` command line, so nothing else may get through.
  */
 export function isExactVersion(value: unknown): value is string {
@@ -106,7 +106,7 @@ const SCHEMA: { readonly [S in keyof Config]: { readonly [K in keyof Config[S]]:
   },
   http: { host: nonEmptyString, port },
   playwright: { enabled: boolean, port, version: nullableVersion },
-  mcp: { enabled: boolean, port, version: nullableVersion },
+  mcp: { enabled: boolean, port, version: nullableString },
   input: { enabled: boolean },
   buffer: { maxEntries: integer(1, 1_000_000) },
   log: { level: oneOf(LOG_LEVELS), file: nullableString, consoleSpeech: boolean },

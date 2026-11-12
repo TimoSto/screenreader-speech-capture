@@ -46,11 +46,12 @@ export interface ChildProcessSupervisorOptions {
   /** Log for the service's own output, under its prefix. */
   output: Logger;
   policy?: RestartPolicy;
-  /** How long the port may take to open after the start. Default 60 s. */
-  readyTimeoutMs?: number;
   /** Interval of the port check. Default 200 ms. */
   probeIntervalMs?: number;
 }
+
+/** How long the port may take to open after the start, before it counts as a crash. */
+const READY_TIMEOUT_MS = 60_000;
 
 const WILDCARD_PROBE: Record<string, string> = { '0.0.0.0': '127.0.0.1', '::': '::1' };
 
@@ -236,7 +237,7 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
     generation: number,
     exited: () => boolean,
   ): Promise<boolean> {
-    const deadline = Date.now() + (this.options.readyTimeoutMs ?? 60_000);
+    const deadline = Date.now() + READY_TIMEOUT_MS;
     while (generation === this.generation && !exited() && Date.now() < deadline) {
       if (await portOpen(settings.host, settings.port)) return true;
       await delay(this.options.probeIntervalMs ?? 200);

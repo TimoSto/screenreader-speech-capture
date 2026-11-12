@@ -8,7 +8,6 @@ import type { Bridge } from '../src/main.js';
 import { accepts, eventually, freePort, start } from './helpers.js';
 
 const FAKE_SERVICE = path.resolve(import.meta.dirname, 'fixtures/fake-service.mjs');
-const FAST = { baseDelayMs: 10, maxDelayMs: 40, stableMs: 60_000, maxCrashesInRow: 5 };
 
 const dirs: string[] = [];
 afterEach(async () => {
@@ -34,7 +33,7 @@ async function startWithPlaywright(patch: object = {}, pidFile?: string) {
   const port = await freePort();
   const bridge = await start(
     { playwright: { enabled: true, port }, ...patch },
-    { playwrightLaunch: fakeLaunch(pidFile), restartPolicy: FAST },
+    { playwrightLaunch: fakeLaunch(pidFile) },
   );
   return { bridge, port };
 }

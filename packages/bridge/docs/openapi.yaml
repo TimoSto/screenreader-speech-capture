@@ -508,8 +508,9 @@ components:
         port: { type: integer, minimum: 0, maximum: 65535 }
         version:
           type: [string, 'null']
-          pattern: '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$'
-          description: Exact version, `null` = bundled.
+          description: |
+            `null` = bundled. For `playwright` an exact version (`1.65.0`, pattern
+            `^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$`).
 
     ServiceConfig:
       type: object
@@ -519,7 +520,7 @@ components:
         port: { type: integer, minimum: 0, maximum: 65535 }
         version:
           type: [string, 'null']
-          description: 'Exact version (for example `1.65.0`), `null` = bundled version.'
+          description: '`null` = bundled version. For `playwright` an exact version like `1.65.0`.'
 
     ErrorCode:
       type: string
