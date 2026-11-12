@@ -15,6 +15,7 @@ export interface Status {
   };
   buffer: BufferStats;
   playwright: ServiceStatus;
+  mcp: ServiceStatus;
   input: { enabled: boolean };
 }
 

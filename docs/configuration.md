@@ -23,7 +23,7 @@ Precedence: **CLI flags > environment variables > config file > defaults**.
   "tcp":        { "host": "127.0.0.1", "port": 4449, "format": "text-to-socket", "encoding": "windows-1252", "maxLineBytes": 65536 },
   "http":       { "host": "0.0.0.0",   "port": 5151 },
   "playwright": { "enabled": true, "port": 3000, "version": null },  // exact version, null = bundled
-  "mcp":        { "enabled": true, "port": 8931, "version": null },
+  "mcp":        { "enabled": true, "port": 8931, "version": null },        // exact version, null = bundled
   "input":      { "enabled": true },
   "buffer":     { "maxEntries": 10000 },
   "log":        { "level": "info", "file": null, "consoleSpeech": false }  // bridge log, file null = default path
@@ -63,7 +63,8 @@ What each section does when it changes:
 | `buffer` | `maxEntries` applies at once. A smaller value drops the oldest entries (they count as `truncated`). |
 | `log` | The level applies at once. A new `file` or `consoleSpeech` switches the log output. |
 | `playwright` | The Playwright server restarts with the new port or version (a new version is installed first). The `PUT` answers at once; `status` shows the service as `starting` until it runs. `enabled: false` stops it. A change of `http.host` restarts it too, because it listens on the same interface. |
-| `mcp`, `input` | Saved, and shown by `GET /config` and `status`. They take effect once Playwright MCP (M3) and native input (M4) exist. |
+| `mcp` | Like `playwright`, for Playwright MCP. |
+| `input` | Saved, and shown by `GET /config` and `status`. It takes effect once native input (M4) exists. |
 
 ## CLI flags
 
@@ -77,6 +78,7 @@ What each section does when it changes:
 | `--playwright-port <n>` | `3000` | Playwright server (WebSocket). |
 | `--playwright-version <v>` | *(bundled)* | Playwright version of the server, exact (`1.65.0`). Must match the clients (see [Version](playwright-mcp.md#version)). |
 | `--mcp-port <n>` | `8931` | Playwright MCP (HTTP). |
+| `--mcp-version <v>` | *(bundled)* | Version of `@playwright/mcp`, exact (`0.0.85`, see [Playwright MCP](playwright-mcp.md#playwright-mcp)). |
 | `--no-playwright` | | Don't start the Playwright server. |
 | `--no-mcp` | | Don't start Playwright MCP. |
 | `--no-input` | | Disable the native input endpoints. |

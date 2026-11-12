@@ -54,7 +54,7 @@ export function toServiceStatusDto(service: ServiceStatus): ServiceStatusDto {
   };
 }
 
-export function toStatusDto({ bridge, tcp, buffer, playwright, input }: Status): StatusDto {
+export function toStatusDto({ bridge, tcp, buffer, playwright, mcp, input }: Status): StatusDto {
   return {
     bridge: { version: bridge.version, apiVersion: bridge.apiVersion, state: bridge.state },
     tcp: {
@@ -75,6 +75,7 @@ export function toStatusDto({ bridge, tcp, buffer, playwright, input }: Status):
       lastSeq: buffer.lastSeq,
     },
     playwright: toServiceStatusDto(playwright),
+    mcp: toServiceStatusDto(mcp),
     input: { enabled: input.enabled },
   };
 }

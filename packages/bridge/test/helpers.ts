@@ -17,8 +17,9 @@ export function testOverrides(patch: unknown = {}): ConfigPatch {
     {
       tcp: { port: 0 },
       http: { host: '127.0.0.1', port: 0 },
-      // No real Playwright install in tests; service tests enable it with a fake launch.
+      // No real Playwright or MCP install in tests; service tests enable them with a fake launch.
       playwright: { enabled: false },
+      mcp: { enabled: false },
     },
     validatePatch(patch),
   );
@@ -43,7 +44,7 @@ export async function start(
   patch: unknown = {},
   options: { store?: MemoryConfigStore } & Pick<
     BridgeOptions,
-    'sinks' | 'ssePingMs' | 'playwrightLaunch'
+    'sinks' | 'ssePingMs' | 'playwrightLaunch' | 'mcpLaunch'
   > = {},
 ): Promise<Bridge> {
   const { store, sinks, ...rest } = options;

@@ -20,6 +20,8 @@ describe('parseCli', () => {
         '1.56.1',
         '--mcp-port',
         '8932',
+        '--mcp-version',
+        '0.0.85',
         '--no-playwright',
         '--no-mcp',
         '--no-input',
@@ -37,7 +39,7 @@ describe('parseCli', () => {
       tcp: { host: '127.0.0.2', port: 4450, encoding: 'utf-8' },
       http: { host: '127.0.0.1', port: 5152 },
       playwright: { port: 3001, version: '1.56.1', enabled: false },
-      mcp: { port: 8932, enabled: false },
+      mcp: { port: 8932, version: '0.0.85', enabled: false },
       input: { enabled: false },
       log: { level: 'debug', file: '/tmp/b.log', consoleSpeech: true },
     });

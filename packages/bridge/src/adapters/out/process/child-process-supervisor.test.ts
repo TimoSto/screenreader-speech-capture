@@ -34,7 +34,7 @@ function fake(...args: string[]): Prepare {
     });
 }
 
-async function setup(prepare: Prepare, port?: number) {
+async function setup(prepare: Prepare, port?: number, urlPath?: string) {
   const logger = new MemoryLogger();
   const output = new MemoryLogger();
   const supervisor = new ChildProcessSupervisor({
@@ -43,6 +43,7 @@ async function setup(prepare: Prepare, port?: number) {
     defaultVersion: '9.9.9',
     prepare,
     scheme: 'ws',
+    ...(urlPath === undefined ? {} : { path: urlPath }),
     logger,
     output,
     policy: FAST,
@@ -160,6 +161,14 @@ describe('ChildProcessSupervisor', () => {
     supervisor.reconfigure({ host: '127.0.0.1', port, version: null });
     await supervisor.start();
     expect(logger.lines).toContain(`info playwright running on ws://127.0.0.1:${port}`);
+  });
+
+  it('appends its path to the URLs', async () => {
+    const { supervisor, logger } = await setup(fake(), undefined, '/mcp');
+    const port = await freePort();
+    supervisor.reconfigure({ host: '127.0.0.1', port, version: null });
+    await supervisor.start();
+    expect(logger.lines).toContain(`info playwright running on ws://127.0.0.1:${port}/mcp`);
   });
 
   it('uses new settings from the next start', async () => {

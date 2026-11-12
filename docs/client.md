@@ -95,7 +95,7 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 |---|---|---|
 | `getSpeech({ since?, limit?, includeMarkers? })` | `SpeechEntry[]` | Recorded speech entries, oldest first. `since` defaults to the cursor, `includeMarkers` to `false`. |
 | `getText({ since?, separator? })` | `string` | All speech since `since` (default: the cursor), joined into one string (`separator` default `'\n'`). Handy for snapshot assertions. |
-| `startSession(name, { run? })` | `Session` | Start a [session](speech-capture.md#sessions) (the previous one ends) and move the cursor to its start. `run` groups sessions, for example of one test run. Needs a bridge with API 1.2. |
+| `startSession(name, { run? })` | `Session` | Start a [session](speech-capture.md#sessions) (the previous one ends) and move the cursor to its start. `run` groups sessions, for example of one test run. Needs a bridge with API 1.3. |
 | `endSession()` | `void` | End the current session. Speech after this belongs to no session. |
 | `sessions()` | `{ sessions, currentId }` | The sessions still in the buffer, newest first. |
 | `clear()` | `void` | Wipe the whole buffer (all sessions) and reset the cursor. For manual use. |

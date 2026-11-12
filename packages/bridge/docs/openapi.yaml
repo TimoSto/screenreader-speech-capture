@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: screenreader-speech-capture bridge API
-  version: '1.1'
+  version: '1.2'
   summary: Capture what a screen reader says and read it over HTTP.
   description: |
     REST + Server-Sent Events API of the bridge. `info.version` is the API version that
@@ -11,7 +11,7 @@ info:
     This file describes the endpoints the bridge serves today. Not implemented yet:
     `POST /set-focus`, `POST /input/keys`.
 
-    Changes: 1.1 added `playwright` to `GET /status`.
+    Changes: 1.1 added `playwright` to `GET /status`, 1.2 added `mcp`.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -380,6 +380,7 @@ components:
             firstSeq: { type: [integer, 'null'] }
             lastSeq: { type: [integer, 'null'] }
         playwright: { $ref: '#/components/schemas/ServiceStatus' }
+        mcp: { $ref: '#/components/schemas/ServiceStatus' }
         input:
           type: object
           required: [enabled]
@@ -509,7 +510,7 @@ components:
         version:
           type: [string, 'null']
           description: |
-            `null` = bundled. For `playwright` an exact version (`1.65.0`, pattern
+            `null` = bundled. Otherwise an exact version (`1.65.0`, pattern
             `^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$`).
 
     ServiceConfig:
@@ -520,7 +521,7 @@ components:
         port: { type: integer, minimum: 0, maximum: 65535 }
         version:
           type: [string, 'null']
-          description: '`null` = bundled version. For `playwright` an exact version like `1.65.0`.'
+          description: '`null` = bundled version. Otherwise an exact version like `1.65.0`.'
 
     ErrorCode:
       type: string
