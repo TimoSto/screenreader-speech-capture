@@ -50,3 +50,5 @@ while the other keys are pressed.
   move the click point.
 - Native input goes to whatever window is in the foreground. Call `setFocus` again after anything
   that could steal focus (a new window, a dialog, the MCP browser).
+
+People can send the same clicks and keys by hand from the [web UI](web-ui.md#actions).

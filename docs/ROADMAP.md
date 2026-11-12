@@ -36,7 +36,13 @@ GitHub issues. This file only tracks milestones.
 
 - [x] Supervisor for the Playwright server with selectable version, process-tree kill, restart backoff
 - [ ] Supervisor for Playwright MCP (`--allowed-hosts`)
-- [ ] Playwright fixture (`connectOptions`, `headless: false`, clear before each test, transcript attachment)
+- [ ] Sessions API: `POST /sessions`, `POST /sessions/end`, `GET /sessions`, `sessionId` on
+      entries, `session` filter on speech / wait / stream, SSE `session` event, `session` in status
+      (API 1.2)
+- [ ] Client + CLI sessions: `startSession` / `endSession` / `sessions`, `onSession`, CLI
+      `session start|end|list`, CLI reads scoped to the current session
+- [ ] Playwright fixture (`connectOptions`, `headless: false`, one session per test instead of
+      clearing, transcript attachment)
 
 ### M4 Native input ⬜
 
@@ -46,7 +52,10 @@ GitHub issues. This file only tracks milestones.
 
 ### M5 Web UI ⬜
 
-- [ ] Status bar, live log (follow, filter, markers, export)
+- [ ] Layout, status bar and status panel (polls `GET /status`)
+- [ ] Context pane: sessions (grouped by run, follow current, new / end session)
+- [ ] Live log per session (follow, filter, markers, export, wipe)
+- [ ] Actions panel: keys, presets, click, delayed send (needs M4)
 - [ ] Settings (validation, services)
 - [ ] Setup page with check button
 - [ ] Accessibility of the UI itself (no feedback loop)
@@ -66,7 +75,7 @@ GitHub issues. This file only tracks milestones.
 ### Later
 
 - [ ] Optional shared-secret auth token
-- [ ] Optional persistent storage (for example SQLite) / session export
+- [ ] Optional persistent storage (for example SQLite), so sessions survive a bridge restart
 - [ ] Maybe: detect the VM's ANSI code page from the registry (`tcp.encoding=auto`), so VMs with
   another code page or the "Use Unicode UTF-8" setting work without `--tcp-encoding`
 
@@ -80,13 +89,14 @@ GitHub issues. This file only tracks milestones.
 | Screen reader setup | [vm-setup.md](vm-setup.md#screen-reader-setup) | ⬜ | Not yet verified on a real VM |
 | Running on the VM | [vm-setup.md](vm-setup.md#running-on-the-vm) | ⬜ | Not yet verified on a real VM |
 | Speech capture | [speech-capture.md](speech-capture.md) | ⬜ | M1 |
-| HTTP API | [http-api.md](http-api.md) | 🚧 | M1 done, Playwright service in M3; MCP and native input come with M3/M4 |
+| Sessions | [speech-capture.md](speech-capture.md#sessions) | ⬜ | Designed, M3 (before the fixture) |
+| HTTP API | [http-api.md](http-api.md) | 🚧 | M1 done, Playwright service in M3; sessions and MCP come with M3, native input with M4 |
 | Operations | [operations.md](operations.md) | 🚧 | Startup, shutdown, bridge log and the Playwright server supervisor done; MCP comes with M3 |
 | Configuration | [configuration.md](configuration.md) | 🚧 | Flags, env, config file, `PUT /config` and `playwright.*` done; `mcp` and `input` take effect with M3/M4 |
-| Test client | [client.md](client.md) | 🚧 | Library, CLI, version check and live feed done; fixture in M3, native input in M4 |
+| Test client | [client.md](client.md) | 🚧 | Library, CLI, version check and live feed done; sessions and fixture in M3, native input in M4 |
 | Remote Playwright & MCP | [playwright-mcp.md](playwright-mcp.md) | 🚧 | Playwright server done (install, supervision); MCP next |
 | Native input | [native-input.md](native-input.md) | ⬜ | M4 |
-| Web UI | [web-ui.md](web-ui.md) | ⬜ | M5 |
+| Web UI | [web-ui.md](web-ui.md) | ⬜ | M5. Designed: status, context pane (sessions), live log, actions |
 | Agents | [agents.md](agents.md) | ⬜ | M6 |
 | Development, CI & releases | [development.md](development.md) | ⬜ | M1 tooling, M7 CI |
 | Security | [security.md](security.md) | ✅ | Documented. The auth token is under Later |

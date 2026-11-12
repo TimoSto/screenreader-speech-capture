@@ -9,6 +9,7 @@ Agents drive the browser through [Playwright MCP](playwright-mcp.md#playwright-m
 
 ```bash
 npx screenreader-speech-capture-client config set url http://my-test-vm:5151   # once per user
+npx screenreader-speech-capture-client session start "audit checkout page"      # once per task
 SEQ=$(npx screenreader-speech-capture-client mark step-1)
 # … act through Playwright MCP, or send a screen reader command:
 npx screenreader-speech-capture-client press h
@@ -26,6 +27,8 @@ packages/client/skills/screenreader-speech-capture/SKILL.md
 
 It teaches an agent how to use the CLI:
 
+- to start a [session](speech-capture.md#sessions) per task (`session start`) instead of `clear`,
+  so a person can follow the task in the [web UI](web-ui.md#context-pane),
 - the loop **mark → act → wait-silence → text --since**,
 - when to use Playwright MCP input and when to use `press` (screen reader commands),
 - that the browser must be in the foreground first (`focus`), and when to do that again,

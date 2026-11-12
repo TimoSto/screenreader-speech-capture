@@ -77,9 +77,12 @@ Speech often arrives **before** your code starts waiting for it: the screen read
 with a `since` option uses the cursor as its default `since`, so it looks at entries with
 `seq > cursor`.
 
-- A new client starts at `0`. `clear()` empties the buffer and sets the cursor back to `0`. `seq`
-  survives a clear, so everything in the buffer after that is newer than the clear. The fixture
-  calls `clear()` before each test.
+- A new client starts at `0`. `startSession(name)` starts a [session](speech-capture.md#sessions)
+  and moves the cursor to the session's start, so everything after it belongs to the session. The
+  fixture does this before each test. Earlier sessions stay in the buffer for the
+  [web UI](web-ui.md#context-pane).
+- `clear()` wipes the whole buffer and sets the cursor back to `0`. It is meant for manual use;
+  tests and agents start a session instead.
 - `waitForOutput` / `waitForSequence` search **from the cursor**, so speech that already arrived
   is found. On a match the cursor moves to the matched entry, so the next wait only sees
   what came after it.
@@ -92,7 +95,10 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 |---|---|---|
 | `getSpeech({ since?, limit?, includeMarkers? })` | `SpeechEntry[]` | Recorded speech entries, oldest first. `since` defaults to the cursor, `includeMarkers` to `false`. |
 | `getText({ since?, separator? })` | `string` | All speech since `since` (default: the cursor), joined into one string (`separator` default `'\n'`). Handy for snapshot assertions. |
-| `clear()` | `void` | Clear the buffer and reset the cursor. |
+| `startSession(name, { run? })` | `Session` | Start a [session](speech-capture.md#sessions) (the previous one ends) and move the cursor to its start. `run` groups sessions, for example of one test run. Needs a bridge with API 1.2. |
+| `endSession()` | `void` | End the current session. Speech after this belongs to no session. |
+| `sessions()` | `{ sessions, currentId }` | The sessions still in the buffer, newest first. |
+| `clear()` | `void` | Wipe the whole buffer (all sessions) and reset the cursor. For manual use. |
 | `waitForOutput(match, { timeout?, since?, normalize? })` | `SpeechEntry` | Wait until a speech entry after the cursor (or `since`) matches, then move the cursor past it. `match` is a `string` (substring), a `RegExp` or a predicate `(u) => boolean`. `normalize: true` ignores case and extra whitespace. Markers never match. Throws `SpeechTimeoutError` (with the speech seen so far in `entries`) on timeout. Default `timeout`: 5000 ms. |
 | `waitForSequence(matches[], { timeout?, since?, normalize? })` | `SpeechEntry[]` | Wait until the matches occur in this order (other entries may come in between). Moves the cursor past the last match. |
 | `waitForSilence({ quietFor?, timeout? })` | `void` | Wait until nothing new has been spoken for `quietFor` ms (default 500), counted from the call. Throws `SpeechTimeoutError` if speech goes on until `timeout` (default 10000 ms). Useful before asserting on "everything that was said". |
@@ -101,7 +107,7 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `setFocus(page, { target? })` | `void` | Make the page's browser window the OS foreground window with a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
 | `click({ x, y })` | `void` | Native click at screen coordinates (`POST /api/v1/set-focus`). |
 | `pressKeys(keys, { delayMs? })` | `void` | Native key presses, for screen reader commands (`'Insert+T'`, `['h', 'h']`). |
-| `onSpeech(cb, { since?, includeMarkers?, onClear?, onTruncated?, onError? })` | `() => void` | Subscribe to the live feed (see [Live feed](#live-feed)). `cb` gets every new speech entry as the bridge receives it. Returns an unsubscribe function. |
+| `onSpeech(cb, { since?, includeMarkers?, onSession?, onClear?, onTruncated?, onError? })` | `() => void` | Subscribe to the live feed (see [Live feed](#live-feed)). `cb` gets every new speech entry as the bridge receives it. Returns an unsubscribe function. |
 | `status()` | `BridgeStatus` | Bridge health (TCP connections, Playwright/MCP state, versions). |
 | `waitForReady({ timeout? })` | `BridgeStatus` | Wait until the bridge answers and is `ready` (default `timeout` 120000 ms). Throws `BridgeNotReadyError` on timeout. |
 | `playwrightEndpoint()` | `string` | WebSocket URL of the bridge's Playwright server, for `browserType.connect()`. |
@@ -121,7 +127,8 @@ stop();
 
 - It starts with the entries that arrive after the call. `since: <seq>` first replays the buffered
   entries after that `seq` (`since: 0`: the whole buffer).
-- Markers are left out unless `includeMarkers: true`. `onClear` is called after a clear,
+- Markers are left out unless `includeMarkers: true`. `onSession` is called when a session starts
+  or ends, `onClear` after a clear,
   `onTruncated` when entries of a replay were already dropped from the bridge's full buffer.
 - It doesn't move the [cursor](#the-cursor): waits work the same with or without a feed.
 - A lost connection is reconnected by itself (after 250 ms, doubling up to 5 s), and the bridge
@@ -183,8 +190,10 @@ The fixture:
 - sets Playwright's `connectOptions.wsEndpoint` to the bridge's Playwright server and forces
   `headless: false`, so `page` opens visibly in the VM's desktop session where the screen reader runs,
 - calls `setFocus(page)` after the page is created (turn off with `speechCaptureFocus: false`),
-- clears the speech buffer and resets the cursor before each test,
-- attaches the speech transcript of the test to the Playwright report (always, or only on failure,
+- starts a [session](speech-capture.md#sessions) per test before it runs (`startSession`, named
+  after the test's title path, with one `run` label per Playwright run) and ends it after the test.
+  It doesn't clear the buffer, so earlier tests stay visible in the [web UI](web-ui.md#context-pane),
+- attaches the speech transcript of the test (its session) to the Playwright report (always, or only on failure,
   set with `speechCaptureAttach: 'always' | 'on-failure' | 'off'`).
 
 > Tests that use the screen reader must run **serially** (`workers: 1`). There is only one screen
@@ -200,13 +209,18 @@ The CLI command has the same name as the package, `screenreader-speech-capture-c
 
 Every command takes `--url` (overrides the [stored bridge URL](#bridge-url)) and `--json` for
 machine-readable output. A CLI call has no memory between invocations, so there is no
-cursor: `--since` defaults to `0`, which means everything since the last `clear`. Use `mark` and
-`--since` to look at a smaller range.
+cursor. Instead, `speech`, `text` and `wait` read the **current
+[session](speech-capture.md#sessions)** (everything since `session start`) by default, or the whole
+buffer when no session is current. `--session <id>` picks another one, `--all` ignores sessions.
+Use `mark` and `--since` to look at a smaller range.
 
 ```bash
 npx screenreader-speech-capture-client config set url http://my-test-vm:5151   # once, see Bridge URL
 npx screenreader-speech-capture-client status [--wait-ready] [--timeout 120000]
-npx screenreader-speech-capture-client clear
+npx screenreader-speech-capture-client session start "checkout flow" [--run <label>]   # prints the session id
+npx screenreader-speech-capture-client session end
+npx screenreader-speech-capture-client session list
+npx screenreader-speech-capture-client clear                 # wipes everything, all sessions
 npx screenreader-speech-capture-client speech [--since <seq>] [--limit <n>] [--include-markers]
 npx screenreader-speech-capture-client text [--since <seq>] [--separator <s>]
 npx screenreader-speech-capture-client wait "Submit, button" [--regex] [--normalize] [--timeout 5000] [--since <seq>]
@@ -235,7 +249,8 @@ with `--json`.
 `SIGTERM`, then exits with `0`. A closed pipe (`tail --json | head -3`) ends it too, once the next
 line is written. By default it shows only new speech; `--since
 <seq>` first prints the buffered entries after `seq`. With `--json` it prints one event per line:
-`{"type":"entry","entry":{...}}`, `{"type":"clear"}` and `{"type":"truncated"}`. If the bridge is
+`{"type":"entry","entry":{...}}`, `{"type":"session","session":{...}}` (a session started or
+ended), `{"type":"clear"}` and `{"type":"truncated"}`. If the bridge is
 not reachable at the start it exits with `2`; a connection lost later is reconnected (with a note
 on stderr) without losing entries.
 

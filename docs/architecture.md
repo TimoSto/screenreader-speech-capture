@@ -78,10 +78,10 @@ flowchart LR
 
 ```
 packages/bridge/src/
-  domain/            SpeechEntry, Marker, Config, KeyChord (key-name parsing + validation). Pure, no I/O.
+  domain/            SpeechEntry, Marker, Session, Config, KeyChord (key-name parsing + validation). Pure, no I/O.
   application/
     ports/in/        driving ports (use cases): RecordSpeech, QuerySpeech,
-                     WaitForSpeech, ClearSpeech, AddMarker, SendNativeInput,
+                     WaitForSpeech, ClearSpeech, AddMarker, ManageSessions, SendNativeInput,
                      ManageConfig, GetStatus
     ports/out/       driven ports: SpeechRepository, SpeechEventBus, CaptureStatusSource,
                      ConfigStore, ProcessSupervisor, InputInjector, Logger, Clock
@@ -154,10 +154,11 @@ default adapters to the service, so `new SpeechCaptureClient()` just works.
 packages/ui/src/
   lib/
     core/        client-side domain + use cases (filter/search log, config draft & validation)
-                 and ports: SpeechFeed, ConfigApi, StatusApi
+                 and ports: SpeechFeed, SessionsApi, StatusApi, InputApi, ConfigApi
     adapters/    HTTP/SSE implementations of those ports (talk to the bridge API)
     stores/      Svelte state built on the use cases; ports are wired to adapters here
-  routes/        pages: Live log, Settings, Setup (NVDA / JAWS docs)
+  routes/        pages: Live log (with context pane and actions), Settings, Setup (NVDA / JAWS docs);
+                 status bar + status panel in the layout
 ```
 
 Components never call `fetch` directly. They go through the ports, so the UI can be developed and

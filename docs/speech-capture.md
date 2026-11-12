@@ -75,5 +75,27 @@ The buffer is an in-memory list, oldest first, with at most `buffer.maxEntries` 
 10 000). When it is full, the oldest entry is dropped for each new one. `GET /api/v1/status`
 reports `buffer.firstSeq` and `buffer.lastSeq`. If entries after a request's `since` were dropped
 this way, the response has `"truncated": true`, so a test can tell that it missed something.
-Entries removed by a clear don't count. Call `DELETE /api/v1/speech` between tests to keep the
-buffer small.
+Entries removed by a clear don't count.
+
+## Sessions
+
+A session groups the speech of one test or one agent task, so the [web UI](web-ui.md#context-pane)
+and readers can tell them apart.
+
+- The socket voice sends only text, nothing about who caused it. So there is **one current session
+  at a time**. `POST /api/v1/sessions` starts a session with a `name` (for example the test title)
+  and an optional `run` label (for example one label per Playwright run). The new session becomes
+  current, and the previous one ends.
+- Every entry recorded while a session is current gets its `sessionId`, markers included.
+  Entries outside any session (before the first one, or after `POST /api/v1/sessions/end`) have
+  `sessionId: null`.
+- Session `id`s increase like `seq` and restart at 1 with the bridge.
+- **Sessions replace clearing between tests.** The [fixture](client.md#playwright-fixture) starts
+  one session per test, and agents start one per task. Reads are scoped to the current session, so
+  earlier sessions stay in the buffer and stay visible in the UI.
+- Sessions share the capped buffer: an ended session disappears from the session list once all
+  its entries have been dropped. `DELETE /api/v1/speech` is a **global wipe** for manual use: it
+  removes all entries and all ended sessions. The current session stays current, empty.
+- Sessions live in memory only, like the buffer.
+
+Endpoints: [HTTP API](http-api.md#endpoints).
