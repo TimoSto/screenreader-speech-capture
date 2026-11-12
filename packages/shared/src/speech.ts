@@ -11,6 +11,8 @@ export interface SpeechEntryDto {
   voice: string | null;
   /** TCP connection that delivered it, `null` for markers. */
   connectionId: number | null;
+  /** The session that was current, `null` outside any session. Added in API 1.3. */
+  sessionId?: number | null;
 }
 
 /** `GET /api/v1/speech` */

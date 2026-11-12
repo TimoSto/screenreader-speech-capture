@@ -9,6 +9,12 @@ const draft = (text: string): NewSpeechEntry => ({
   source: 'tcp',
   voice: null,
   connectionId: 1,
+  sessionId: null,
+});
+
+const inSession = (text: string, sessionId: number | null): NewSpeechEntry => ({
+  ...draft(text),
+  sessionId,
 });
 
 function fill(repo: MemorySpeechRepository, count: number) {
@@ -73,5 +79,70 @@ describe('MemorySpeechRepository', () => {
     const next = repo.add(draft('after'));
     expect(next.seq).toBe(4);
     expect(repo.list(0, 100)).toEqual({ entries: [next], truncated: false, hasMore: false });
+  });
+
+  describe('sessions', () => {
+    it('tracks first, last and count of each session and lists one session', () => {
+      const repo = new MemorySpeechRepository(10);
+      repo.add(inSession('before', null));
+      repo.add(inSession('a1', 1));
+      repo.add(inSession('a2', 1));
+      repo.add(inSession('between', null));
+      repo.add(inSession('b1', 2));
+      expect(repo.sessionStats(1)).toEqual({
+        firstSeq: 2,
+        lastSeq: 3,
+        entries: 2,
+        droppedUpToSeq: 0,
+      });
+      expect(repo.sessionStats(2)).toMatchObject({ firstSeq: 5, lastSeq: 5, entries: 1 });
+      expect(repo.sessionStats(9)).toEqual({
+        firstSeq: null,
+        lastSeq: null,
+        entries: 0,
+        droppedUpToSeq: 0,
+      });
+      expect(repo.list(0, 100, 1).entries.map((e) => e.text)).toEqual(['a1', 'a2']);
+      expect(repo.list(2, 100, 1).entries.map((e) => e.text)).toEqual(['a2']);
+      expect(repo.list(0, 1, 1).hasMore).toBe(true);
+    });
+
+    it('follows the dropped entries, and reports truncated only for the session that lost some', () => {
+      const repo = new MemorySpeechRepository(3);
+      repo.add(inSession('a1', 1));
+      repo.add(inSession('a2', 1));
+      repo.add(inSession('b1', 2));
+      repo.add(inSession('b2', 2));
+      expect(repo.sessionStats(1)).toEqual({
+        firstSeq: 2,
+        lastSeq: 2,
+        entries: 1,
+        droppedUpToSeq: 1,
+      });
+      expect(repo.list(0, 100, 1)).toMatchObject({ truncated: true });
+      expect(repo.list(1, 100, 1)).toMatchObject({ truncated: false });
+      expect(repo.list(0, 100, 2)).toMatchObject({ truncated: false });
+
+      repo.add(inSession('b3', 2));
+      expect(repo.sessionStats(1)).toEqual({
+        firstSeq: null,
+        lastSeq: null,
+        entries: 0,
+        droppedUpToSeq: 2,
+      });
+      expect(repo.list(0, 100, 1)).toEqual({ entries: [], truncated: true, hasMore: false });
+    });
+
+    it('resets the session stats on clear and when a session is forgotten', () => {
+      const repo = new MemorySpeechRepository(10);
+      repo.add(inSession('a1', 1));
+      repo.add(inSession('b1', 2));
+      repo.forgetSession(1);
+      expect(repo.sessionStats(1).entries).toBe(0);
+      repo.clear();
+      expect(repo.sessionStats(2).entries).toBe(0);
+      repo.add(inSession('b2', 2));
+      expect(repo.sessionStats(2)).toMatchObject({ firstSeq: 3, lastSeq: 3, entries: 1 });
+    });
   });
 });

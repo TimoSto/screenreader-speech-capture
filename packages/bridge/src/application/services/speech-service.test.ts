@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bus.js';
+import { MemorySessionRepository } from '../../adapters/out/memory/memory-session-repository.js';
 import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
 import { SystemClock } from '../../adapters/out/clock/system-clock.js';
 import type { SpeechEvent } from '../../domain/speech-event.js';
@@ -14,6 +15,7 @@ function setup(maxEntries = 100) {
     repository: new MemorySpeechRepository(maxEntries),
     events,
     clock: new SystemClock(),
+    sessions: new MemorySessionRepository(),
   });
   return { speech, published };
 }
@@ -42,6 +44,7 @@ describe('SpeechService', () => {
       source: 'tcp',
       voice: 'dev',
       connectionId: 3,
+      sessionId: null,
     });
     expect(published).toEqual([{ type: 'entry', entry }]);
   });

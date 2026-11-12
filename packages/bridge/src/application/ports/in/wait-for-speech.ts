@@ -1,3 +1,4 @@
+import type { SessionFilter } from '../../../domain/session.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import type { TextMatchOptions } from '../../../domain/text-match.js';
 
@@ -9,6 +10,11 @@ export interface WaitOptions extends TextMatchOptions {
   since?: number | undefined;
   /** Default and maximum: `WAIT_TIMEOUT_MS`. */
   timeoutMs?: number | undefined;
+  /**
+   * Only this session's entries match. `current` is resolved when the wait starts, so speech of
+   * a session started later never matches.
+   */
+  session?: SessionFilter | undefined;
   /** Aborts the wait, for example when the HTTP client disconnects. */
   signal?: AbortSignal | undefined;
 }
@@ -31,8 +37,8 @@ export type WaitResult =
 export interface WaitForSpeech {
   /**
    * Resolves with the first matching speech entry, or with `timeout` when none arrived in
-   * time. Rejects with `INVALID_REQUEST` for bad match or range options, `SERVICE_UNAVAILABLE` on
-   * shutdown, or the signal's reason when aborted.
+   * time. Rejects with `INVALID_REQUEST` for bad match or range options, `NOT_FOUND` for an
+   * unknown session, `SERVICE_UNAVAILABLE` on shutdown, or the signal's reason when aborted.
    */
   wait(options: WaitOptions): Promise<WaitResult>;
 }

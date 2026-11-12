@@ -1,3 +1,5 @@
+import type { SessionDto } from './session.js';
+
 export type BridgeState = 'starting' | 'ready' | 'stopping';
 
 export interface ConnectionDto {
@@ -32,4 +34,6 @@ export interface StatusDto {
   /** Added in API 1.2. */
   mcp?: ServiceStatusDto;
   input: { enabled: boolean };
+  /** The current session and the number of listed sessions. Added in API 1.3. */
+  session?: { current: SessionDto | null; count: number };
 }

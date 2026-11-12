@@ -8,6 +8,8 @@ export interface SpeechEntry {
   readonly source: 'tcp' | 'api';
   readonly voice: string | null;
   readonly connectionId: number | null;
+  /** The session that was current when it was recorded, `null` outside any session. */
+  readonly sessionId: number | null;
 }
 
 /** A speech entry before the repository has given it a `seq`. */

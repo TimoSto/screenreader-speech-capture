@@ -37,7 +37,11 @@ format for every endpoint (see [Errors](#errors)).
 ```
 
 A [session](speech-capture.md#sessions) groups the entries of one test or agent task. Only one is
-current at a time.
+current at a time. The `session` parameter of the speech endpoints takes an `id` or `current`.
+`current` means the session that is current when the request arrives: a wait or stream stays on
+it when a later session starts (a stream learns about that from the `session` event). `current`
+while no session is current, or an `id` the bridge never gave out, answers `404 NOT_FOUND`. An
+ended session whose entries have all left the buffer is not an error: it just has no entries.
 
 ## Endpoints
 
@@ -48,7 +52,7 @@ current at a time.
 | `GET /api/v1/speech/stream?session=<id>` | Server-Sent Events: one `entry` event per new entry (event `id` = `seq`), a `clear` event after a clear, and a `session` event (data: the `Session`) when a session starts or ends. `session` (an `id` or `current`) limits `entry` events to that session; `session` events are always sent. A reconnect with `Last-Event-ID` first gets the entries it missed from the buffer, preceded by a `truncated` event if some of them were already dropped because the buffer was full. A `: ping` comment every 15 s keeps the connection open. A client that stops reading is disconnected once about 1 MiB is waiting for it; it reconnects with `Last-Event-ID`. |
 | `GET /api/v1/speech/wait?contains=<text>&since=<seq>&timeoutMs=<n>` | Long-poll until a speech entry with `seq > since` matches (also if it arrived before the request). `regex=<pattern>` can be used instead of `contains`, `normalize=1` ignores case and extra whitespace, `session=<id>|current` only matches that session's entries. Markers never match. `since` defaults to `0`, `timeoutMs` to `5000` (max `300000`). Always `200`: `{ "matched": true, "entry": {...} }`, or on timeout `{ "matched": false, "entries": [...] }` with every entry seen after `since`. A timeout is an expected answer, not an error (a `408` would make browsers and proxies repeat the request). |
 | `POST /api/v1/markers` `{ "label": "step 3" }` | Insert a marker into the timeline (shown in the UI, returned in lists). Requires `content-type: application/json` (a web page can't send that cross-origin without a CORS preflight). Returns `201` with the new entry. |
-| `POST /api/v1/sessions` `{ "name": "checkout test", "run": "nightly-42" }` | Start a [session](speech-capture.md#sessions): it becomes current and the previous one ends. `name` is required, `run` optional. Requires `content-type: application/json`. Returns `201` with the new `Session`. |
+| `POST /api/v1/sessions` `{ "name": "checkout test", "run": "nightly-42" }` | Start a [session](speech-capture.md#sessions): it becomes current and the previous one ends. `name` is required, `run` optional (both trimmed, not empty, at most 1000 characters). Requires `content-type: application/json`. Returns `201` with the new `Session`. |
 | `POST /api/v1/sessions/end` | End the current session (`204`). Entries after this have `sessionId: null`. Does nothing if no session is current. |
 | `GET /api/v1/sessions` | `{ "sessions": [...], "currentId": 7 }`: the sessions that still have entries in the buffer, plus the current one, newest first. `currentId` is `null` when no session is current. |
 | `POST /api/v1/set-focus` `{ "x": 640, "y": 12, "button": "left" }` | Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
@@ -60,7 +64,7 @@ current at a time.
 
 ```jsonc
 {
-  "bridge": { "version": "0.3.0", "apiVersion": "1.2", "state": "ready" },
+  "bridge": { "version": "0.3.0", "apiVersion": "1.3", "state": "ready" },
   "tcp": {
     "listening": true,
     "host": "127.0.0.1",

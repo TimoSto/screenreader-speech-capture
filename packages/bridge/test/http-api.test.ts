@@ -83,6 +83,7 @@ describe('HTTP API', () => {
         source: 'tcp',
         voice: 'dev',
         connectionId: 1,
+        sessionId: null,
       },
     ]);
     expect(new Date(entry!.receivedAt).toISOString()).toBe(entry!.receivedAt);
@@ -130,6 +131,7 @@ describe('HTTP API', () => {
       source: 'api',
       voice: null,
       connectionId: null,
+      sessionId: null,
     });
 
     const missing = await fetch(api(bridge, '/markers'), postJson('{}'));
@@ -329,6 +331,7 @@ describe('HTTP API', () => {
         exitCode: null,
       },
       input: { enabled: true },
+      session: { current: null, count: 0 },
     });
   });
 

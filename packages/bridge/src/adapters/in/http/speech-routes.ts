@@ -6,11 +6,18 @@ import type { QuerySpeech } from '../../../application/ports/in/query-speech.js'
 import type { WaitForSpeech, WaitResult } from '../../../application/ports/in/wait-for-speech.js';
 import type { WatchEvent, WatchSpeech } from '../../../application/ports/in/watch-speech.js';
 import { invalidField } from '../../../domain/errors.js';
-import { toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from './dto.js';
-import { booleanParam, intParam, readJson, requireJson, stringParam } from './request.js';
+import { toSessionDto, toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from './dto.js';
+import {
+  booleanParam,
+  intParam,
+  readJson,
+  requireJson,
+  sessionParam,
+  stringParam,
+} from './request.js';
 import { sendJson } from './response.js';
 import type { Router } from './router.js';
-import type { SseHub } from './sse.js';
+import type { SseHub, SseSend } from './sse.js';
 
 export interface SpeechRoutesDeps {
   speech: QuerySpeech & ClearSpeech & AddMarker & WatchSpeech;
@@ -25,9 +32,17 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 /** The SSE frame for one event (docs/http-api.md, `GET /speech/stream`). */
 function sseFrame(event: WatchEvent): string {
-  if (event.type !== 'entry') return `event: ${event.type}\ndata: {}\n\n`;
-  const data = JSON.stringify(toSpeechEntryDto(event.entry));
-  return `id: ${event.entry.seq}\nevent: entry\ndata: ${data}\n\n`;
+  switch (event.type) {
+    case 'entry': {
+      const data = JSON.stringify(toSpeechEntryDto(event.entry));
+      return `id: ${event.entry.seq}\nevent: entry\ndata: ${data}\n\n`;
+    }
+    // No `id:`, so `Last-Event-ID` stays the seq of the last entry.
+    case 'session':
+      return `event: session\ndata: ${JSON.stringify(toSessionDto(event.session))}\n\n`;
+    default:
+      return `event: ${event.type}\ndata: {}\n\n`;
+  }
 }
 
 /** `Last-Event-ID` of an SSE reconnect, `null` on a first connect. */
@@ -44,7 +59,11 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
 
   router
     .add('GET', `${API_PREFIX}/speech`, ({ res, url }) => {
-      const page = speech.list({ since: intParam(url, 'since'), limit: intParam(url, 'limit') });
+      const page = speech.list({
+        since: intParam(url, 'since'),
+        limit: intParam(url, 'limit'),
+        session: sessionParam(url),
+      });
       sendJson(res, 200, toSpeechListDto(page));
     })
     .add('DELETE', `${API_PREFIX}/speech`, ({ res }) => {
@@ -73,6 +92,7 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
           normalize: booleanParam(url, 'normalize'),
           since: intParam(url, 'since'),
           timeoutMs: intParam(url, 'timeoutMs'),
+          session: sessionParam(url),
           signal: controller.signal,
         });
       } catch (error) {
@@ -84,11 +104,17 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
       // to repeat the request.
       sendJson(res, 200, toWaitResultDto(result));
     })
-    .add('GET', `${API_PREFIX}/speech/stream`, ({ req, res }) => {
+    .add('GET', `${API_PREFIX}/speech/stream`, ({ req, res, url }) => {
       const since = lastEventId(req);
+      // The stream opens on the first event at the latest: `watch` rejects an unknown session
+      // before it calls the listener, so that is still answered as a JSON error.
+      let send: SseSend | undefined;
       // `close` is emitted asynchronously, so `unwatch` is set by then, even if the replay
       // already overflowed the stream.
-      const send = sse.open(res, () => unwatch());
-      const unwatch = speech.watch(since, (event) => send(sseFrame(event)));
+      const stream = () => (send ??= sse.open(res, () => unwatch()));
+      const unwatch = speech.watch(since, (event) => stream()(sseFrame(event)), {
+        session: sessionParam(url),
+      });
+      stream();
     });
 }
