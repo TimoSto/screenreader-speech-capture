@@ -6,7 +6,8 @@ The Playwright server and Playwright MCP that the bridge runs and supervises.
 
 The bridge runs `playwright run-server --port 3000 --host 0.0.0.0` as a supervised child process
 (restarts, process-tree kill: see [Operations](operations.md#child-service-crashes)). Connect from
-anywhere with the same Playwright version:
+anywhere with the same Playwright version, to a `ws://` URL from the bridge log's
+`playwright running on …, reachable at …` line ([Line format](operations.md#line-format)):
 
 ```ts
 // @playwright/test (playwright.config.ts): `headless` from `use` is sent to the server.

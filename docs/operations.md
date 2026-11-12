@@ -111,6 +111,7 @@ always starts in the same column:
 [speech-capture]    2026-11-07T14:03:10.015Z INFO  listening on 127.0.0.1:4449, encoding windows-1252
 [http-api]          2026-11-07T14:03:10.031Z INFO  listening on 0.0.0.0:5151, reachable at http://192.168.122.57:5151, http://localhost:5151
 [playwright-server] 2026-11-07T14:03:11.410Z INFO  Listening on ws://0.0.0.0:3000/
+[bridge]            2026-11-07T14:03:11.497Z INFO  playwright running on 0.0.0.0:3000, reachable at ws://192.168.122.57:3000, ws://localhost:3000
 [playwright-mcp]    2026-11-07T14:03:11.622Z INFO  Listening on http://0.0.0.0:8931
 [bridge]            2026-11-07T14:03:11.623Z INFO  ready
 [speech-capture]    2026-11-07T14:03:12.345Z INFO  connection 3 opened (voice=null)
@@ -120,7 +121,8 @@ always starts in the same column:
 
 On `0.0.0.0` (the default `--host`), the `http-api` line lists the URLs the API can be reached at:
 the machine's IPv4 addresses, then `localhost`. Use one of them as the client's
-[bridge URL](client.md#bridge-url).
+[bridge URL](client.md#bridge-url). The `[bridge] playwright running on …` line does the same for
+the Playwright server: its `ws://` URLs are the `wsEndpoint` to connect to.
 
 After the prefix comes the timestamp (ISO 8601, UTC), the level (padded to 5 characters) and the
 message.

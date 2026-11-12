@@ -42,6 +42,7 @@ async function setup(prepare: Prepare, port?: number) {
     settings: { host: '0.0.0.0', port: port ?? (await freePort()), version: null },
     defaultVersion: '9.9.9',
     prepare,
+    scheme: 'ws',
     logger,
     output,
     policy: FAST,
@@ -73,7 +74,11 @@ describe('ChildProcessSupervisor', () => {
       (lines) => lines.some((line) => line.startsWith('info Listening on')),
     );
     expect(output.lines).toContain('warn fake service warming up');
-    expect(logger.lines).toContainEqual(expect.stringMatching(/^info playwright running on port/));
+    expect(logger.lines).toContainEqual(
+      expect.stringMatching(
+        /^info playwright running on 0\.0\.0\.0:\d+, reachable at (ws:\/\/[\d.]+:\d+, )*ws:\/\/localhost:\d+$/,
+      ),
+    );
   });
 
   it('restarts after crashes and fails after 5 in a row', async () => {
@@ -147,6 +152,14 @@ describe('ChildProcessSupervisor', () => {
       (isAlive) => !isAlive,
     );
     expect(alive(grandchild)).toBe(false);
+  });
+
+  it('names its URL when it listens on one address', async () => {
+    const { supervisor, logger } = await setup(fake());
+    const port = await freePort();
+    supervisor.reconfigure({ host: '127.0.0.1', port, version: null });
+    await supervisor.start();
+    expect(logger.lines).toContain(`info playwright running on ws://127.0.0.1:${port}`);
   });
 
   it('uses new settings from the next start', async () => {

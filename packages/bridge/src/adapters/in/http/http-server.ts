@@ -10,7 +10,7 @@ import type { Logger } from '../../../application/ports/out/logger.js';
 import type { Config } from '../../../domain/config.js';
 import { AppError } from '../../../domain/errors.js';
 import { listen } from '../net/listen.js';
-import { hostPort, isWildcard, reachableUrls } from '../net/reachable-urls.js';
+import { hostPort, isWildcard, reachableUrls } from '../../shared/net/reachable-urls.js';
 import { sendError } from './errors.js';
 import { Router } from './router.js';
 import { SseHub } from './sse.js';

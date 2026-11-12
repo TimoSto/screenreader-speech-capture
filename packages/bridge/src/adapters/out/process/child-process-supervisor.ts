@@ -11,6 +11,7 @@ import {
   type ServiceState,
   type ServiceStatus,
 } from '../../../domain/service.js';
+import { hostPort, isWildcard, reachableUrls } from '../../shared/net/reachable-urls.js';
 import { killTree, pipeLines, treeSpawnOptions } from './process-tree.js';
 
 /** A program to run, without a shell. */
@@ -38,6 +39,8 @@ export interface ChildProcessSupervisorOptions {
   settings: ServiceSettings;
   defaultVersion: string;
   prepare: Prepare;
+  /** URL scheme clients use, for the `reachable at` log line (`ws` for the Playwright server). */
+  scheme: 'http' | 'ws';
   /** `[bridge]` log: starts, crashes, restarts. */
   logger: Logger;
   /** Log for the service's own output, under its prefix. */
@@ -212,7 +215,7 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
       if (open) {
         this.runningSince = Date.now();
         this.setState('running');
-        this.options.logger.info(`${this.options.name} running on port ${settings.port}`);
+        this.options.logger.info(`${this.options.name} running on ${this.where(settings)}`);
       } else {
         this.options.logger.error(
           `${this.options.name} did not open port ${settings.port} in time, killing it`,
@@ -220,6 +223,12 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
         void killTree(child);
       }
     });
+  }
+
+  /** Where clients reach it. On `0.0.0.0`, the machine's addresses (docs/operations.md#line-format). */
+  private where({ host, port }: ResolvedSettings): string {
+    const urls = reachableUrls(this.options.scheme, host, port).join(', ');
+    return isWildcard(host) ? `${hostPort(host, port)}, reachable at ${urls}` : urls;
   }
 
   private async waitForPort(

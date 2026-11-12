@@ -91,6 +91,7 @@ packages/bridge/src/
                      tracks its connections (CaptureStatusSource)
     in/http/         REST + SSE routes → driving ports; serves the built UI
     in/net/          listen helper shared by the TCP and HTTP listeners
+    shared/net/      reachable URLs of a listener, used by in and out adapters
     in/cli/          flags / env → startup overrides (win over the config file)
     out/memory/      speech repository (capped list), in-process event bus
     out/fs-config/   config.json in %APPDATA%

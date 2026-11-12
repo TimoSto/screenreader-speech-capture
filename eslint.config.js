@@ -84,6 +84,14 @@ export default tseslint.config(
     },
   },
   {
+    // Helpers both sides may use (for example reachable URLs). They import no other adapter.
+    files: [hexagon('adapters/shared')],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [services, inAdapters, outAdapters] }],
+    },
+  },
+  {
     files: ['**/*.test.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',

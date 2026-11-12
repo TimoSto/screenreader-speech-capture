@@ -45,6 +45,7 @@ export function playwrightServer(options: PlaywrightServerOptions): ChildProcess
     settings: options.settings,
     defaultVersion: DEFAULT_PLAYWRIGHT_VERSION,
     prepare: options.launch ?? prepare,
+    scheme: 'ws',
     logger: options.logger,
     output,
     ...(options.policy ? { policy: options.policy } : {}),
