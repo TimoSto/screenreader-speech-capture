@@ -19,23 +19,42 @@ format for every endpoint (see [Errors](#errors)).
   "receivedAt": "2026-11-07T14:03:12.345Z",
   "source": "tcp",                       // "tcp" | "api" (markers)
   "voice": "ssc5000",                    // tcpHeader of the sending voice, null if not set
-  "connectionId": 3                      // TCP connection that delivered it
+  "connectionId": 3,                     // TCP connection that delivered it
+  "sessionId": 7                         // session that was current, null outside any session
+}
+
+// Session (see Sessions in speech-capture.md)
+{
+  "id": 7,                               // increasing, restarts at 1 with the bridge
+  "name": "form › submit button is announced",
+  "run": "2026-11-12T09:30:00Z",         // optional label that groups sessions, null if not set
+  "startedAt": "2026-11-12T09:31:04.120Z",
+  "endedAt": null,                       // set when the session ends, null while it is current
+  "firstSeq": 340,                       // first and last entry still in the buffer, null if none
+  "lastSeq": 342,
+  "entries": 3                           // entries of this session still in the buffer
 }
 ```
+
+A [session](speech-capture.md#sessions) groups the entries of one test or agent task. Only one is
+current at a time.
 
 ## Endpoints
 
 | Method & path | Description |
 |---|---|
-| `GET /api/v1/speech?since=<seq>&limit=<n>` | List speech entries and markers with `seq > since` (oldest first). `since` defaults to `0`, `limit` to `1000` (max `10000`). Response: `{ "entries": [...], "truncated": false, "hasMore": false }`. `truncated` is `true` when entries after `since` were dropped because the buffer was full. `hasMore` is `true` when more entries follow: ask again with the last entry's `seq` as `since`. |
-| `DELETE /api/v1/speech` | Clear the buffer (`204`, no body). Call this between tests. |
-| `GET /api/v1/speech/stream` | Server-Sent Events: one `entry` event per new entry (event `id` = `seq`) and a `clear` event after a clear. A reconnect with `Last-Event-ID` first gets the entries it missed from the buffer, preceded by a `truncated` event if some of them were already dropped because the buffer was full. A `: ping` comment every 15 s keeps the connection open. A client that stops reading is disconnected once about 1 MiB is waiting for it; it reconnects with `Last-Event-ID`. |
-| `GET /api/v1/speech/wait?contains=<text>&since=<seq>&timeoutMs=<n>` | Long-poll until a speech entry with `seq > since` matches (also if it arrived before the request). `regex=<pattern>` can be used instead of `contains`, `normalize=1` ignores case and extra whitespace. Markers never match. `since` defaults to `0`, `timeoutMs` to `5000` (max `300000`). Always `200`: `{ "matched": true, "entry": {...} }`, or on timeout `{ "matched": false, "entries": [...] }` with every entry seen after `since`. A timeout is an expected answer, not an error (a `408` would make browsers and proxies repeat the request). |
+| `GET /api/v1/speech?since=<seq>&limit=<n>&session=<id>` | List speech entries and markers with `seq > since` (oldest first). `since` defaults to `0`, `limit` to `1000` (max `10000`). Response: `{ "entries": [...], "truncated": false, "hasMore": false }`. `truncated` is `true` when entries after `since` were dropped because the buffer was full. `hasMore` is `true` when more entries follow: ask again with the last entry's `seq` as `since`. `session` (an `id` or `current`) returns only that session's entries. |
+| `DELETE /api/v1/speech` | Wipe the buffer and all ended sessions (`204`, no body). The current session stays current. Tests and agents start a session instead (see [Sessions](speech-capture.md#sessions)). |
+| `GET /api/v1/speech/stream?session=<id>` | Server-Sent Events: one `entry` event per new entry (event `id` = `seq`), a `clear` event after a clear, and a `session` event (data: the `Session`) when a session starts or ends. `session` (an `id` or `current`) limits `entry` events to that session; `session` events are always sent. A reconnect with `Last-Event-ID` first gets the entries it missed from the buffer, preceded by a `truncated` event if some of them were already dropped because the buffer was full. A `: ping` comment every 15 s keeps the connection open. A client that stops reading is disconnected once about 1 MiB is waiting for it; it reconnects with `Last-Event-ID`. |
+| `GET /api/v1/speech/wait?contains=<text>&since=<seq>&timeoutMs=<n>` | Long-poll until a speech entry with `seq > since` matches (also if it arrived before the request). `regex=<pattern>` can be used instead of `contains`, `normalize=1` ignores case and extra whitespace, `session=<id>|current` only matches that session's entries. Markers never match. `since` defaults to `0`, `timeoutMs` to `5000` (max `300000`). Always `200`: `{ "matched": true, "entry": {...} }`, or on timeout `{ "matched": false, "entries": [...] }` with every entry seen after `since`. A timeout is an expected answer, not an error (a `408` would make browsers and proxies repeat the request). |
 | `POST /api/v1/markers` `{ "label": "step 3" }` | Insert a marker into the timeline (shown in the UI, returned in lists). Requires `content-type: application/json` (a web page can't send that cross-origin without a CORS preflight). Returns `201` with the new entry. |
+| `POST /api/v1/sessions` `{ "name": "checkout test", "run": "nightly-42" }` | Start a [session](speech-capture.md#sessions): it becomes current and the previous one ends. `name` is required, `run` optional. Requires `content-type: application/json`. Returns `201` with the new `Session`. |
+| `POST /api/v1/sessions/end` | End the current session (`204`). Entries after this have `sessionId: null`. Does nothing if no session is current. |
+| `GET /api/v1/sessions` | `{ "sessions": [...], "currentId": 7 }`: the sessions that still have entries in the buffer, plus the current one, newest first. `currentId` is `null` when no session is current. |
 | `POST /api/v1/set-focus` `{ "x": 640, "y": 12, "button": "left" }` | Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
 | `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | Native key presses: one chord, or a sequence with `delayMs` between them. |
 | `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. `PUT` takes any subset as `application/json`, applies it to the running bridge, saves it to the config file and answers with the new configuration. Changing ports restarts the affected listeners; after an `http.*` change the answer still comes from the old address. See [Changing settings](configuration.md#changing-settings). |
-| `GET /api/v1/status` | Bridge and API version, state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, native input available. |
+| `GET /api/v1/status` | Bridge and API version, state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, native input available, current session. |
 
 `GET /api/v1/status` example:
 
@@ -52,7 +71,8 @@ format for every endpoint (see [Errors](#errors)).
   "buffer": { "size": 120, "maxEntries": 10000, "firstSeq": 223, "lastSeq": 342 },
   "playwright": { "state": "running", "version": "1.65.0", "port": 3000, "restarts": 0, "exitCode": null },
   "mcp": { "state": "running", "version": "0.0.40", "port": 8931, "restarts": 0, "exitCode": null },
-  "input": { "enabled": true }
+  "input": { "enabled": true },
+  "session": { "current": { "id": 7, "name": "checkout test", "run": null, "startedAt": "2026-11-07T14:02:55.000Z", "endedAt": null, "firstSeq": 340, "lastSeq": 342, "entries": 3 }, "count": 12 }
 }
 ```
 
@@ -61,10 +81,12 @@ format for every endpoint (see [Errors](#errors)).
 ```bash
 VM=http://my-test-vm:5151
 
-curl -X DELETE $VM/api/v1/speech
-curl "$VM/api/v1/speech?since=0"
+curl -X POST $VM/api/v1/sessions -H 'content-type: application/json' -d '{"name":"checkout test"}'
+curl "$VM/api/v1/speech?session=current"
 curl "$VM/api/v1/speech/wait?contains=Submit%2C%20button&timeoutMs=5000"
 curl -N $VM/api/v1/speech/stream
+curl -X POST $VM/api/v1/sessions/end
+curl -X DELETE $VM/api/v1/speech   # wipe everything
 curl -X POST $VM/api/v1/input/keys -H 'content-type: application/json' -d '{"keys":"Insert+T"}'
 ```
 

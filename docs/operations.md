@@ -159,6 +159,7 @@ Rules:
 
 ## Restarting the bridge
 
-Speech entries live in memory, so a restart empties the buffer. `seq` starts again at 1, and clients
-that kept a cursor have to `clear()` again. The socket voice reconnects by itself on its next
+Speech entries and [sessions](speech-capture.md#sessions) live in memory, so a restart empties the
+buffer and the session list. `seq` and session ids start again at 1, and clients that kept a cursor
+have to start a new session (or `clear()`) again. The socket voice reconnects by itself on its next
 `Speak` call (it retries a failed send once), so the screen reader doesn't need to be restarted.
