@@ -1,9 +1,5 @@
 // Child services the bridge supervises (docs/operations.md#child-service-crashes).
 
-/** Names of the child services. MCP joins in M3 step 2. */
-export type ServiceName = 'playwright';
-export const SERVICE_NAMES: readonly ServiceName[] = ['playwright'];
-
 export type ServiceState = 'stopped' | 'starting' | 'running' | 'crashed' | 'failed';
 
 export interface ServiceStatus {
@@ -11,7 +7,7 @@ export interface ServiceStatus {
   /** The version that runs (or will run): the configured one or the bundled default. */
   readonly version: string;
   readonly port: number;
-  /** Restarts after crashes since the last start by hand. */
+  /** Restarts after crashes since the service was last started (bridge start or config change). */
   readonly restarts: number;
   /** Exit code of the last unexpected exit, `null` if there was none. */
   readonly exitCode: number | null;

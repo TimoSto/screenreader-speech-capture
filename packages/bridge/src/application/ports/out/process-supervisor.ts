@@ -19,7 +19,7 @@ export interface ProcessSupervisor {
   start(): Promise<void>;
   /** Stops it and its child processes. Resolves when they have exited. */
   stop(): Promise<void>;
-  /** Stop, then start, with a fresh crash count (the restart by hand). */
+  /** Stop, then start, with a fresh crash count (after a config change). */
   restart(): Promise<void>;
   /** Settings for the next start. A running service keeps its settings until it restarts. */
   reconfigure(settings: ServiceSettings): void;

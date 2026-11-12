@@ -36,7 +36,6 @@ format for every endpoint (see [Errors](#errors)).
 | `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | Native key presses: one chord, or a sequence with `delayMs` between them. |
 | `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. `PUT` takes any subset as `application/json`, applies it to the running bridge, saves it to the config file and answers with the new configuration. Changing ports restarts the affected listeners; after an `http.*` change the answer still comes from the old address. See [Changing settings](configuration.md#changing-settings). |
 | `GET /api/v1/status` | Bridge and API version, state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, native input available. |
-| `POST /api/v1/services/{playwright\|mcp}/{start\|stop\|restart}` | Control the child services (`mcp` comes with M3 step 2). Requires `content-type: application/json`, no body. `start` / `restart` answer once the service runs (or has failed) with its status, as in `status`. `restart` also resets the crash count of a `failed` service. A disabled service answers `503` to `start` / `restart`, an unknown name `404`. |
 
 `GET /api/v1/status` example:
 
@@ -88,9 +87,9 @@ Every error response has the same body:
 | HTTP status | `code` | When |
 |---|---|---|
 | `400` | `INVALID_REQUEST` | Bad query or body (unknown key name, invalid regex, invalid config value). `details.field` names the field. |
-| `404` | `NOT_FOUND` | Unknown endpoint or service name. |
+| `404` | `NOT_FOUND` | Unknown endpoint. |
 | `409` | `INPUT_DISABLED` | Native input endpoint called, but input is off (`--no-input`, or not on Windows). |
-| `503` | `SERVICE_UNAVAILABLE` | The bridge is still starting, or a child service (Playwright / MCP) is not running. |
+| `503` | `SERVICE_UNAVAILABLE` | The bridge is shutting down (for example a pending `wait`). |
 | `500` | `INTERNAL` | Anything else. The bridge log has the details. |
 
 New codes may be added in minor versions. Clients must handle unknown codes as errors of their HTTP

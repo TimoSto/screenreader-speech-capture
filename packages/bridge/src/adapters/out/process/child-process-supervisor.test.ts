@@ -87,7 +87,7 @@ describe('ChildProcessSupervisor', () => {
       'error playwright exited with code 3, restart 2 in 20 ms',
       'error playwright exited with code 3, restart 3 in 40 ms',
       'error playwright exited with code 3, restart 4 in 40 ms',
-      'error playwright exited with code 3, 5 crashes in a row: giving up. Restart it with POST /api/v1/services/playwright/restart',
+      'error playwright exited with code 3, 5 crashes in a row: giving up. Restart the bridge to try again',
     ]);
   });
 
@@ -98,7 +98,7 @@ describe('ChildProcessSupervisor', () => {
     expect(logger.lines).toContain('error playwright could not be prepared: npm failed');
   });
 
-  it('restarts a crashed service and starts again by hand after it failed', async () => {
+  it('restarts a crashed service, and restart() starts over with a fresh count', async () => {
     let crashes = 2;
     const { supervisor } = await setup((settings, signal) =>
       crashes-- > 0 ? fake('--exit', '1')(settings, signal) : fake()(settings, signal),

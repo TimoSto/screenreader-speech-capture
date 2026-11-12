@@ -246,7 +246,7 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
     if (decision.action === 'fail') {
       logger.error(
         `${name} ${what}, ${decision.crashesInRow} crashes in a row: giving up. ` +
-          `Restart it with POST /api/v1/services/${name}/restart`,
+          'Restart the bridge to try again',
       );
       this.setState('failed');
       return;

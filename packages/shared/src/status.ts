@@ -10,7 +10,7 @@ export interface ServiceStatusDto {
   state: 'stopped' | 'starting' | 'running' | 'crashed' | 'failed';
   version: string;
   port: number;
-  /** Restarts after crashes since the last start by hand. */
+  /** Restarts after crashes since the service was last started (bridge start or config change). */
   restarts: number;
   /** Exit code of the last unexpected exit, `null` if there was none. Added in API 1.1. */
   exitCode: number | null;

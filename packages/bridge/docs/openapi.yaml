@@ -9,9 +9,9 @@ info:
     The prose reference is `docs/http-api.md`. The types match `packages/shared`.
 
     This file describes the endpoints the bridge serves today. Not implemented yet:
-    `POST /set-focus`, `POST /input/keys`, and the `mcp` service.
+    `POST /set-focus`, `POST /input/keys`.
 
-    Changes: 1.1 added `playwright` to `GET /status` and `POST /services/playwright/{action}`.
+    Changes: 1.1 added `playwright` to `GET /status`.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -32,8 +32,6 @@ tags:
     description: Recorded speech and markers
   - name: bridge
     description: Status and configuration
-  - name: services
-    description: Child services (Playwright server)
 
 paths:
   /speech:
@@ -260,39 +258,6 @@ paths:
                   message: 'tcp.port: Cannot listen on 127.0.0.1:4450: the port is already in use (is another bridge running?)'
                   details: { field: tcp.port }
 
-  /services/playwright/{action}:
-    post:
-      tags: [services]
-      operationId: controlPlaywright
-      summary: Start, stop or restart the Playwright server
-      description: |
-        `start` and `restart` answer once the service is `running` or `failed` (a first start of
-        a new version includes its install, which can take minutes). `restart` resets
-        `restarts` and the crash count, which brings a `failed` service back. `start` and
-        `restart` of a disabled service (`playwright.enabled: false`) answer `503`. Other service
-        names answer `404`.
-
-        No body is needed, but the content type must be `application/json` (`400` with
-        `field: content-type` otherwise), so a web page can't control the service cross-origin
-        without a CORS preflight.
-      parameters:
-        - name: action
-          in: path
-          required: true
-          schema: { type: string, enum: [start, stop, restart] }
-      responses:
-        '200':
-          description: The service's status after the action.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ServiceStatus' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '503':
-          description: The service is disabled in the configuration.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorBody' }
-
 components:
   parameters:
     Since:
@@ -518,7 +483,7 @@ components:
           enum: [stopped, starting, running, crashed, failed]
           description: |
             `starting` includes the install. `crashed`: it exited and restarts after a delay.
-            `failed`: 5 crashes in a row, restart it by hand.
+            `failed`: 5 crashes in a row; restart the bridge (or change the service's settings).
         version:
           {
             type: string,
@@ -527,7 +492,10 @@ components:
           }
         port: { type: integer }
         restarts:
-          { type: integer, description: Restarts after crashes since the last start by hand. }
+          {
+            type: integer,
+            description: Restarts after crashes since the service was last started (bridge start or config change).,
+          }
         exitCode:
           type: [integer, 'null']
           description: Exit code of the last unexpected exit. `null` if none, or killed by a signal.

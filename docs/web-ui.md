@@ -35,8 +35,8 @@ Playwright / MCP versions, and native input on/off.
 - Changes that restart a listener (ports, hosts, TCP settings) are marked. Before saving, the UI
   warns if the change moves the HTTP port the UI itself is running on, and then opens the new
   address.
-- **Services:** start, stop and restart the Playwright server and MCP
-  (`POST /api/v1/services/...`), with their state and version.
+- **Services:** the state and version of the Playwright server and MCP (from `status`). They are
+  switched on and off with their `enabled` setting; there are no start / stop buttons.
 
 ## Setup
 

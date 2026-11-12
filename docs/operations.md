@@ -21,7 +21,7 @@ The bridge starts in this order:
    connections (at most 60 seconds after its process started, or it counts as a crash).
 
 `GET /api/v1/status` reports `bridge.state: "starting"` until each enabled service is running (or
-has `failed`, so a broken service doesn't block forever: check its state), then `"ready"`. Requests that need a service that isn't running yet get `503 SERVICE_UNAVAILABLE`.
+has `failed`, so a broken service doesn't block forever: check its state), then `"ready"`.
 `screenreader-speech-capture-client status --wait-ready` waits for `ready`, which is useful as the
 first step of a CI job.
 
@@ -65,10 +65,10 @@ If the Playwright server or MCP exits unexpectedly:
 - the bridge kills what is left of its process tree and restarts it with a growing delay (1 s,
   2 s, 4 s, … up to 30 s). A failed install counts as a crash too,
 - `status` shows `state: "crashed"`, the `exitCode` (`null` when it was killed by a signal or
-  could not start) and `restarts` (restarts since the last start by hand),
+  could not start) and `restarts` (restarts since the service was last started),
 - after **5 crashes in a row** (without 60 seconds of stable running in between), it stops trying.
-  The state stays `"failed"` until it is restarted by hand (`POST /api/v1/services/<name>/restart`
-  or the UI),
+  The state stays `"failed"` until the bridge restarts, or a `PUT /api/v1/config` change to the
+  service's settings restarts it,
 - the service's output is in the bridge log, line by line, and a `[bridge]` line says how it
   ended: `[bridge] ERROR playwright exited with code 1, restart 2 in 2 s`.
 

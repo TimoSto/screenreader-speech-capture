@@ -82,7 +82,7 @@ packages/bridge/src/
   application/
     ports/in/        driving ports (use cases): RecordSpeech, QuerySpeech,
                      WaitForSpeech, ClearSpeech, AddMarker, SendNativeInput,
-                     ManageConfig, ManageServices, GetStatus
+                     ManageConfig, GetStatus
     ports/out/       driven ports: SpeechRepository, SpeechEventBus, CaptureStatusSource,
                      ConfigStore, ProcessSupervisor, InputInjector, Logger, Clock
     services/        use-case implementations (only depend on domain + ports)

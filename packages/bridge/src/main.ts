@@ -22,7 +22,6 @@ import type { ConfigStore } from './application/ports/out/config-store.js';
 import type { Logger } from './application/ports/out/logger.js';
 import type { ServiceSettings } from './application/ports/out/process-supervisor.js';
 import { ConfigService } from './application/services/config-service.js';
-import { ServicesService } from './application/services/services-service.js';
 import { SpeechService } from './application/services/speech-service.js';
 import { StatusService } from './application/services/status-service.js';
 import { WaitForSpeechService } from './application/services/wait-for-speech-service.js';
@@ -202,10 +201,6 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     ...(options.playwrightLaunch ? { launch: options.playwrightLaunch } : {}),
     ...(options.restartPolicy ? { policy: options.restartPolicy } : {}),
   });
-  const services = new ServicesService({
-    supervisors: new Map([['playwright', playwright]]),
-    config: () => configService.get(),
-  });
 
   const tcp = new TcpListener(speech, clock, log.for('speech-capture'));
   const status = new StatusService({
@@ -221,7 +216,6 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     waits,
     status,
     config: configService,
-    services,
     logger: log.for('http-api'),
     ...(options.ssePingMs === undefined ? {} : { pingMs: options.ssePingMs }),
   });

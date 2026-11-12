@@ -1,8 +1,4 @@
-import type {
-  ErrorBodyDto,
-  ServiceStatusDto,
-  StatusDto,
-} from '@screenreader-speech-capture/shared';
+import type { StatusDto } from '@screenreader-speech-capture/shared';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -32,10 +28,6 @@ const api = (bridge: Bridge, route: string) => `http://127.0.0.1:${bridge.httpPo
 
 async function status(bridge: Bridge): Promise<StatusDto> {
   return (await (await fetch(api(bridge, '/status'))).json()) as StatusDto;
-}
-
-function post(bridge: Bridge, route: string, type = 'application/json') {
-  return fetch(api(bridge, route), { method: 'POST', headers: { 'content-type': type } });
 }
 
 async function startWithPlaywright(patch: object = {}, pidFile?: string) {
@@ -79,42 +71,15 @@ describe('Playwright server service', () => {
     expect(await accepts(port)).toBe(true);
   });
 
-  it('reports a disabled service as stopped', async () => {
+  it('reports a disabled service as stopped and has no routes to control it', async () => {
     const bridge = await start();
     expect((await status(bridge)).playwright).toMatchObject({ state: 'stopped', port: 3000 });
-  });
 
-  it('stops, starts and restarts the service by hand', async () => {
-    const { bridge, port } = await startWithPlaywright();
-    await ready(bridge);
-
-    const stopped = await post(bridge, '/services/playwright/stop');
-    expect(stopped.status).toBe(200);
-    expect(((await stopped.json()) as ServiceStatusDto).state).toBe('stopped');
-    expect(await accepts(port)).toBe(false);
-
-    const started = await post(bridge, '/services/playwright/start');
-    expect(((await started.json()) as ServiceStatusDto).state).toBe('running');
-
-    const restarted = await post(bridge, '/services/playwright/restart');
-    expect(restarted.status).toBe(200);
-    expect(((await restarted.json()) as ServiceStatusDto).state).toBe('running');
-    expect(await accepts(port)).toBe(true);
-  });
-
-  it('rejects unknown services, disabled services and requests without JSON', async () => {
-    const bridge = await start();
-
-    const unknown = await post(bridge, '/services/nope/start');
-    expect(unknown.status).toBe(404);
-    expect(((await unknown.json()) as ErrorBodyDto).error.code).toBe('NOT_FOUND');
-
-    const disabled = await post(bridge, '/services/playwright/start');
-    expect(disabled.status).toBe(503);
-    expect(((await disabled.json()) as ErrorBodyDto).error.code).toBe('SERVICE_UNAVAILABLE');
-
-    const form = await post(bridge, '/services/playwright/stop', 'text/plain');
-    expect(form.status).toBe(400);
+    const restart = await fetch(api(bridge, '/services/playwright/restart'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+    });
+    expect(restart.status).toBe(404);
   });
 
   it('restarts on the new port after PUT /config, and stops when disabled', async () => {
