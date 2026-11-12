@@ -59,10 +59,15 @@ describe('mergeConfig', () => {
     const merged = mergeConfig(DEFAULT_CONFIG, {
       tcp: { encoding: 'shift_jis' },
       playwright: { version: null },
-      mcp: { version: '0.0.40' },
     });
     expect(merged.tcp.encoding).toBe('shift_jis');
-    expect(merged.mcp.version).toBe('0.0.40');
+    expect(merged.playwright.version).toBeNull();
+  });
+
+  it('has no MCP version: the bundled one runs', () => {
+    expect(fieldOf(() => mergeConfig(DEFAULT_CONFIG, { mcp: { version: '0.0.85' } }))).toBe(
+      'mcp.version',
+    );
   });
 
   it.each(['1.56', 'latest', '^1.56.1', '1.56.1 && calc', '1.56.1;x', ' 1.56.1'])(
@@ -71,7 +76,6 @@ describe('mergeConfig', () => {
       expect(fieldOf(() => mergeConfig(DEFAULT_CONFIG, { playwright: { version } }))).toBe(
         'playwright.version',
       );
-      expect(fieldOf(() => mergeConfig(DEFAULT_CONFIG, { mcp: { version } }))).toBe('mcp.version');
     },
   );
 

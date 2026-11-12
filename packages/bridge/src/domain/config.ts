@@ -19,10 +19,10 @@ export interface Config {
     readonly port: number;
     readonly version: string | null;
   };
+  /** No version: the bridge runs the `@playwright/mcp` it depends on. */
   readonly mcp: {
     readonly enabled: boolean;
     readonly port: number;
-    readonly version: string | null;
   };
   readonly input: { readonly enabled: boolean };
   readonly buffer: { readonly maxEntries: number };
@@ -47,7 +47,7 @@ export const DEFAULT_CONFIG: Config = {
   },
   http: { host: '0.0.0.0', port: 5151 },
   playwright: { enabled: true, port: 3000, version: null },
-  mcp: { enabled: true, port: 8931, version: null },
+  mcp: { enabled: true, port: 8931 },
   input: { enabled: true },
   buffer: { maxEntries: 10000 },
   log: { level: 'info', file: null, consoleSpeech: false },
@@ -70,8 +70,8 @@ const nonEmptyString: Check = (value) =>
 const nullableString: Check = (value) =>
   value === null ? undefined : nonEmptyString(value) && 'must be a non-empty string or null';
 /**
- * An exact npm version (`1.56.1`, `1.57.0-beta-1`). `playwright.version` and `mcp.version` end
- * up on an `npm install` command line, so nothing else may get through.
+ * An exact npm version (`1.56.1`, `1.57.0-beta-1`). `playwright.version` ends up on an
+ * `npm install` command line, so nothing else may get through.
  */
 export function isExactVersion(value: unknown): value is string {
   return typeof value === 'string' && /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(value);
@@ -106,7 +106,7 @@ const SCHEMA: { readonly [S in keyof Config]: { readonly [K in keyof Config[S]]:
   },
   http: { host: nonEmptyString, port },
   playwright: { enabled: boolean, port, version: nullableVersion },
-  mcp: { enabled: boolean, port, version: nullableVersion },
+  mcp: { enabled: boolean, port },
   input: { enabled: boolean },
   buffer: { maxEntries: integer(1, 1_000_000) },
   log: { level: oneOf(LOG_LEVELS), file: nullableString, consoleSpeech: boolean },

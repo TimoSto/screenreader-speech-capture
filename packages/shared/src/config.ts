@@ -12,7 +12,8 @@ export interface ConfigDto {
   };
   http: { host: string; port: number };
   playwright: { enabled: boolean; port: number; version: string | null };
-  mcp: { enabled: boolean; port: number; version: string | null };
+  /** No version: the bridge runs the `@playwright/mcp` it depends on. */
+  mcp: { enabled: boolean; port: number };
   input: { enabled: boolean };
   buffer: { maxEntries: number };
   log: { level: LogLevel; file: string | null; consoleSpeech: boolean };

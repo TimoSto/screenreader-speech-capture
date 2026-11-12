@@ -73,13 +73,6 @@ const SETTINGS: readonly Setting[] = [
     description: 'Playwright MCP (default 8931)',
   },
   {
-    flag: 'mcp-version',
-    field: 'mcp.version',
-    kind: 'string',
-    arg: '<v>',
-    description: 'Version of @playwright/mcp (default: bundled)',
-  },
-  {
     flag: 'no-playwright',
     field: 'playwright.enabled',
     kind: 'off',

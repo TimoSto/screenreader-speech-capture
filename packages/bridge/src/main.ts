@@ -11,12 +11,7 @@ import { logSpeechTranscript } from './adapters/out/log/speech-transcript.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
 import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';
 import { playwrightMcp } from './adapters/out/mcp/mcp-server.js';
-import {
-  defaultConfigFile,
-  defaultLogFile,
-  defaultMcpDir,
-  defaultPlaywrightDir,
-} from './adapters/out/paths.js';
+import { defaultConfigFile, defaultLogFile, defaultPlaywrightDir } from './adapters/out/paths.js';
 import { playwrightServer } from './adapters/out/playwright/playwright-server.js';
 import type { Prepare } from './adapters/out/process/child-process-supervisor.js';
 import type { AddMarker } from './application/ports/in/add-marker.js';
@@ -68,9 +63,7 @@ export interface BridgeOptions {
   playwrightDir?: string;
   /** Replaces the Playwright install and `run-server` command (tests). */
   playwrightLaunch?: Prepare;
-  /** Where `@playwright/mcp` versions are installed. Default: `defaultMcpDir()`. */
-  mcpDir?: string;
-  /** Replaces the MCP install and command (tests). */
+  /** Replaces the MCP Chromium install and command (tests). */
   mcpLaunch?: Prepare;
 }
 
@@ -155,11 +148,11 @@ const playwrightSettings = (config: Config): ServiceSettings => ({
   version: config.playwright.version,
 });
 
-/** Playwright MCP listens on the same interface as the HTTP API (`--host`). */
+/** Playwright MCP listens on the same interface as the HTTP API (`--host`), bundled version. */
 const mcpSettings = (config: Config): ServiceSettings => ({
   host: config.http.host,
   port: config.mcp.port,
-  version: config.mcp.version,
+  version: null,
 });
 
 /** The child services and the config section each one follows. */
@@ -223,7 +216,6 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
 
   const mcp = playwrightMcp({
     settings: mcpSettings(config),
-    cacheRoot: options.mcpDir ?? defaultMcpDir(),
     logger: bridgeLogger,
     output: log.for('playwright-mcp'),
     ...(options.mcpLaunch ? { launch: options.mcpLaunch } : {}),

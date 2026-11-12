@@ -409,7 +409,7 @@ components:
             host: { type: string }
             port: { type: integer, minimum: 0, maximum: 65535 }
         playwright: { $ref: '#/components/schemas/ServiceConfig' }
-        mcp: { $ref: '#/components/schemas/ServiceConfig' }
+        mcp: { $ref: '#/components/schemas/McpConfig' }
         input:
           type: object
           required: [enabled]
@@ -455,7 +455,7 @@ components:
             host: { type: string }
             port: { type: integer, minimum: 0, maximum: 65535 }
         playwright: { $ref: '#/components/schemas/ServiceConfigPatch' }
-        mcp: { $ref: '#/components/schemas/ServiceConfigPatch' }
+        mcp: { $ref: '#/components/schemas/McpConfigPatch' }
         input:
           type: object
           additionalProperties: false
@@ -522,6 +522,21 @@ components:
         version:
           type: [string, 'null']
           description: '`null` = bundled version. Otherwise an exact version like `1.65.0`.'
+
+    McpConfigPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled: { type: boolean }
+        port: { type: integer, minimum: 0, maximum: 65535 }
+
+    McpConfig:
+      type: object
+      description: No `version`, the bridge runs its bundled `@playwright/mcp`.
+      required: [enabled, port]
+      properties:
+        enabled: { type: boolean }
+        port: { type: integer, minimum: 0, maximum: 65535 }
 
     ErrorCode:
       type: string

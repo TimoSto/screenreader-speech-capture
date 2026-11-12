@@ -91,7 +91,7 @@ export function toConfigDto({ tcp, http, playwright, mcp, input, buffer, log }: 
     },
     http: { host: http.host, port: http.port },
     playwright: { enabled: playwright.enabled, port: playwright.port, version: playwright.version },
-    mcp: { enabled: mcp.enabled, port: mcp.port, version: mcp.version },
+    mcp: { enabled: mcp.enabled, port: mcp.port },
     input: { enabled: input.enabled },
     buffer: { maxEntries: buffer.maxEntries },
     log: { level: log.level, file: log.file, consoleSpeech: log.consoleSpeech },
