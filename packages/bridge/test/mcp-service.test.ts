@@ -5,6 +5,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { bundledMcp } from '../src/adapters/out/mcp/mcp-server.js';
 import type { Prepare } from '../src/adapters/out/process/child-process-supervisor.js';
 import type { Bridge } from '../src/main.js';
 import { accepts, eventually, freePort, start } from './helpers.js';
@@ -69,7 +70,7 @@ describe('Playwright MCP service', () => {
 
     expect(current.mcp).toEqual({
       state: 'running',
-      version: '0.0.85',
+      version: bundledMcp().version,
       port,
       restarts: 0,
       exitCode: null,
@@ -97,9 +98,9 @@ describe('Playwright MCP service', () => {
     expect(await accepts(newPort)).toBe(false);
   });
 
-  it('rejects a version that is not exact', async () => {
+  it('rejects a version: the bundled one runs', async () => {
     const bridge = await start();
-    expect(await putConfig(bridge, { mcp: { version: 'latest' } })).toBe(400);
+    expect(await putConfig(bridge, { mcp: { version: '0.0.85' } })).toBe(400);
   });
 
   it('kills MCP when the bridge stops', async () => {

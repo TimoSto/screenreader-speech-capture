@@ -9,6 +9,7 @@ import { API_VERSION } from '@screenreader-speech-capture/shared';
 import { once } from 'node:events';
 import net from 'node:net';
 import { describe, expect, it } from 'vitest';
+import { bundledMcp } from '../src/adapters/out/mcp/mcp-server.js';
 import type { Bridge } from '../src/main.js';
 import { eventually, send, start, testConfig } from './helpers.js';
 
@@ -320,7 +321,13 @@ describe('HTTP API', () => {
       },
       buffer: { size: 1, maxEntries: 10000, firstSeq: 1, lastSeq: 1 },
       playwright: { state: 'stopped', version: '1.65.0', port: 3000, restarts: 0, exitCode: null },
-      mcp: { state: 'stopped', version: '0.0.85', port: 8931, restarts: 0, exitCode: null },
+      mcp: {
+        state: 'stopped',
+        version: bundledMcp().version,
+        port: 8931,
+        restarts: 0,
+        exitCode: null,
+      },
       input: { enabled: true },
     });
   });

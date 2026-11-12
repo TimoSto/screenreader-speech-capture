@@ -63,12 +63,3 @@ export function defaultPlaywrightDir(
 ): string {
   return cacheDir('playwright', platform, env, home);
 }
-
-/** Where the bridge installs `@playwright/mcp` versions: like `defaultPlaywrightDir`, in `mcp`. */
-export function defaultMcpDir(
-  platform: NodeJS.Platform = process.platform,
-  env: NodeJS.ProcessEnv = process.env,
-  home: string = os.homedir(),
-): string {
-  return cacheDir('mcp', platform, env, home);
-}

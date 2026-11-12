@@ -107,7 +107,7 @@ The actions panel sends [native input](native-input.md) through the bridge, the 
 ## Settings
 
 A form for the [configuration](configuration.md): ports, hosts, encoding, buffer size, log file,
-Playwright / MCP versions, and native input on/off.
+Playwright version, and native input on/off.
 
 - Input is validated in the browser first, then saved with `PUT /api/v1/config`. Errors from the
   bridge are shown next to the field.

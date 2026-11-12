@@ -56,7 +56,7 @@ The bridge runs [`@playwright/mcp`](https://github.com/microsoft/playwright-mcp)
 second supervised child service (same restarts and process-tree kill as the Playwright server):
 
 ```
-node <cache>/mcp/<version>/node_modules/@playwright/mcp/cli.js
+node <bridge>/node_modules/@playwright/mcp/cli.js
   --port 8931 --host 0.0.0.0 --allowed-hosts * --browser chromium --isolated
 ```
 
@@ -89,21 +89,18 @@ CLI or the HTTP API above.
 
 ### MCP version
 
-`--mcp-version` (or `mcp.version` in the config) selects the `@playwright/mcp` version, exact like
-`0.0.85`. Without it, the bridge uses its bundled default (`DEFAULT_MCP_VERSION`, currently
-`0.0.85`). MCP brings its own Playwright, so its version is independent of `--playwright-version`.
-`GET /api/v1/status` reports the version that runs.
+`@playwright/mcp` is a dependency of the bridge, pinned to an exact version (`packages/bridge/
+package.json`). A new MCP version comes with a new bridge release; it can't be configured. Unlike the
+Playwright server, MCP has no client that must match its version: clients speak MCP over HTTP.
+MCP brings its own Playwright, independent of `--playwright-version`. `GET /api/v1/status` reports
+the version that runs.
 
 ### MCP install
 
-Like the [Playwright server](#install), automatic:
-
-1. **The package**, once per version: `npm install @playwright/mcp@<version>` into
-   `%LOCALAPPDATA%\screenreader-speech-capture\mcp\<version>` (on Linux and macOS:
-   `$XDG_CACHE_HOME` or `~/.cache`, then `screenreader-speech-capture/mcp/<version>`), install
-   scripts off, through a temporary folder.
-2. **The Chromium of MCP's Playwright**, on every start: `cli.js install-browser --no-shell
-   chromium`. It downloads only when that build is missing. It can be a different build than the
-   Playwright server's, so the first start may download a second Chromium.
+The package arrives with the bridge (`npm i -g screenreader-speech-capture`). Only **the Chromium
+of MCP's Playwright** is installed at runtime, on every start: `cli.js install-browser --no-shell
+chromium`. It downloads only when that build is missing (into `%LOCALAPPDATA%\ms-playwright`, like
+the [Playwright server's](#install)). It can be a different build than the Playwright server's, so
+the first start may download a second Chromium.
 
 The output appears under `[playwright-mcp]` in the bridge log.

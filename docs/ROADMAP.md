@@ -111,8 +111,8 @@ GitHub issues. This file only tracks milestones.
 - **License:** which one (MIT would match `text-to-socket-engine`)?
 - **Screen reader key:** do `Insert` and `CapsLock` work as held modifiers through robotjs, so NVDA
   and JAWS see `Insert+T`? Check on a real VM early in M4.
-- **Default versions:** both are pinned constants (`DEFAULT_PLAYWRIGHT_VERSION`, 1.65.0, and
-  `DEFAULT_MCP_VERSION`, 0.0.85). Still open: how often to update them.
+- **Default versions:** `DEFAULT_PLAYWRIGHT_VERSION` (1.65.0) and the `@playwright/mcp`
+  dependency (0.0.85) are both pinned. Still open: how often to update them.
 - **Windows job object:** tie the child services to the bridge's process, so a hard kill of the
   bridge ends them too (see [Shutdown](operations.md#shutdown)).
 - **JAWS in CI:** license the VM, or reset a snapshot before each run (demo mode stops after 40 minutes)?

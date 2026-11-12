@@ -15,8 +15,8 @@ The bridge starts in this order:
    [Speech capture](speech-capture.md#listening-and-connections)).
 3. **HTTP server** (API + UI).
 4. **Child services**: Playwright server and Playwright MCP, if enabled. They start in the
-   background, so the API already answers meanwhile. If the configured Playwright or MCP version
-   is not installed yet, it is installed first, which can take a minute or two
+   background, so the API already answers meanwhile. If the configured Playwright version or a
+   service's Chromium is not installed yet, it is installed first, which can take a minute or two
    ([Install](playwright-mcp.md#install)). A service is `running` once its port accepts
    connections (at most 60 seconds after its process started, or it counts as a crash).
 
