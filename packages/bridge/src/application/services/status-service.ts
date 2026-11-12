@@ -8,6 +8,7 @@ export interface StatusServiceDeps {
   capture: CaptureStatusSource;
   repository: SpeechRepository;
   playwright: Pick<ProcessSupervisor, 'status'>;
+  mcp: Pick<ProcessSupervisor, 'status'>;
   /**
    * The active configuration. A getter, not the `ReadConfig` use case: services depend on
    * out-ports and values, not on other driving ports.
@@ -30,7 +31,7 @@ export class StatusService implements GetStatus {
   }
 
   status(): Status {
-    const { capture, repository, playwright, config, version, apiVersion } = this.deps;
+    const { capture, repository, playwright, mcp, config, version, apiVersion } = this.deps;
     const { listener, connections } = capture.captureStatus();
     const { tcp, input } = config();
     return {
@@ -44,6 +45,7 @@ export class StatusService implements GetStatus {
       },
       buffer: repository.stats(),
       playwright: playwright.status(),
+      mcp: mcp.status(),
       input: { enabled: input.enabled },
     };
   }

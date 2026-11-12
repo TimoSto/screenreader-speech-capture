@@ -71,6 +71,7 @@ describe('mergeConfig', () => {
       expect(fieldOf(() => mergeConfig(DEFAULT_CONFIG, { playwright: { version } }))).toBe(
         'playwright.version',
       );
+      expect(fieldOf(() => mergeConfig(DEFAULT_CONFIG, { mcp: { version } }))).toBe('mcp.version');
     },
   );
 

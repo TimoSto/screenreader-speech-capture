@@ -90,7 +90,7 @@ describe('ensurePlaywright', () => {
         logger: new MemoryLogger(),
         run: fakeRun(calls),
       }),
-    ).rejects.toThrow('Invalid Playwright version');
+    ).rejects.toThrow('Invalid playwright version');
     expect(calls).toEqual([]);
   });
 });

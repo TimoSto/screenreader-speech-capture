@@ -11,8 +11,9 @@ The docs in `docs/` describe the full planned design (UI, client, Playwright/MCP
 input); much of it is **not implemented yet**. Check `docs/ROADMAP.md` for what exists — currently
 `packages/bridge`, `packages/shared` and `tools/fake-speech` are real (M1 capture core), and
 `packages/client` has the M2 library, version check, CLI and SSE live feed (`onSpeech` / `tail`).
-The bridge also supervises the Playwright server (M3 step 1: `adapters/out/process` is the generic
-supervisor, `adapters/out/playwright` installs and runs the configured version).
+The bridge also supervises the Playwright server and Playwright MCP (M3: `adapters/out/process` is
+the generic supervisor, `adapters/out/npm` the per-version npm install, `adapters/out/playwright`
+and `adapters/out/mcp` install and run the configured versions).
 
 ## Commands
 

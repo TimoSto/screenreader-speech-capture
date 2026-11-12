@@ -29,7 +29,7 @@ export interface StatusDto {
   buffer: { size: number; maxEntries: number; firstSeq: number | null; lastSeq: number | null };
   /** Added in API 1.1. */
   playwright?: ServiceStatusDto;
-  /** Added in M3. */
+  /** Added in API 1.2. */
   mcp?: ServiceStatusDto;
   input: { enabled: boolean };
 }

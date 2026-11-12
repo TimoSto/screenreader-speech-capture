@@ -10,7 +10,13 @@ import { BridgeLog, consoleSink, type LogSink } from './adapters/out/log/log.js'
 import { logSpeechTranscript } from './adapters/out/log/speech-transcript.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
 import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';
-import { defaultConfigFile, defaultLogFile, defaultPlaywrightDir } from './adapters/out/paths.js';
+import { playwrightMcp } from './adapters/out/mcp/mcp-server.js';
+import {
+  defaultConfigFile,
+  defaultLogFile,
+  defaultMcpDir,
+  defaultPlaywrightDir,
+} from './adapters/out/paths.js';
 import { playwrightServer } from './adapters/out/playwright/playwright-server.js';
 import type { Prepare } from './adapters/out/process/child-process-supervisor.js';
 import type { AddMarker } from './application/ports/in/add-marker.js';
@@ -20,7 +26,10 @@ import type { CaptureStatusSource } from './application/ports/out/capture-status
 import type { Clock } from './application/ports/out/clock.js';
 import type { ConfigStore } from './application/ports/out/config-store.js';
 import type { Logger } from './application/ports/out/logger.js';
-import type { ServiceSettings } from './application/ports/out/process-supervisor.js';
+import type {
+  ProcessSupervisor,
+  ServiceSettings,
+} from './application/ports/out/process-supervisor.js';
 import { ConfigService } from './application/services/config-service.js';
 import { SpeechService } from './application/services/speech-service.js';
 import { StatusService } from './application/services/status-service.js';
@@ -59,6 +68,10 @@ export interface BridgeOptions {
   playwrightDir?: string;
   /** Replaces the Playwright install and `run-server` command (tests). */
   playwrightLaunch?: Prepare;
+  /** Where `@playwright/mcp` versions are installed. Default: `defaultMcpDir()`. */
+  mcpDir?: string;
+  /** Replaces the MCP install and command (tests). */
+  mcpLaunch?: Prepare;
 }
 
 export interface Bridge {
@@ -142,6 +155,16 @@ const playwrightSettings = (config: Config): ServiceSettings => ({
   version: config.playwright.version,
 });
 
+/** Playwright MCP listens on the same interface as the HTTP API (`--host`). */
+const mcpSettings = (config: Config): ServiceSettings => ({
+  host: config.http.host,
+  port: config.mcp.port,
+  version: config.mcp.version,
+});
+
+/** The child services and the config section each one follows. */
+type ServiceSection = 'playwright' | 'mcp';
+
 /**
  * Starts the bridge. An invalid setting rejects with a `ConfigError` before anything starts.
  * Any other failure to start is written to the bridge log before the promise rejects, and so is
@@ -198,11 +221,24 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     ...(options.playwrightLaunch ? { launch: options.playwrightLaunch } : {}),
   });
 
+  const mcp = playwrightMcp({
+    settings: mcpSettings(config),
+    cacheRoot: options.mcpDir ?? defaultMcpDir(),
+    logger: bridgeLogger,
+    output: log.for('playwright-mcp'),
+    ...(options.mcpLaunch ? { launch: options.mcpLaunch } : {}),
+  });
+  const services: [ServiceSection, ProcessSupervisor, (config: Config) => ServiceSettings][] = [
+    ['playwright', playwright, playwrightSettings],
+    ['mcp', mcp, mcpSettings],
+  ];
+
   const tcp = new TcpListener(speech, clock, log.for('speech-capture'));
   const status = new StatusService({
     capture: tcp,
     repository,
     playwright,
+    mcp,
     config: () => configService.get(),
     version,
     apiVersion: API_VERSION,
@@ -273,21 +309,23 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     for (const sink of sinks) log.addSink(sink);
   });
 
-  // Last, because it never fails: the steps before it are not undone because of it.
-  configService.onChange(async (next, previous) => {
-    const changed = changedSections(previous, next);
-    const hostChanged = changed.includes('http') && next.http.host !== previous.http.host;
-    if (!changed.includes('playwright') && !hostChanged) return;
-    playwright.reconfigure(playwrightSettings(next));
-    // Not awaited: an install can take minutes. `status` shows the progress.
-    if (next.playwright.enabled) {
-      playwright.restart().catch((error: unknown) => {
-        bridgeLogger.error(`playwright restart failed: ${String(error)}`);
-      });
-    } else {
-      await playwright.stop();
-    }
-  });
+  // Last, because they never fail: the steps before them are not undone because of them.
+  for (const [section, service, settingsOf] of services) {
+    configService.onChange(async (next, previous) => {
+      const changed = changedSections(previous, next);
+      const hostChanged = changed.includes('http') && next.http.host !== previous.http.host;
+      if (!changed.includes(section) && !hostChanged) return;
+      service.reconfigure(settingsOf(next));
+      // Not awaited: an install can take minutes. `status` shows the progress.
+      if (next[section].enabled) {
+        service.restart().catch((error: unknown) => {
+          bridgeLogger.error(`${section} restart failed: ${String(error)}`);
+        });
+      } else {
+        await service.stop();
+      }
+    });
+  }
 
   let stopping: Promise<void> | undefined;
 
@@ -298,7 +336,9 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     status.setState('ready');
     bridgeLogger.info('ready');
   };
-  const enabled = config.playwright.enabled ? [playwright] : [];
+  const enabled = services
+    .filter(([section]) => config[section].enabled)
+    .map(([, service]) => service);
   if (enabled.length === 0) ready();
   else void Promise.all(enabled.map((service) => service.start())).then(ready);
 
@@ -326,7 +366,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     // Each part stops even if the one before it failed. The child services go last
     // (docs/operations.md#shutdown); their whole process tree is killed.
     const errors: unknown[] = [];
-    for (const part of [http, tcp, playwright]) {
+    for (const part of [http, tcp, playwright, mcp]) {
       try {
         await part.stop();
       } catch (error) {

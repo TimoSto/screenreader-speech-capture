@@ -41,6 +41,8 @@ export interface ChildProcessSupervisorOptions {
   prepare: Prepare;
   /** URL scheme clients use, for the `reachable at` log line (`ws` for the Playwright server). */
   scheme: 'http' | 'ws';
+  /** Path clients use, appended to the URLs in that line, for example `/mcp`. Default none. */
+  path?: string;
   /** `[bridge]` log: starts, crashes, restarts. */
   logger: Logger;
   /** Log for the service's own output, under its prefix. */
@@ -228,7 +230,10 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
 
   /** Where clients reach it. On `0.0.0.0`, the machine's addresses (docs/operations.md#line-format). */
   private where({ host, port }: ResolvedSettings): string {
-    const urls = reachableUrls(this.options.scheme, host, port).join(', ');
+    const path = this.options.path ?? '';
+    const urls = reachableUrls(this.options.scheme, host, port)
+      .map((url) => `${url}${path}`)
+      .join(', ');
     return isWildcard(host) ? `${hostPort(host, port)}, reachable at ${urls}` : urls;
   }
 

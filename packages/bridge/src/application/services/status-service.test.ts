@@ -12,6 +12,9 @@ function setup(capture: CaptureStatus) {
     playwright: {
       status: () => ({ state: 'running', version: '1.65.0', port: 3000, restarts: 1, exitCode: 1 }),
     },
+    mcp: {
+      status: () => ({ state: 'failed', version: '0.0.85', port: 8931, restarts: 4, exitCode: 2 }),
+    },
     config: () => DEFAULT_CONFIG,
     version: '1.2.3',
     apiVersion: '1.0',
@@ -47,6 +50,7 @@ describe('StatusService', () => {
       },
       buffer: { size: 1, maxEntries: 10, firstSeq: 1, lastSeq: 1 },
       playwright: { state: 'running', version: '1.65.0', port: 3000, restarts: 1, exitCode: 1 },
+      mcp: { state: 'failed', version: '0.0.85', port: 8931, restarts: 4, exitCode: 2 },
       input: { enabled: true },
     });
   });

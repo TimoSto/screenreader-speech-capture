@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultConfigFile, defaultLogFile, defaultPlaywrightDir } from './paths.js';
+import { defaultConfigFile, defaultLogFile, defaultMcpDir, defaultPlaywrightDir } from './paths.js';
 
 describe('defaultLogFile', () => {
   it('uses %LOCALAPPDATA% on Windows', () => {
@@ -52,6 +52,17 @@ describe('defaultPlaywrightDir', () => {
     );
     expect(defaultPlaywrightDir('linux', {}, '/home/t')).toBe(
       '/home/t/.cache/screenreader-speech-capture/playwright',
+    );
+  });
+});
+
+describe('defaultMcpDir', () => {
+  it('sits next to the Playwright folder', () => {
+    expect(
+      defaultMcpDir('win32', { LOCALAPPDATA: 'C:\\Users\\t\\AppData\\Local' }, 'C:\\Users\\t'),
+    ).toBe('C:\\Users\\t\\AppData\\Local\\screenreader-speech-capture\\mcp');
+    expect(defaultMcpDir('linux', {}, '/home/t')).toBe(
+      '/home/t/.cache/screenreader-speech-capture/mcp',
     );
   });
 });
