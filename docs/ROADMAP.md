@@ -37,7 +37,7 @@ GitHub issues. This file only tracks milestones.
 - [x] Supervisor for the Playwright server with selectable version, process-tree kill, restart backoff
 - [x] Supervisor for Playwright MCP (`--allowed-hosts`, `--isolated`, auto-installed Chromium),
       `mcp` in status (API 1.2)
-- [ ] Sessions API: `POST /sessions`, `POST /sessions/end`, `GET /sessions`, `sessionId` on
+- [x] Sessions API: `POST /sessions`, `POST /sessions/end`, `GET /sessions`, `sessionId` on
       entries, `session` filter on speech / wait / stream, SSE `session` event, `session` in status
       (API 1.3)
 - [ ] Client + CLI sessions: `startSession` / `endSession` / `sessions`, `onSession`, CLI
@@ -90,8 +90,8 @@ GitHub issues. This file only tracks milestones.
 | Screen reader setup | [vm-setup.md](vm-setup.md#screen-reader-setup) | ⬜ | Not yet verified on a real VM |
 | Running on the VM | [vm-setup.md](vm-setup.md#running-on-the-vm) | ⬜ | Not yet verified on a real VM |
 | Speech capture | [speech-capture.md](speech-capture.md) | ⬜ | M1 |
-| Sessions | [speech-capture.md](speech-capture.md#sessions) | ⬜ | Designed, M3 (before the fixture) |
-| HTTP API | [http-api.md](http-api.md) | 🚧 | M1 done, Playwright and MCP services in M3; sessions come with M3, native input with M4 |
+| Sessions | [speech-capture.md](speech-capture.md#sessions) | 🚧 | Bridge API done (API 1.3); client, CLI and fixture in M3 |
+| HTTP API | [http-api.md](http-api.md) | 🚧 | M1 done, Playwright and MCP services and sessions in M3, native input with M4 |
 | Operations | [operations.md](operations.md) | ✅ | Startup, shutdown, bridge log, Playwright server and MCP supervisors done |
 | Configuration | [configuration.md](configuration.md) | 🚧 | Flags, env, config file, `PUT /config`, `playwright.*` and `mcp.*` done; `input` takes effect with M4 |
 | Test client | [client.md](client.md) | 🚧 | Library, CLI, version check and live feed done; sessions and fixture in M3, native input in M4 |

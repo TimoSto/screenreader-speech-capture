@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SystemClock } from '../../adapters/out/clock/system-clock.js';
 import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bus.js';
+import { MemorySessionRepository } from '../../adapters/out/memory/memory-session-repository.js';
 import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
 import type { AppError } from '../../domain/errors.js';
 import { WAIT_TIMEOUT_MS } from '../ports/in/wait-for-speech.js';
@@ -10,10 +11,15 @@ import { WaitForSpeechService } from './wait-for-speech-service.js';
 function setup() {
   const repository = new MemorySpeechRepository(100);
   const events = new InProcessEventBus();
-  const speech = new SpeechService({ repository, events, clock: new SystemClock() });
-  const waits = new WaitForSpeechService({ repository, events });
+  const sessions = new MemorySessionRepository();
+  const speech = new SpeechService({ repository, events, clock: new SystemClock(), sessions });
+  const waits = new WaitForSpeechService({ repository, events, sessions });
   const say = (text: string) => speech.record({ text, voice: null, connectionId: 1 });
-  return { speech, waits, say, events };
+  const startSession = (name: string) => {
+    sessions.endCurrent(new Date());
+    sessions.create({ name, run: null, startedAt: new Date() });
+  };
+  return { speech, waits, say, events, startSession };
 }
 
 /** The settled value of a promise, without letting a rejection go unhandled. */
@@ -124,6 +130,31 @@ describe('WaitForSpeechService', () => {
     });
     await expect(waits.wait({ regex: '(', since: 0, timeoutMs: 1000 })).rejects.toMatchObject({
       details: { field: 'regex' },
+    });
+  });
+
+  it('only matches entries of the session, resolving current when the wait starts', async () => {
+    const { waits, say, startSession } = setup();
+    startSession('a');
+    say('Submit in a');
+    await expect(
+      waits.wait({ contains: 'Submit', session: 'current', timeoutMs: 1000 }),
+    ).resolves.toMatchObject({ status: 'matched', entry: { seq: 1, sessionId: 1 } });
+
+    const result = settle(waits.wait({ contains: 'Next', session: 'current', timeoutMs: 1000 }));
+    startSession('b');
+    say('Next in b');
+    await vi.advanceTimersByTimeAsync(1000);
+    // Only session a's entries were seen, not the one of the session started later.
+    const timeout = result.value;
+    if (timeout?.status !== 'timeout') throw new Error('expected a timeout');
+    expect(timeout.seen.map((e) => e.text)).toEqual(['Submit in a']);
+  });
+
+  it('rejects an unknown session with NOT_FOUND', async () => {
+    const { waits } = setup();
+    await expect(waits.wait({ contains: 'x', session: 'current' })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
     });
   });
 });

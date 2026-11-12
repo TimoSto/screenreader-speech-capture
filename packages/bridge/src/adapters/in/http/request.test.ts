@@ -1,7 +1,7 @@
 import type http from 'node:http';
 import { describe, expect, it } from 'vitest';
 import { AppError } from '../../../domain/errors.js';
-import { booleanParam, intParam, requireJson } from './request.js';
+import { booleanParam, intParam, requireJson, sessionParam } from './request.js';
 
 const url = (query: string) => new URL(`http://bridge/x?${query}`);
 describe('intParam', () => {
@@ -51,4 +51,19 @@ describe('requireJson', () => {
       );
     },
   );
+});
+
+describe('sessionParam', () => {
+  it('accepts current and positive ids, and treats missing as undefined', () => {
+    expect(sessionParam(url(''))).toBeUndefined();
+    expect(sessionParam(url('session='))).toBeUndefined();
+    expect(sessionParam(url('session=current'))).toBe('current');
+    expect(sessionParam(url('session=7'))).toBe(7);
+  });
+
+  it.each(['0', '-1', '1.5', 'latest', '99999999999999999999'])('rejects %s', (value) => {
+    expect(() => sessionParam(url(`session=${value}`))).toThrow(
+      expect.objectContaining({ code: 'INVALID_REQUEST', details: { field: 'session' } }) as Error,
+    );
+  });
 });

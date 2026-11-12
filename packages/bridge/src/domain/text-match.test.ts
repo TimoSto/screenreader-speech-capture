@@ -12,6 +12,7 @@ function entry(text: string, kind: SpeechEntry['kind'] = 'speech'): SpeechEntry 
     source: 'tcp',
     voice: null,
     connectionId: 1,
+    sessionId: null,
   };
 }
 

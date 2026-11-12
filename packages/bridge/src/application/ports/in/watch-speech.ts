@@ -1,3 +1,4 @@
+import type { SessionFilter } from '../../../domain/session.js';
 import type { SpeechEvent } from '../../../domain/speech-event.js';
 
 /**
@@ -8,12 +9,21 @@ export type WatchEvent = SpeechEvent | { type: 'truncated' };
 
 export type WatchListener = (event: WatchEvent) => void;
 
+export interface WatchOptions {
+  /**
+   * Only this session's `entry` events (`clear` and `session` events always come). `current` is
+   * resolved when the watch starts.
+   */
+  session?: SessionFilter | undefined;
+}
+
 export interface WatchSpeech {
   /**
    * Calls `listener` with every new entry and clear, until the returned function is called.
    * With `since`, it first gets the buffered entries with `seq > since` (an SSE reconnect with
    * `Last-Event-ID`), with nothing missed or repeated in between. If some of them were already
-   * dropped, a `truncated` event comes first.
+   * dropped, a `truncated` event comes first. Throws `NOT_FOUND` for an unknown session, before
+   * calling `listener`.
    */
-  watch(since: number | null, listener: WatchListener): () => void;
+  watch(since: number | null, listener: WatchListener, options?: WatchOptions): () => void;
 }

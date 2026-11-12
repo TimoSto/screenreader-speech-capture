@@ -1,5 +1,6 @@
 import type http from 'node:http';
 import { invalidField } from '../../../domain/errors.js';
+import type { SessionFilter } from '../../../domain/session.js';
 
 // Parsing of the request: query parameters and the JSON body. Syntax only.
 
@@ -26,6 +27,18 @@ export function booleanParam(url: URL, name: string): boolean | undefined {
   if (raw === '1' || raw === 'true') return true;
   if (raw === '0' || raw === 'false') return false;
   throw invalidField(name, 'must be 1, true, 0 or false');
+}
+
+/** The `session` query parameter (a session id or `current`), `undefined` if it is missing. */
+export function sessionParam(url: URL): SessionFilter | undefined {
+  const raw = url.searchParams.get('session');
+  if (raw === null || raw === '') return undefined;
+  if (raw === 'current') return 'current';
+  const id = /^\d+$/.test(raw) ? Number(raw) : NaN;
+  if (!Number.isSafeInteger(id) || id < 1) {
+    throw invalidField('session', 'must be a session id or current');
+  }
+  return id;
 }
 
 export const MAX_BODY_BYTES = 1024 * 1024;

@@ -12,6 +12,7 @@ const entry = (kind: SpeechEntry['kind'], text: string): SpeechEntry => ({
   source: kind === 'speech' ? 'tcp' : 'api',
   voice: null,
   connectionId: kind === 'speech' ? 1 : null,
+  sessionId: null,
 });
 
 describe('logSpeechTranscript', () => {

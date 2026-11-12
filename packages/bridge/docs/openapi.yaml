@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: screenreader-speech-capture bridge API
-  version: '1.2'
+  version: '1.3'
   summary: Capture what a screen reader says and read it over HTTP.
   description: |
     REST + Server-Sent Events API of the bridge. `info.version` is the API version that
@@ -11,7 +11,9 @@ info:
     This file describes the endpoints the bridge serves today. Not implemented yet:
     `POST /set-focus`, `POST /input/keys`.
 
-    Changes: 1.1 added `playwright` to `GET /status`, 1.2 added `mcp`.
+    Changes: 1.1 added `playwright` to `GET /status`, 1.2 added `mcp`, 1.3 added sessions
+    (`/sessions`, `sessionId` on entries, the `session` filter and SSE event, `session` in the
+    status).
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -30,6 +32,8 @@ servers:
 tags:
   - name: speech
     description: Recorded speech and markers
+  - name: sessions
+    description: Sessions group the speech of one test or agent task
   - name: bridge
     description: Status and configuration
 
@@ -48,18 +52,24 @@ paths:
           in: query
           description: Maximum number of entries in the response.
           schema: { type: integer, minimum: 1, maximum: 10000, default: 1000 }
+        - $ref: '#/components/parameters/Session'
       responses:
         '200':
-          description: One page of entries.
+          description: |
+            One page of entries. With `session`, `truncated` is only `true` when entries of that
+            session were dropped.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SpeechList' }
         '400': { $ref: '#/components/responses/InvalidRequest' }
+        '404': { $ref: '#/components/responses/SessionNotFound' }
     delete:
       tags: [speech]
       operationId: clearSpeech
-      summary: Clear the buffer
-      description: Removes all entries. `seq` keeps counting. Call this between tests.
+      summary: Wipe the buffer and the ended sessions
+      description: |
+        Removes all entries and all ended sessions. The current session stays current, empty.
+        `seq` keeps counting. Meant for manual use: tests and agents start a session instead.
       responses:
         '204':
           description: Cleared.
@@ -96,6 +106,7 @@ paths:
         - name: timeoutMs
           in: query
           schema: { type: integer, minimum: 0, maximum: 300000, default: 5000 }
+        - $ref: '#/components/parameters/Session'
       responses:
         '200':
           description: The matching entry, or every entry seen after `since` on timeout.
@@ -128,6 +139,7 @@ paths:
                         voice: ssc5000
                         connectionId: 3
         '400': { $ref: '#/components/responses/InvalidRequest' }
+        '404': { $ref: '#/components/responses/SessionNotFound' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
   /speech/stream:
@@ -137,8 +149,10 @@ paths:
       summary: Stream new entries (Server-Sent Events)
       description: |
         One `entry` event per new entry, with the event `id` set to its `seq` and the entry as
-        JSON `data`. After a clear, a `clear` event with `data: {}`. A `: ping` comment every
-        15 s keeps the connection open.
+        JSON `data`. After a clear, a `clear` event with `data: {}`. When a session starts or
+        ends, a `session` event with the `Session` as `data` and no `id`. With `session`, only
+        that session's `entry` events are sent; `clear` and `session` events always are. A
+        `: ping` comment every 15 s keeps the connection open.
 
         A reconnect with `Last-Event-ID` first gets the buffered entries after that `seq`, then
         the live ones, with nothing missed or repeated in between. If some of the missed entries
@@ -158,8 +172,12 @@ paths:
 
         event: truncated
         data: {}
+
+        event: session
+        data: {"id":7,"name":"checkout test","run":null,...}
         ```
       parameters:
+        - $ref: '#/components/parameters/Session'
         - name: Last-Event-ID
           in: header
           description: '`seq` of the last entry received before a reconnect.'
@@ -171,6 +189,7 @@ paths:
             text/event-stream:
               schema: { type: string }
         '400': { $ref: '#/components/responses/InvalidRequest' }
+        '404': { $ref: '#/components/responses/SessionNotFound' }
 
   /markers:
     post:
@@ -192,6 +211,49 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SpeechEntry' }
         '400': { $ref: '#/components/responses/InvalidRequest' }
+
+  /sessions:
+    get:
+      tags: [sessions]
+      operationId: listSessions
+      summary: List the sessions
+      description: The current session and the ended ones that still have entries in the buffer, newest first.
+      responses:
+        '200':
+          description: The sessions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionList' }
+    post:
+      tags: [sessions]
+      operationId: startSession
+      summary: Start a session
+      description: |
+        The new session becomes current and the previous one ends. Every entry recorded while it
+        is current, markers included, gets its `sessionId`. The body must be sent as
+        `application/json`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StartSessionRequest' }
+      responses:
+        '201':
+          description: The new session.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+
+  /sessions/end:
+    post:
+      tags: [sessions]
+      operationId: endSession
+      summary: End the current session
+      description: Entries after this have `sessionId` `null`. Does nothing if no session is current.
+      responses:
+        '204':
+          description: Ended (or none was current).
 
   /status:
     get:
@@ -265,8 +327,27 @@ components:
       in: query
       description: Only entries with `seq` greater than this.
       schema: { type: integer, minimum: 0, default: 0 }
+    Session:
+      name: session
+      in: query
+      description: |
+        Only entries of this session: its `id`, or `current` for the session that is current
+        when the request arrives (it is not followed to later sessions).
+      schema:
+        oneOf:
+          - { type: integer, minimum: 1 }
+          - { type: string, enum: [current] }
 
   responses:
+    SessionNotFound:
+      description: '`session=current` while no session is current, or a session id never given out.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorBody' }
+          example:
+            error:
+              code: NOT_FOUND
+              message: No session is current
     InvalidRequest:
       description: Bad query or body. `error.details.field` names the field.
       content:
@@ -287,7 +368,7 @@ components:
     SpeechEntry:
       type: object
       description: One recorded speech line or a marker.
-      required: [seq, kind, text, receivedAt, source, voice, connectionId]
+      required: [seq, kind, text, receivedAt, source, voice, connectionId, sessionId]
       properties:
         seq:
           type: integer
@@ -309,6 +390,9 @@ components:
         connectionId:
           type: [integer, 'null']
           description: TCP connection that delivered it, `null` for markers.
+        sessionId:
+          type: [integer, 'null']
+          description: The session that was current, `null` outside any session. Added in API 1.3.
       example:
         seq: 42
         kind: speech
@@ -317,6 +401,7 @@ components:
         source: tcp
         voice: ssc5000
         connectionId: 3
+        sessionId: 7
 
     SpeechList:
       type: object
@@ -340,6 +425,58 @@ components:
           type: string
           description: Marker text. Trimmed, must not be empty, at most 1000 characters.
           example: step 3
+
+    Session:
+      type: object
+      description: A session (docs/speech-capture.md#sessions). Added in API 1.3.
+      required: [id, name, run, startedAt, endedAt, firstSeq, lastSeq, entries]
+      properties:
+        id: { type: integer, minimum: 1, description: Increasing, restarts at 1 with the bridge. }
+        name: { type: string }
+        run: { type: [string, 'null'], description: Optional label that groups sessions. }
+        startedAt: { type: string, format: date-time }
+        endedAt:
+          type: [string, 'null']
+          format: date-time
+          description: '`null` while the session is current.'
+        firstSeq:
+          type: [integer, 'null']
+          description: First entry still in the buffer, `null` if none.
+        lastSeq:
+          type: [integer, 'null']
+          description: Last entry still in the buffer, `null` if none.
+        entries: { type: integer, description: Entries of this session still in the buffer. }
+      example:
+        id: 7
+        name: form › submit button is announced
+        run: nightly-42
+        startedAt: '2026-11-12T09:31:04.120Z'
+        endedAt: null
+        firstSeq: 340
+        lastSeq: 342
+        entries: 3
+
+    SessionList:
+      type: object
+      required: [sessions, currentId]
+      properties:
+        sessions:
+          type: array
+          items: { $ref: '#/components/schemas/Session' }
+        currentId: { type: [integer, 'null'] }
+
+    StartSessionRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: For example the test title. Trimmed, must not be empty, at most 1000 characters.
+          example: checkout test
+        run:
+          type: [string, 'null']
+          description: Optional label that groups sessions, for example one per test run. Same limits as `name`.
+          example: nightly-42
 
     Status:
       type: object
@@ -386,6 +523,16 @@ components:
           required: [enabled]
           properties:
             enabled: { type: boolean }
+        session:
+          type: object
+          description: Added in API 1.3.
+          required: [current, count]
+          properties:
+            current:
+              oneOf:
+                - { $ref: '#/components/schemas/Session' }
+                - { type: 'null' }
+            count: { type: integer, description: Number of sessions `GET /sessions` lists. }
 
     Config:
       type: object

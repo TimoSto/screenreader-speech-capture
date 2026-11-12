@@ -3,6 +3,7 @@ import type { AddMarker } from '../../../application/ports/in/add-marker.js';
 import type { ClearSpeech } from '../../../application/ports/in/clear-speech.js';
 import type { GetStatus } from '../../../application/ports/in/get-status.js';
 import type { ManageConfig } from '../../../application/ports/in/manage-config.js';
+import type { ManageSessions } from '../../../application/ports/in/manage-sessions.js';
 import type { QuerySpeech } from '../../../application/ports/in/query-speech.js';
 import type { WaitForSpeech } from '../../../application/ports/in/wait-for-speech.js';
 import type { WatchSpeech } from '../../../application/ports/in/watch-speech.js';
@@ -14,6 +15,7 @@ import { hostPort, isWildcard, reachableUrls } from '../../shared/net/reachable-
 import { sendError } from './errors.js';
 import { Router } from './router.js';
 import { SseHub } from './sse.js';
+import { sessionRoutes } from './session-routes.js';
 import { speechRoutes } from './speech-routes.js';
 import { statusRoutes } from './status-routes.js';
 
@@ -25,6 +27,7 @@ export interface HttpServerDeps {
   waits: WaitForSpeech;
   status: GetStatus;
   config: ManageConfig;
+  sessions: ManageSessions;
   logger: Logger;
   /** Interval of the SSE `: ping` comment. Default 15 s. */
   pingMs?: number;
@@ -54,6 +57,7 @@ export class HttpServer {
     });
     speechRoutes(this.router, { ...deps, sse: this.sse });
     statusRoutes(this.router, deps);
+    sessionRoutes(this.router, deps);
   }
 
   /** Starts listening. Resolves with the bound port (useful with port 0). */

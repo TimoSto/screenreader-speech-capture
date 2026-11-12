@@ -9,6 +9,7 @@ import { fileSink } from './adapters/out/log/file-sink.js';
 import { BridgeLog, consoleSink, type LogSink } from './adapters/out/log/log.js';
 import { logSpeechTranscript } from './adapters/out/log/speech-transcript.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
+import { MemorySessionRepository } from './adapters/out/memory/memory-session-repository.js';
 import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';
 import { playwrightMcp } from './adapters/out/mcp/mcp-server.js';
 import { defaultConfigFile, defaultLogFile, defaultPlaywrightDir } from './adapters/out/paths.js';
@@ -16,6 +17,7 @@ import { playwrightServer } from './adapters/out/playwright/playwright-server.js
 import type { Prepare } from './adapters/out/process/child-process-supervisor.js';
 import type { AddMarker } from './application/ports/in/add-marker.js';
 import type { ClearSpeech } from './application/ports/in/clear-speech.js';
+import type { ManageSessions } from './application/ports/in/manage-sessions.js';
 import type { QuerySpeech } from './application/ports/in/query-speech.js';
 import type { CaptureStatusSource } from './application/ports/out/capture-status.js';
 import type { Clock } from './application/ports/out/clock.js';
@@ -26,6 +28,7 @@ import type {
   ServiceSettings,
 } from './application/ports/out/process-supervisor.js';
 import { ConfigService } from './application/services/config-service.js';
+import { SessionService } from './application/services/session-service.js';
 import { SpeechService } from './application/services/speech-service.js';
 import { StatusService } from './application/services/status-service.js';
 import { WaitForSpeechService } from './application/services/wait-for-speech-service.js';
@@ -71,6 +74,7 @@ export interface Bridge {
   readonly tcpPort: number;
   readonly httpPort: number;
   readonly speech: QuerySpeech & ClearSpeech & AddMarker;
+  readonly sessions: ManageSessions;
   readonly capture: CaptureStatusSource;
   /** The `[bridge]` log, for lifecycle messages from outside (signals, crashes). */
   readonly log: Logger;
@@ -191,13 +195,15 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
 
   const clock = options.clock ?? new SystemClock();
   const repository = new MemorySpeechRepository(config.buffer.maxEntries);
+  const sessionRepository = new MemorySessionRepository();
   const events = new InProcessEventBus((error) =>
     bridgeLogger.error(`event listener failed: ${String(error)}`),
   );
 
   logSpeechTranscript(events, log.for('speech-capture', { channel: 'speech' }));
-  const speech = new SpeechService({ repository, events, clock });
-  const waits = new WaitForSpeechService({ repository, events });
+  const speech = new SpeechService({ repository, events, clock, sessions: sessionRepository });
+  const waits = new WaitForSpeechService({ repository, events, sessions: sessionRepository });
+  const sessions = new SessionService({ sessions: sessionRepository, repository, events, clock });
   const configService = new ConfigService({
     store,
     logger: configLogger,
@@ -229,6 +235,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   const status = new StatusService({
     capture: tcp,
     repository,
+    sessions: sessionRepository,
     playwright,
     mcp,
     config: () => configService.get(),
@@ -240,6 +247,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     waits,
     status,
     config: configService,
+    sessions,
     logger: log.for('http-api'),
     ...(options.ssePingMs === undefined ? {} : { pingMs: options.ssePingMs }),
   });
@@ -342,6 +350,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
       return httpPort;
     },
     speech,
+    sessions,
     capture: tcp,
     log: bridgeLogger,
     stop(reason?: string) {

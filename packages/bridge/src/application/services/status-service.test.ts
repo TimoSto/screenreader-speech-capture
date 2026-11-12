@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MemorySessionRepository } from '../../adapters/out/memory/memory-session-repository.js';
 import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
 import { DEFAULT_CONFIG } from '../../domain/config.js';
 import type { CaptureStatus } from '../../domain/capture.js';
@@ -6,9 +7,11 @@ import { StatusService } from './status-service.js';
 
 function setup(capture: CaptureStatus) {
   const repository = new MemorySpeechRepository(10);
+  const sessions = new MemorySessionRepository();
   const status = new StatusService({
     capture: { captureStatus: () => capture },
     repository,
+    sessions,
     playwright: {
       status: () => ({ state: 'running', version: '1.65.0', port: 3000, restarts: 1, exitCode: 1 }),
     },
@@ -19,7 +22,7 @@ function setup(capture: CaptureStatus) {
     version: '1.2.3',
     apiVersion: '1.0',
   });
-  return { status, repository };
+  return { status, repository, sessions };
 }
 
 describe('StatusService', () => {
@@ -36,6 +39,7 @@ describe('StatusService', () => {
       source: 'api',
       voice: null,
       connectionId: null,
+      sessionId: null,
     });
     status.setState('ready');
 
@@ -52,6 +56,7 @@ describe('StatusService', () => {
       playwright: { state: 'running', version: '1.65.0', port: 3000, restarts: 1, exitCode: 1 },
       mcp: { state: 'failed', version: '0.0.85', port: 8931, restarts: 4, exitCode: 2 },
       input: { enabled: true },
+      session: { current: null, count: 0 },
     });
   });
 
@@ -64,6 +69,36 @@ describe('StatusService', () => {
       port: DEFAULT_CONFIG.tcp.port,
       encoding: DEFAULT_CONFIG.tcp.encoding,
       connections: [],
+    });
+  });
+
+  it('reports the current session and how many are listed', () => {
+    const { status, repository, sessions } = setup({ listener: null, connections: [] });
+    const startedAt = new Date('2026-11-12T09:00:00.000Z');
+    sessions.create({ name: 'a', run: null, startedAt });
+    repository.add({
+      kind: 'marker',
+      text: 'm',
+      receivedAt: startedAt,
+      source: 'api',
+      voice: null,
+      connectionId: null,
+      sessionId: 1,
+    });
+    sessions.endCurrent(startedAt);
+    sessions.create({ name: 'b', run: 'r', startedAt });
+    expect(status.status().session).toEqual({
+      current: {
+        id: 2,
+        name: 'b',
+        run: 'r',
+        startedAt,
+        endedAt: null,
+        firstSeq: null,
+        lastSeq: null,
+        entries: 0,
+      },
+      count: 2,
     });
   });
 });

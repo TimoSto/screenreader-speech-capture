@@ -6,13 +6,16 @@ import {
   type WaitOptions,
   type WaitResult,
 } from '../ports/in/wait-for-speech.js';
+import type { SessionRepository } from '../ports/out/session-repository.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
 import { intOption } from './int-option.js';
+import { resolveSessionFilter } from './session-filter.js';
 
 export interface WaitForSpeechDeps {
   repository: SpeechRepository;
   events: SpeechEventBus;
+  sessions: Pick<SessionRepository, 'current' | 'lastId'>;
 }
 
 function abortReason(signal: AbortSignal): Error {
@@ -48,9 +51,10 @@ export class WaitForSpeechService implements WaitForSpeech {
       max: WAIT_TIMEOUT_MS.max,
     });
     const matches = createSpeechMatcher(options);
+    const sessionId = resolveSessionFilter(options.session, this.deps.sessions);
     if (signal?.aborted) throw abortReason(signal);
 
-    const seen = [...this.deps.repository.list(since).entries];
+    const seen = [...this.deps.repository.list(since, undefined, sessionId).entries];
     const found = seen.find(matches);
     if (found) return { status: 'matched', entry: found };
 
@@ -69,6 +73,7 @@ export class WaitForSpeechService implements WaitForSpeech {
 
       const unsubscribe = this.deps.events.subscribe((event) => {
         if (event.type !== 'entry' || event.entry.seq <= since) return;
+        if (sessionId !== undefined && event.entry.sessionId !== sessionId) return;
         seen.push(event.entry);
         if (!matches(event.entry)) return;
         finish();
