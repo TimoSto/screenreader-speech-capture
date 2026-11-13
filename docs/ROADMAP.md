@@ -73,6 +73,22 @@ GitHub issues. This file only tracks milestones.
       publish from CI (stable from main, previews from branches)
 - [ ] Smoke test on a real VM (NVDA + socket voice + Chrome)
 
+### M8 Own SAPI voice (Rust) ⬜
+
+Replaces the third-party C++ [`text-to-socket-engine`](vm-setup.md#socket-voice-setup) with our
+own SAPI 5 voice written in Rust.
+
+- [ ] SAPI 5 TTS engine as a COM DLL (`ISpTTSEngine`, `ISpObjectWithToken`), 32-bit and 64-bit
+      builds
+- [ ] Same wire format as `text-to-socket-engine` (header line, CRLF lines), so the bridge's
+      `text-to-socket` parser works unchanged
+- [ ] Host and port configurable per voice (default 4449), matching the bridge's `tcp.port`
+- [ ] German voice (language `407`) next to the English one (`409`), so screen readers set to
+      German offer it
+- [ ] Register / unregister and add / remove voice commands (administrator prompt)
+- [ ] Windows CI build of both DLLs, shipped with the bridge; update
+      [vm-setup.md](vm-setup.md#socket-voice-setup)
+
 ### Later
 
 - [ ] Optional shared-secret auth token
@@ -86,7 +102,7 @@ GitHub issues. This file only tracks milestones.
 |---|---|---|---|
 | Why Node.js | [architecture.md](architecture.md#why-nodejs-and-not-go) | ✅ | Decided |
 | Requirements | [vm-setup.md](vm-setup.md#requirements) | ✅ | Decided |
-| Socket voice | [vm-setup.md](vm-setup.md#socket-voice-setup) | ✅ | Third-party, package contents and wire format checked |
+| Socket voice | [vm-setup.md](vm-setup.md#socket-voice-setup) | ✅ | Third-party, package contents and wire format checked. Own Rust voice in M8 |
 | Screen reader setup | [vm-setup.md](vm-setup.md#screen-reader-setup) | ⬜ | Not yet verified on a real VM |
 | Running on the VM | [vm-setup.md](vm-setup.md#running-on-the-vm) | ⬜ | Not yet verified on a real VM |
 | Speech capture | [speech-capture.md](speech-capture.md) | ⬜ | M1 |
@@ -116,5 +132,7 @@ GitHub issues. This file only tracks milestones.
 - **Windows job object:** tie the child services to the bridge's process, so a hard kill of the
   bridge ends them too (see [Shutdown](operations.md#shutdown)).
 - **JAWS in CI:** license the VM, or reset a snapshot before each run (demo mode stops after 40 minutes)?
+- **Own voice encoding:** should the Rust voice (M8) send UTF-8 instead of the ANSI code page, so
+  `tcp.encoding` no longer depends on the VM? That needs a new `tcp.format` or a header flag.
 - **NVDA bitness:** newer NVDA versions may run as 64-bit. Check that the 64-bit voice registration
   covers it.
