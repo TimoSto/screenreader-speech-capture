@@ -10,7 +10,7 @@ import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js
 import { MemorySessionRepository } from './adapters/out/memory/memory-session-repository.js';
 import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';
 import { defaultConfigFile } from './adapters/out/platform/paths.js';
-import type { Prepare } from './adapters/out/process/child-process-supervisor.js';
+import type { Prepare } from './adapters/out/process/types.js';
 import type { AddMarker } from './application/ports/in/add-marker.js';
 import type { ClearSpeech } from './application/ports/in/clear-speech.js';
 import type { ManageSessions } from './application/ports/in/manage-sessions.js';

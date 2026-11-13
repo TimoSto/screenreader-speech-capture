@@ -12,7 +12,7 @@ import type { Logger } from '../../../application/ports/out/logger.js';
 import type { Config } from '../../../domain/config/index.js';
 import { AppError } from '../../../domain/errors.js';
 import { listen } from '../../shared/net/listen.js';
-import { hostPort, isWildcard, reachableUrls } from '../../shared/net/reachable-urls.js';
+import { describeListener } from '../../shared/net/reachable-urls.js';
 import { sendError } from './errors.js';
 import { Router } from './router.js';
 import { configRoutes } from './routes/config-routes.js';
@@ -138,12 +138,7 @@ export class HttpServer {
     this.server = server;
     this.settings = { ...settings, port };
     // On 0.0.0.0, name the addresses clients can actually use (docs/operations.md#line-format).
-    const urls = reachableUrls('http', settings.host, port).join(', ');
-    this.deps.logger.info(
-      isWildcard(settings.host)
-        ? `listening on ${hostPort(settings.host, port)}, reachable at ${urls}`
-        : `listening on ${urls}`,
-    );
+    this.deps.logger.info(`listening on ${describeListener('http', settings.host, port)}`);
     return port;
   }
 

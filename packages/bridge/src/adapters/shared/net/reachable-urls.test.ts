@@ -1,6 +1,6 @@
 import type os from 'node:os';
 import { expect, it } from 'vitest';
-import { reachableUrls } from './reachable-urls.js';
+import { describeListener, reachableUrls } from './reachable-urls.js';
 
 const info = (
   address: string,
@@ -31,4 +31,20 @@ it('falls back to localhost without network, and keeps a specific host as it is'
   ]);
   expect(reachableUrls('http', '127.0.0.1', 5151, interfaces)).toEqual(['http://127.0.0.1:5151']);
   expect(reachableUrls('ws', '::1', 3000, interfaces)).toEqual(['ws://[::1]:3000']);
+});
+
+it('describes a wildcard listener by its address and where to reach it', () => {
+  expect(describeListener('http', '0.0.0.0', 5151, '', { lo: interfaces.lo })).toBe(
+    '0.0.0.0:5151, reachable at http://localhost:5151',
+  );
+  expect(describeListener('http', '::', 8931, '/mcp', { lo: interfaces.lo })).toBe(
+    '[::]:8931, reachable at http://localhost:8931/mcp',
+  );
+});
+
+it('describes a listener on one address by its URL, with the path', () => {
+  expect(describeListener('ws', '127.0.0.1', 3000, '', interfaces)).toBe('ws://127.0.0.1:3000');
+  expect(describeListener('http', '127.0.0.1', 8931, '/mcp', interfaces)).toBe(
+    'http://127.0.0.1:8931/mcp',
+  );
 });

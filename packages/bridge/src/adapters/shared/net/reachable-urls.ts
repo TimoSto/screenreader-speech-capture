@@ -25,3 +25,20 @@ export function reachableUrls(
     .map((info) => info.address);
   return [...new Set(addresses), 'localhost'].map((a) => `${scheme}://${hostPort(a, port)}`);
 }
+
+/**
+ * How a listener is named in the log (docs/operations.md#line-format): on a wildcard host,
+ * `0.0.0.0:5151, reachable at <urls>`; otherwise just its URL. `path` is appended to each URL.
+ */
+export function describeListener(
+  scheme: 'http' | 'ws',
+  host: string,
+  port: number,
+  path = '',
+  interfaces: NodeJS.Dict<os.NetworkInterfaceInfo[]> = os.networkInterfaces(),
+): string {
+  const urls = reachableUrls(scheme, host, port, interfaces)
+    .map((url) => `${url}${path}`)
+    .join(', ');
+  return isWildcard(host) ? `${hostPort(host, port)}, reachable at ${urls}` : urls;
+}

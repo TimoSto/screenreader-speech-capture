@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import net from 'node:net';
+import { setTimeout as delay } from 'node:timers/promises';
 import type { Logger } from '../../../application/ports/out/logger.js';
 import type {
   ProcessSupervisor,
@@ -11,27 +11,10 @@ import {
   type ServiceState,
   type ServiceStatus,
 } from '../../../domain/child-service.js';
-import { hostPort, isWildcard, reachableUrls } from '../../shared/net/reachable-urls.js';
+import { portOpen } from '../../shared/net/port-probe.js';
+import { describeListener } from '../../shared/net/reachable-urls.js';
 import { killTree, pipeLines, treeSpawnOptions } from './process-tree.js';
-
-/** A program to run, without a shell. */
-export interface Command {
-  readonly command: string;
-  readonly args: readonly string[];
-}
-
-/** The settings with the version resolved (the configured one or the default). */
-export interface ResolvedSettings {
-  readonly host: string;
-  readonly port: number;
-  readonly version: string;
-}
-
-/**
- * Gets the service ready to run (for example installs it) and returns its command. A rejection
- * counts as a crash. `signal` aborts when the service is stopped meanwhile.
- */
-export type Prepare = (settings: ResolvedSettings, signal: AbortSignal) => Promise<Command>;
+import type { Command, Prepare, ResolvedSettings } from './types.js';
 
 export interface ChildProcessSupervisorOptions {
   /** Service name for the `[bridge]` log and hints, for example `playwright`. */
@@ -54,24 +37,6 @@ export interface ChildProcessSupervisorOptions {
 
 /** How long the port may take to open after the start, before it counts as a crash. */
 const READY_TIMEOUT_MS = 60_000;
-
-const WILDCARD_PROBE: Record<string, string> = { '0.0.0.0': '127.0.0.1', '::': '::1' };
-
-/** Whether something accepts connections on `host:port`. */
-function portOpen(host: string, port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const socket = net.connect({ host: WILDCARD_PROBE[host] ?? host, port });
-    const done = (open: boolean) => {
-      socket.destroy();
-      resolve(open);
-    };
-    socket.setTimeout(1000, () => done(false));
-    socket.once('connect', () => done(true));
-    socket.once('error', () => done(false));
-  });
-}
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Runs one child service (docs/operations.md#child-service-crashes): prepare, spawn, wait for
@@ -218,7 +183,10 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
       if (open) {
         this.runningSince = Date.now();
         this.setState('running');
-        this.options.logger.info(`${this.options.name} running on ${this.where(settings)}`);
+        const { scheme, path } = this.options;
+        this.options.logger.info(
+          `${this.options.name} running on ${describeListener(scheme, settings.host, settings.port, path)}`,
+        );
       } else {
         this.options.logger.error(
           `${this.options.name} did not open port ${settings.port} in time, killing it`,
@@ -226,15 +194,6 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
         void killTree(child);
       }
     });
-  }
-
-  /** Where clients reach it. On `0.0.0.0`, the machine's addresses (docs/operations.md#line-format). */
-  private where({ host, port }: ResolvedSettings): string {
-    const path = this.options.path ?? '';
-    const urls = reachableUrls(this.options.scheme, host, port)
-      .map((url) => `${url}${path}`)
-      .join(', ');
-    return isWildcard(host) ? `${hostPort(host, port)}, reachable at ${urls}` : urls;
   }
 
   private async waitForPort(

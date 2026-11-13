@@ -1,7 +1,8 @@
 import type { Logger } from '../../../application/ports/out/logger.js';
 import type { ServiceSettings } from '../../../application/ports/out/process-supervisor.js';
 import type { RestartPolicy } from '../../../domain/child-service.js';
-import { ChildProcessSupervisor, type Prepare } from '../process/child-process-supervisor.js';
+import { ChildProcessSupervisor } from '../process/child-process-supervisor.js';
+import type { Prepare } from '../process/types.js';
 import { runCommand } from '../process/run-command.js';
 import { ensurePlaywright } from './playwright-installer.js';
 

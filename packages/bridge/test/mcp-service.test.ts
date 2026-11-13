@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { bundledMcp } from '../src/adapters/out/mcp/playwright-mcp.js';
-import type { Prepare } from '../src/adapters/out/process/child-process-supervisor.js';
+import type { Prepare } from '../src/adapters/out/process/types.js';
 import type { Bridge } from '../src/main.js';
 import { accepts, eventually, freePort, start } from './helpers.js';
 
