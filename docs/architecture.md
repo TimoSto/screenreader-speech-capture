@@ -151,8 +151,10 @@ packages/client/src/
 
 Unlike the bridge, the client is also used as a library, so the in-port interfaces are its public
 types (users can fake them in their own tests). Users don't call `main.ts` functions explicitly
-for the speech client: the public `SpeechCaptureClient` class lives in `main.ts` and passes the
-default adapters to the service, so `new SpeechCaptureClient()` just works.
+for the speech client: the public `SpeechCaptureClient` class lives in `main.ts`, implements
+`SpeechCapture` and delegates to a service built with the default adapters, so
+`new SpeechCaptureClient()` just works. It wraps the service (a private `#service` field) instead
+of extending it, so the service's internals never become public types.
 
 ## UI: SvelteKit, hexagonal-lite
 
