@@ -82,7 +82,10 @@ Relative imports use `.js` extensions (ESM), and type-only imports must use `imp
 
 `packages/shared` holds only the HTTP API DTOs (exported from `src/index.ts`, consumed as TS
 source), plus one contract rule: `text-match.ts` (`normalizeText`, `createTextTest`), used by both
-the bridge's wait and the client's waits. It is private and bundled into published packages by tsdown — never published on its own.
+the bridge's wait and the client's waits. A second, Node-only entry
+(`@screenreader-speech-capture/shared/platform-paths`, kept out of `index.ts` so the UI can import
+the DTOs) holds `appDir`, the per-user config/state/cache folders, so the bridge's `config.json` and
+the client's `client.json` agree. It is private and bundled into published packages by tsdown — never published on its own.
 Each hexagon owns its own domain model and maps to/from DTOs in its HTTP adapter
 (`adapters/in/http/dto/`, one file per resource). The OpenAPI spec lives at `packages/bridge/docs/openapi.yaml`.
 

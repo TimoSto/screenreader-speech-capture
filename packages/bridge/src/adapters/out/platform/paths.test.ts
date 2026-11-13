@@ -55,3 +55,14 @@ describe('defaultPlaywrightDir', () => {
     );
   });
 });
+
+describe('defaults on a Windows machine without the AppData variables', () => {
+  it('falls back to the AppData folders in the home directory', () => {
+    expect(defaultConfigFile('win32', {}, 'C:\\Users\\t')).toBe(
+      'C:\\Users\\t\\AppData\\Roaming\\screenreader-speech-capture\\config.json',
+    );
+    expect(defaultLogFile('win32', {}, 'C:\\Users\\t')).toBe(
+      'C:\\Users\\t\\AppData\\Local\\screenreader-speech-capture\\logs\\bridge.log',
+    );
+  });
+});

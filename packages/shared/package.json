@@ -2,10 +2,11 @@
   "name": "@screenreader-speech-capture/shared",
   "version": "0.0.0",
   "private": true,
-  "description": "HTTP API contract (DTOs and the normalize text rule) shared by bridge, UI and client. Bundled into them, never published.",
+  "description": "HTTP API contract (DTOs and the normalize text rule) shared by bridge, UI and client, plus the Node-only per-user app directories (./platform-paths). Bundled into them, never published.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./platform-paths": "./src/platform-paths.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
