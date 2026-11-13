@@ -13,6 +13,7 @@ import type { Config } from '../../../domain/config.js';
 import { AppError } from '../../../domain/errors.js';
 import { listen } from '../net/listen.js';
 import { hostPort, isWildcard, reachableUrls } from '../../shared/net/reachable-urls.js';
+import { configRoutes } from './config-routes.js';
 import { sendError } from './errors.js';
 import { Router } from './router.js';
 import { SseHub } from './sse.js';
@@ -58,6 +59,7 @@ export class HttpServer {
     });
     speechRoutes(this.router, { ...deps, sse: this.sse });
     statusRoutes(this.router, deps);
+    configRoutes(this.router, deps);
     sessionRoutes(this.router, deps);
   }
 
