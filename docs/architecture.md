@@ -102,13 +102,16 @@ packages/bridge/src/
     out/robotjs/     InputInjector on @jitsi/robotjs (mouse click, key chords)
     out/log/         bridge log: console + file, prefixes, colours, rotation
     out/clock/       system clock
-  main.ts            composition root: the only place adapters are wired to ports
+  main.ts            composition root: startBridge, the only place adapters are wired to ports
+  composition/       its helpers: config loading, logging, child services, live re-apply
+                     (PUT /config), startup and shutdown order
   bin/cli.ts         executable: parses argv (adapters/in/cli), starts main.ts
 ```
 
 **Dependency rule:** `adapters → application → domain`. The domain imports nothing, the application
-imports only the domain and its own ports, and the adapters implement or call the ports. Only `main.ts`
-knows the concrete adapters. Adapters don't import the concrete services, the composition root or
+imports only the domain and its own ports, and the adapters implement or call the ports. Only the
+composition root (`main.ts` + `composition/` in the bridge, `main.ts` in the client) knows the
+concrete adapters. Adapters don't import the concrete services, the composition root or
 each other (`in` ↔ `out`); the executables in `bin/` sit outside the adapters and call `main.ts`. ESLint (`no-restricted-imports` in `eslint.config.js`) enforces all of this.
 
 **Extending:**
