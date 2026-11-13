@@ -66,12 +66,13 @@ GitHub issues. This file only tracks milestones.
 - [ ] Agent skill (`SKILL.md`) + `install-skill` command
 - [ ] Subagent definitions (for example `a11y-screenreader-tester`)
 
-### M7 Distribution ⬜
+### M7 Distribution 🚧
 
 - [ ] CI: Windows runner (Linux CI exists since M1)
-- [ ] Releases from PR titles (independent versions, tags as the source of truth), manual npm
+- [x] Releases from PR titles (independent versions, tags as the source of truth), manual npm
       publish from CI (stable from main, previews from branches)
-- [ ] Smoke test on a real VM (NVDA + socket voice + Chrome)
+- [ ] Smoke test on a real VM (NVDA + socket voice + Chrome). It also verifies
+      [VM setup](vm-setup.md), which is not yet checked on a real VM
 
 ### M8 Own SAPI voice (Rust) ⬜
 
@@ -95,32 +96,6 @@ own SAPI 5 voice written in Rust.
 - [ ] Optional persistent storage (for example SQLite), so sessions survive a bridge restart
 - [ ] Maybe: detect the VM's ANSI code page from the registry (`tcp.encoding=auto`), so VMs with
   another code page or the "Use Unicode UTF-8" setting work without `--tcp-encoding`
-
-## State per topic
-
-| Topic | Doc | State | Note |
-|---|---|---|---|
-| Why Node.js | [architecture.md](architecture.md#why-nodejs-and-not-go) | ✅ | Decided |
-| Requirements | [vm-setup.md](vm-setup.md#requirements) | ✅ | Decided |
-| Socket voice | [vm-setup.md](vm-setup.md#socket-voice-setup) | ✅ | Third-party, package contents and wire format checked. Own Rust voice in M8 |
-| Screen reader setup | [vm-setup.md](vm-setup.md#screen-reader-setup) | ⬜ | Not yet verified on a real VM |
-| Running on the VM | [vm-setup.md](vm-setup.md#running-on-the-vm) | ⬜ | Not yet verified on a real VM |
-| Speech capture | [speech-capture.md](speech-capture.md) | ⬜ | M1 |
-| Sessions | [speech-capture.md](speech-capture.md#sessions) | 🚧 | Bridge API (API 1.3), client and CLI done; fixture in M3 |
-| HTTP API | [http-api.md](http-api.md) | 🚧 | M1 done, Playwright and MCP services and sessions in M3, native input with M4 |
-| Operations | [operations.md](operations.md) | ✅ | Startup, shutdown, bridge log, Playwright server and MCP supervisors done |
-| Configuration | [configuration.md](configuration.md) | 🚧 | Flags, env, config file, `PUT /config`, `playwright.*` and `mcp.*` done; `input` takes effect with M4 |
-| Test client | [client.md](client.md) | 🚧 | Library, CLI, version check, live feed and sessions done; fixture in M3, native input in M4 |
-| Remote Playwright & MCP | [playwright-mcp.md](playwright-mcp.md) | ✅ | Playwright server and MCP done (install, supervision) |
-| Native input | [native-input.md](native-input.md) | ⬜ | M4 |
-| Web UI | [web-ui.md](web-ui.md) | ⬜ | M5. Designed: status, context pane (sessions), live log, actions |
-| Agents | [agents.md](agents.md) | ⬜ | M6 |
-| Development, CI & releases | [development.md](development.md) | ⬜ | M1 tooling, M7 CI |
-| Security | [security.md](security.md) | ✅ | Documented. The auth token is under Later |
-| Troubleshooting | [troubleshooting.md](troubleshooting.md) | ✅ | Kept up to date as issues are found |
-| Limitations | [limitations.md](limitations.md) | ✅ | Documented |
-| Architecture | [architecture.md](architecture.md) | ⬜ | Designed, no code yet |
-| License | — | ⬜ | Not chosen yet |
 
 ## Open questions
 
