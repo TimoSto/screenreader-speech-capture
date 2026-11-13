@@ -9,7 +9,7 @@ import type { QuerySpeech } from '../../../application/ports/in/query-speech.js'
 import type { WaitForSpeech } from '../../../application/ports/in/wait-for-speech.js';
 import type { WatchSpeech } from '../../../application/ports/in/watch-speech.js';
 import type { Logger } from '../../../application/ports/out/logger.js';
-import type { Config } from '../../../domain/config.js';
+import type { Config } from '../../../domain/config/index.js';
 import { AppError } from '../../../domain/errors.js';
 import { listen } from '../../shared/net/listen.js';
 import { hostPort, isWildcard, reachableUrls } from '../../shared/net/reachable-urls.js';

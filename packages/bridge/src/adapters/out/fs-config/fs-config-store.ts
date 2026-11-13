@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { ConfigStore } from '../../../application/ports/out/config-store.js';
-import type { ConfigPatch } from '../../../domain/config.js';
+import type { ConfigPatch } from '../../../domain/config/index.js';
 
 /**
  * The config file (docs/configuration.md): JSON with the settings saved so far. Only the file's

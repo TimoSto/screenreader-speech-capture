@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryConfigStore, MemoryLogger } from '../../../test/fakes.js';
-import { DEFAULT_CONFIG, mergeConfig, type Config, type ConfigPatch } from '../../domain/config.js';
+import {
+  DEFAULT_CONFIG,
+  mergeConfig,
+  type Config,
+  type ConfigPatch,
+} from '../../domain/config/index.js';
 import { AppError } from '../../domain/errors.js';
 import { ConfigService } from './config-service.js';
 

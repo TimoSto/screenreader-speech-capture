@@ -7,7 +7,7 @@ import {
   validatePatch,
   type Config,
   type ConfigPatch,
-} from '../src/domain/config.js';
+} from '../src/domain/config/index.js';
 import { startBridge, type Bridge, type BridgeOptions } from '../src/main.js';
 import { MemoryConfigStore } from './fakes.js';
 

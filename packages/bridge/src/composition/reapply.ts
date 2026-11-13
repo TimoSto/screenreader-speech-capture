@@ -4,7 +4,7 @@ import { toConfigError } from '../adapters/shared/net/listen.js';
 import type { MemorySpeechRepository } from '../adapters/out/memory/memory-speech-repository.js';
 import type { Logger } from '../application/ports/out/logger.js';
 import type { ConfigService } from '../application/services/config-service.js';
-import { changedSections } from '../domain/config.js';
+import { changedSections } from '../domain/config/index.js';
 import type { Logging } from './logging.js';
 import type { ChildService } from './services.js';
 

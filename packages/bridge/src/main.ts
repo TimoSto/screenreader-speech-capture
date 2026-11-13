@@ -30,7 +30,7 @@ import { loadConfig } from './composition/load-config.js';
 import { createLogging } from './composition/logging.js';
 import { registerReapply } from './composition/reapply.js';
 import { createServices } from './composition/services.js';
-import { configFields, overriddenFields, type ConfigField } from './domain/config.js';
+import { configFields, overriddenFields, type ConfigField } from './domain/config/index.js';
 
 export { ConfigError } from './composition/load-config.js';
 

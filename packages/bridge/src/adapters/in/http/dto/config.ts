@@ -1,5 +1,5 @@
 import type { ConfigDto } from '@screenreader-speech-capture/shared';
-import type { Config } from '../../../../domain/config.js';
+import type { Config } from '../../../../domain/config/index.js';
 
 // Lists every field on purpose: a field added to the config (for example a secret) doesn't reach
 // the API until it is added here and to the contract.

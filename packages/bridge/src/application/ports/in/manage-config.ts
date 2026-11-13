@@ -1,4 +1,4 @@
-import type { Config } from '../../../domain/config.js';
+import type { Config } from '../../../domain/config/index.js';
 
 /**
  * Applies a configuration change to one part of the bridge, for example by restarting a

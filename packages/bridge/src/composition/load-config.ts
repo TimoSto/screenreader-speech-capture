@@ -5,7 +5,7 @@ import {
   validatePatch,
   type ConfigField,
   type ConfigPatch,
-} from '../domain/config.js';
+} from '../domain/config/index.js';
 import { AppError } from '../domain/errors.js';
 
 /** A setting from flags, the environment or the config file is invalid. Nothing was started. */

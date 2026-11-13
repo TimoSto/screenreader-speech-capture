@@ -1,5 +1,5 @@
 import { parseArgs } from 'node:util';
-import type { ConfigField } from '../../../domain/config.js';
+import type { ConfigField } from '../../../domain/config/index.js';
 
 // Flags and environment variables (docs/configuration.md#cli-flags). Values are only parsed
 // here; the configuration checks their ranges and names the flag in its error.

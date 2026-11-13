@@ -1,6 +1,6 @@
 import type { ConfigStore } from '../src/application/ports/out/config-store.js';
 import type { Logger } from '../src/application/ports/out/logger.js';
-import type { ConfigPatch } from '../src/domain/config.js';
+import type { ConfigPatch } from '../src/domain/config/index.js';
 
 /** Logger that keeps its messages, as `"<level> <message>"`. */
 export class MemoryLogger implements Logger {
