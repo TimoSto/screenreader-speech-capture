@@ -1,5 +1,5 @@
 import type { ConnectionInfo } from '../../../domain/capture.js';
-import type { ServiceStatus } from '../../../domain/service.js';
+import type { ServiceStatus } from '../../../domain/child-service.js';
 import type { SessionSummary } from '../../../domain/session.js';
 import type { BufferStats } from '../../../domain/speech-buffer.js';
 

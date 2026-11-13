@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import type { Logger } from '../../../application/ports/out/logger.js';
 import type { ServiceSettings } from '../../../application/ports/out/process-supervisor.js';
-import type { RestartPolicy } from '../../../domain/service.js';
+import type { RestartPolicy } from '../../../domain/child-service.js';
 import { ChildProcessSupervisor, type Prepare } from '../process/child-process-supervisor.js';
 import { runCommand } from '../process/run-command.js';
 
