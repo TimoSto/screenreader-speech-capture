@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ClientConfigError,
   DEFAULT_BRIDGE_URL,
   normalizeBridgeUrl,
   overridesStored,
-  parseClientConfig,
-  parseConfigKey,
   pickBridgeUrl,
 } from './bridge-url.js';
+import { ClientConfigError } from './errors.js';
 
 describe('normalizeBridgeUrl', () => {
   it('strips trailing slashes and whitespace', () => {
@@ -21,24 +19,6 @@ describe('normalizeBridgeUrl', () => {
       expect(() => normalizeBridgeUrl(input)).toThrow(ClientConfigError);
     },
   );
-});
-
-describe('parseClientConfig', () => {
-  it('accepts an empty object and normalises the url', () => {
-    expect(parseClientConfig({}, 'f')).toEqual({});
-    expect(parseClientConfig({ url: 'http://vm:1/', other: true }, 'f')).toEqual({
-      url: 'http://vm:1',
-    });
-  });
-
-  it.each([
-    ['a non-object', []],
-    ['null', null],
-    ['a non-string url', { url: 5 }],
-    ['an invalid url', { url: 'vm:5151' }],
-  ])('rejects %s and names the origin', (_name, raw) => {
-    expect(() => parseClientConfig(raw, '/cfg/client.json')).toThrow(/\/cfg\/client\.json/);
-  });
 });
 
 describe('pickBridgeUrl', () => {
@@ -73,13 +53,5 @@ describe('pickBridgeUrl', () => {
   it('overridesStored tells when the stored value cannot win', () => {
     expect(overridesStored({ env: 'http://env:1' })).toBe(true);
     expect(overridesStored({ explicit: '', env: '' })).toBe(false);
-  });
-});
-
-describe('parseConfigKey', () => {
-  it('accepts known keys and rejects others', () => {
-    expect(parseConfigKey('url')).toBe('url');
-    expect(() => parseConfigKey('colour')).toThrow(ClientConfigError);
-    expect(() => parseConfigKey('toString')).toThrow(ClientConfigError);
   });
 });

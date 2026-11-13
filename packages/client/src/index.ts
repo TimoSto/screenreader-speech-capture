@@ -22,18 +22,17 @@ export type {
   WaitOptions,
 } from './application/ports/in/speech-capture.js';
 export {
-  ClientConfigError,
   DEFAULT_BRIDGE_URL,
   normalizeBridgeUrl,
   URL_ENV,
-  type ClientConfig,
-  type ConfigKey,
   type ValueSource,
 } from './domain/bridge-url.js';
+export type { ClientConfig, ConfigKey } from './domain/client-config.js';
 export {
   BridgeHttpError,
   BridgeNotReadyError,
   BridgeUnreachableError,
+  ClientConfigError,
   IncompatibleBridgeError,
   SpeechTimeoutError,
 } from './domain/errors.js';

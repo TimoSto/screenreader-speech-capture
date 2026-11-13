@@ -9,10 +9,10 @@ import type {
 } from '../../../application/ports/in/manage-client-config.js';
 import type { SpeechCapture } from '../../../application/ports/in/speech-capture.js';
 import { SpeechCaptureService } from '../../../application/services/speech-capture-service.js';
-import { ClientConfigError } from '../../../domain/bridge-url.js';
 import {
   BridgeHttpError,
   BridgeUnreachableError,
+  ClientConfigError,
   IncompatibleBridgeError,
 } from '../../../domain/errors.js';
 import { createClientConfig } from '../../../main.js';
