@@ -1,11 +1,7 @@
-import type {
-  BridgeStatus,
-  Session,
-  SessionList,
-  SessionRef,
-  SpeechEntry,
-  SpeechFeedEvent,
-} from '../../../domain/speech-entry.js';
+import type { BridgeStatus } from '../../../domain/bridge-status.js';
+import type { SpeechFeedEvent } from '../../../domain/feed-event.js';
+import type { Session, SessionList, SessionRef } from '../../../domain/session.js';
+import type { SpeechEntry } from '../../../domain/speech-entry.js';
 
 /** One page of `GET /api/v1/speech`. */
 export interface SpeechPage {

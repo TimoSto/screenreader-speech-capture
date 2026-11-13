@@ -1,5 +1,7 @@
 import { URL_ENV, type ValueSource } from '../../../domain/bridge-url.js';
-import type { BridgeStatus, Session, SpeechEntry } from '../../../domain/speech-entry.js';
+import type { BridgeStatus } from '../../../domain/bridge-status.js';
+import type { Session } from '../../../domain/session.js';
+import type { SpeechEntry } from '../../../domain/speech-entry.js';
 
 export const SOURCE_LABEL: Record<ValueSource, string> = {
   explicit: '--url',
@@ -52,11 +54,7 @@ export function formatStatus(status: BridgeStatus): string {
       `${connections} voice connection${connections === 1 ? '' : 's'}, ${tcp.encoding}`,
     `buffer  ${buffer.size} of ${buffer.maxEntries} entries (${range})`,
     `input   ${input.enabled ? 'enabled' : 'disabled'}`,
-    ...(session === undefined
-      ? []
-      : [
-          `session ${session.current === null ? 'none current' : `#${session.current.id} ${session.current.name}`}, ` +
-            `${session.count} in the buffer`,
-        ]),
+    `session ${session.current === null ? 'none current' : `#${session.current.id} ${session.current.name}`}, ` +
+      `${session.count} in the buffer`,
   ].join('\n');
 }

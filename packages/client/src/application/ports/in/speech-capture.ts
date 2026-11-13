@@ -1,10 +1,6 @@
-import type {
-  BridgeStatus,
-  Session,
-  SessionList,
-  SessionRef,
-  SpeechEntry,
-} from '../../../domain/speech-entry.js';
+import type { BridgeStatus } from '../../../domain/bridge-status.js';
+import type { Session, SessionList, SessionRef } from '../../../domain/session.js';
+import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import type { SpeechMatch } from '../../../domain/text-match.js';
 
 export interface GetSpeechOptions {
@@ -16,7 +12,7 @@ export interface GetSpeechOptions {
   includeMarkers?: boolean | undefined;
   /**
    * Only entries of this session: its `id`, or `'current'` (the session current when the request
-   * arrives). Default: all entries. Needs a bridge with API 1.3.
+   * arrives). Default: all entries.
    */
   session?: SessionRef | undefined;
 }
@@ -28,7 +24,7 @@ export interface GetTextOptions {
   separator?: string | undefined;
   /**
    * Only entries of this session: its `id`, or `'current'` (the session current when the request
-   * arrives). Default: all entries. Needs a bridge with API 1.3.
+   * arrives). Default: all entries.
    */
   session?: SessionRef | undefined;
 }
@@ -42,7 +38,7 @@ export interface WaitOptions {
   normalize?: boolean | undefined;
   /**
    * Only entries of this session: its `id`, or `'current'` (the session current when the request
-   * arrives). Default: all entries. Needs a bridge with API 1.3.
+   * arrives). Default: all entries.
    */
   session?: SessionRef | undefined;
 }
@@ -110,7 +106,7 @@ export interface SpeechCapture {
   /**
    * Starts a session (docs/speech-capture.md#sessions): it becomes current and the previous one
    * ends. Moves the cursor to the session's start, so the next reads and waits only see its
-   * speech. Needs a bridge with API 1.3.
+   * speech.
    */
   startSession(name: string, options?: StartSessionOptions): Promise<Session>;
   /** Ends the current session. Speech after this belongs to no session. */

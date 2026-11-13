@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SpeechCapture } from '../../../application/ports/in/speech-capture.js';
-import type { BridgeStatus } from '../../../domain/speech-entry.js';
+import type { BridgeStatus } from '../../../domain/bridge-status.js';
 import {
   GLOBAL_OPTIONS,
   OPTIONS,
@@ -81,37 +81,36 @@ describe('scope', () => {
   }
 
   it('uses --session without asking the bridge', async () => {
-    const { fake, calls } = speech(undefined);
+    const { fake, calls } = speech({ current: null, count: 0 });
     expect(await scope(values({ session: '4' }), fake)).toBe(4);
     expect(calls).toEqual([]);
   });
 
   it('reads the whole buffer with --all', async () => {
-    const { fake, calls } = speech(undefined);
+    const { fake, calls } = speech({ current: null, count: 0 });
     expect(await scope(values({ all: true }), fake)).toBeUndefined();
     expect(calls).toEqual([]);
   });
 
   it('rejects --session together with --all', async () => {
     await expect(
-      scope(values({ session: '1', all: true }), speech(undefined).fake),
+      scope(values({ session: '1', all: true }), speech({ current: null, count: 0 }).fake),
     ).rejects.toThrow('Use either --session or --all.');
   });
 
   it('rejects --session 0', async () => {
-    await expect(scope(values({ session: '0' }), speech(undefined).fake)).rejects.toThrow(
-      UsageError,
-    );
+    await expect(
+      scope(values({ session: '0' }), speech({ current: null, count: 0 }).fake),
+    ).rejects.toThrow(UsageError);
   });
 
   it('defaults to the id of the current session', async () => {
-    const current = { id: 7 } as NonNullable<BridgeStatus['session']>['current'];
+    const current = { id: 7 } as BridgeStatus['session']['current'];
     expect(await scope(values({}), speech({ current, count: 1 }).fake)).toBe(7);
   });
 
-  it('reads the whole buffer without a current session or session support', async () => {
+  it('reads the whole buffer without a current session', async () => {
     expect(await scope(values({}), speech({ current: null, count: 0 }).fake)).toBeUndefined();
-    expect(await scope(values({}), speech(undefined).fake)).toBeUndefined();
   });
 });
 

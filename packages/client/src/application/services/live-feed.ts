@@ -1,6 +1,7 @@
 import { ClientConfigError } from '../../domain/bridge-url.js';
 import { BridgeHttpError, IncompatibleBridgeError } from '../../domain/errors.js';
-import { isSpeech, type SpeechEntry, type SpeechFeedEvent } from '../../domain/speech-entry.js';
+import type { SpeechFeedEvent } from '../../domain/feed-event.js';
+import { isSpeech, type SpeechEntry } from '../../domain/speech-entry.js';
 import type { OnSpeechOptions } from '../ports/in/speech-capture.js';
 import type { BridgeApi } from '../ports/out/bridge-api.js';
 import type { Clock } from '../ports/out/clock.js';

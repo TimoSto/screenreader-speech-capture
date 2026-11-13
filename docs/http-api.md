@@ -133,6 +133,7 @@ status.
   versions.
 - The client checks `apiVersion` on its first call:
   - **different major version:** error (`IncompatibleBridgeError`, CLI exit code `2`),
-  - **bridge older than the client (minor):** error only when a function needs something the
+  - **bridge older than the client (minor):** error if it is older than the oldest API the client
+    supports (API 1.3 for the current client), otherwise only when a function needs something the
     bridge doesn't have yet,
   - **bridge newer (minor):** works, no warning.

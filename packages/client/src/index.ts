@@ -37,16 +37,10 @@ export {
   IncompatibleBridgeError,
   SpeechTimeoutError,
 } from './domain/errors.js';
-export type {
-  BridgeState,
-  BridgeStatus,
-  ServiceStatus,
-  Session,
-  SessionList,
-  SessionRef,
-  SpeechEntry,
-  SpeechFeedEvent,
-} from './domain/speech-entry.js';
+export type { BridgeState, BridgeStatus, ServiceStatus } from './domain/bridge-status.js';
+export type { SpeechFeedEvent } from './domain/feed-event.js';
+export type { Session, SessionList, SessionRef } from './domain/session.js';
+export type { SpeechEntry } from './domain/speech-entry.js';
 export { normalizeText } from '@screenreader-speech-capture/shared';
 export type { SpeechMatch } from './domain/text-match.js';
 export { CONFIG_PATH_ENV, clientConfigFile } from './adapters/out/fs-config/paths.js';

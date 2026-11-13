@@ -285,21 +285,6 @@ describe('speech commands', () => {
     expect((await cli(['text'], fake)).stdout).toBe('before\nSubmit, button\nName, edit\n');
   });
 
-  it('reads the whole buffer on a bridge older than API 1.3', async () => {
-    const fake = fakeSpeech();
-    fake.api.speak('a');
-    const status = fake.api.status.bind(fake.api);
-    fake.api.status = async () => {
-      const old = await status();
-      delete old.session;
-      return { ...old, bridge: { ...old.bridge, apiVersion: '1.2' } };
-    };
-    expect((await cli(['text'], fake)).stdout).toBe('a\n');
-    const start = await cli(['session', 'start', 'x'], fake);
-    expect(start.code).toBe(EXIT.bridge);
-    expect(start.stderr).toContain('Sessions need a bridge with API 1.3');
-  });
-
   it.each([
     [new BridgeUnreachableError('http://vm:1'), 'not reachable'],
     [new BridgeHttpError(500, 'INTERNAL', 'boom'), 'boom (HTTP 500, INTERNAL)'],

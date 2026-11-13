@@ -95,7 +95,7 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 |---|---|---|
 | `getSpeech({ since?, limit?, includeMarkers?, session? })` | `SpeechEntry[]` | Recorded speech entries, oldest first. `since` defaults to the cursor, `includeMarkers` to `false`. `session` (an `id` or `'current'`) returns only that session's entries; without it, all entries. |
 | `getText({ since?, separator?, session? })` | `string` | All speech since `since` (default: the cursor), joined into one string (`separator` default `'\n'`). Handy for snapshot assertions. |
-| `startSession(name, { run? })` | `Session` | Start a [session](speech-capture.md#sessions) (the previous one ends) and move the cursor to its start. `run` groups sessions, for example of one test run. Needs a bridge with API 1.3. |
+| `startSession(name, { run? })` | `Session` | Start a [session](speech-capture.md#sessions) (the previous one ends) and move the cursor to its start. `run` groups sessions, for example of one test run. |
 | `endSession()` | `void` | End the current session. Speech after this belongs to no session. |
 | `sessions()` | `{ sessions, currentId }` | The sessions still in the buffer plus the current one, newest first. |
 | `clear()` | `void` | Wipe the whole buffer (all sessions) and reset the cursor. For manual use. |
@@ -147,7 +147,7 @@ stop();
 | `BridgeNotReadyError` | `waitForReady` timed out. |
 | `BridgeUnreachableError` | No connection to the bridge (wrong URL, bridge not running, network). |
 | `BridgeHttpError` | The bridge answered with an [error](http-api.md#errors): `status`, `code`, `details`. |
-| `IncompatibleBridgeError` | The bridge has another major API version (see [Versioning](http-api.md#versioning)), or sessions were used with a bridge older than API 1.3. |
+| `IncompatibleBridgeError` | The bridge has another major API version (see [Versioning](http-api.md#versioning)), or is older than API 1.3, the oldest this client supports. |
 | `ClientConfigError` | Invalid bridge URL or client config file. |
 
 ## Playwright fixture
@@ -242,8 +242,8 @@ Exit codes, so agents can branch on them without parsing output:
 
 `session start` prints the new session's id (the whole session with `--json`). `session list`
 prints one line per session, newest first (`#7 checkout test (run nightly-42): current, 3 entries,
-seq 340-342`), or `{ sessions, currentId }` with `--json`. A bridge older than API 1.3 has no
-sessions: `speech`, `text` and `wait` read the whole buffer, and `session` exits with `2`.
+seq 340-342`), or `{ sessions, currentId }` with `--json`. Without a current session, `speech`, `text` and
+`wait` read the whole buffer.
 
 With `--json`, `wait` prints `{ "matched": true, "entry": {...} }`, or on timeout
 `{ "matched": false, "entries": [...] }` with the speech seen (the same shapes as

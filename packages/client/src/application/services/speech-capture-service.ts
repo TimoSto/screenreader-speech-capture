@@ -1,18 +1,13 @@
-import { checkApiVersion, requireApiVersion } from '../../domain/api-version.js';
+import { checkApiVersion } from '../../domain/api-version.js';
 import {
   BridgeHttpError,
   BridgeNotReadyError,
   BridgeUnreachableError,
   SpeechTimeoutError,
 } from '../../domain/errors.js';
-import {
-  isSpeech,
-  type BridgeStatus,
-  type Session,
-  type SessionList,
-  type SessionRef,
-  type SpeechEntry,
-} from '../../domain/speech-entry.js';
+import type { BridgeStatus } from '../../domain/bridge-status.js';
+import type { Session, SessionList, SessionRef } from '../../domain/session.js';
+import { isSpeech, type SpeechEntry } from '../../domain/speech-entry.js';
 import { advanceSequence, toMatcher, type SpeechMatch } from '../../domain/text-match.js';
 import type {
   GetSpeechOptions,
@@ -43,14 +38,10 @@ const MAX_PAGE = 10_000;
 
 const DEFAULTS = { timeout: 5000, quietFor: 500, silenceTimeout: 10_000, readyTimeout: 120_000 };
 
-/** The API version that added sessions. */
-const SESSIONS_API = '1.3';
-
 export class SpeechCaptureService implements SpeechCapture {
   #cursor = 0;
   #compatible: Promise<void> | undefined;
   /** `bridge.apiVersion` of the last status, for features of newer minor versions. */
-  #bridgeApiVersion: string | undefined;
 
   constructor(private readonly deps: SpeechCaptureServiceDeps) {}
 
@@ -85,7 +76,7 @@ export class SpeechCaptureService implements SpeechCapture {
   }
 
   async startSession(name: string, options: StartSessionOptions = {}): Promise<Session> {
-    await this.sessionsSupported();
+    await this.compatible();
     const before = await this.endSeq();
     const session = await this.deps.api.startSession({ name, run: options.run });
     // Speech may arrive between the two requests: the cursor goes to the last entry before the
@@ -100,12 +91,12 @@ export class SpeechCaptureService implements SpeechCapture {
   }
 
   async endSession(): Promise<void> {
-    await this.sessionsSupported();
+    await this.compatible();
     await this.deps.api.endSession();
   }
 
   async sessions(): Promise<SessionList> {
-    await this.sessionsSupported();
+    await this.compatible();
     return this.deps.api.listSessions();
   }
 
@@ -117,7 +108,6 @@ export class SpeechCaptureService implements SpeechCapture {
   async status(): Promise<BridgeStatus> {
     const status = await this.deps.api.status();
     checkApiVersion(status.bridge.apiVersion, this.deps.apiVersion);
-    this.#bridgeApiVersion = status.bridge.apiVersion;
     this.#compatible = Promise.resolve();
     return status;
   }
@@ -243,12 +233,6 @@ export class SpeechCaptureService implements SpeechCapture {
       },
     );
     return this.#compatible;
-  }
-
-  /** Rejects with `IncompatibleBridgeError` if the bridge is older than API 1.3. */
-  private async sessionsSupported(): Promise<void> {
-    await this.compatible();
-    requireApiVersion(this.#bridgeApiVersion ?? '', SESSIONS_API, 'Sessions');
   }
 
   /** The `seq` of the newest entry in the buffer, 0 if it is empty. */
