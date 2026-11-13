@@ -5,9 +5,22 @@ import { FsClientConfigStore } from './adapters/out/fs-config/fs-client-config-s
 import { clientConfigFile } from './adapters/out/fs-config/paths.js';
 import { FetchBridgeApi } from './adapters/out/http/fetch-bridge-api.js';
 import type { ManageClientConfig } from './application/ports/in/manage-client-config.js';
+import type {
+  GetSpeechOptions,
+  GetTextOptions,
+  OnSpeechOptions,
+  ReadyOptions,
+  Recording,
+  SilenceOptions,
+  SpeechCapture,
+  StartSessionOptions,
+  WaitOptions,
+} from './application/ports/in/speech-capture.js';
 import { ClientConfigService } from './application/services/client-config-service.js';
 import { SpeechCaptureService } from './application/services/speech-capture-service.js';
 import { URL_ENV } from './domain/bridge-url.js';
+import type { BridgeStatus, Session, SessionList, SpeechEntry } from './domain/speech-entry.js';
+import type { SpeechMatch } from './domain/text-match.js';
 
 /**
  * The client's per-user settings, stored in the config file (docs/client.md#bridge-url).
@@ -33,16 +46,85 @@ export interface SpeechCaptureClientOptions {
 /**
  * Talks to the bridge (docs/client.md#library): `new SpeechCaptureClient()` uses the stored
  * bridge URL. The URL is resolved on the first request.
+ *
+ * Wraps the service instead of extending it, so the service's internals stay out of the public
+ * type surface (docs/architecture.md).
  */
-export class SpeechCaptureClient extends SpeechCaptureService {
+export class SpeechCaptureClient implements SpeechCapture {
+  readonly #service: SpeechCapture;
+
   constructor(options: SpeechCaptureClientOptions = {}) {
     const config = createClientConfig(options.env ?? process.env);
-    super({
+    this.#service = new SpeechCaptureService({
       api: new FetchBridgeApi({
         baseUrl: async () => (await config.get('url', { url: options.baseUrl })).value,
       }),
       clock: new SystemClock(),
       apiVersion: API_VERSION,
     });
+  }
+
+  getSpeech(options?: GetSpeechOptions): Promise<SpeechEntry[]> {
+    return this.#service.getSpeech(options);
+  }
+
+  getText(options?: GetTextOptions): Promise<string> {
+    return this.#service.getText(options);
+  }
+
+  clear(): Promise<void> {
+    return this.#service.clear();
+  }
+
+  startSession(name: string, options?: StartSessionOptions): Promise<Session> {
+    return this.#service.startSession(name, options);
+  }
+
+  endSession(): Promise<void> {
+    return this.#service.endSession();
+  }
+
+  sessions(): Promise<SessionList> {
+    return this.#service.sessions();
+  }
+
+  mark(label: string): Promise<SpeechEntry> {
+    return this.#service.mark(label);
+  }
+
+  status(): Promise<BridgeStatus> {
+    return this.#service.status();
+  }
+
+  waitForReady(options?: ReadyOptions): Promise<BridgeStatus> {
+    return this.#service.waitForReady(options);
+  }
+
+  waitForOutput(match: SpeechMatch, options?: WaitOptions): Promise<SpeechEntry> {
+    return this.#service.waitForOutput(match, options);
+  }
+
+  waitForSequence(matches: readonly SpeechMatch[], options?: WaitOptions): Promise<SpeechEntry[]> {
+    return this.#service.waitForSequence(matches, options);
+  }
+
+  waitForSilence(options?: SilenceOptions): Promise<void> {
+    return this.#service.waitForSilence(options);
+  }
+
+  record<T>(fn: () => T | Promise<T>, options?: SilenceOptions): Promise<Recording<T>> {
+    return this.#service.record(fn, options);
+  }
+
+  onSpeech(listener: (entry: SpeechEntry) => void, options?: OnSpeechOptions): () => void {
+    return this.#service.onSpeech(listener, options);
+  }
+
+  cursor(): number {
+    return this.#service.cursor();
+  }
+
+  setCursor(seq: number): void {
+    this.#service.setCursor(seq);
   }
 }

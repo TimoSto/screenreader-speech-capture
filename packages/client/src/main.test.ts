@@ -2,7 +2,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { createClientConfig } from './main.js';
+import { SpeechCaptureService } from './application/services/speech-capture-service.js';
+import { createClientConfig, SpeechCaptureClient } from './main.js';
 
 describe('createClientConfig (default wiring)', () => {
   it('reads SR_SPEECH_URL from the given env', async () => {
@@ -27,5 +28,18 @@ describe('createClientConfig (default wiring)', () => {
     } finally {
       await fs.rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('SpeechCaptureClient', () => {
+  it('wraps the service instead of exposing its internals', () => {
+    const client = new SpeechCaptureClient({ baseUrl: 'http://localhost:1', env: {} });
+    expect(client).not.toBeInstanceOf(SpeechCaptureService);
+    expect(Object.keys(client)).toEqual([]);
+    expect('deps' in client).toBe(false);
+    expect('search' in client).toBe(false);
+    expect(client.cursor()).toBe(0);
+    client.setCursor(7);
+    expect(client.cursor()).toBe(7);
   });
 });
