@@ -14,7 +14,7 @@ On the Windows machine or VM that runs the screen reader:
 | JAWS **or** NVDA | Both can use SAPI 5 voices. JAWS without a license runs in 40-minute demo mode (see [Running on the VM](#running-on-the-vm)). |
 | [`text-to-socket-engine`](https://www.npmjs.com/package/text-to-socket-engine) | The SAPI 5 voice that forwards speech text over TCP. Registering it needs an administrator prompt (see [Socket voice setup](#socket-voice-setup)). |
 | Playwright browsers | Playwright's Chromium is installed automatically ([Install](playwright-mcp.md#install)). Branded Chrome / Edge are recommended; install them yourself (their installers need administrator rights). |
-| [`@jitsi/robotjs`](https://www.npmjs.com/package/@jitsi/robotjs) | Native mouse / keyboard input. A dependency of the bridge with prebuilt Windows binaries, so no build tools are needed. |
+| [`@jitsi/robotjs`](https://www.npmjs.com/package/@jitsi/robotjs) | *(planned, [M4](ROADMAP.md#m4-native-input-))* Native mouse / keyboard input. A dependency of the bridge with prebuilt Windows binaries, so no build tools are needed. |
 
 For development you also need [pnpm](https://pnpm.io/) (see [Development](development.md)).
 
@@ -86,8 +86,8 @@ The UI has the same instructions under **Setup**. In both screen readers, select
 ### Checking the setup
 
 With the bridge running, press a key that makes the screen reader speak (for example
-`Insert+T` to read the window title). The text should appear in the UI within a few
-milliseconds. `GET /api/v1/status` should list at least one entry in `tcp.connections`.
+`Insert+T` to read the window title). The text should appear within a few milliseconds in
+`npx screenreader-speech-capture-client tail` (or the [web UI](web-ui.md) once it exists). `GET /api/v1/status` should list at least one entry in `tcp.connections`.
 
 The exact text depends on the screen reader, its version and its verbosity settings. Phrases like
 `"Submit, button"` in these docs are only examples.

@@ -30,12 +30,12 @@ Common problems, what causes them and how to fix them. Start with
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| The browser opens, but the screen reader says nothing about the page | The browser runs **headless** (no window). | Pass `headless: false` (the fixture does it) ([Playwright server](playwright-mcp.md#playwright-server)). |
-| | The browser window is not the **foreground** window. | `setFocus(page)` or CLI `focus` ([Native input](native-input.md)). |
+| The browser opens, but the screen reader says nothing about the page | The browser runs **headless** (no window). | Pass `headless: false` (the fixture will do it, [M3](ROADMAP.md#m3-playwright--mcp-)) ([Playwright server](playwright-mcp.md#playwright-server)). |
+| | The browser window is not the **foreground** window. | `setFocus(page)` or CLI `focus` ([Native input](native-input.md), *planned, [M4](ROADMAP.md#m4-native-input-)*). Until then, click the window yourself. |
 | Nothing works after an RDP session | The disconnected RDP session has no active desktop: no input, no foreground window. | Use the hypervisor console or VNC. Don't leave the VM on a disconnected RDP session ([Running on the VM](vm-setup.md#running-on-the-vm)). |
-| Screen reader commands (`H`, `Insert+T`) do nothing | They were sent with Playwright (`page.keyboard`), which the screen reader never sees. | Use `pressKeys()` / CLI `press` ([Native input](native-input.md)). |
-| `pressKeys` / `focus` returns `409 INPUT_DISABLED` | Native input is off. | Remove `--no-input`. Native input only works on Windows. |
-| Native clicks land in the wrong place | Display scaling, browser zoom, or several monitors. | See the caveats in [Native input](native-input.md). |
+| Screen reader commands (`H`, `Insert+T`) do nothing | They were sent with Playwright (`page.keyboard`), which the screen reader never sees. | Use `pressKeys()` / CLI `press` ([Native input](native-input.md), *planned, [M4](ROADMAP.md#m4-native-input-)*). |
+| `pressKeys` / `focus` returns `409 INPUT_DISABLED` | Native input is off. | Remove `--no-input`. Native input only works on Windows. *(planned, [M4](ROADMAP.md#m4-native-input-))* |
+| Native clicks land in the wrong place | Display scaling, browser zoom, or several monitors. | See the caveats in [Native input](native-input.md). *(planned, [M4](ROADMAP.md#m4-native-input-))* |
 | Native input does nothing at all | The bridge runs elevated or as a service, or the screen is locked. | Run non-elevated in the logged-in, unlocked user session. |
 
 ## Versions and services

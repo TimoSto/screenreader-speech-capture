@@ -1,21 +1,6 @@
 # Architecture
 
-How the code is organised, and why it is written in Node.js.
-
-## Why Node.js (and not Go)
-
-The bridge is written in **TypeScript on Node.js**:
-
-1. **Playwright server and Playwright MCP are Node programs.** Whatever language the bridge is in,
-   Node has to be on the VM. The bridge runs them as supervised child processes and can install
-   and start exactly the Playwright version a client needs (`npx playwright@<version> run-server`).
-2. **One language end to end.** The bridge, the shared API contract, the client and the SvelteKit
-   UI are all TypeScript in one pnpm monorepo.
-3. **Simple distribution.** `npm i -g screenreader-speech-capture` works on any machine that
-   already has Node for Playwright.
-
-Go's main strength here would be a single static binary. That counts for less when Node has to be
-installed anyway.
+How the code is organised. Why it is written in Node.js is in [Decisions](decisions.md#nodejs-not-go).
 
 ## Monorepo
 
@@ -24,13 +9,13 @@ pnpm monorepo:
 ```
 packages/
   bridge/   Node/TS process: TCP listener, HTTP API, native input, process supervisor (hexagonal)
-  ui/       SvelteKit app (adapter-static), served by the bridge (hexagonal-lite)
-  client/   npm lib + CLI (`screenreader-speech-capture-client`) + Playwright fixture
-            + agent skill, for tests and agents
+  ui/       SvelteKit app (adapter-static), served by the bridge (hexagonal-lite), planned (M5)
+  client/   npm lib + CLI (`screenreader-speech-capture-client`) + Playwright fixture (M3)
+            + agent skill (M6), for tests and agents
   shared/   HTTP API contract (DTO types), used by bridge, UI and client
 ```
 
-Published packages: `screenreader-speech-capture` (the bridge, with the UI bundled in) and
+Published packages: `screenreader-speech-capture` (the bridge, with the UI bundled in from M5) and
 `screenreader-speech-capture-client`. `shared` is bundled into both and isn't published on its own.
 The client never imports from the bridge, so test projects don't pull in the bridge's dependencies
 (such as robotjs).
@@ -55,7 +40,7 @@ flowchart LR
         MEM["out/memory<br/>repository, event bus"]
         CFG["out/fs-config<br/>config.json"]
         SUP["out/process, out/playwright, out/mcp<br/>process supervisors"]
-        ROBOT["out/robotjs<br/>InputInjector"]
+        ROBOT["out/robotjs<br/>InputInjector (planned)"]
         LOG["out/log<br/>bridge log"]
         CLK["out/clock"]
     end
@@ -114,6 +99,9 @@ packages/bridge/src/
   bin/cli.ts         executable: parses argv (adapters/in/cli), starts main.ts
 ```
 
+Planned, not in the code yet: `KeyChord`, `SendNativeInput`, `InputInjector` and `out/robotjs/`
+([M4](ROADMAP.md#m4-native-input-)), and serving the built UI ([M5](ROADMAP.md#m5-web-ui-)).
+
 **Dependency rule:** `adapters → application → domain`. The domain imports nothing, the application
 imports only the domain and its own ports, and the adapters implement or call the ports. Only the
 composition root (`main.ts` + `composition/` in the bridge, `main.ts` in the client) knows the
@@ -132,7 +120,7 @@ each other (`in` ↔ `out`); the executables in `bin/` sit outside the adapters 
 ## Client: hexagonal
 
 The client uses the bridge's layout and the same ESLint rules (see the dependency rule above). The
-CLI and the Playwright fixture are **driving adapters on the same in-ports as the library**, so they
+CLI and the Playwright fixture (planned) are **driving adapters on the same in-ports as the library**, so they
 can't drift from it (see [Test client](client.md)).
 
 ```
@@ -163,6 +151,8 @@ for the speech client: the public `SpeechCaptureClient` class lives in `main.ts`
 of extending it, so the service's internals never become public types.
 
 ## UI: SvelteKit, hexagonal-lite
+
+*(planned, [M5](ROADMAP.md#m5-web-ui-))*
 
 ```
 packages/ui/src/
