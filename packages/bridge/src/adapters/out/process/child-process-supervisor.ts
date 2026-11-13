@@ -10,7 +10,7 @@ import {
   type RestartPolicy,
   type ServiceState,
   type ServiceStatus,
-} from '../../../domain/service.js';
+} from '../../../domain/child-service.js';
 import { hostPort, isWildcard, reachableUrls } from '../../shared/net/reachable-urls.js';
 import { killTree, pipeLines, treeSpawnOptions } from './process-tree.js';
 

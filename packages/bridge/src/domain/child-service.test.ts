@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextAfterCrash, RESTART_POLICY } from './service.js';
+import { nextAfterCrash, RESTART_POLICY } from './child-service.js';
 
 describe('nextAfterCrash', () => {
   it('restarts with a growing delay: 1 s, 2 s, 4 s, 8 s', () => {

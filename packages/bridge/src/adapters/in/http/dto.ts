@@ -12,7 +12,7 @@ import type { Status } from '../../../application/ports/in/get-status.js';
 import type { SessionList } from '../../../application/ports/in/manage-sessions.js';
 import type { WaitResult } from '../../../application/ports/in/wait-for-speech.js';
 import type { Config } from '../../../domain/config.js';
-import type { ServiceStatus } from '../../../domain/service.js';
+import type { ServiceStatus } from '../../../domain/child-service.js';
 import type { SessionSummary } from '../../../domain/session.js';
 import type { SpeechPage } from '../../../domain/speech-buffer.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';

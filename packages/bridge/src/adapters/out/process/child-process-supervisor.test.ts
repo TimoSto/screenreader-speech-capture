@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { eventually, freePort } from '../../../../test/helpers.js';
 import { MemoryLogger } from '../../../../test/fakes.js';
-import type { RestartPolicy } from '../../../domain/service.js';
+import type { RestartPolicy } from '../../../domain/child-service.js';
 import { ChildProcessSupervisor, type Prepare } from './child-process-supervisor.js';
 
 const FAKE_SERVICE = path.resolve(
@@ -85,8 +85,15 @@ describe('ChildProcessSupervisor', () => {
   it('restarts after crashes and fails after 5 in a row', async () => {
     const { supervisor, logger } = await setup(fake('--exit', '3'));
 
-    await supervisor.start();
+    void supervisor.start();
 
+    // Not `await start()`: the port is only known free a moment ago, so the port check can see
+    // something else on it and report `running` early. The child still exits with 3 every time.
+    await eventually(
+      () => supervisor.status(),
+      (status) => status.state === 'failed',
+      500,
+    );
     expect(supervisor.status()).toMatchObject({ state: 'failed', restarts: 4, exitCode: 3 });
     expect(logger.lines.filter((line) => line.includes('exited with code 3'))).toEqual([
       'error playwright exited with code 3, restart 1 in 10 ms',
@@ -109,7 +116,13 @@ describe('ChildProcessSupervisor', () => {
     const { supervisor } = await setup((settings, signal) =>
       crashes-- > 0 ? fake('--exit', '1')(settings, signal) : fake()(settings, signal),
     );
-    await supervisor.start();
+    void supervisor.start();
+    // Waits for the end state, not `start()`, for the same reason as the test above.
+    await eventually(
+      () => supervisor.status(),
+      (status) => status.state === 'running' && status.restarts === 2,
+      500,
+    );
     expect(supervisor.status()).toMatchObject({ state: 'running', restarts: 2, exitCode: 1 });
 
     await supervisor.restart();

@@ -1,4 +1,4 @@
-import type { ServiceStatus } from '../../../domain/service.js';
+import type { ServiceStatus } from '../../../domain/child-service.js';
 
 /** Where and which version a child service runs. `version: null` = the bundled default. */
 export interface ServiceSettings {
