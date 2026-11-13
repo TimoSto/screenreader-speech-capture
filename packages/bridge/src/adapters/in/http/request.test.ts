@@ -1,7 +1,15 @@
 import type http from 'node:http';
 import { describe, expect, it } from 'vitest';
 import { AppError } from '../../../domain/errors.js';
-import { booleanParam, intParam, requireJson, sessionParam } from './request.js';
+import {
+  booleanParam,
+  intParam,
+  lastEventId,
+  nullableStringField,
+  requireJson,
+  sessionParam,
+  stringField,
+} from './request.js';
 
 const url = (query: string) => new URL(`http://bridge/x?${query}`);
 describe('intParam', () => {
@@ -64,6 +72,41 @@ describe('sessionParam', () => {
   it.each(['0', '-1', '1.5', 'latest', '99999999999999999999'])('rejects %s', (value) => {
     expect(() => sessionParam(url(`session=${value}`))).toThrow(
       expect.objectContaining({ code: 'INVALID_REQUEST', details: { field: 'session' } }) as Error,
+    );
+  });
+});
+
+describe('body fields', () => {
+  const field = (name: string) => expect.objectContaining({ details: { field: name } }) as Error;
+
+  it('reads a required string, treating a non-object body as missing', () => {
+    expect(stringField({ label: 'x' }, 'label')).toBe('x');
+    for (const body of [{}, { label: 1 }, null, 'label', ['x']]) {
+      expect(() => stringField(body, 'label')).toThrow(field('label'));
+    }
+  });
+
+  it('reads an optional string that may be null', () => {
+    expect(nullableStringField({ run: 'r' }, 'run')).toBe('r');
+    expect(nullableStringField({ run: null }, 'run')).toBeNull();
+    expect(nullableStringField({}, 'run')).toBeUndefined();
+    expect(() => nullableStringField({ run: 1 }, 'run')).toThrow(field('run'));
+  });
+});
+
+describe('lastEventId', () => {
+  const request = (id?: string) =>
+    ({ headers: id === undefined ? {} : { 'last-event-id': id } }) as http.IncomingMessage;
+
+  it('is null on a first connect and a seq on a reconnect', () => {
+    expect(lastEventId(request())).toBeNull();
+    expect(lastEventId(request(''))).toBeNull();
+    expect(lastEventId(request('42'))).toBe(42);
+  });
+
+  it.each(['-1', 'abc', '1.5', '99999999999999999999'])('rejects %s', (value) => {
+    expect(() => lastEventId(request(value))).toThrow(
+      expect.objectContaining({ details: { field: 'Last-Event-ID' } }) as Error,
     );
   });
 });

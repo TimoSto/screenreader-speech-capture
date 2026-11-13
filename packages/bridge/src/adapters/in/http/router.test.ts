@@ -11,4 +11,11 @@ describe('Router', () => {
       expect.objectContaining({ code: 'NOT_FOUND' }) as Error,
     );
   });
+
+  it('registers paths relative to its prefix', () => {
+    const handler = () => {};
+    const router = new Router('/api').add('GET', '/a', handler);
+    expect(router.find('GET', '/api/a')).toBe(handler);
+    expect(() => router.find('GET', '/a')).toThrow('Unknown endpoint GET /a');
+  });
 });

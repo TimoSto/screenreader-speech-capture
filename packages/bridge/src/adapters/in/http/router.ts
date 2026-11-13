@@ -9,12 +9,17 @@ export interface RequestContext {
 
 export type Handler = (context: RequestContext) => void | Promise<void>;
 
-/** Exact-path router: method + path → handler. Anything else is `NOT_FOUND`. */
+/**
+ * Exact-path router: method + path → handler. Anything else is `NOT_FOUND`. Paths passed to
+ * `add` are relative to `prefix`; `find` takes the full path.
+ */
 export class Router {
   private readonly routes = new Map<string, Handler>();
 
+  constructor(private readonly prefix = '') {}
+
   add(method: string, path: string, handler: Handler): this {
-    this.routes.set(`${method} ${path}`, handler);
+    this.routes.set(`${method} ${this.prefix}${path}`, handler);
     return this;
   }
 

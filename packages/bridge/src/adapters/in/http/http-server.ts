@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { API_PREFIX } from '@screenreader-speech-capture/shared';
 import type { AddMarker } from '../../../application/ports/in/add-marker.js';
 import type { ClearSpeech } from '../../../application/ports/in/clear-speech.js';
 import type { GetStatus } from '../../../application/ports/in/get-status.js';
@@ -47,7 +48,7 @@ export class HttpServer {
   private settings: HttpSettings | null = null;
   /** Servers replaced by `restart()` that are still finishing their open requests. */
   private readonly retiring = new Set<Promise<void>>();
-  private readonly router = new Router();
+  private readonly router = new Router(API_PREFIX);
   private readonly sse: SseHub;
 
   constructor(private readonly deps: HttpServerDeps) {
