@@ -1,11 +1,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
-  ClientConfigError,
   parseClientConfig,
   type ClientConfig,
   type ClientConfigPatch,
-} from '../../../domain/bridge-url.js';
+} from '../../../domain/client-config.js';
+import { ClientConfigError } from '../../../domain/errors.js';
 import type { ClientConfigStore } from '../../../application/ports/out/client-config-store.js';
 
 /**

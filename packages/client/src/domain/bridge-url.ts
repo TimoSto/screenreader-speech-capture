@@ -1,16 +1,10 @@
+import { ClientConfigError } from './errors.js';
+
 /** Bridge URL used when nothing else is configured. */
 export const DEFAULT_BRIDGE_URL = 'http://localhost:5151';
 
 /** Environment variable with the bridge URL. */
 export const URL_ENV = 'SR_SPEECH_URL';
-
-/** Settings stored in the client's config file. */
-export interface ClientConfig {
-  url?: string;
-}
-
-/** A change to the stored config: a value sets the key, `undefined` removes it. */
-export type ClientConfigPatch = { [K in keyof ClientConfig]-?: ClientConfig[K] | undefined };
 
 /** Where the effective value came from, highest precedence first. */
 export type ValueSource = 'explicit' | 'env' | 'config' | 'default';
@@ -18,11 +12,6 @@ export type ValueSource = 'explicit' | 'env' | 'config' | 'default';
 export interface Resolved {
   value: string;
   source: ValueSource;
-}
-
-/** The config file or a configured value is invalid. */
-export class ClientConfigError extends Error {
-  override name = 'ClientConfigError';
 }
 
 /**
@@ -43,19 +32,6 @@ export function normalizeBridgeUrl(input: string, origin = 'URL'): string {
     throw new ClientConfigError(`${origin} "${input}" must not contain a query or fragment`);
   }
   return url.href.replace(/\/+$/, '');
-}
-
-/** Checks the parsed content of a config file. `origin` names the file in errors. */
-export function parseClientConfig(raw: unknown, origin: string): ClientConfig {
-  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-    throw new ClientConfigError(`The client config file ${origin} must contain a JSON object`);
-  }
-  const { url } = raw as Record<string, unknown>;
-  if (url === undefined) return {};
-  if (typeof url !== 'string') {
-    throw new ClientConfigError(`"url" in the client config file ${origin} must be a string`);
-  }
-  return { url: normalizeBridgeUrl(url, `"url" in ${origin}`) };
 }
 
 export interface UrlSources {
@@ -84,19 +60,4 @@ export function pickBridgeUrl(sources: UrlSources): Resolved {
   if (isSet(sources.env)) return { value: normalizeBridgeUrl(sources.env, URL_ENV), source: 'env' };
   if (isSet(sources.stored)) return { value: sources.stored, source: 'config' };
   return { value: DEFAULT_BRIDGE_URL, source: 'default' };
-}
-
-/** Keys the client config stores, each with the check that normalises a value before saving. */
-export const CONFIG_KEYS = {
-  url: (value: string) => normalizeBridgeUrl(value),
-} as const satisfies Record<keyof ClientConfig, (value: string) => string>;
-
-export type ConfigKey = keyof typeof CONFIG_KEYS;
-
-/** Checks a key name given by a user. */
-export function parseConfigKey(key: string): ConfigKey {
-  if (Object.hasOwn(CONFIG_KEYS, key)) return key as ConfigKey;
-  throw new ClientConfigError(
-    `Unknown config key "${key}". Known keys: ${Object.keys(CONFIG_KEYS).join(', ')}.`,
-  );
 }

@@ -1,10 +1,10 @@
 import { parseArgs } from 'node:util';
 import type { SpeechCapture } from '../../../application/ports/in/speech-capture.js';
-import { ClientConfigError } from '../../../domain/bridge-url.js';
 import {
   BridgeHttpError,
   BridgeNotReadyError,
   BridgeUnreachableError,
+  ClientConfigError,
   IncompatibleBridgeError,
 } from '../../../domain/errors.js';
 import { EXIT, type CliIo, type Context } from './command.js';

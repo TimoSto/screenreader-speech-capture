@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ClientConfigError, type ClientConfig } from '../../domain/bridge-url.js';
+import type { ClientConfig } from '../../domain/client-config.js';
+import { ClientConfigError } from '../../domain/errors.js';
 import type { ClientConfigStore } from '../ports/out/client-config-store.js';
 import { ClientConfigService } from './client-config-service.js';
 

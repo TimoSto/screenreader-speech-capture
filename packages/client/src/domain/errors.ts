@@ -72,3 +72,8 @@ function describeCause(cause: unknown): string | undefined {
   // For example `bad port` for a port fetch refuses to use, or a timeout's abort reason.
   return inner instanceof Error ? inner.message : cause.message;
 }
+
+/** The config file or a configured value is invalid. */
+export class ClientConfigError extends Error {
+  override name = 'ClientConfigError';
+}

@@ -1,4 +1,5 @@
-import type { ConfigKey, ValueSource } from '../../../domain/bridge-url.js';
+import type { ValueSource } from '../../../domain/bridge-url.js';
+import type { ConfigKey } from '../../../domain/client-config.js';
 
 /** Values passed for this call only (`--url`, `baseUrl`). They win over everything else. */
 export type ExplicitValues = Partial<Record<ConfigKey, string | undefined>>;

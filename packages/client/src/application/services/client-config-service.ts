@@ -1,10 +1,5 @@
-import {
-  CONFIG_KEYS,
-  overridesStored,
-  parseConfigKey,
-  pickBridgeUrl,
-  type ConfigKey,
-} from '../../domain/bridge-url.js';
+import { overridesStored, pickBridgeUrl } from '../../domain/bridge-url.js';
+import { CONFIG_KEYS, parseConfigKey, type ConfigKey } from '../../domain/client-config.js';
 import type {
   ConfigValue,
   ExplicitValues,
