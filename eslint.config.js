@@ -84,7 +84,7 @@ export default tseslint.config(
     },
   },
   {
-    // Helpers both sides may use (for example reachable URLs). They import no other adapter.
+    // Helpers both sides may use (listen, reachable URLs). They import no other adapter.
     files: [hexagon('adapters/shared')],
     ignores: ['**/*.test.ts'],
     rules: {
