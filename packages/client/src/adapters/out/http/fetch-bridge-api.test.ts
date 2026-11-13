@@ -58,7 +58,13 @@ const sessionDto: SessionDto = {
   entries: 0,
 };
 const statusDto = (apiVersion = '1.3'): StatusDto => ({
-  bridge: { version: '1.0.0', apiVersion, state: 'ready' },
+  bridge: {
+    version: '1.0.0',
+    apiVersion,
+    state: 'ready',
+    instanceId: 'run-1',
+    startedAt: '2026-11-12T09:00:00.000Z',
+  },
   tcp: {
     listening: true,
     host: '127.0.0.1',
@@ -76,7 +82,7 @@ const statusDto = (apiVersion = '1.3'): StatusDto => ({
 describe('FetchBridgeApi requests', () => {
   it('lists speech with the query parameters under /api/v1', async () => {
     const { fetch, calls } = fakeFetch(() =>
-      json({ entries: [entryDto], truncated: false, hasMore: true }),
+      json({ entries: [entryDto], truncated: false, hasMore: true, instanceId: 'run-1' }),
     );
     const page = await api(fetch).listSpeech({ since: 3, limit: 10, session: 'current' });
     expect(calls[0]).toMatchObject({

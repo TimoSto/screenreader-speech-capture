@@ -165,13 +165,14 @@ describe('Sessions API', () => {
       .split('\n\n')
       .filter((frame) => frame.startsWith('id:') || frame.startsWith('event:'));
     expect(frames.map((frame) => frame.split('\n').find((l) => l.startsWith('event:')))).toEqual([
+      'event: bridge',
       'event: entry',
       'event: session',
       'event: session',
     ]);
-    expect(frames[0]).toContain('"text":"a1"');
-    expect(frames[1]).not.toContain('id:');
-    const ended = JSON.parse(frames[1]!.split('data: ')[1]!) as SessionDto;
+    expect(frames[1]).toContain('"text":"a1"');
+    expect(frames[2]).not.toContain('id:');
+    const ended = JSON.parse(frames[2]!.split('data: ')[1]!) as SessionDto;
     expect(ended).toMatchObject({ id: 1, entries: 1, endedAt: expect.any(String) as string });
   });
 

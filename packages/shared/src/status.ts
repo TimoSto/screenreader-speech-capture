@@ -20,7 +20,18 @@ export interface ServiceStatusDto {
 
 /** `GET /api/v1/status` */
 export interface StatusDto {
-  bridge: { version: string; apiVersion: string; state: BridgeState };
+  bridge: {
+    version: string;
+    apiVersion: string;
+    state: BridgeState;
+    /**
+     * Random id of this bridge run. A new id means the bridge restarted: `seq` and session ids
+     * start at 1 again. Added in API 1.4.
+     */
+    instanceId: string;
+    /** ISO 8601, UTC. When this bridge run started. Added in API 1.4. */
+    startedAt: string;
+  };
   tcp: {
     listening: boolean;
     host: string;

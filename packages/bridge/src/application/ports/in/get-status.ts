@@ -6,7 +6,14 @@ import type { BufferStats } from '../../../domain/speech-buffer.js';
 export type BridgeState = 'starting' | 'ready' | 'stopping';
 
 export interface Status {
-  bridge: { version: string; apiVersion: string; state: BridgeState };
+  bridge: {
+    version: string;
+    apiVersion: string;
+    state: BridgeState;
+    /** Random id of this bridge run: a new one means `seq` and session ids started over. */
+    instanceId: string;
+    startedAt: Date;
+  };
   tcp: {
     listening: boolean;
     host: string;

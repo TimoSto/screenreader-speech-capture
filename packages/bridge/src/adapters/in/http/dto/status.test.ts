@@ -14,7 +14,13 @@ const service = (state: ServiceStatus['state']): ServiceStatus => ({
 });
 
 const status = (current: Status['session']['current']): Status => ({
-  bridge: { version: '0.1.0', apiVersion: '1.3', state: 'ready' },
+  bridge: {
+    version: '0.1.0',
+    apiVersion: '1.4',
+    state: 'ready',
+    instanceId: 'run-1',
+    startedAt: AT,
+  },
   tcp: {
     listening: true,
     host: '127.0.0.1',
@@ -32,7 +38,13 @@ const status = (current: Status['session']['current']): Status => ({
 describe('toStatusDto', () => {
   it('maps every section, with dates as ISO 8601', () => {
     expect(toStatusDto(status(session()))).toEqual({
-      bridge: { version: '0.1.0', apiVersion: '1.3', state: 'ready' },
+      bridge: {
+        version: '0.1.0',
+        apiVersion: '1.4',
+        state: 'ready',
+        instanceId: 'run-1',
+        startedAt: AT_ISO,
+      },
       tcp: {
         listening: true,
         host: '127.0.0.1',

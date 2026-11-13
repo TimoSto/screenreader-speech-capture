@@ -1,5 +1,6 @@
 // Composition root, with the helpers in composition/: the only place that knows the concrete
 // adapters (docs/architecture.md).
+import { randomUUID } from 'node:crypto';
 import { API_VERSION } from '@screenreader-speech-capture/shared';
 import { HttpServer } from './adapters/in/http/http-server.js';
 import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
@@ -28,6 +29,7 @@ import { loadConfig } from './composition/load-config.js';
 import { createLogging } from './composition/logging.js';
 import { registerReapply } from './composition/reapply.js';
 import { createServices } from './composition/services.js';
+import type { BridgeInstance } from './domain/bridge-instance.js';
 import { configFields, overriddenFields, type ConfigField } from './domain/config/index.js';
 
 export { ConfigError } from './composition/load-config.js';
@@ -47,6 +49,8 @@ export interface BridgeOptions {
    */
   sinks?: LogSink[];
   clock?: Clock;
+  /** Id of this bridge run (`bridge.instanceId`). Default: a random UUID. Tests pin it. */
+  instanceId?: string;
   /** Interval of the SSE `: ping` comment. Default 15 s. */
   ssePingMs?: number;
   /** Where Playwright versions are installed. Default: `defaultPlaywrightDir()`. */
@@ -105,6 +109,10 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   }
 
   const clock = options.clock ?? new SystemClock();
+  const instance: BridgeInstance = {
+    id: options.instanceId ?? randomUUID(),
+    startedAt: clock.now(),
+  };
   const repository = new MemorySpeechRepository(config.buffer.maxEntries);
   const sessionRepository = new MemorySessionRepository();
   const events = new InProcessEventBus((error) =>
@@ -137,6 +145,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     config: () => configService.get(),
     version,
     apiVersion: API_VERSION,
+    instance,
   });
   const http = new HttpServer({
     speech,
@@ -145,6 +154,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     config: configService,
     sessions,
     logger: log.for('http-api'),
+    instanceId: instance.id,
     ...(options.ssePingMs === undefined ? {} : { pingMs: options.ssePingMs }),
   });
 

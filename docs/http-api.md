@@ -43,13 +43,18 @@ it when a later session starts (a stream learns about that from the `session` ev
 while no session is current, or an `id` the bridge never gave out, answers `404 NOT_FOUND`. An
 ended session whose entries have all left the buffer is not an error: it just has no entries.
 
+`seq` and session ids start again at 1 when the bridge restarts. Each bridge run has a random
+`instanceId` (in the status, in every speech list and as the first event of every stream). If it
+changed, a `seq` or session id from before belongs to the old run: its entries are gone, and the
+same number may now mean something else. The [client](client.md) checks this for you.
+
 ## Endpoints
 
 | Method & path | Description |
 |---|---|
-| `GET /api/v1/speech?since=<seq>&limit=<n>&session=<id>` | List speech entries and markers with `seq > since` (oldest first). `since` defaults to `0`, `limit` to `1000` (max `10000`). Response: `{ "entries": [...], "truncated": false, "hasMore": false }`. `truncated` is `true` when entries after `since` were dropped because the buffer was full. `hasMore` is `true` when more entries follow: ask again with the last entry's `seq` as `since`. `session` (an `id` or `current`) returns only that session's entries. |
+| `GET /api/v1/speech?since=<seq>&limit=<n>&session=<id>` | List speech entries and markers with `seq > since` (oldest first). `since` defaults to `0`, `limit` to `1000` (max `10000`). Response: `{ "entries": [...], "truncated": false, "hasMore": false, "instanceId": "…" }`. `truncated` is `true` when entries after `since` were dropped because the buffer was full. `hasMore` is `true` when more entries follow: ask again with the last entry's `seq` as `since`. `session` (an `id` or `current`) returns only that session's entries. `instanceId` names the bridge run (see [above](#data-model)). |
 | `DELETE /api/v1/speech` | Wipe the buffer and all ended sessions (`204`, no body). The current session stays current. Tests and agents start a session instead (see [Sessions](speech-capture.md#sessions)). |
-| `GET /api/v1/speech/stream?session=<id>` | Server-Sent Events: one `entry` event per new entry (event `id` = `seq`), a `clear` event after a clear, and a `session` event (data: the `Session`) when a session starts or ends. `session` (an `id` or `current`) limits `entry` events to that session; `session` events are always sent. A reconnect with `Last-Event-ID` first gets the entries it missed from the buffer, preceded by a `truncated` event if some of them were already dropped because the buffer was full. A `: ping` comment every 15 s keeps the connection open. A client that stops reading is disconnected once about 1 MiB is waiting for it; it reconnects with `Last-Event-ID`. |
+| `GET /api/v1/speech/stream?session=<id>` | Server-Sent Events: first a `bridge` event (data: `{ "instanceId": "…" }`), then one `entry` event per new entry (event `id` = `seq`), a `clear` event after a clear, and a `session` event (data: the `Session`) when a session starts or ends. `session` (an `id` or `current`) limits `entry` events to that session; `session` events are always sent. A reconnect with `Last-Event-ID` first gets the entries it missed from the buffer (after the `bridge` event: if its `instanceId` changed, the `Last-Event-ID` came from an earlier bridge run, so reconnect without it or with `0`), preceded by a `truncated` event if some of them were already dropped because the buffer was full. A `: ping` comment every 15 s keeps the connection open. A client that stops reading is disconnected once about 1 MiB is waiting for it; it reconnects with `Last-Event-ID`. |
 | `GET /api/v1/speech/wait?contains=<text>&since=<seq>&timeoutMs=<n>` | Long-poll until a speech entry with `seq > since` matches (also if it arrived before the request). `regex=<pattern>` can be used instead of `contains`, `normalize=1` ignores case and extra whitespace, `session=<id>|current` only matches that session's entries. Markers never match. `since` defaults to `0`, `timeoutMs` to `5000` (max `300000`). Always `200`: `{ "matched": true, "entry": {...} }`, or on timeout `{ "matched": false, "entries": [...] }` with every entry seen after `since`. A timeout is an expected answer, not an error (a `408` would make browsers and proxies repeat the request). |
 | `POST /api/v1/markers` `{ "label": "step 3" }` | Insert a marker into the timeline (shown in the UI, returned in lists). Requires `content-type: application/json` (a web page can't send that cross-origin without a CORS preflight). Returns `201` with the new entry. |
 | `POST /api/v1/sessions` `{ "name": "checkout test", "run": "nightly-42" }` | Start a [session](speech-capture.md#sessions): it becomes current and the previous one ends. `name` is required, `run` optional (both trimmed, not empty, at most 1000 characters). Requires `content-type: application/json`. Returns `201` with the new `Session`. |
@@ -58,13 +63,19 @@ ended session whose entries have all left the buffer is not an error: it just ha
 | `POST /api/v1/set-focus` `{ "x": 640, "y": 12, "button": "left" }` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
 | `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Native key presses: one chord, or a sequence with `delayMs` between them. |
 | `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. `PUT` takes any subset as `application/json`, applies it to the running bridge, saves it to the config file and answers with the new configuration. Changing ports restarts the affected listeners; after an `http.*` change the answer still comes from the old address. See [Changing settings](configuration.md#changing-settings). |
-| `GET /api/v1/status` | Bridge and API version, state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, native input available, current session. |
+| `GET /api/v1/status` | Bridge and API version, the bridge run (`instanceId`, `startedAt`), state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, native input available, current session. |
 
 `GET /api/v1/status` example:
 
 ```jsonc
 {
-  "bridge": { "version": "0.3.0", "apiVersion": "1.3", "state": "ready" },
+  "bridge": {
+    "version": "0.3.0",
+    "apiVersion": "1.4",
+    "state": "ready",
+    "instanceId": "3f0c9a52-6b1e-4d8f-9c37-0e2a5b7d1f44", // random, new on every start
+    "startedAt": "2026-11-07T14:00:58.000Z"
+  },
   "tcp": {
     "listening": true,
     "host": "127.0.0.1",

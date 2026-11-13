@@ -26,7 +26,13 @@ export function toStatusDto({
   session,
 }: Status): StatusDto {
   return {
-    bridge: { version: bridge.version, apiVersion: bridge.apiVersion, state: bridge.state },
+    bridge: {
+      version: bridge.version,
+      apiVersion: bridge.apiVersion,
+      state: bridge.state,
+      instanceId: bridge.instanceId,
+      startedAt: bridge.startedAt.toISOString(),
+    },
     tcp: {
       listening: tcp.listening,
       host: tcp.host,
