@@ -1,5 +1,6 @@
+import { BridgeLog, type LogSink } from '../adapters/out/log/bridge-log.js';
+import { consoleSink } from '../adapters/out/log/console-sink.js';
 import { fileSink } from '../adapters/out/log/file-sink.js';
-import { BridgeLog, consoleSink, type LogSink } from '../adapters/out/log/log.js';
 import { defaultLogFile } from '../adapters/out/platform/paths.js';
 import type { Config } from '../domain/config/index.js';
 
