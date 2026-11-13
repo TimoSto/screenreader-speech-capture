@@ -1,5 +1,6 @@
 import type { Config } from '../../domain/config/index.js';
 import type { BridgeState, GetStatus, Status } from '../ports/in/get-status.js';
+import type { BridgeStateControl } from '../ports/in/lifecycle.js';
 import type { CaptureStatusSource } from '../ports/out/capture-status.js';
 import type { ProcessSupervisor } from '../ports/out/process-supervisor.js';
 import type { SessionRepository } from '../ports/out/session-repository.js';
@@ -23,8 +24,11 @@ export interface StatusServiceDeps {
   apiVersion: string;
 }
 
-/** `GET /api/v1/status`. The composition root moves the state from `starting` to `ready`. */
-export class StatusService implements GetStatus {
+/**
+ * `GET /api/v1/status`. The composition root moves the state from `starting` to `ready` through
+ * `BridgeStateControl`.
+ */
+export class StatusService implements GetStatus, BridgeStateControl {
   private state: BridgeState = 'starting';
 
   constructor(private readonly deps: StatusServiceDeps) {}

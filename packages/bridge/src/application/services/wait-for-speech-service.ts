@@ -1,5 +1,6 @@
 import { AppError } from '../../domain/errors.js';
 import { createSpeechMatcher } from '../../domain/text-match.js';
+import type { Shutdown } from '../ports/in/lifecycle.js';
 import {
   WAIT_TIMEOUT_MS,
   type WaitForSpeech,
@@ -29,7 +30,7 @@ const unavailable = () => new AppError('SERVICE_UNAVAILABLE', 'The bridge is shu
  * Long-poll for a speech entry (`GET /api/v1/speech/wait`): looks in the buffer first, then
  * waits for new entries on the event bus.
  */
-export class WaitForSpeechService implements WaitForSpeech {
+export class WaitForSpeechService implements WaitForSpeech, Shutdown {
   private readonly pending = new Set<(error: Error) => void>();
   private closed = false;
 
@@ -89,8 +90,8 @@ export class WaitForSpeechService implements WaitForSpeech {
   }
 
   /**
-   * Rejects all pending waits, and every later one, with `SERVICE_UNAVAILABLE`. Lifecycle, so
-   * not part of the `WaitForSpeech` port: only the composition root calls it.
+   * Rejects all pending waits, and every later one, with `SERVICE_UNAVAILABLE`. The `Shutdown`
+   * lifecycle port, not part of `WaitForSpeech`: only the composition root calls it.
    */
   shutdown(): void {
     this.closed = true;
