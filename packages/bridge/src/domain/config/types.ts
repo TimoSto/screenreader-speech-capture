@@ -35,5 +35,10 @@ export interface Config {
 
 export type ConfigPatch = { readonly [K in keyof Config]?: Partial<Config[K]> };
 
-/** One setting as `section.key`, for example `tcp.port`. */
-export type ConfigField = `${string}.${string}`;
+/**
+ * One setting as `section.key`, for example `tcp.port`. Derived from `Config`, so a typo like
+ * `tcp.prot` doesn't compile.
+ */
+export type ConfigField = {
+  [S in keyof Config]: `${S}.${keyof Config[S] & string}`;
+}[keyof Config];

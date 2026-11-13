@@ -12,7 +12,8 @@ export function configFields(config: ConfigPatch): Map<ConfigField, unknown> {
   const fields = new Map<ConfigField, unknown>();
   for (const [section, values] of Object.entries(config)) {
     for (const [key, value] of Object.entries(values ?? {})) {
-      if (value !== undefined) fields.set(`${section}.${key}`, value);
+      // `ConfigPatch` only has known sections and keys, so this is a real setting.
+      if (value !== undefined) fields.set(`${section}.${key}` as ConfigField, value);
     }
   }
   return fields;
