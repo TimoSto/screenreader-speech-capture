@@ -14,7 +14,15 @@ export interface ServiceStatus {
 
 /** Bridge health, as `GET /api/v1/status` reports it (docs/http-api.md). */
 export interface BridgeStatus {
-  bridge: { version: string; apiVersion: string; state: BridgeState };
+  bridge: {
+    version: string;
+    apiVersion: string;
+    state: BridgeState;
+    /** Random id of this bridge run: a new one means the bridge restarted. */
+    instanceId: string;
+    /** ISO 8601, UTC. When this bridge run started. */
+    startedAt: string;
+  };
   tcp: {
     listening: boolean;
     host: string;

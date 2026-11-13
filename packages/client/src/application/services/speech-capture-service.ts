@@ -2,6 +2,7 @@ import { checkApiVersion } from '../../domain/api-version.js';
 import {
   BridgeHttpError,
   BridgeNotReadyError,
+  BridgeRestartedError,
   BridgeUnreachableError,
   SpeechTimeoutError,
 } from '../../domain/errors.js';
@@ -40,8 +41,12 @@ const DEFAULTS = { timeout: 5000, quietFor: 500, silenceTimeout: 10_000, readyTi
 
 export class SpeechCaptureService implements SpeechCapture {
   #cursor = 0;
+  /**
+   * The bridge run (`instanceId`) the cursor's `seq` belongs to. `undefined`: not known yet, the
+   * next speech read adopts the run that answers.
+   */
+  #cursorInstance: string | undefined;
   #compatible: Promise<void> | undefined;
-  /** `bridge.apiVersion` of the last status, for features of newer minor versions. */
 
   constructor(private readonly deps: SpeechCaptureServiceDeps) {}
 
@@ -73,6 +78,7 @@ export class SpeechCaptureService implements SpeechCapture {
     await this.deps.api.clear();
     // seq survives a clear, so everything in the buffer from now on is newer than the clear.
     this.#cursor = 0;
+    this.#cursorInstance = undefined;
   }
 
   async startSession(name: string, options: StartSessionOptions = {}): Promise<Session> {
@@ -81,12 +87,14 @@ export class SpeechCaptureService implements SpeechCapture {
     const session = await this.deps.api.startSession({ name, run: options.run });
     // Speech may arrive between the two requests: the cursor goes to the last entry before the
     // session's first one, so nothing of the session is skipped and nothing older is read.
-    let start = before;
-    for (const entry of await this.fetchSince(before)) {
+    let start = before.seq;
+    for (const entry of await this.fetchSince(before.seq, undefined, before.instanceId)) {
       if (entry.sessionId === session.id) break;
       start = entry.seq;
     }
+    // A new session starts a new cursor, also on a bridge that restarted since the last read.
     this.#cursor = start;
+    this.#cursorInstance = before.instanceId;
     return session;
   }
 
@@ -175,12 +183,13 @@ export class SpeechCaptureService implements SpeechCapture {
     const timeout = options.timeout ?? DEFAULTS.silenceTimeout;
     await this.compatible();
     const start = clock.now();
-    let from = await this.endSeq();
+    const end = await this.endSeq();
+    let from = end.seq;
     // Speech may have arrived just before the call, so silence is counted from the call.
     let lastSpeech = start;
     const seen: SpeechEntry[] = [];
     for (;;) {
-      const entries = await this.fetchSince(from);
+      const entries = await this.fetchSince(from, undefined, end.instanceId);
       if (entries.length > 0) from = entries.at(-1)!.seq;
       const speech = entries.filter(isSpeech);
       const now = clock.now();
@@ -205,8 +214,12 @@ export class SpeechCaptureService implements SpeechCapture {
     const start = await this.endSeq();
     const result = await fn();
     await this.waitForSilence(options);
-    const entries = await this.fetchSince(start);
-    if (entries.length > 0) this.#cursor = entries.at(-1)!.seq;
+    const entries = await this.fetchSince(start.seq, undefined, start.instanceId);
+    const last = entries.at(-1)?.seq;
+    if (last !== undefined) this.#cursor = last;
+    // A cursor of an earlier bridge run means nothing on this one: start from `fn`'s start.
+    else if (this.#cursorInstance !== start.instanceId) this.#cursor = start.seq;
+    this.#cursorInstance = start.instanceId;
     return { result, entries: entries.filter(isSpeech) };
   }
 
@@ -235,13 +248,36 @@ export class SpeechCaptureService implements SpeechCapture {
     return this.#compatible;
   }
 
-  /** The `seq` of the newest entry in the buffer, 0 if it is empty. */
-  private async endSeq(): Promise<number> {
-    return (await this.deps.api.status()).buffer.lastSeq ?? 0;
+  /** The `seq` of the newest entry in the buffer (0 if it is empty), and its bridge run. */
+  private async endSeq(): Promise<{ seq: number; instanceId: string }> {
+    const { buffer, bridge } = await this.deps.api.status();
+    return { seq: buffer.lastSeq ?? 0, instanceId: bridge.instanceId };
   }
 
-  /** Every entry with `seq > since` (of `session`, if given), across pages. */
-  private async fetchSince(since: number, session?: SessionRef): Promise<SpeechEntry[]> {
+  /**
+   * Checks that a page came from the bridge run `since` belongs to: `expected`, or else the
+   * cursor's run (adopted if not known yet). After a restart, moves the cursor to the new run's
+   * start, so the next call works, and throws {@link BridgeRestartedError}.
+   */
+  private checkInstance(instanceId: string, expected: string | undefined): void {
+    const known = expected ?? (this.#cursorInstance ??= instanceId);
+    if (instanceId === known) return;
+    this.#cursor = 0;
+    this.#cursorInstance = instanceId;
+    // The new bridge may speak another API version.
+    this.#compatible = undefined;
+    throw new BridgeRestartedError(known, instanceId);
+  }
+
+  /**
+   * Every entry with `seq > since` (of `session`, if given), across pages. `expected` is the
+   * bridge run `since` came from (default: the cursor's).
+   */
+  private async fetchSince(
+    since: number,
+    session?: SessionRef,
+    expected?: string,
+  ): Promise<SpeechEntry[]> {
     const all: SpeechEntry[] = [];
     let from = since;
     for (;;) {
@@ -250,6 +286,7 @@ export class SpeechCaptureService implements SpeechCapture {
         limit: MAX_PAGE,
         ...(session === undefined ? {} : { session }),
       });
+      this.checkInstance(page.instanceId, expected);
       all.push(...page.entries);
       const last = page.entries.at(-1);
       if (!page.hasMore || last === undefined) return all;

@@ -156,7 +156,7 @@ describe('speech commands', () => {
     const fake = fakeSpeech();
     const plain = await cli(['status', '--url', 'http://vm:1'], fake);
     expect(plain.code).toBe(EXIT.ok);
-    expect(plain.stdout).toContain('bridge  0.0.0 (API 1.3), ready');
+    expect(plain.stdout).toContain('bridge  0.0.0 (API 1.4), ready');
     expect(plain.stdout).toContain('buffer  0 of 10000 entries (empty)');
     expect(fake.urls).toEqual(['http://vm:1']);
     const json = JSON.parse((await cli(['status', '--json'], fake)).stdout) as {

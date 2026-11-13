@@ -33,6 +33,7 @@ export type { ClientConfig, ConfigKey } from './domain/client-config.js';
 export {
   BridgeHttpError,
   BridgeNotReadyError,
+  BridgeRestartedError,
   BridgeUnreachableError,
   ClientConfigError,
   IncompatibleBridgeError,
