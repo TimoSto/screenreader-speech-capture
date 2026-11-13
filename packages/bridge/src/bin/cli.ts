@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import packageJson from '../../../../package.json' with { type: 'json' };
-import { ConfigError, startBridge } from '../../../main.js';
-import { flushConsole, runUntilStopped } from './lifecycle.js';
-import { helpText, parseCli, UsageError } from './options.js';
+import packageJson from '../../package.json' with { type: 'json' };
+import { ConfigError, startBridge } from '../main.js';
+import { flushConsole, runUntilStopped } from '../adapters/in/cli/lifecycle.js';
+import { helpText, parseCli, UsageError } from '../adapters/in/cli/options.js';
 
 const fail = (message: string): never => {
   process.stderr.write(`screenreader-speech-capture: ${message}\n`);

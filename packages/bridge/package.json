@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "build": "tsdown",
-    "dev": "tsx watch src/adapters/in/cli/cli.ts",
+    "dev": "tsx watch src/bin/cli.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

@@ -22,7 +22,7 @@ pnpm monorepo, Node >= 22.12 (CI uses `.nvmrc`).
 
 ```bash
 pnpm install
-pnpm dev                 # bridge in watch mode (tsx watch src/adapters/in/cli/cli.ts)
+pnpm dev                 # bridge in watch mode (tsx watch src/bin/cli.ts)
 pnpm test                # all Vitest projects (packages/*/vitest.config.ts, tools/*/vitest.config.ts)
 pnpm test packages/bridge/src/domain/config.test.ts   # single test file (no `--`: that runs everything)
 pnpm test -t "name of test"                           # filter by test name

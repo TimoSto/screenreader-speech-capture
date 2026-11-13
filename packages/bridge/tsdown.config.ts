@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsdown';
 
 export default defineConfig({
-  entry: { cli: 'src/adapters/in/cli/cli.ts' },
+  entry: { cli: 'src/bin/cli.ts' },
   format: 'esm',
   platform: 'node',
   target: 'node22',

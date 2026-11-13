@@ -21,6 +21,10 @@ const services = {
   group: ['**/application/services/**'],
   message: 'Adapters talk to the application through ports, not the concrete services.',
 };
+const compositionRoot = {
+  group: ['**/main.js', '**/composition/**'],
+  message: 'Adapters must not import the composition root. Entry points live in src/bin/.',
+};
 // Relative imports between adapters look like `../../out/...`, so match them with a regex.
 const outAdapters = {
   regex: '(^|/)(\\.\\./out|adapters/out)/',
@@ -73,14 +77,14 @@ export default tseslint.config(
     files: [hexagon('adapters/in')],
     ignores: ['**/*.test.ts'],
     rules: {
-      'no-restricted-imports': ['error', { patterns: [services, outAdapters] }],
+      'no-restricted-imports': ['error', { patterns: [services, compositionRoot, outAdapters] }],
     },
   },
   {
     files: [hexagon('adapters/out')],
     ignores: ['**/*.test.ts'],
     rules: {
-      'no-restricted-imports': ['error', { patterns: [services, inAdapters] }],
+      'no-restricted-imports': ['error', { patterns: [services, compositionRoot, inAdapters] }],
     },
   },
   {
@@ -88,7 +92,10 @@ export default tseslint.config(
     files: [hexagon('adapters/shared')],
     ignores: ['**/*.test.ts'],
     rules: {
-      'no-restricted-imports': ['error', { patterns: [services, inAdapters, outAdapters] }],
+      'no-restricted-imports': [
+        'error',
+        { patterns: [services, compositionRoot, inAdapters, outAdapters] },
+      ],
     },
   },
   {
