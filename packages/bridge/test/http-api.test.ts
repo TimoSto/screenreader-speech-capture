@@ -9,7 +9,7 @@ import { API_VERSION } from '@screenreader-speech-capture/shared';
 import { once } from 'node:events';
 import net from 'node:net';
 import { describe, expect, it } from 'vitest';
-import { bundledMcp } from '../src/adapters/out/mcp/mcp-server.js';
+import { bundledMcp } from '../src/adapters/out/mcp/playwright-mcp.js';
 import type { Bridge } from '../src/main.js';
 import { eventually, send, start, testConfig } from './helpers.js';
 
