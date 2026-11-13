@@ -4,19 +4,20 @@ import {
   DEFAULT_CONFIG,
   mergeConfig,
   type Config,
+  type ConfigField,
   type ConfigPatch,
 } from '../../domain/config/index.js';
 import { AppError } from '../../domain/errors.js';
 import { ConfigService } from './config-service.js';
 
-function setup(options: { file?: ConfigPatch; overrides?: ConfigPatch; pinned?: string[] } = {}) {
+function setup(
+  options: { file?: ConfigPatch; overrides?: ConfigPatch; pinned?: ConfigField[] } = {},
+) {
   const file = options.file ?? {};
   const store = new MemoryConfigStore(file);
   const logger = new MemoryLogger();
   const active = mergeConfig(mergeConfig(DEFAULT_CONFIG, file), options.overrides ?? {});
-  const pinned = new Map(
-    (options.pinned ?? []).map((field) => [field as `${string}.${string}`, `--${field}`]),
-  );
+  const pinned = new Map((options.pinned ?? []).map((field) => [field, `--${field}`]));
   const config = new ConfigService({ store, logger, active, file, pinned });
   return { config, store, logger };
 }
