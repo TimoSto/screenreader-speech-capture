@@ -11,10 +11,8 @@ import { MemorySessionRepository } from './adapters/out/memory/memory-session-re
 import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';
 import { defaultConfigFile } from './adapters/out/platform/paths.js';
 import type { Prepare } from './adapters/out/process/types.js';
-import type { AddMarker } from './application/ports/in/add-marker.js';
-import type { ClearSpeech } from './application/ports/in/clear-speech.js';
 import type { ManageSessions } from './application/ports/in/manage-sessions.js';
-import type { QuerySpeech } from './application/ports/in/query-speech.js';
+import type { SpeechUseCases } from './application/ports/in/speech-use-cases.js';
 import type { CaptureStatusSource } from './application/ports/out/capture-status.js';
 import type { Clock } from './application/ports/out/clock.js';
 import type { ConfigStore } from './application/ports/out/config-store.js';
@@ -62,7 +60,7 @@ export interface BridgeOptions {
 export interface Bridge {
   readonly tcpPort: number;
   readonly httpPort: number;
-  readonly speech: QuerySpeech & ClearSpeech & AddMarker;
+  readonly speech: SpeechUseCases;
   readonly sessions: ManageSessions;
   readonly capture: CaptureStatusSource;
   /** The `[bridge]` log, for lifecycle messages from outside (signals, crashes). */
