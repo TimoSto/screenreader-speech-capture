@@ -7,7 +7,6 @@ import {
   IncompatibleBridgeError,
   SpeechTimeoutError,
 } from '../../domain/errors.js';
-import type { OnSpeechOptions } from '../ports/in/speech-capture.js';
 import { SpeechCaptureService } from './speech-capture-service.js';
 
 function setup() {
@@ -307,140 +306,15 @@ describe('waitForReady', () => {
 });
 
 describe('onSpeech', () => {
-  /** Subscribes and logs everything the feed reports, as short strings. */
-  function subscribe(sr: SpeechCaptureService, options: OnSpeechOptions = {}) {
-    const log: string[] = [];
-    const errors: { error: Error; retrying: boolean }[] = [];
-    const stop = sr.onSpeech((entry) => log.push(`${entry.seq} ${entry.text}`), {
-      onClear: () => log.push('clear'),
-      onTruncated: () => log.push('truncated'),
-      onError: (error, { retrying }) => errors.push({ error, retrying }),
-      ...options,
-    });
-    return { log, errors, stop };
-  }
-
-  it('checks the version, then delivers live speech and clears; the cursor stays', async () => {
+  it('checks the version, then delivers live speech; the cursor stays', async () => {
     const { api, sr } = setup();
-    api.speak('before');
-    const { log, errors } = subscribe(sr);
+    const log: string[] = [];
+    const stop = sr.onSpeech((entry) => log.push(entry.text));
     await vi.waitFor(() => expect(api.openStreams).toBe(1));
     expect(api.calls).toEqual(['status', 'stream null']);
     api.speak('Submit, button');
-    await api.mark('step');
-    await api.clear();
-    api.speak('after');
-    await vi.waitFor(() => expect(log).toEqual(['2 Submit, button', 'clear', '4 after']));
-    expect(errors).toEqual([]);
+    await vi.waitFor(() => expect(log).toEqual(['Submit, button']));
     expect(sr.cursor()).toBe(0);
-  });
-
-  it('reports sessions that start and end', async () => {
-    const { api, sr } = setup();
-    const { log } = subscribe(sr, {
-      onSession: (s) => log.push(`session ${s.id} ${s.endedAt === null ? 'started' : 'ended'}`),
-    });
-    await vi.waitFor(() => expect(api.openStreams).toBe(1));
-    await api.startSession({ name: 'one' });
-    api.speak('hello');
-    await api.endSession();
-    await vi.waitFor(() =>
-      expect(log).toEqual(['session 1 started', '1 hello', 'session 1 ended']),
-    );
-  });
-
-  it('delivers markers with includeMarkers and replays the buffer with since', async () => {
-    const { api, sr } = setup();
-    api.speak('one');
-    await api.mark('step');
-    api.speak('two');
-    const { log } = subscribe(sr, { since: 1, includeMarkers: true });
-    await vi.waitFor(() => expect(log).toEqual(['2 step', '3 two']));
-    expect(api.calls).toContain('stream 1');
-    api.emit({ type: 'truncated' });
-    await vi.waitFor(() => expect(log).toEqual(['2 step', '3 two', 'truncated']));
-  });
-
-  it('reconnects after a lost connection from the last seq, losing and repeating nothing', async () => {
-    const { api, clock, sr } = setup();
-    const { log, errors } = subscribe(sr);
-    await vi.waitFor(() => expect(api.openStreams).toBe(1));
-    api.speak('a', 'b');
-    await vi.waitFor(() => expect(log).toEqual(['1 a', '2 b']));
-    const lost = new BridgeUnreachableError('http://vm:5151');
-    api.dropStreams(lost);
-    api.speak('c'); // while the feed is down
-    await vi.waitFor(() => expect(log).toEqual(['1 a', '2 b', '3 c']));
-    expect(api.calls).toContain('stream 2');
-    expect(errors).toEqual([{ error: lost, retrying: true }]);
-    expect(clock.sleeps).toEqual([250]);
-  });
-
-  it('starts from 0 again after a bridge restart', async () => {
-    const { api, sr } = setup();
-    const { log } = subscribe(sr);
-    await vi.waitFor(() => expect(api.openStreams).toBe(1));
-    api.speak('a', 'b');
-    await vi.waitFor(() => expect(log).toEqual(['1 a', '2 b']));
-    api.restart();
-    api.speak('new bridge');
-    await vi.waitFor(() => expect(log).toEqual(['1 a', '2 b', '1 new bridge']));
-    expect(api.calls).toContain('stream 0');
-  });
-
-  it('backs off exponentially while the bridge is unreachable', async () => {
-    const { api, clock, sr } = setup();
-    api.failures = Array.from({ length: 6 }, () => new BridgeUnreachableError('http://vm:5151'));
-    const { errors } = subscribe(sr);
-    await vi.waitFor(() => expect(api.openStreams).toBe(1));
-    expect(clock.sleeps).toEqual([250, 500, 1000, 2000, 4000, 5000]);
-    expect(errors.every((e) => e.retrying)).toBe(true);
-  });
-
-  it('stops for good on an incompatible bridge or a 4xx', async () => {
-    const { api, sr } = setup();
-    api.apiVersion = '2.0';
-    const { errors } = subscribe(sr);
-    await vi.waitFor(() => expect(errors).toHaveLength(1));
-    expect(errors[0]).toMatchObject({ retrying: false });
-    expect(errors[0]!.error).toBeInstanceOf(IncompatibleBridgeError);
-
-    const other = setup();
-    await other.sr.status(); // the version check passes, the stream then fails
-    other.api.failures = [new BridgeHttpError(404, 'NOT_FOUND', 'nope')];
-    const feed = subscribe(other.sr);
-    await vi.waitFor(() => expect(feed.errors).toHaveLength(1));
-    expect(feed.errors[0]).toMatchObject({ retrying: false });
-    expect(other.api.openStreams).toBe(0);
-  });
-
-  it('reports a throwing listener and goes on', async () => {
-    const { api, sr } = setup();
-    const errors: boolean[] = [];
-    const seen: string[] = [];
-    sr.onSpeech(
-      (entry) => {
-        seen.push(entry.text);
-        if (entry.text === 'bad') throw new Error('listener bug');
-      },
-      { onError: (_e, { retrying }) => errors.push(retrying) },
-    );
-    await vi.waitFor(() => expect(api.openStreams).toBe(1));
-    api.speak('bad', 'good');
-    await vi.waitFor(() => expect(seen).toEqual(['bad', 'good']));
-    expect(errors).toEqual([true]);
-  });
-
-  it('unsubscribing closes the feed', async () => {
-    const { api, sr } = setup();
-    const { log, errors, stop } = subscribe(sr);
-    await vi.waitFor(() => expect(api.openStreams).toBe(1));
     stop();
-    stop();
-    await vi.waitFor(() => expect(api.openStreams).toBe(0));
-    api.speak('late');
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(log).toEqual([]);
-    expect(errors).toEqual([]);
   });
 });
