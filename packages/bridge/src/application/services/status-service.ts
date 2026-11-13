@@ -4,7 +4,7 @@ import type { CaptureStatusSource } from '../ports/out/capture-status.js';
 import type { ProcessSupervisor } from '../ports/out/process-supervisor.js';
 import type { SessionRepository } from '../ports/out/session-repository.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
-import { listedSessions } from './session-service.js';
+import { pruneAndListSessions } from '../shared/prune-and-list-sessions.js';
 
 export interface StatusServiceDeps {
   capture: CaptureStatusSource;
@@ -38,7 +38,7 @@ export class StatusService implements GetStatus {
       this.deps;
     const { listener, connections } = capture.captureStatus();
     const { tcp, input } = config();
-    const listed = listedSessions(sessions, repository);
+    const listed = pruneAndListSessions(sessions, repository);
     const currentId = sessions.current()?.id;
     return {
       bridge: { version, apiVersion, state: this.state },

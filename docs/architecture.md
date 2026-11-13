@@ -86,6 +86,8 @@ packages/bridge/src/
     ports/out/       driven ports: SpeechRepository, SpeechEventBus, CaptureStatusSource,
                      ConfigStore, ProcessSupervisor, InputInjector, Logger, Clock
     services/        use-case implementations (only depend on domain + ports)
+    shared/          helpers several services use: option checks, session filter,
+                     session listing (prunes ended sessions)
   adapters/
     in/tcp/          socket listener + wire-format parsers → RecordSpeech;
                      tracks its connections (CaptureStatusSource)

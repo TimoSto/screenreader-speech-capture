@@ -56,7 +56,8 @@ details in `docs/architecture.md`). The bridge:
   nothing from outer layers.
 - `application/ports/in/` (use cases), `application/ports/out/` (driven ports: repository, event
   bus, clock, config store, logger, capture status), `application/services/` (use-case
-  implementations depending only on domain + ports).
+  implementations depending only on domain + ports), `application/shared/` (helpers several
+  services use; adapters may not import it).
 - `adapters/in/` (tcp, http, cli, net) and `adapters/out/` (memory, fs-config, log, clock).
 - The composition root: `main.ts` (a thin `startBridge`) plus `composition/` (config loading,
   logging, child services, live re-apply, startup/shutdown). It is the **only** place that knows

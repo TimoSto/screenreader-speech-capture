@@ -1,9 +1,7 @@
 import {
   EMPTY_SESSION_STATS,
-  isListed,
   sessionLabel,
   summarize,
-  type Session,
   type SessionSummary,
 } from '../../domain/session.js';
 import type {
@@ -15,27 +13,13 @@ import type { Clock } from '../ports/out/clock.js';
 import type { SessionRepository } from '../ports/out/session-repository.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
+import { pruneAndListSessions } from '../shared/prune-and-list-sessions.js';
 
 export interface SessionServiceDeps {
   sessions: SessionRepository;
   repository: Pick<SpeechRepository, 'sessionStats' | 'forgetSession'>;
   events: SpeechEventBus;
   clock: Clock;
-}
-
-/**
- * The sessions that are listed, newest first, with what the buffer still holds of them. Ended
- * sessions whose entries were all dropped are forgotten here, so neither repository grows
- * without bound and the session repository doesn't have to follow the buffer.
- */
-export function listedSessions(
-  sessions: SessionRepository,
-  repository: Pick<SpeechRepository, 'sessionStats' | 'forgetSession'>,
-): SessionSummary[] {
-  const stats = (session: Session) => repository.sessionStats(session.id);
-  const removed = sessions.removeEnded((session) => isListed(session, stats(session)));
-  for (const session of removed) repository.forgetSession(session.id);
-  return sessions.list().map((session) => summarize(session, stats(session)));
 }
 
 /**
@@ -62,7 +46,7 @@ export class SessionService implements ManageSessions {
 
   list(): SessionList {
     return {
-      sessions: listedSessions(this.deps.sessions, this.deps.repository),
+      sessions: pruneAndListSessions(this.deps.sessions, this.deps.repository),
       currentId: this.deps.sessions.current()?.id ?? null,
     };
   }
