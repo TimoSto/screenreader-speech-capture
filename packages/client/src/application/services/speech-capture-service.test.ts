@@ -240,17 +240,6 @@ describe('sessions', () => {
     ).rejects.toThrow(SpeechTimeoutError);
     await expect(sr.getText({ since: 0, session: 7 })).rejects.toThrow(BridgeHttpError);
   });
-
-  it('needs a bridge with API 1.3', async () => {
-    const { api, sr } = setup();
-    api.apiVersion = '1.2';
-    await expect(sr.startSession('x')).rejects.toThrow(
-      'Sessions need a bridge with API 1.3 or newer, this one speaks API 1.2',
-    );
-    await expect(sr.sessions()).rejects.toThrow(IncompatibleBridgeError);
-    await expect(sr.endSession()).rejects.toThrow(IncompatibleBridgeError);
-    expect(api.calls.filter((c) => c !== 'status')).toEqual([]);
-  });
 });
 
 describe('version check', () => {

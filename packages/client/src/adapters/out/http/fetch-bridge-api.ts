@@ -2,6 +2,7 @@ import {
   API_PREFIX,
   type ErrorBodyDto,
   type MarkerRequestDto,
+  type ServiceStatusDto,
   type SessionDto,
   type SessionListDto,
   type SpeechEntryDto,
@@ -10,15 +11,12 @@ import {
   type StatusDto,
 } from '@screenreader-speech-capture/shared';
 import type { BridgeApi, SpeechPage } from '../../../application/ports/out/bridge-api.js';
+import { MIN_BRIDGE_API, requireApiVersion } from '../../../domain/api-version.js';
 import { BridgeHttpError, BridgeUnreachableError } from '../../../domain/errors.js';
-import type {
-  BridgeStatus,
-  Session,
-  SessionList,
-  SessionRef,
-  SpeechEntry,
-  SpeechFeedEvent,
-} from '../../../domain/speech-entry.js';
+import type { BridgeStatus, ServiceStatus } from '../../../domain/bridge-status.js';
+import type { SpeechFeedEvent } from '../../../domain/feed-event.js';
+import type { Session, SessionList, SessionRef } from '../../../domain/session.js';
+import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import { parseSse } from './sse-parser.js';
 
 /** A request that gets no answer in this time fails as unreachable (the bridge answers at once). */
@@ -50,7 +48,10 @@ export class FetchBridgeApi implements BridgeApi {
   constructor(private readonly options: FetchBridgeApiOptions) {}
 
   async status(): Promise<BridgeStatus> {
-    return toStatus(await this.json<StatusDto>('GET', '/status'));
+    const dto = await this.json<StatusDto>('GET', '/status');
+    // Older bridges lack fields this client's status requires (`session`, ...).
+    requireApiVersion(dto.bridge.apiVersion, MIN_BRIDGE_API, 'Clients of this version');
+    return toStatus(dto);
   }
 
   async listSpeech(query: {
@@ -216,7 +217,54 @@ const toEntry = (dto: SpeechEntryDto): SpeechEntry => ({
   sessionId: dto.sessionId ?? null,
 });
 
-// The domain model mirrors the DTO today; the compiler checks they stay assignable.
-const toSession = (dto: SessionDto): Session => dto;
+// Field by field, so a field the domain model gains without a DTO source is a compile error.
+const toSession = (dto: SessionDto): Session => ({
+  id: dto.id,
+  name: dto.name,
+  run: dto.run,
+  startedAt: dto.startedAt,
+  endedAt: dto.endedAt,
+  firstSeq: dto.firstSeq,
+  lastSeq: dto.lastSeq,
+  entries: dto.entries,
+});
 
-const toStatus = (dto: StatusDto): BridgeStatus => dto;
+const toServiceStatus = (dto: ServiceStatusDto): ServiceStatus => ({
+  state: dto.state,
+  version: dto.version,
+  port: dto.port,
+  restarts: dto.restarts,
+  exitCode: dto.exitCode,
+});
+
+const toStatus = ({
+  bridge,
+  tcp,
+  buffer,
+  playwright,
+  mcp,
+  input,
+  session,
+}: StatusDto): BridgeStatus => ({
+  bridge: { version: bridge.version, apiVersion: bridge.apiVersion, state: bridge.state },
+  tcp: {
+    listening: tcp.listening,
+    host: tcp.host,
+    port: tcp.port,
+    encoding: tcp.encoding,
+    connections: tcp.connections.map(({ id, voice, connectedAt }) => ({ id, voice, connectedAt })),
+  },
+  buffer: {
+    size: buffer.size,
+    maxEntries: buffer.maxEntries,
+    firstSeq: buffer.firstSeq,
+    lastSeq: buffer.lastSeq,
+  },
+  playwright: toServiceStatus(playwright),
+  mcp: toServiceStatus(mcp),
+  input: { enabled: input.enabled },
+  session: {
+    current: session.current === null ? null : toSession(session.current),
+    count: session.count,
+  },
+});

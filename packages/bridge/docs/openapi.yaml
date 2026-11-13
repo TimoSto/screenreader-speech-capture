@@ -480,7 +480,7 @@ components:
 
     Status:
       type: object
-      required: [bridge, tcp, buffer, input]
+      required: [bridge, tcp, buffer, playwright, mcp, input, session]
       properties:
         bridge:
           type: object
@@ -516,8 +516,12 @@ components:
             maxEntries: { type: integer }
             firstSeq: { type: [integer, 'null'] }
             lastSeq: { type: [integer, 'null'] }
-        playwright: { $ref: '#/components/schemas/ServiceStatus' }
-        mcp: { $ref: '#/components/schemas/ServiceStatus' }
+        playwright:
+          description: Added in API 1.1.
+          allOf: [{ $ref: '#/components/schemas/ServiceStatus' }]
+        mcp:
+          description: Added in API 1.2.
+          allOf: [{ $ref: '#/components/schemas/ServiceStatus' }]
         input:
           type: object
           required: [enabled]

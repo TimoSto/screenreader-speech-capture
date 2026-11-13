@@ -1,7 +1,7 @@
 import type { parseArgs } from 'node:util';
 import type { SpeechCapture } from '../../../application/ports/in/speech-capture.js';
 import { URL_ENV } from '../../../domain/bridge-url.js';
-import type { SessionRef } from '../../../domain/speech-entry.js';
+import type { SessionRef } from '../../../domain/session.js';
 
 export const NAME = 'screenreader-speech-capture-client';
 
@@ -81,8 +81,8 @@ export function expectArgs<N extends 0 | 1 | 2>(args: string[], count: N, usage:
 
 /**
  * The session `speech`, `text` and `wait` read: `--session <id>`, nothing with `--all`, otherwise
- * the current session. Its id, not `'current'`, so a bridge without a current session (or older
- * than API 1.3) reads the whole buffer instead of answering 404.
+ * the current session. Its id, not `'current'`, so without a current session it reads the whole
+ * buffer instead of answering 404.
  */
 export async function scope(
   values: Values,
@@ -92,5 +92,5 @@ export async function scope(
   if (values.all && id !== undefined) throw new UsageError('Use either --session or --all.');
   if (id !== undefined) return id;
   if (values.all) return undefined;
-  return (await speech.status()).session?.current?.id;
+  return (await speech.status()).session.current?.id;
 }

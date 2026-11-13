@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { BridgeStatus, Session, SpeechEntry } from '../../../domain/speech-entry.js';
+import type { BridgeStatus } from '../../../domain/bridge-status.js';
+import type { Session } from '../../../domain/session.js';
+import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import {
   SOURCE_LABEL,
   formatEntry,
@@ -47,7 +49,10 @@ function status(overrides: Partial<BridgeStatus> = {}): BridgeStatus {
       connections: [],
     },
     buffer: { size: 0, maxEntries: 10000, firstSeq: null, lastSeq: null },
+    playwright: { state: 'stopped', version: '1.65.0', port: 3000, restarts: 0, exitCode: null },
+    mcp: { state: 'stopped', version: '0.0.85', port: 8931, restarts: 0, exitCode: null },
     input: { enabled: false },
+    session: { current: null, count: 0 },
     ...overrides,
   };
 }
@@ -101,13 +106,14 @@ describe('seenText', () => {
 });
 
 describe('formatStatus', () => {
-  it('prints an empty bridge without session support', () => {
+  it('prints an empty bridge', () => {
     expect(formatStatus(status())).toBe(
       [
         'bridge  1.4.0 (API 1.3), ready',
         'tcp     127.0.0.1:4449 listening, 0 voice connections, windows-1252',
         'buffer  0 of 10000 entries (empty)',
         'input   disabled',
+        'session none current, 0 in the buffer',
       ].join('\n'),
     );
   });

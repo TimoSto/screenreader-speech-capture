@@ -19,7 +19,9 @@ import type {
 import { ClientConfigService } from './application/services/client-config-service.js';
 import { SpeechCaptureService } from './application/services/speech-capture-service.js';
 import { URL_ENV } from './domain/bridge-url.js';
-import type { BridgeStatus, Session, SessionList, SpeechEntry } from './domain/speech-entry.js';
+import type { BridgeStatus } from './domain/bridge-status.js';
+import type { Session, SessionList } from './domain/session.js';
+import type { SpeechEntry } from './domain/speech-entry.js';
 import type { SpeechMatch } from './domain/text-match.js';
 
 /**

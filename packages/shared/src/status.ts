@@ -30,10 +30,10 @@ export interface StatusDto {
   };
   buffer: { size: number; maxEntries: number; firstSeq: number | null; lastSeq: number | null };
   /** Added in API 1.1. */
-  playwright?: ServiceStatusDto;
+  playwright: ServiceStatusDto;
   /** Added in API 1.2. */
-  mcp?: ServiceStatusDto;
+  mcp: ServiceStatusDto;
   input: { enabled: boolean };
   /** The current session and the number of listed sessions. Added in API 1.3. */
-  session?: { current: SessionDto | null; count: number };
+  session: { current: SessionDto | null; count: number };
 }

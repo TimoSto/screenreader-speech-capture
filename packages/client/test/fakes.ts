@@ -1,13 +1,9 @@
 import type { BridgeApi, SpeechPage } from '../src/application/ports/out/bridge-api.js';
 import type { Clock } from '../src/application/ports/out/clock.js';
-import type {
-  BridgeStatus,
-  Session,
-  SessionList,
-  SessionRef,
-  SpeechEntry,
-  SpeechFeedEvent,
-} from '../src/domain/speech-entry.js';
+import type { BridgeStatus } from '../src/domain/bridge-status.js';
+import type { SpeechFeedEvent } from '../src/domain/feed-event.js';
+import type { Session, SessionList, SessionRef } from '../src/domain/session.js';
+import type { SpeechEntry } from '../src/domain/speech-entry.js';
 import { BridgeHttpError } from '../src/domain/errors.js';
 
 /**
@@ -266,6 +262,8 @@ export class FakeBridgeApi implements BridgeApi {
         firstSeq: this.entries[0]?.seq ?? null,
         lastSeq: this.entries.at(-1)?.seq ?? null,
       },
+      playwright: { state: 'stopped', version: '1.65.0', port: 3000, restarts: 0, exitCode: null },
+      mcp: { state: 'stopped', version: '0.0.85', port: 8931, restarts: 0, exitCode: null },
       input: { enabled: false },
       session: {
         current: this.current ? { ...this.current } : null,
