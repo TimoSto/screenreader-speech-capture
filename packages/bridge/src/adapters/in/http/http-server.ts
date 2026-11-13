@@ -28,6 +28,8 @@ export interface HttpServerDeps {
   config: ManageConfig;
   sessions: ManageSessions;
   logger: Logger;
+  /** `bridge.instanceId`, sent with speech lists and first on every SSE stream. */
+  instanceId: string;
   /** Interval of the SSE `: ping` comment. Default 15 s. */
   pingMs?: number;
 }

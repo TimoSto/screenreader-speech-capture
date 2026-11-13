@@ -241,10 +241,12 @@ describe('HTTP API', () => {
     );
     stream.close();
 
+    const { instanceId } = (await json<StatusDto>(await fetch(api(bridge, '/status')))).bridge;
     const frames = stream.text.split('\n\n').filter((frame) => frame !== '');
-    expect(frames[0]).toMatch(/^id: 1\nevent: entry\ndata: \{"seq":1,"kind":"speech","text":"one"/);
-    expect(frames[1]).toMatch(/^id: 2\nevent: entry\n/);
-    expect(frames[2]).toBe('event: clear\ndata: {}');
+    expect(frames[0]).toBe(`event: bridge\ndata: {"instanceId":"${instanceId}"}`);
+    expect(frames[1]).toMatch(/^id: 1\nevent: entry\ndata: \{"seq":1,"kind":"speech","text":"one"/);
+    expect(frames[2]).toMatch(/^id: 2\nevent: entry\n/);
+    expect(frames[3]).toBe('event: clear\ndata: {}');
 
     await send(bridge.tcpPort, 'three\r\nfour\r\n');
     await eventually(
@@ -258,7 +260,8 @@ describe('HTTP API', () => {
     );
     resumed.close();
     expect(resumed.text).not.toContain('"three"');
-    expect(resumed.text).toMatch(/^id: 4\nevent: entry\n/);
+    // The bridge event comes first, before the replay.
+    expect(resumed.text).toMatch(/^event: bridge\ndata: .*\n\nid: 4\nevent: entry\n/);
   });
 
   it('sends a truncated event before the replay when missed entries were dropped', async () => {
@@ -275,8 +278,28 @@ describe('HTTP API', () => {
     );
     resumed.close();
     const frames = resumed.text.split('\n\n').filter((frame) => frame !== '');
-    expect(frames[0]).toBe('event: truncated\ndata: {}');
-    expect(frames.slice(1).map((frame) => frame.split('\n')[0])).toEqual(['id: 2', 'id: 3']);
+    expect(frames[0]).toMatch(/^event: bridge\n/);
+    expect(frames[1]).toBe('event: truncated\ndata: {}');
+    expect(frames.slice(2).map((frame) => frame.split('\n')[0])).toEqual(['id: 2', 'id: 3']);
+  });
+
+  it('names the bridge run in the status, speech lists and streams, new for every run', async () => {
+    const bridge = await start();
+    const { bridge: run } = await json<StatusDto>(await fetch(api(bridge, '/status')));
+    expect(run.instanceId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(run.startedAt).toMatch(/^\d{4}-\d\d-\d\dT.*Z$/);
+    const list = await json<SpeechListDto>(await fetch(api(bridge, '/speech')));
+    expect(list.instanceId).toBe(run.instanceId);
+
+    const other = await start();
+    const { bridge: otherRun } = await json<StatusDto>(await fetch(api(other, '/status')));
+    expect(otherRun.instanceId).not.toBe(run.instanceId);
+  });
+
+  it('uses the instance id it is given', async () => {
+    const bridge = await start({}, { instanceId: 'pinned' });
+    const list = await json<SpeechListDto>(await fetch(api(bridge, '/speech')));
+    expect(list.instanceId).toBe('pinned');
   });
 
   it('rejects a Last-Event-ID that is not a plain seq', async () => {
@@ -311,7 +334,13 @@ describe('HTTP API', () => {
 
     expect(status.tcp.connections[0]!.connectedAt).toMatch(/^\d{4}-\d\d-\d\dT.*Z$/);
     expect(status).toEqual({
-      bridge: { version: '0.0.0-test', apiVersion: API_VERSION, state: 'ready' },
+      bridge: {
+        version: '0.0.0-test',
+        apiVersion: API_VERSION,
+        state: 'ready',
+        instanceId: status.bridge.instanceId,
+        startedAt: status.bridge.startedAt,
+      },
       tcp: {
         listening: true,
         host: '127.0.0.1',

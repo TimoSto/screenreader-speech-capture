@@ -23,11 +23,12 @@ export function toSpeechEntryDto(entry: SpeechEntry): SpeechEntryDto {
   };
 }
 
-export function toSpeechListDto(page: SpeechPage): SpeechListDto {
+export function toSpeechListDto(page: SpeechPage, instanceId: string): SpeechListDto {
   return {
     entries: page.entries.map(toSpeechEntryDto),
     truncated: page.truncated,
     hasMore: page.hasMore,
+    instanceId,
   };
 }
 

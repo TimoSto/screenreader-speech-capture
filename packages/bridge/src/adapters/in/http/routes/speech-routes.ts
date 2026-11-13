@@ -15,7 +15,7 @@ import {
 } from '../request.js';
 import { sendJson, sendNoContent } from '../response.js';
 import type { Router } from '../router.js';
-import { sseFrame } from '../sse/sse-frames.js';
+import { bridgeFrame, sseFrame } from '../sse/sse-frames.js';
 import type { SseHub, SseSend } from '../sse/sse-hub.js';
 
 export interface SpeechRoutesDeps {
@@ -23,10 +23,12 @@ export interface SpeechRoutesDeps {
   waits: WaitForSpeech;
   /** The open SSE streams. */
   sse: SseHub;
+  /** `bridge.instanceId`, sent with speech lists and first on every stream. */
+  instanceId: string;
 }
 
 export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
-  const { speech, waits, sse } = deps;
+  const { speech, waits, sse, instanceId } = deps;
 
   router
     .add('GET', '/speech', ({ res, url }) => {
@@ -35,7 +37,7 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
         limit: intParam(url, 'limit'),
         session: sessionParam(url),
       });
-      sendJson(res, 200, toSpeechListDto(page));
+      sendJson(res, 200, toSpeechListDto(page, instanceId));
     })
     .add('DELETE', '/speech', ({ res }) => {
       speech.clear();
@@ -77,8 +79,14 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
       // before it calls the listener, so that is still answered as a JSON error.
       let send: SseSend | undefined;
       // `close` is emitted asynchronously, so `unwatch` is set by then, even if the replay
-      // already overflowed the stream.
-      const stream = () => (send ??= sse.open(res, () => unwatch()));
+      // already overflowed the stream. The `bridge` frame goes first, before the replay.
+      const stream = () => {
+        if (send === undefined) {
+          send = sse.open(res, () => unwatch());
+          send(bridgeFrame(instanceId));
+        }
+        return send;
+      };
       const unwatch = speech.watch(since, (event) => stream()(sseFrame(event)), {
         session: sessionParam(url),
       });

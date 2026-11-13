@@ -5,6 +5,8 @@ import { DEFAULT_CONFIG } from '../../domain/config/index.js';
 import type { CaptureStatus } from '../../domain/capture.js';
 import { StatusService } from './status-service.js';
 
+const STARTED_AT = new Date('2026-11-07T13:00:00.000Z');
+
 function setup(capture: CaptureStatus) {
   const repository = new MemorySpeechRepository(10);
   const sessions = new MemorySessionRepository();
@@ -21,6 +23,7 @@ function setup(capture: CaptureStatus) {
     config: () => DEFAULT_CONFIG,
     version: '1.2.3',
     apiVersion: '1.0',
+    instance: { id: 'run-1', startedAt: STARTED_AT },
   });
   return { status, repository, sessions };
 }
@@ -44,7 +47,13 @@ describe('StatusService', () => {
     status.setState('ready');
 
     expect(status.status()).toEqual({
-      bridge: { version: '1.2.3', apiVersion: '1.0', state: 'ready' },
+      bridge: {
+        version: '1.2.3',
+        apiVersion: '1.0',
+        state: 'ready',
+        instanceId: 'run-1',
+        startedAt: STARTED_AT,
+      },
       tcp: {
         listening: true,
         host: '127.0.0.1',

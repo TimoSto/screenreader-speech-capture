@@ -44,7 +44,7 @@ export async function start(
   patch: unknown = {},
   options: { store?: MemoryConfigStore } & Pick<
     BridgeOptions,
-    'sinks' | 'ssePingMs' | 'playwrightLaunch' | 'mcpLaunch'
+    'sinks' | 'ssePingMs' | 'playwrightLaunch' | 'mcpLaunch' | 'instanceId'
   > = {},
 ): Promise<Bridge> {
   const { store, sinks, ...rest } = options;

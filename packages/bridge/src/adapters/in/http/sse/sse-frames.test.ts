@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionSummary } from '../../../../domain/session.js';
 import type { SpeechEntry } from '../../../../domain/speech-entry.js';
-import { sseFrame } from './sse-frames.js';
+import { bridgeFrame, sseFrame } from './sse-frames.js';
 
 const entry: SpeechEntry = {
   seq: 7,
@@ -52,5 +52,11 @@ describe('sseFrame', () => {
 
   it.each(['clear', 'truncated'] as const)('sends %s with empty data and no id', (type) => {
     expect(sseFrame({ type })).toBe(`event: ${type}\ndata: {}\n\n`);
+  });
+});
+
+describe('bridgeFrame', () => {
+  it('sends the instance id without id, so Last-Event-ID stays on the last entry', () => {
+    expect(bridgeFrame('run-1')).toBe('event: bridge\ndata: {"instanceId":"run-1"}\n\n');
   });
 });

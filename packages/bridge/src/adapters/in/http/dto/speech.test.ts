@@ -18,11 +18,13 @@ describe('speech DTOs', () => {
     expect(toSpeechEntryDto(entry)).toEqual(entryDto);
   });
 
-  it('maps a page with its flags', () => {
-    expect(toSpeechListDto({ entries: [entry], truncated: true, hasMore: false })).toEqual({
+  it('maps a page with its flags and the instance id', () => {
+    const page = { entries: [entry], truncated: true, hasMore: false };
+    expect(toSpeechListDto(page, 'run-1')).toEqual({
       entries: [entryDto],
       truncated: true,
       hasMore: false,
+      instanceId: 'run-1',
     });
   });
 
