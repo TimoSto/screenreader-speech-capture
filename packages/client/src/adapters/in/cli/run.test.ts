@@ -353,6 +353,16 @@ it('--help and --version', async () => {
   expect((await run(['--version'])).stdout).toBe('1.2.3\n');
 });
 
+it('config never creates a bridge client', async () => {
+  const speech = (): SpeechCapture => {
+    throw new Error('config must not create a bridge client');
+  };
+  expect(await run(['config', 'path'], fakeConfig().config, speech)).toMatchObject({
+    code: EXIT.ok,
+    stdout: '/cfg/client.json\n',
+  });
+});
+
 it('works end to end with the real config file', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sr-client-cli-'));
   try {
