@@ -6,6 +6,7 @@ import { freePort, send, start } from '../../bridge/test/helpers.js';
 import { EXIT, runCli } from '../src/adapters/in/cli/run.js';
 import {
   BridgeHttpError,
+  BridgeRestartedError,
   BridgeUnreachableError,
   IncompatibleBridgeError,
   SpeechTimeoutError,
@@ -114,9 +115,9 @@ describe('library', () => {
     await expect(new SpeechCaptureClient({ baseUrl: v2, env }).getSpeech()).rejects.toThrow(
       IncompatibleBridgeError,
     );
-    const v12 = await stub(200, JSON.stringify({ bridge: { apiVersion: '1.2' } }));
+    const v12 = await stub(200, JSON.stringify({ bridge: { apiVersion: '1.3' } }));
     await expect(new SpeechCaptureClient({ baseUrl: v12, env }).status()).rejects.toThrow(
-      'Clients of this version need a bridge with API 1.3 or newer, this one speaks API 1.2',
+      'Clients of this version need a bridge with API 1.4 or newer, this one speaks API 1.3',
     );
   });
 });
@@ -197,10 +198,10 @@ describe('onSpeech', () => {
     const url = `http://127.0.0.1:${port}`;
     const sr = new SpeechCaptureClient({ baseUrl: url, env });
     const log: string[] = [];
-    const retries: boolean[] = [];
+    const errors: { error: Error; retrying: boolean }[] = [];
     const stop = sr.onSpeech((e) => log.push(`${e.seq} ${e.text}`), {
       since: 0,
-      onError: (_error, { retrying }) => retries.push(retrying),
+      onError: (error, { retrying }) => errors.push({ error, retrying }),
     });
     onTestFinished(stop);
     await send(first.tcpPort, 'one\r\ntwo\r\n');
@@ -208,12 +209,28 @@ describe('onSpeech', () => {
 
     await first.stop();
     const second = await start({ http: { port } });
-    await send(second.tcpPort, 'new bridge\r\n');
-    await vi.waitFor(() => expect(log).toEqual(['1 one', '2 two', '1 new bridge']), {
+    // Past the old seq 2, so a replay after Last-Event-ID 2 alone would miss the first two.
+    await send(second.tcpPort, 'x\r\ny\r\nz\r\n');
+    await vi.waitFor(() => expect(log).toEqual(['1 one', '2 two', '1 x', '2 y', '3 z']), {
       timeout: 5000,
     });
-    expect(retries.length).toBeGreaterThan(0);
-    expect(retries.every(Boolean)).toBe(true);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors.every((e) => e.retrying)).toBe(true);
+    expect(errors.some((e) => e.error instanceof BridgeRestartedError)).toBe(true);
+  });
+
+  it('a wait after a bridge restart rejects, and the next one reads the new bridge', async () => {
+    const port = await freePort();
+    const first = await start({ http: { port } });
+    const sr = new SpeechCaptureClient({ baseUrl: `http://127.0.0.1:${port}`, env });
+    await send(first.tcpPort, 'one\r\ntwo\r\n');
+    await sr.waitForOutput('two');
+
+    await first.stop();
+    const second = await start({ http: { port } });
+    await send(second.tcpPort, 'x\r\ny\r\nz\r\n');
+    await expect(sr.waitForOutput('x')).rejects.toBeInstanceOf(BridgeRestartedError);
+    expect(await sr.waitForOutput('x')).toMatchObject({ seq: 1, text: 'x' });
   });
 });
 

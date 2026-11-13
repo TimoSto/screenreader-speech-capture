@@ -57,7 +57,7 @@ const sessionDto: SessionDto = {
   lastSeq: null,
   entries: 0,
 };
-const statusDto = (apiVersion = '1.3'): StatusDto => ({
+const statusDto = (apiVersion = '1.4'): StatusDto => ({
   bridge: {
     version: '1.0.0',
     apiVersion,
@@ -89,7 +89,12 @@ describe('FetchBridgeApi requests', () => {
       url: 'http://vm:5151/api/v1/speech?since=3&limit=10&session=current',
       method: 'GET',
     });
-    expect(page).toEqual({ entries: [entryDto], truncated: false, hasMore: true });
+    expect(page).toEqual({
+      entries: [entryDto],
+      truncated: false,
+      hasMore: true,
+      instanceId: 'run-1',
+    });
   });
 
   it('sends JSON bodies with a content type', async () => {
@@ -129,7 +134,13 @@ describe('FetchBridgeApi requests', () => {
   it('maps the status', async () => {
     const { fetch } = fakeFetch(() => json(statusDto()));
     const status = await api(fetch).status();
-    expect(status.bridge.apiVersion).toBe('1.3');
+    expect(status.bridge).toEqual({
+      version: '1.0.0',
+      apiVersion: '1.4',
+      state: 'ready',
+      instanceId: 'run-1',
+      startedAt: '2026-11-12T09:00:00.000Z',
+    });
     expect(status.session.current).toEqual(sessionDto);
     expect(status.tcp.connections).toEqual([
       { id: 1, voice: null, connectedAt: '2026-11-12T09:00:00.000Z' },
@@ -137,7 +148,7 @@ describe('FetchBridgeApi requests', () => {
   });
 
   it('rejects a bridge whose API is older than the client needs', async () => {
-    const { fetch } = fakeFetch(() => json(statusDto('1.2')));
+    const { fetch } = fakeFetch(() => json(statusDto('1.3')));
     await expect(api(fetch).status()).rejects.toBeInstanceOf(IncompatibleBridgeError);
   });
 
@@ -226,6 +237,7 @@ describe('FetchBridgeApi.streamSpeech', () => {
       request = init;
       return sse(
         [
+          'event: bridge\ndata: {"instanceId":"run-1"}\n\n',
           `id: 1\nevent: entry\ndata: ${JSON.stringify(entryDto)}\n\n`,
           `event: session\ndata: ${JSON.stringify(sessionDto)}\n\n`,
           'event: clear\ndata: {}\n\n',
@@ -245,8 +257,9 @@ describe('FetchBridgeApi.streamSpeech', () => {
       events.push(event);
       if (event.type === 'truncated') controller.abort();
     }
-    expect(events.map((e) => e.type)).toEqual(['entry', 'session', 'clear', 'truncated']);
-    expect(events[0]).toEqual({ type: 'entry', entry: entryDto });
+    expect(events.map((e) => e.type)).toEqual(['bridge', 'entry', 'session', 'clear', 'truncated']);
+    expect(events[0]).toEqual({ type: 'bridge', instanceId: 'run-1' });
+    expect(events[1]).toEqual({ type: 'entry', entry: entryDto });
     expect(request?.headers).toMatchObject({
       accept: 'text/event-stream',
       'last-event-id': '7',

@@ -60,7 +60,10 @@ export class FakeBridgeApi implements BridgeApi {
   /** Every session started, oldest first (the fake never forgets one). */
   readonly allSessions: Session[] = [];
   private current: Session | undefined;
-  apiVersion = '1.3';
+  apiVersion = '1.4';
+  /** `bridge.instanceId`: changes with {@link restart}. */
+  instanceId = 'run-1';
+  private runs = 1;
   state: BridgeStatus['bridge']['state'] = 'ready';
   /** Page size the fake uses, whatever `limit` asks for, to test paging. */
   pageSize = Infinity;
@@ -99,6 +102,7 @@ export class FakeBridgeApi implements BridgeApi {
       entries: after.slice(0, size),
       truncated: false,
       hasMore: after.length > size,
+      instanceId: this.instanceId,
     });
   }
 
@@ -163,6 +167,7 @@ export class FakeBridgeApi implements BridgeApi {
     this.calls.push(`stream ${lastEventId}`);
     await this.fail();
     const stream = new FakeStream();
+    stream.push({ type: 'bridge', instanceId: this.instanceId });
     if (lastEventId !== null) {
       for (const entry of this.entries) {
         if (entry.seq > lastEventId) stream.push({ type: 'entry', entry });
@@ -206,10 +211,16 @@ export class FakeBridgeApi implements BridgeApi {
     for (const stream of this.streams) stream.end(error);
   }
 
-  /** A new bridge: seq starts again at 1, the buffer is empty, open feeds drop. */
+  /**
+   * A new bridge run: a new `instanceId`, seq and session ids start again at 1, the buffer is
+   * empty, open feeds drop.
+   */
   restart(): void {
+    this.instanceId = `run-${++this.runs}`;
     this.seq = 0;
     this.entries = [];
+    this.allSessions.length = 0;
+    this.current = undefined;
     this.dropStreams(new Error('restarted'));
   }
 
@@ -248,7 +259,13 @@ export class FakeBridgeApi implements BridgeApi {
 
   private snapshot(): BridgeStatus {
     return {
-      bridge: { version: '0.0.0', apiVersion: this.apiVersion, state: this.state },
+      bridge: {
+        version: '0.0.0',
+        apiVersion: this.apiVersion,
+        state: this.state,
+        instanceId: this.instanceId,
+        startedAt: new Date(0).toISOString(),
+      },
       tcp: {
         listening: true,
         host: '127.0.0.1',

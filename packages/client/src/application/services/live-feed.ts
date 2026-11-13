@@ -1,5 +1,6 @@
 import {
   BridgeHttpError,
+  BridgeRestartedError,
   ClientConfigError,
   IncompatibleBridgeError,
 } from '../../domain/errors.js';
@@ -55,6 +56,8 @@ class Backoff {
 class LiveFeed {
   /** The `seq` of the last entry seen: a reconnect asks the bridge for what came after it. */
   #lastEventId: number | null;
+  /** The bridge run of the last connection (its `bridge` event), `undefined` before the first. */
+  #instanceId: string | undefined;
   readonly #backoff = new Backoff();
 
   constructor(
@@ -68,11 +71,13 @@ class LiveFeed {
 
   /** Runs until `signal` aborts or a fatal error. Never rejects. */
   async run(): Promise<void> {
-    for (let reconnect = false; !this.signal.aborted; reconnect = true) {
+    while (!this.signal.aborted) {
       const connectedAt = this.deps.clock.now();
       try {
-        await this.#stream(reconnect);
+        const outcome = await this.#stream();
         if (this.signal.aborted) return;
+        // Reconnect at once: the bridge is up, only the `Last-Event-ID` was from its last run.
+        if (outcome === 'restarted') continue;
         this.#report(new Error('The bridge closed the live feed'), true);
       } catch (error) {
         if (this.signal.aborted) return;
@@ -84,23 +89,41 @@ class LiveFeed {
     }
   }
 
-  /** One connection: dispatches its events until it ends, throws, or `signal` aborts. */
-  async #stream(reconnect: boolean): Promise<void> {
+  /**
+   * One connection: dispatches its events until it ends, throws, or `signal` aborts. Returns
+   * `restarted` when the bridge restarted since the last connection.
+   */
+  async #stream(): Promise<'ended' | 'restarted'> {
+    // Checked on reconnects too: a restarted bridge may be another version.
     await this.deps.ensureCompatible();
-    if (reconnect && (await this.#bridgeRestarted())) {
-      // A new bridge counts `seq` from 1 again: asking for `seq > lastEventId` would skip its
-      // entries.
-      this.#lastEventId = 0;
-    }
     const events = this.deps.api.streamSpeech({
       lastEventId: this.#lastEventId,
       signal: this.signal,
     });
     for await (const event of events) {
-      if (this.signal.aborted) return;
+      if (this.signal.aborted) return 'ended';
       this.#backoff.reset();
+      if (event.type === 'bridge') {
+        if (this.#restarted(event.instanceId)) return 'restarted';
+        continue;
+      }
       this.#dispatch(event);
     }
+    return 'ended';
+  }
+
+  /**
+   * Whether the `bridge` event names another run than the last connection. Then the stream's
+   * replay, if any, was for a `Last-Event-ID` of the old run: a new bridge counts `seq` from 1
+   * again, so the next connection asks for everything of the new run (`0`).
+   */
+  #restarted(instanceId: string): boolean {
+    const previous = this.#instanceId;
+    this.#instanceId = instanceId;
+    if (previous === undefined || previous === instanceId) return false;
+    this.#lastEventId = 0;
+    this.#report(new BridgeRestartedError(previous, instanceId), true);
+    return true;
   }
 
   #dispatch(event: SpeechFeedEvent): void {
@@ -124,14 +147,6 @@ class LiveFeed {
         this.#notify(() => options.onTruncated?.());
         break;
     }
-  }
-
-  /** Whether the bridge has restarted since it sent the entry `#lastEventId`. */
-  async #bridgeRestarted(): Promise<boolean> {
-    if (this.#lastEventId === null) return false;
-    // seq survives a clear, so on the same bridge the newest entry is never older than one
-    // already seen, unless the buffer is empty: then a replay from 0 is empty too.
-    return ((await this.deps.api.status()).buffer.lastSeq ?? 0) < this.#lastEventId;
   }
 
   /** Sleeps the backoff delay. Returns false if unsubscribed meanwhile. */

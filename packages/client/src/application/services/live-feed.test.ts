@@ -3,6 +3,7 @@ import { FakeBridgeApi, FakeClock } from '../../../test/fakes.js';
 import { checkApiVersion } from '../../domain/api-version.js';
 import {
   BridgeHttpError,
+  BridgeRestartedError,
   BridgeUnreachableError,
   IncompatibleBridgeError,
 } from '../../domain/errors.js';
@@ -16,7 +17,7 @@ function setup() {
     api,
     clock,
     ensureCompatible: async () => {
-      checkApiVersion((await api.status()).bridge.apiVersion, '1.3');
+      checkApiVersion((await api.status()).bridge.apiVersion, '1.4');
     },
   };
   return { api, clock, deps };
@@ -91,16 +92,36 @@ describe('live feed', () => {
     expect(clock.sleeps).toEqual([250]);
   });
 
-  it('starts from 0 again after a bridge restart', async () => {
+  it("reports a bridge restart and starts from the new bridge's first entry", async () => {
     const { api, deps } = setup();
-    const { log } = subscribe(deps);
+    const { log, errors } = subscribe(deps);
     await vi.waitFor(() => expect(api.openStreams).toBe(1));
     api.speak('a', 'b');
     await vi.waitFor(() => expect(log).toEqual(['1 a', '2 b']));
     api.restart();
-    api.speak('new bridge');
-    await vi.waitFor(() => expect(log).toEqual(['1 a', '2 b', '1 new bridge']));
-    expect(api.calls).toContain('stream 0');
+    // Already past the old seq 2: a replay after Last-Event-ID 2 would skip x and y.
+    api.speak('x', 'y', 'z');
+    await vi.waitFor(() => expect(log).toEqual(['1 a', '2 b', '1 x', '2 y', '3 z']));
+    expect(api.calls.filter((c) => c.startsWith('stream'))).toEqual([
+      'stream null',
+      'stream 2',
+      'stream 0',
+    ]);
+    const restart = errors.find((e) => e.error instanceof BridgeRestartedError);
+    expect(restart).toMatchObject({ retrying: true });
+    expect(restart!.error).toMatchObject({ previousInstanceId: 'run-1', instanceId: 'run-2' });
+  });
+
+  it('does not report a restart on a reconnect to the same bridge', async () => {
+    const { api, deps } = setup();
+    const { log, errors } = subscribe(deps);
+    await vi.waitFor(() => expect(api.openStreams).toBe(1));
+    api.speak('a');
+    await vi.waitFor(() => expect(log).toEqual(['1 a']));
+    api.dropStreams(new Error('network'));
+    api.speak('b');
+    await vi.waitFor(() => expect(log).toEqual(['1 a', '2 b']));
+    expect(errors.some((e) => e.error instanceof BridgeRestartedError)).toBe(false);
   });
 
   it('backs off exponentially while the bridge is unreachable', async () => {

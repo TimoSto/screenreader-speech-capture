@@ -40,7 +40,13 @@ function session(overrides: Partial<Session> = {}): Session {
 
 function status(overrides: Partial<BridgeStatus> = {}): BridgeStatus {
   return {
-    bridge: { version: '1.4.0', apiVersion: '1.3', state: 'ready' },
+    bridge: {
+      version: '1.4.0',
+      apiVersion: '1.4',
+      state: 'ready',
+      instanceId: 'run-1',
+      startedAt: '2026-11-12T09:00:00.000Z',
+    },
     tcp: {
       listening: true,
       host: '127.0.0.1',
@@ -109,7 +115,7 @@ describe('formatStatus', () => {
   it('prints an empty bridge', () => {
     expect(formatStatus(status())).toBe(
       [
-        'bridge  1.4.0 (API 1.3), ready',
+        'bridge  1.4.0 (API 1.4), ready',
         'tcp     127.0.0.1:4449 listening, 0 voice connections, windows-1252',
         'buffer  0 of 10000 entries (empty)',
         'input   disabled',

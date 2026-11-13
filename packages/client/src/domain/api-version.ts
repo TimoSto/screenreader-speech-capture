@@ -1,7 +1,7 @@
 import { IncompatibleBridgeError } from './errors.js';
 
 /** The oldest bridge API this client works with: its status has every field the client needs. */
-export const MIN_BRIDGE_API = '1.3';
+export const MIN_BRIDGE_API = '1.4';
 
 /** `[major, minor]` of a `<major>.<minor>` API version, `undefined` if it isn't one. */
 function parse(version: string): [number, number] | undefined {
