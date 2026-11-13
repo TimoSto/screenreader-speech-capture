@@ -103,12 +103,13 @@ packages/bridge/src/
     out/log/         bridge log: console + file, prefixes, colours, rotation
     out/clock/       system clock
   main.ts            composition root: the only place adapters are wired to ports
+  bin/cli.ts         executable: parses argv (adapters/in/cli), starts main.ts
 ```
 
 **Dependency rule:** `adapters → application → domain`. The domain imports nothing, the application
 imports only the domain and its own ports, and the adapters implement or call the ports. Only `main.ts`
-knows the concrete adapters. Adapters don't import the concrete services or each other (`in` ↔
-`out`). ESLint (`no-restricted-imports` in `eslint.config.js`) enforces all of this.
+knows the concrete adapters. Adapters don't import the concrete services, the composition root or
+each other (`in` ↔ `out`); the executables in `bin/` sit outside the adapters and call `main.ts`. ESLint (`no-restricted-imports` in `eslint.config.js`) enforces all of this.
 
 **Extending:**
 
@@ -141,6 +142,7 @@ packages/client/src/
   main.ts              composition root: createClientConfig(env) and SpeechCaptureClient, the only
                        place that knows the concrete adapters and reads process.env
   index.ts             public API: re-exports from main.ts, in-port types and domain types
+  bin/cli.ts           executable: wires main.ts into the CLI adapter (adapters/in/cli)
 ```
 
 Unlike the bridge, the client is also used as a library, so the in-port interfaces are its public

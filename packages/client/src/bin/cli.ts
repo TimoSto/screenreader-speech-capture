@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import packageJson from '../../../../package.json' with { type: 'json' };
-import { createClientConfig, SpeechCaptureClient } from '../../../main.js';
-import { runCli } from './run.js';
+import packageJson from '../../package.json' with { type: 'json' };
+import { createClientConfig, SpeechCaptureClient } from '../main.js';
+import { runCli } from '../adapters/in/cli/run.js';
 
 process.exitCode = await runCli(process.argv.slice(2), {
   config: createClientConfig(process.env),

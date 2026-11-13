@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const bridgeDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const cli = path.join(bridgeDir, 'src/adapters/in/cli/cli.ts');
+const cli = path.join(bridgeDir, 'src/bin/cli.ts');
 
 let dir: string | undefined;
 afterEach(async () => {
