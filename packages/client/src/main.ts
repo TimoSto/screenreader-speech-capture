@@ -24,6 +24,9 @@ import type { Session, SessionList } from './domain/session.js';
 import type { SpeechEntry } from './domain/speech-entry.js';
 import type { SpeechMatch } from './domain/text-match.js';
 
+// The config file location is public too: tools and docs point users at it.
+export { CONFIG_PATH_ENV, clientConfigFile } from './adapters/out/fs-config/paths.js';
+
 /**
  * The client's per-user settings, stored in the config file (docs/client.md#bridge-url).
  * `SR_SPEECH_URL` and `SR_SPEECH_CLIENT_CONFIG` are read from `env` once, here.

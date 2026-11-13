@@ -75,6 +75,23 @@ export default tseslint.config(
     },
   },
   {
+    // The public API goes index.ts → main.ts → adapters, so main.ts stays the one composition root.
+    files: ['packages/client/src/index.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/adapters/**'],
+              message: 'Export adapters through main.ts (the composition root).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: [hexagon('adapters/in')],
     ignores: ['**/*.test.ts'],
     rules: {
