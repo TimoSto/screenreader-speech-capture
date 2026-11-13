@@ -1,10 +1,8 @@
 import { checkApiVersion, requireApiVersion } from '../../domain/api-version.js';
-import { ClientConfigError } from '../../domain/bridge-url.js';
 import {
   BridgeHttpError,
   BridgeNotReadyError,
   BridgeUnreachableError,
-  IncompatibleBridgeError,
   SpeechTimeoutError,
 } from '../../domain/errors.js';
 import {
@@ -29,6 +27,7 @@ import type {
 } from '../ports/in/speech-capture.js';
 import type { BridgeApi } from '../ports/out/bridge-api.js';
 import type { Clock } from '../ports/out/clock.js';
+import { startLiveFeed } from './live-feed.js';
 
 export interface SpeechCaptureServiceDeps {
   api: BridgeApi;
@@ -46,9 +45,6 @@ const DEFAULTS = { timeout: 5000, quietFor: 500, silenceTimeout: 10_000, readyTi
 
 /** The API version that added sessions. */
 const SESSIONS_API = '1.3';
-
-/** Reconnect delays of the live feed: doubling from `min` up to `max`. */
-const RETRY = { min: 250, max: 5000 };
 
 export class SpeechCaptureService implements SpeechCapture {
   #cursor = 0;
@@ -225,88 +221,12 @@ export class SpeechCaptureService implements SpeechCapture {
   }
 
   onSpeech(listener: (entry: SpeechEntry) => void, options: OnSpeechOptions = {}): () => void {
-    const controller = new AbortController();
-    void this.feed(listener, options, controller.signal);
-    return () => controller.abort();
-  }
-
-  /** The live feed's connect / reconnect loop, until `signal` aborts or a fatal error. */
-  private async feed(
-    listener: (entry: SpeechEntry) => void,
-    options: OnSpeechOptions,
-    signal: AbortSignal,
-  ): Promise<void> {
     const { api, clock } = this.deps;
-    const report = (error: unknown, retrying: boolean) => {
-      if (signal.aborted) return;
-      try {
-        options.onError?.(toError(error), { retrying });
-      } catch {
-        // An onError that throws has nowhere left to report to.
-      }
-    };
-    const call = (fn: () => void) => {
-      try {
-        fn();
-      } catch (error) {
-        report(error, true);
-      }
-    };
-    // The `seq` of the last entry seen: a reconnect asks the bridge for what came after it.
-    let lastEventId: number | null = options.since ?? null;
-    let backoff = RETRY.min;
-    let reconnect = false;
-    while (!signal.aborted) {
-      const connectedAt = clock.now();
-      try {
-        await this.compatible();
-        if (reconnect && lastEventId !== null && (await this.restarted(lastEventId))) {
-          // A new bridge counts `seq` from 1 again: asking for `seq > lastEventId` would skip
-          // its entries.
-          lastEventId = 0;
-        }
-        for await (const event of api.streamSpeech({ lastEventId, signal })) {
-          if (signal.aborted) return;
-          backoff = RETRY.min;
-          if (event.type === 'entry') {
-            const { entry } = event;
-            lastEventId = entry.seq;
-            if (options.includeMarkers || isSpeech(entry)) call(() => listener(entry));
-          } else if (event.type === 'session') {
-            const { onSession } = options;
-            if (onSession) call(() => onSession(event.session));
-          } else if (event.type === 'clear') {
-            if (options.onClear) call(options.onClear);
-          } else if (options.onTruncated) {
-            call(options.onTruncated);
-          }
-        }
-        if (signal.aborted) return;
-        report(new Error('The bridge closed the live feed'), true);
-      } catch (error) {
-        if (signal.aborted) return;
-        if (isFatal(error)) {
-          report(error, false);
-          return;
-        }
-        report(error, true);
-      }
-      if (clock.now() - connectedAt >= RETRY.max) backoff = RETRY.min;
-      try {
-        await clock.sleep(backoff, signal);
-      } catch {
-        return; // unsubscribed
-      }
-      backoff = Math.min(backoff * 2, RETRY.max);
-      reconnect = true;
-    }
-  }
-
-  /** Whether the bridge has restarted since it sent the entry `seq`. */
-  private async restarted(seq: number): Promise<boolean> {
-    // seq survives a clear, so on the same bridge the newest entry is never older than one
-    // already seen, unless the buffer is empty: then a replay from 0 is empty too.
-    return ((await this.deps.api.status()).buffer.lastSeq ?? 0) < seq;
+    return startLiveFeed(
+      { api, clock, ensureCompatible: () => this.compatible() },
+      listener,
+      options,
+    );
   }
 
   private get pollMs(): number {
@@ -381,19 +301,6 @@ export class SpeechCaptureService implements SpeechCapture {
       await clock.sleep(Math.min(this.pollMs, left));
     }
   }
-}
-
-/** Errors a reconnect can't fix. */
-function isFatal(error: unknown): boolean {
-  return (
-    error instanceof IncompatibleBridgeError ||
-    error instanceof ClientConfigError ||
-    (error instanceof BridgeHttpError && error.status >= 400 && error.status < 500)
-  );
-}
-
-function toError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
 }
 
 function describe(match: SpeechMatch): string {

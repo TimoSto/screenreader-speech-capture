@@ -136,7 +136,8 @@ packages/client/src/
   application/
     ports/in/          ManageClientConfig, SpeechCapture (the library's functions)
     ports/out/         ClientConfigStore, BridgeApi, Clock
-    services/          ClientConfigService, SpeechCaptureService (cursor, waits by polling)
+    services/          ClientConfigService, SpeechCaptureService (cursor, waits by polling),
+                       live feed (onSpeech: SSE with reconnect and backoff)
   adapters/
     in/cli/            argv → in-ports → stdout + exit code; parsing and output only
     out/fs-config/     client.json in %APPDATA% / ~/.config, atomic writes
