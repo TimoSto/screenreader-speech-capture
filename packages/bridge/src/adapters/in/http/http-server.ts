@@ -1,13 +1,10 @@
 import http from 'node:http';
 import { API_PREFIX } from '@screenreader-speech-capture/shared';
-import type { AddMarker } from '../../../application/ports/in/add-marker.js';
-import type { ClearSpeech } from '../../../application/ports/in/clear-speech.js';
 import type { GetStatus } from '../../../application/ports/in/get-status.js';
 import type { ManageConfig } from '../../../application/ports/in/manage-config.js';
 import type { ManageSessions } from '../../../application/ports/in/manage-sessions.js';
-import type { QuerySpeech } from '../../../application/ports/in/query-speech.js';
+import type { SpeechUseCases } from '../../../application/ports/in/speech-use-cases.js';
 import type { WaitForSpeech } from '../../../application/ports/in/wait-for-speech.js';
-import type { WatchSpeech } from '../../../application/ports/in/watch-speech.js';
 import type { Logger } from '../../../application/ports/out/logger.js';
 import type { Config } from '../../../domain/config/index.js';
 import { AppError } from '../../../domain/errors.js';
@@ -25,7 +22,7 @@ export type HttpSettings = Config['http'];
 
 /** The driving ports the API calls, plus the logger. */
 export interface HttpServerDeps {
-  speech: QuerySpeech & ClearSpeech & AddMarker & WatchSpeech;
+  speech: SpeechUseCases;
   waits: WaitForSpeech;
   status: GetStatus;
   config: ManageConfig;

@@ -1,11 +1,8 @@
-import type { AddMarker } from '../../../../application/ports/in/add-marker.js';
-import type { ClearSpeech } from '../../../../application/ports/in/clear-speech.js';
-import type { QuerySpeech } from '../../../../application/ports/in/query-speech.js';
+import type { SpeechUseCases } from '../../../../application/ports/in/speech-use-cases.js';
 import type {
   WaitForSpeech,
   WaitResult,
 } from '../../../../application/ports/in/wait-for-speech.js';
-import type { WatchSpeech } from '../../../../application/ports/in/watch-speech.js';
 import { toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from '../dto/speech.js';
 import {
   booleanParam,
@@ -22,7 +19,7 @@ import { sseFrame } from '../sse/sse-frames.js';
 import type { SseHub, SseSend } from '../sse/sse-hub.js';
 
 export interface SpeechRoutesDeps {
-  speech: QuerySpeech & ClearSpeech & AddMarker & WatchSpeech;
+  speech: SpeechUseCases;
   waits: WaitForSpeech;
   /** The open SSE streams. */
   sse: SseHub;
