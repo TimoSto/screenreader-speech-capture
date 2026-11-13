@@ -40,7 +40,7 @@ GitHub issues. This file only tracks milestones.
 - [x] Sessions API: `POST /sessions`, `POST /sessions/end`, `GET /sessions`, `sessionId` on
       entries, `session` filter on speech / wait / stream, SSE `session` event, `session` in status
       (API 1.3)
-- [ ] Client + CLI sessions: `startSession` / `endSession` / `sessions`, `onSession`, CLI
+- [x] Client + CLI sessions: `startSession` / `endSession` / `sessions`, `onSession`, CLI
       `session start|end|list`, CLI reads scoped to the current session
 - [ ] Playwright fixture (`connectOptions`, `headless: false`, one session per test instead of
       clearing, transcript attachment)
@@ -106,11 +106,11 @@ own SAPI 5 voice written in Rust.
 | Screen reader setup | [vm-setup.md](vm-setup.md#screen-reader-setup) | ⬜ | Not yet verified on a real VM |
 | Running on the VM | [vm-setup.md](vm-setup.md#running-on-the-vm) | ⬜ | Not yet verified on a real VM |
 | Speech capture | [speech-capture.md](speech-capture.md) | ⬜ | M1 |
-| Sessions | [speech-capture.md](speech-capture.md#sessions) | 🚧 | Bridge API done (API 1.3); client, CLI and fixture in M3 |
+| Sessions | [speech-capture.md](speech-capture.md#sessions) | 🚧 | Bridge API (API 1.3), client and CLI done; fixture in M3 |
 | HTTP API | [http-api.md](http-api.md) | 🚧 | M1 done, Playwright and MCP services and sessions in M3, native input with M4 |
 | Operations | [operations.md](operations.md) | ✅ | Startup, shutdown, bridge log, Playwright server and MCP supervisors done |
 | Configuration | [configuration.md](configuration.md) | 🚧 | Flags, env, config file, `PUT /config`, `playwright.*` and `mcp.*` done; `input` takes effect with M4 |
-| Test client | [client.md](client.md) | 🚧 | Library, CLI, version check and live feed done; sessions and fixture in M3, native input in M4 |
+| Test client | [client.md](client.md) | 🚧 | Library, CLI, version check, live feed and sessions done; fixture in M3, native input in M4 |
 | Remote Playwright & MCP | [playwright-mcp.md](playwright-mcp.md) | ✅ | Playwright server and MCP done (install, supervision) |
 | Native input | [native-input.md](native-input.md) | ⬜ | M4 |
 | Web UI | [web-ui.md](web-ui.md) | ⬜ | M5. Designed: status, context pane (sessions), live log, actions |

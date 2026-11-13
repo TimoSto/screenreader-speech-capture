@@ -1,4 +1,4 @@
-import { checkApiVersion } from '../../domain/api-version.js';
+import { checkApiVersion, requireApiVersion } from '../../domain/api-version.js';
 import { ClientConfigError } from '../../domain/bridge-url.js';
 import {
   BridgeHttpError,
@@ -7,7 +7,14 @@ import {
   IncompatibleBridgeError,
   SpeechTimeoutError,
 } from '../../domain/errors.js';
-import { isSpeech, type BridgeStatus, type SpeechEntry } from '../../domain/speech-entry.js';
+import {
+  isSpeech,
+  type BridgeStatus,
+  type Session,
+  type SessionList,
+  type SessionRef,
+  type SpeechEntry,
+} from '../../domain/speech-entry.js';
 import { advanceSequence, toMatcher, type SpeechMatch } from '../../domain/text-match.js';
 import type {
   GetSpeechOptions,
@@ -17,6 +24,7 @@ import type {
   Recording,
   SilenceOptions,
   SpeechCapture,
+  StartSessionOptions,
   WaitOptions,
 } from '../ports/in/speech-capture.js';
 import type { BridgeApi } from '../ports/out/bridge-api.js';
@@ -36,12 +44,17 @@ const MAX_PAGE = 10_000;
 
 const DEFAULTS = { timeout: 5000, quietFor: 500, silenceTimeout: 10_000, readyTimeout: 120_000 };
 
+/** The API version that added sessions. */
+const SESSIONS_API = '1.3';
+
 /** Reconnect delays of the live feed: doubling from `min` up to `max`. */
 const RETRY = { min: 250, max: 5000 };
 
 export class SpeechCaptureService implements SpeechCapture {
   #cursor = 0;
   #compatible: Promise<void> | undefined;
+  /** `bridge.apiVersion` of the last status, for features of newer minor versions. */
+  #bridgeApiVersion: string | undefined;
 
   constructor(private readonly deps: SpeechCaptureServiceDeps) {}
 
@@ -58,13 +71,13 @@ export class SpeechCaptureService implements SpeechCapture {
 
   async getSpeech(options: GetSpeechOptions = {}): Promise<SpeechEntry[]> {
     await this.compatible();
-    const entries = await this.fetchSince(options.since ?? this.#cursor);
+    const entries = await this.fetchSince(options.since ?? this.#cursor, options.session);
     const wanted = options.includeMarkers ? entries : entries.filter(isSpeech);
     return options.limit === undefined ? wanted : wanted.slice(0, options.limit);
   }
 
   async getText(options: GetTextOptions = {}): Promise<string> {
-    const entries = await this.getSpeech({ since: options.since });
+    const entries = await this.getSpeech({ since: options.since, session: options.session });
     return entries.map((e) => e.text).join(options.separator ?? '\n');
   }
 
@@ -75,6 +88,31 @@ export class SpeechCaptureService implements SpeechCapture {
     this.#cursor = 0;
   }
 
+  async startSession(name: string, options: StartSessionOptions = {}): Promise<Session> {
+    await this.sessionsSupported();
+    const before = await this.endSeq();
+    const session = await this.deps.api.startSession({ name, run: options.run });
+    // Speech may arrive between the two requests: the cursor goes to the last entry before the
+    // session's first one, so nothing of the session is skipped and nothing older is read.
+    let start = before;
+    for (const entry of await this.fetchSince(before)) {
+      if (entry.sessionId === session.id) break;
+      start = entry.seq;
+    }
+    this.#cursor = start;
+    return session;
+  }
+
+  async endSession(): Promise<void> {
+    await this.sessionsSupported();
+    await this.deps.api.endSession();
+  }
+
+  async sessions(): Promise<SessionList> {
+    await this.sessionsSupported();
+    return this.deps.api.listSessions();
+  }
+
   async mark(label: string): Promise<SpeechEntry> {
     await this.compatible();
     return this.deps.api.mark(label);
@@ -83,6 +121,7 @@ export class SpeechCaptureService implements SpeechCapture {
   async status(): Promise<BridgeStatus> {
     const status = await this.deps.api.status();
     checkApiVersion(status.bridge.apiVersion, this.deps.apiVersion);
+    this.#bridgeApiVersion = status.bridge.apiVersion;
     this.#compatible = Promise.resolve();
     return status;
   }
@@ -233,6 +272,9 @@ export class SpeechCaptureService implements SpeechCapture {
             const { entry } = event;
             lastEventId = entry.seq;
             if (options.includeMarkers || isSpeech(entry)) call(() => listener(entry));
+          } else if (event.type === 'session') {
+            const { onSession } = options;
+            if (onSession) call(() => onSession(event.session));
           } else if (event.type === 'clear') {
             if (options.onClear) call(options.onClear);
           } else if (options.onTruncated) {
@@ -283,17 +325,27 @@ export class SpeechCaptureService implements SpeechCapture {
     return this.#compatible;
   }
 
+  /** Rejects with `IncompatibleBridgeError` if the bridge is older than API 1.3. */
+  private async sessionsSupported(): Promise<void> {
+    await this.compatible();
+    requireApiVersion(this.#bridgeApiVersion ?? '', SESSIONS_API, 'Sessions');
+  }
+
   /** The `seq` of the newest entry in the buffer, 0 if it is empty. */
   private async endSeq(): Promise<number> {
     return (await this.deps.api.status()).buffer.lastSeq ?? 0;
   }
 
-  /** Every entry with `seq > since`, across pages. */
-  private async fetchSince(since: number): Promise<SpeechEntry[]> {
+  /** Every entry with `seq > since` (of `session`, if given), across pages. */
+  private async fetchSince(since: number, session?: SessionRef): Promise<SpeechEntry[]> {
     const all: SpeechEntry[] = [];
     let from = since;
     for (;;) {
-      const page = await this.deps.api.listSpeech({ since: from, limit: MAX_PAGE });
+      const page = await this.deps.api.listSpeech({
+        since: from,
+        limit: MAX_PAGE,
+        ...(session === undefined ? {} : { session }),
+      });
       all.push(...page.entries);
       const last = page.entries.at(-1);
       if (!page.hasMore || last === undefined) return all;
@@ -316,7 +368,7 @@ export class SpeechCaptureService implements SpeechCapture {
     const seen: SpeechEntry[] = [];
     let from = options.since ?? this.#cursor;
     for (;;) {
-      const entries = await this.fetchSince(from);
+      const entries = await this.fetchSince(from, options.session);
       if (entries.length > 0) from = entries.at(-1)!.seq;
       seen.push(...entries.filter(isSpeech));
       const result = step(entries);

@@ -93,14 +93,14 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 
 | Function | Returns | Description |
 |---|---|---|
-| `getSpeech({ since?, limit?, includeMarkers? })` | `SpeechEntry[]` | Recorded speech entries, oldest first. `since` defaults to the cursor, `includeMarkers` to `false`. |
-| `getText({ since?, separator? })` | `string` | All speech since `since` (default: the cursor), joined into one string (`separator` default `'\n'`). Handy for snapshot assertions. |
+| `getSpeech({ since?, limit?, includeMarkers?, session? })` | `SpeechEntry[]` | Recorded speech entries, oldest first. `since` defaults to the cursor, `includeMarkers` to `false`. `session` (an `id` or `'current'`) returns only that session's entries; without it, all entries. |
+| `getText({ since?, separator?, session? })` | `string` | All speech since `since` (default: the cursor), joined into one string (`separator` default `'\n'`). Handy for snapshot assertions. |
 | `startSession(name, { run? })` | `Session` | Start a [session](speech-capture.md#sessions) (the previous one ends) and move the cursor to its start. `run` groups sessions, for example of one test run. Needs a bridge with API 1.3. |
 | `endSession()` | `void` | End the current session. Speech after this belongs to no session. |
-| `sessions()` | `{ sessions, currentId }` | The sessions still in the buffer, newest first. |
+| `sessions()` | `{ sessions, currentId }` | The sessions still in the buffer plus the current one, newest first. |
 | `clear()` | `void` | Wipe the whole buffer (all sessions) and reset the cursor. For manual use. |
-| `waitForOutput(match, { timeout?, since?, normalize? })` | `SpeechEntry` | Wait until a speech entry after the cursor (or `since`) matches, then move the cursor past it. `match` is a `string` (substring), a `RegExp` or a predicate `(u) => boolean`. `normalize: true` ignores case and extra whitespace. Markers never match. Throws `SpeechTimeoutError` (with the speech seen so far in `entries`) on timeout. Default `timeout`: 5000 ms. |
-| `waitForSequence(matches[], { timeout?, since?, normalize? })` | `SpeechEntry[]` | Wait until the matches occur in this order (other entries may come in between). Moves the cursor past the last match. |
+| `waitForOutput(match, { timeout?, since?, normalize?, session? })` | `SpeechEntry` | Wait until a speech entry after the cursor (or `since`) matches, then move the cursor past it. `match` is a `string` (substring), a `RegExp` or a predicate `(u) => boolean`. `normalize: true` ignores case and extra whitespace. Markers never match. Throws `SpeechTimeoutError` (with the speech seen so far in `entries`) on timeout. Default `timeout`: 5000 ms. |
+| `waitForSequence(matches[], { timeout?, since?, normalize?, session? })` | `SpeechEntry[]` | Wait until the matches occur in this order (other entries may come in between). Moves the cursor past the last match. |
 | `waitForSilence({ quietFor?, timeout? })` | `void` | Wait until nothing new has been spoken for `quietFor` ms (default 500), counted from the call. Throws `SpeechTimeoutError` if speech goes on until `timeout` (default 10000 ms). Useful before asserting on "everything that was said". |
 | `record(fn, { quietFor?, timeout? })` | `{ result, entries }` | Run `fn` and return everything spoken while it ran (waits for silence at the end, then moves the cursor to the end). |
 | `mark(label)` | `SpeechEntry` | Insert a marker. Its `seq` can be used as `since`. |
@@ -127,8 +127,8 @@ stop();
 
 - It starts with the entries that arrive after the call. `since: <seq>` first replays the buffered
   entries after that `seq` (`since: 0`: the whole buffer).
-- Markers are left out unless `includeMarkers: true`. `onSession` is called when a session starts
-  or ends, `onClear` after a clear,
+- Markers are left out unless `includeMarkers: true`. `onSession(session)` is called when a
+  session starts or ends (`endedAt` is set once it ended), `onClear` after a clear,
   `onTruncated` when entries of a replay were already dropped from the bridge's full buffer.
 - It doesn't move the [cursor](#the-cursor): waits work the same with or without a feed.
 - A lost connection is reconnected by itself (after 250 ms, doubling up to 5 s), and the bridge
@@ -147,7 +147,7 @@ stop();
 | `BridgeNotReadyError` | `waitForReady` timed out. |
 | `BridgeUnreachableError` | No connection to the bridge (wrong URL, bridge not running, network). |
 | `BridgeHttpError` | The bridge answered with an [error](http-api.md#errors): `status`, `code`, `details`. |
-| `IncompatibleBridgeError` | The bridge has another major API version (see [Versioning](http-api.md#versioning)). |
+| `IncompatibleBridgeError` | The bridge has another major API version (see [Versioning](http-api.md#versioning)), or sessions were used with a bridge older than API 1.3. |
 | `ClientConfigError` | Invalid bridge URL or client config file. |
 
 ## Playwright fixture
@@ -221,9 +221,9 @@ npx screenreader-speech-capture-client session start "checkout flow" [--run <lab
 npx screenreader-speech-capture-client session end
 npx screenreader-speech-capture-client session list
 npx screenreader-speech-capture-client clear                 # wipes everything, all sessions
-npx screenreader-speech-capture-client speech [--since <seq>] [--limit <n>] [--include-markers]
-npx screenreader-speech-capture-client text [--since <seq>] [--separator <s>]
-npx screenreader-speech-capture-client wait "Submit, button" [--regex] [--normalize] [--timeout 5000] [--since <seq>]
+npx screenreader-speech-capture-client speech [--since <seq>] [--limit <n>] [--include-markers] [--session <id> | --all]
+npx screenreader-speech-capture-client text [--since <seq>] [--separator <s>] [--session <id> | --all]
+npx screenreader-speech-capture-client wait "Submit, button" [--regex] [--normalize] [--timeout 5000] [--since <seq>] [--session <id> | --all]
 npx screenreader-speech-capture-client wait-silence [--quiet-for 500] [--timeout 10000]
 npx screenreader-speech-capture-client mark "before tab"   # prints the marker's seq
 npx screenreader-speech-capture-client focus --x 640 --y 12  # native click
@@ -239,6 +239,11 @@ Exit codes, so agents can branch on them without parsing output:
 | `1` | Timeout / no match (also `status --wait-ready` and `wait-silence`) |
 | `2` | Bridge not reachable, HTTP error, or incompatible bridge version |
 | `3` | Invalid usage or invalid client config |
+
+`session start` prints the new session's id (the whole session with `--json`). `session list`
+prints one line per session, newest first (`#7 checkout test (run nightly-42): current, 3 entries,
+seq 340-342`), or `{ sessions, currentId }` with `--json`. A bridge older than API 1.3 has no
+sessions: `speech`, `text` and `wait` read the whole buffer, and `session` exits with `2`.
 
 With `--json`, `wait` prints `{ "matched": true, "entry": {...} }`, or on timeout
 `{ "matched": false, "entries": [...] }` with the speech seen (the same shapes as

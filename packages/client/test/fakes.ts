@@ -1,6 +1,14 @@
 import type { BridgeApi, SpeechPage } from '../src/application/ports/out/bridge-api.js';
 import type { Clock } from '../src/application/ports/out/clock.js';
-import type { BridgeStatus, SpeechEntry, SpeechFeedEvent } from '../src/domain/speech-entry.js';
+import type {
+  BridgeStatus,
+  Session,
+  SessionList,
+  SessionRef,
+  SpeechEntry,
+  SpeechFeedEvent,
+} from '../src/domain/speech-entry.js';
+import { BridgeHttpError } from '../src/domain/errors.js';
 
 /**
  * Virtual time: `sleep` advances `now` at once and runs the actions scheduled up to then, so
@@ -49,11 +57,14 @@ class FakeStream {
   }
 }
 
-/** An in-memory bridge: a seq counter that survives `clear`, live feeds and a call log. */
+/** An in-memory bridge: a seq counter that survives `clear`, sessions, live feeds and a call log. */
 export class FakeBridgeApi implements BridgeApi {
   entries: SpeechEntry[] = [];
   private seq = 0;
-  apiVersion = '1.0';
+  /** Every session started, oldest first (the fake never forgets one). */
+  readonly allSessions: Session[] = [];
+  private current: Session | undefined;
+  apiVersion = '1.3';
   state: BridgeStatus['bridge']['state'] = 'ready';
   /** Page size the fake uses, whatever `limit` asks for, to test paging. */
   pageSize = Infinity;
@@ -72,11 +83,21 @@ export class FakeBridgeApi implements BridgeApi {
     return this.fail() ?? Promise.resolve(this.snapshot());
   }
 
-  listSpeech(query: { since: number; limit?: number }): Promise<SpeechPage> {
-    this.calls.push(`list ${query.since}`);
+  listSpeech(query: { since: number; limit?: number; session?: SessionRef }): Promise<SpeechPage> {
+    const { session } = query;
+    this.calls.push(`list ${query.since}${session === undefined ? '' : ` session=${session}`}`);
     const failure = this.fail();
     if (failure) return failure;
-    const after = this.entries.filter((e) => e.seq > query.since);
+    let sessionId: number | undefined;
+    if (session !== undefined) {
+      sessionId = session === 'current' ? this.current?.id : session;
+      if (sessionId === undefined || !this.allSessions.some((s) => s.id === sessionId)) {
+        return Promise.reject(new BridgeHttpError(404, 'NOT_FOUND', 'No such session'));
+      }
+    }
+    const after = this.entries.filter(
+      (e) => e.seq > query.since && (sessionId === undefined || e.sessionId === sessionId),
+    );
     const size = Math.min(query.limit ?? 1000, this.pageSize);
     return Promise.resolve({
       entries: after.slice(0, size),
@@ -97,6 +118,45 @@ export class FakeBridgeApi implements BridgeApi {
   mark(label: string): Promise<SpeechEntry> {
     this.calls.push(`mark ${label}`);
     return this.fail() ?? Promise.resolve(this.add('marker', label));
+  }
+
+  startSession(request: { name: string; run?: string | undefined }): Promise<Session> {
+    this.calls.push(`start ${request.name}`);
+    const failure = this.fail();
+    if (failure) return failure;
+    this.endCurrent();
+    const session: Session = {
+      id: this.allSessions.length + 1,
+      name: request.name,
+      run: request.run ?? null,
+      startedAt: new Date(0).toISOString(),
+      endedAt: null,
+      firstSeq: null,
+      lastSeq: null,
+      entries: 0,
+    };
+    this.allSessions.push(session);
+    this.current = session;
+    this.emit({ type: 'session', session: { ...session } });
+    return Promise.resolve({ ...session });
+  }
+
+  endSession(): Promise<void> {
+    this.calls.push('end');
+    const failure = this.fail();
+    if (failure) return failure;
+    this.endCurrent();
+    return Promise.resolve();
+  }
+
+  listSessions(): Promise<SessionList> {
+    this.calls.push('sessions');
+    const failure = this.fail();
+    if (failure) return failure;
+    return Promise.resolve({
+      sessions: this.allSessions.map((s) => ({ ...s })).reverse(),
+      currentId: this.current?.id ?? null,
+    });
   }
 
   async *streamSpeech(options: {
@@ -166,10 +226,23 @@ export class FakeBridgeApi implements BridgeApi {
       source: kind === 'speech' ? 'tcp' : 'api',
       voice: null,
       connectionId: kind === 'speech' ? 1 : null,
+      sessionId: this.current?.id ?? null,
     };
+    if (this.current) {
+      this.current.firstSeq ??= entry.seq;
+      this.current.lastSeq = entry.seq;
+      this.current.entries++;
+    }
     this.entries.push(entry);
     this.emit({ type: 'entry', entry });
     return entry;
+  }
+
+  private endCurrent(): void {
+    if (!this.current) return;
+    this.current.endedAt = new Date(0).toISOString();
+    this.emit({ type: 'session', session: { ...this.current } });
+    this.current = undefined;
   }
 
   private fail(): Promise<never> | undefined {
@@ -194,6 +267,10 @@ export class FakeBridgeApi implements BridgeApi {
         lastSeq: this.entries.at(-1)?.seq ?? null,
       },
       input: { enabled: false },
+      session: {
+        current: this.current ? { ...this.current } : null,
+        count: this.allSessions.length,
+      },
     };
   }
 }

@@ -2,13 +2,23 @@ import {
   API_PREFIX,
   type ErrorBodyDto,
   type MarkerRequestDto,
+  type SessionDto,
+  type SessionListDto,
   type SpeechEntryDto,
+  type StartSessionRequestDto,
   type SpeechListDto,
   type StatusDto,
 } from '@screenreader-speech-capture/shared';
 import type { BridgeApi, SpeechPage } from '../../../application/ports/out/bridge-api.js';
 import { BridgeHttpError, BridgeUnreachableError } from '../../../domain/errors.js';
-import type { BridgeStatus, SpeechEntry, SpeechFeedEvent } from '../../../domain/speech-entry.js';
+import type {
+  BridgeStatus,
+  Session,
+  SessionList,
+  SessionRef,
+  SpeechEntry,
+  SpeechFeedEvent,
+} from '../../../domain/speech-entry.js';
 import { parseSse } from './sse-parser.js';
 
 /** A request that gets no answer in this time fails as unreachable (the bridge answers at once). */
@@ -43,9 +53,14 @@ export class FetchBridgeApi implements BridgeApi {
     return toStatus(await this.json<StatusDto>('GET', '/status'));
   }
 
-  async listSpeech(query: { since: number; limit?: number }): Promise<SpeechPage> {
+  async listSpeech(query: {
+    since: number;
+    limit?: number;
+    session?: SessionRef;
+  }): Promise<SpeechPage> {
     const params = new URLSearchParams({ since: String(query.since) });
     if (query.limit !== undefined) params.set('limit', String(query.limit));
+    if (query.session !== undefined) params.set('session', String(query.session));
     const page = await this.json<SpeechListDto>('GET', `/speech?${params.toString()}`);
     return { entries: page.entries.map(toEntry), truncated: page.truncated, hasMore: page.hasMore };
   }
@@ -57,6 +72,23 @@ export class FetchBridgeApi implements BridgeApi {
   async mark(label: string): Promise<SpeechEntry> {
     const body: MarkerRequestDto = { label };
     return toEntry(await this.json<SpeechEntryDto>('POST', '/markers', { body }));
+  }
+
+  async startSession(request: { name: string; run?: string | undefined }): Promise<Session> {
+    const body: StartSessionRequestDto = {
+      name: request.name,
+      ...(request.run === undefined ? {} : { run: request.run }),
+    };
+    return toSession(await this.json<SessionDto>('POST', '/sessions', { body }));
+  }
+
+  async endSession(): Promise<void> {
+    await this.request('POST', '/sessions/end');
+  }
+
+  async listSessions(): Promise<SessionList> {
+    const list = await this.json<SessionListDto>('GET', '/sessions');
+    return { sessions: list.sessions.map(toSession), currentId: list.currentId };
   }
 
   async *streamSpeech(options: {
@@ -162,6 +194,8 @@ function toFeedEvent(event: string, data: string): SpeechFeedEvent | undefined {
   switch (event) {
     case 'entry':
       return { type: 'entry', entry: toEntry(JSON.parse(data) as SpeechEntryDto) };
+    case 'session':
+      return { type: 'session', session: toSession(JSON.parse(data) as SessionDto) };
     case 'clear':
     case 'truncated':
       return { type: event };
@@ -179,7 +213,10 @@ const toEntry = (dto: SpeechEntryDto): SpeechEntry => ({
   source: dto.source,
   voice: dto.voice,
   connectionId: dto.connectionId,
+  sessionId: dto.sessionId ?? null,
 });
 
 // The domain model mirrors the DTO today; the compiler checks they stay assignable.
+const toSession = (dto: SessionDto): Session => dto;
+
 const toStatus = (dto: StatusDto): BridgeStatus => dto;

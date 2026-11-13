@@ -11,6 +11,7 @@ const entry = (text: string, kind: SpeechEntry['kind'] = 'speech'): SpeechEntry 
   source: kind === 'speech' ? 'tcp' : 'api',
   voice: null,
   connectionId: null,
+  sessionId: null,
 });
 
 describe('toMatcher', () => {
