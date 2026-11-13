@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import type http from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SseHub } from './sse.js';
+import { SseHub } from './sse-hub.js';
 
 /** A response whose client reads nothing: every written byte stays buffered. */
 class StalledResponse extends EventEmitter {

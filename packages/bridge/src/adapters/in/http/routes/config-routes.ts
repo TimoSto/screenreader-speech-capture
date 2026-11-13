@@ -1,8 +1,8 @@
-import type { ManageConfig } from '../../../application/ports/in/manage-config.js';
-import { toConfigDto } from './dto.js';
-import { jsonBody } from './request.js';
-import { sendJson } from './response.js';
-import type { Router } from './router.js';
+import type { ManageConfig } from '../../../../application/ports/in/manage-config.js';
+import { toConfigDto } from '../dto/config.js';
+import { jsonBody } from '../request.js';
+import { sendJson } from '../response.js';
+import type { Router } from '../router.js';
 
 export interface ConfigRoutesDeps {
   config: ManageConfig;

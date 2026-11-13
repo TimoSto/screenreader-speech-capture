@@ -83,7 +83,7 @@ Relative imports use `.js` extensions (ESM), and type-only imports must use `imp
 source), plus one contract rule: `text-match.ts` (`normalizeText`, `createTextTest`), used by both
 the bridge's wait and the client's waits. It is private and bundled into published packages by tsdown — never published on its own.
 Each hexagon owns its own domain model and maps to/from DTOs in its HTTP adapter
-(`adapters/in/http/dto.ts`). The OpenAPI spec lives at `packages/bridge/docs/openapi.yaml`.
+(`adapters/in/http/dto/`, one file per resource). The OpenAPI spec lives at `packages/bridge/docs/openapi.yaml`.
 
 ### Config
 
