@@ -1,3 +1,4 @@
+import { createTextTest } from '@screenreader-speech-capture/shared';
 import { isSpeech, type SpeechEntry } from './speech-entry.js';
 
 /** What a wait looks for: a substring, a regular expression or a predicate. */
@@ -10,31 +11,13 @@ export interface MatchOptions {
 
 export type SpeechMatcher = (entry: SpeechEntry) => boolean;
 
-/** Lower case, whitespace runs collapsed to one space, trimmed (same rule as the bridge). */
-export function normalizeText(text: string): string {
-  return text.toLowerCase().replace(/\s+/g, ' ').trim();
-}
-
 /** Builds the test for one {@link SpeechMatch}. Markers never match. */
 export function toMatcher(match: SpeechMatch, options: MatchOptions = {}): SpeechMatcher {
-  const prepare = options.normalize ? normalizeText : (text: string) => text;
-  let test: (entry: SpeechEntry) => boolean;
+  if (typeof match === 'function') return (entry) => isSpeech(entry) && match(entry);
 
-  if (typeof match === 'function') {
-    test = match;
-  } else if (match instanceof RegExp) {
-    // Without `g` / `y`, `test` keeps no state between entries.
-    let flags = match.flags.replace(/[gy]/g, '');
-    if (options.normalize && !flags.includes('i')) flags += 'i';
-    const pattern = new RegExp(match.source, flags);
-    test = (entry) => pattern.test(prepare(entry.text));
-  } else {
-    const needle = prepare(match);
-    if (needle === '') throw new TypeError('The text to wait for must not be empty');
-    test = (entry) => prepare(entry.text).includes(needle);
-  }
-
-  return (entry) => isSpeech(entry) && test(entry);
+  const test = createTextTest(match, options.normalize ?? false);
+  if (test === undefined) throw new TypeError('The text to wait for must not be empty');
+  return (entry) => isSpeech(entry) && test(entry.text);
 }
 
 /**

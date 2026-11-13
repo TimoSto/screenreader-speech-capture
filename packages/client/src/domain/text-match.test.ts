@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SpeechEntry } from './speech-entry.js';
-import { advanceSequence, normalizeText, toMatcher } from './text-match.js';
+import { advanceSequence, toMatcher } from './text-match.js';
 
 let seq = 0;
 const entry = (text: string, kind: SpeechEntry['kind'] = 'speech'): SpeechEntry => ({
@@ -15,21 +15,8 @@ const entry = (text: string, kind: SpeechEntry['kind'] = 'speech'): SpeechEntry 
 });
 
 describe('toMatcher', () => {
-  it('normalizeText lowercases, collapses whitespace and trims', () => {
-    expect(normalizeText('  Submit,\t\n BUTTON ')).toBe('submit, button');
-  });
-
-  it('matches a substring, case-sensitive unless normalize', () => {
+  it('matches strings and regexes (rules in packages/shared/src/text-match.ts)', () => {
     expect(toMatcher('Submit')(entry('Submit, button'))).toBe(true);
-    expect(toMatcher('submit')(entry('Submit, button'))).toBe(false);
-    expect(toMatcher('SUBMIT,   Button', { normalize: true })(entry(' Submit, button'))).toBe(true);
-  });
-
-  it('a regex keeps its flags, drops g/y state, and gets i with normalize', () => {
-    const global = toMatcher(/button/g);
-    expect(global(entry('button'))).toBe(true);
-    expect(global(entry('button'))).toBe(true);
-    expect(toMatcher(/^edit/)(entry('Edit'))).toBe(false);
     expect(toMatcher(/^edit/, { normalize: true })(entry('  Edit'))).toBe(true);
   });
 
