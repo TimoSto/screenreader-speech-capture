@@ -1,8 +1,8 @@
-import type { ManageSessions } from '../../../application/ports/in/manage-sessions.js';
-import { toSessionDto, toSessionListDto } from './dto.js';
-import { jsonBody, nullableStringField, stringField } from './request.js';
-import { sendJson, sendNoContent } from './response.js';
-import type { Router } from './router.js';
+import type { ManageSessions } from '../../../../application/ports/in/manage-sessions.js';
+import { toSessionDto, toSessionListDto } from '../dto/session.js';
+import { jsonBody, nullableStringField, stringField } from '../request.js';
+import { sendJson, sendNoContent } from '../response.js';
+import type { Router } from '../router.js';
 
 export interface SessionRoutesDeps {
   sessions: ManageSessions;

@@ -89,7 +89,10 @@ packages/bridge/src/
   adapters/
     in/tcp/          socket listener + wire-format parsers → RecordSpeech;
                      tracks its connections (CaptureStatusSource)
-    in/http/         REST + SSE routes → driving ports; serves the built UI
+    in/http/         server, router, request/response helpers; serves the built UI
+      routes/        one file per resource → driving ports
+      sse/           open SSE streams (SseHub) and the frame format
+      dto/           domain → API contract mappers, one file per resource
     shared/net/      listen helper (ListenError) and reachable URLs of a listener,
                      used by in and out adapters
     in/cli/          flags / env → startup overrides (win over the config file)

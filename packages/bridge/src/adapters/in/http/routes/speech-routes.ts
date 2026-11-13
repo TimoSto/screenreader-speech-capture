@@ -1,9 +1,12 @@
-import type { AddMarker } from '../../../application/ports/in/add-marker.js';
-import type { ClearSpeech } from '../../../application/ports/in/clear-speech.js';
-import type { QuerySpeech } from '../../../application/ports/in/query-speech.js';
-import type { WaitForSpeech, WaitResult } from '../../../application/ports/in/wait-for-speech.js';
-import type { WatchEvent, WatchSpeech } from '../../../application/ports/in/watch-speech.js';
-import { toSessionDto, toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from './dto.js';
+import type { AddMarker } from '../../../../application/ports/in/add-marker.js';
+import type { ClearSpeech } from '../../../../application/ports/in/clear-speech.js';
+import type { QuerySpeech } from '../../../../application/ports/in/query-speech.js';
+import type {
+  WaitForSpeech,
+  WaitResult,
+} from '../../../../application/ports/in/wait-for-speech.js';
+import type { WatchSpeech } from '../../../../application/ports/in/watch-speech.js';
+import { toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from '../dto/speech.js';
 import {
   booleanParam,
   intParam,
@@ -12,31 +15,17 @@ import {
   sessionParam,
   stringField,
   stringParam,
-} from './request.js';
-import { sendJson, sendNoContent } from './response.js';
-import type { Router } from './router.js';
-import type { SseHub, SseSend } from './sse.js';
+} from '../request.js';
+import { sendJson, sendNoContent } from '../response.js';
+import type { Router } from '../router.js';
+import { sseFrame } from '../sse/sse-frames.js';
+import type { SseHub, SseSend } from '../sse/sse-hub.js';
 
 export interface SpeechRoutesDeps {
   speech: QuerySpeech & ClearSpeech & AddMarker & WatchSpeech;
   waits: WaitForSpeech;
   /** The open SSE streams. */
   sse: SseHub;
-}
-
-/** The SSE frame for one event (docs/http-api.md, `GET /speech/stream`). */
-function sseFrame(event: WatchEvent): string {
-  switch (event.type) {
-    case 'entry': {
-      const data = JSON.stringify(toSpeechEntryDto(event.entry));
-      return `id: ${event.entry.seq}\nevent: entry\ndata: ${data}\n\n`;
-    }
-    // No `id:`, so `Last-Event-ID` stays the seq of the last entry.
-    case 'session':
-      return `event: session\ndata: ${JSON.stringify(toSessionDto(event.session))}\n\n`;
-    default:
-      return `event: ${event.type}\ndata: {}\n\n`;
-  }
 }
 
 export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {

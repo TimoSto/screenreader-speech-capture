@@ -1,7 +1,7 @@
-import type { GetStatus } from '../../../application/ports/in/get-status.js';
-import { toStatusDto } from './dto.js';
-import { sendJson } from './response.js';
-import type { Router } from './router.js';
+import type { GetStatus } from '../../../../application/ports/in/get-status.js';
+import { toStatusDto } from '../dto/status.js';
+import { sendJson } from '../response.js';
+import type { Router } from '../router.js';
 
 export interface StatusRoutesDeps {
   status: GetStatus;

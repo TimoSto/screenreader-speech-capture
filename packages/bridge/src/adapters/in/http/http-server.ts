@@ -13,13 +13,13 @@ import type { Config } from '../../../domain/config.js';
 import { AppError } from '../../../domain/errors.js';
 import { listen } from '../../shared/net/listen.js';
 import { hostPort, isWildcard, reachableUrls } from '../../shared/net/reachable-urls.js';
-import { configRoutes } from './config-routes.js';
 import { sendError } from './errors.js';
 import { Router } from './router.js';
-import { SseHub } from './sse.js';
-import { sessionRoutes } from './session-routes.js';
-import { speechRoutes } from './speech-routes.js';
-import { statusRoutes } from './status-routes.js';
+import { configRoutes } from './routes/config-routes.js';
+import { sessionRoutes } from './routes/session-routes.js';
+import { speechRoutes } from './routes/speech-routes.js';
+import { statusRoutes } from './routes/status-routes.js';
+import { SseHub } from './sse/sse-hub.js';
 
 export type HttpSettings = Config['http'];
 
