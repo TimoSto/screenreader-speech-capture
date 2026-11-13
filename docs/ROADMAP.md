@@ -40,7 +40,7 @@ GitHub issues. This file only tracks milestones.
 - [x] Sessions API: `POST /sessions`, `POST /sessions/end`, `GET /sessions`, `sessionId` on
       entries, `session` filter on speech / wait / stream, SSE `session` event, `session` in status
       (API 1.3)
-- [ ] Client + CLI sessions: `startSession` / `endSession` / `sessions`, `onSession`, CLI
+- [x] Client + CLI sessions: `startSession` / `endSession` / `sessions`, `onSession`, CLI
       `session start|end|list`, CLI reads scoped to the current session
 - [ ] Playwright fixture (`connectOptions`, `headless: false`, one session per test instead of
       clearing, transcript attachment)

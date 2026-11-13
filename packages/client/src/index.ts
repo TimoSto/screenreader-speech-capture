@@ -18,6 +18,7 @@ export type {
   Recording,
   SilenceOptions,
   SpeechCapture,
+  StartSessionOptions,
   WaitOptions,
 } from './application/ports/in/speech-capture.js';
 export {
@@ -40,6 +41,9 @@ export type {
   BridgeState,
   BridgeStatus,
   ServiceStatus,
+  Session,
+  SessionList,
+  SessionRef,
   SpeechEntry,
   SpeechFeedEvent,
 } from './domain/speech-entry.js';

@@ -51,7 +51,7 @@ function fakeSpeech() {
   const urls: (string | undefined)[] = [];
   const speech = (url: string | undefined): SpeechCapture => {
     urls.push(url);
-    return new SpeechCaptureService({ api, clock, apiVersion: '1.0' });
+    return new SpeechCaptureService({ api, clock, apiVersion: '1.3' });
   };
   return { api, clock, urls, speech };
 }
@@ -156,7 +156,7 @@ describe('speech commands', () => {
     const fake = fakeSpeech();
     const plain = await cli(['status', '--url', 'http://vm:1'], fake);
     expect(plain.code).toBe(EXIT.ok);
-    expect(plain.stdout).toContain('bridge  0.0.0 (API 1.0), ready');
+    expect(plain.stdout).toContain('bridge  0.0.0 (API 1.3), ready');
     expect(plain.stdout).toContain('buffer  0 of 10000 entries (empty)');
     expect(fake.urls).toEqual(['http://vm:1']);
     const json = JSON.parse((await cli(['status', '--json'], fake)).stdout) as {
@@ -239,6 +239,67 @@ describe('speech commands', () => {
     expect(busy.code).toBe(EXIT.timeout);
   });
 
+  it('session start, list and end', async () => {
+    const fake = fakeSpeech();
+    expect((await cli(['session', 'list'], fake)).stdout).toBe('No sessions.\n');
+    expect((await cli(['session', 'start', 'checkout', '--run', 'nightly'], fake)).stdout).toBe(
+      '1\n',
+    );
+    fake.api.speak('Submit, button');
+    expect(JSON.parse((await cli(['session', 'start', 'next', '--json'], fake)).stdout)).toEqual(
+      expect.objectContaining({ id: 2, name: 'next', run: null, endedAt: null }),
+    );
+    expect((await cli(['session', 'list'], fake)).stdout).toBe(
+      '#2 next: current, 0 entries\n#1 checkout (run nightly): ended, 1 entry, seq 1-1\n',
+    );
+    expect((await cli(['status'], fake)).stdout).toContain('session #2 next, 2 in the buffer');
+    expect((await cli(['session', 'end'], fake)).stdout).toBe('Session ended.\n');
+    expect(JSON.parse((await cli(['session', 'list', '--json'], fake)).stdout)).toMatchObject({
+      currentId: null,
+      sessions: [{ id: 2 }, { id: 1 }],
+    });
+    expect((await cli(['status'], fake)).stdout).toContain('session none current, 2 in the buffer');
+  });
+
+  it('speech, text and wait read the current session; --session and --all pick others', async () => {
+    const fake = fakeSpeech();
+    fake.api.speak('before');
+    await cli(['session', 'start', 'one'], fake);
+    fake.api.speak('Submit, button');
+    await cli(['session', 'start', 'two'], fake);
+    fake.api.speak('Name, edit');
+
+    expect((await cli(['speech'], fake)).stdout).toBe('#3 Name, edit\n');
+    expect((await cli(['text', '--session', '1'], fake)).stdout).toBe('Submit, button\n');
+    expect((await cli(['text', '--all'], fake)).stdout).toBe(
+      'before\nSubmit, button\nName, edit\n',
+    );
+    expect((await cli(['wait', 'Submit', '--timeout', '0'], fake)).code).toBe(EXIT.timeout);
+    expect((await cli(['wait', 'Submit', '--session', '1'], fake)).stdout).toBe(
+      '#2 Submit, button\n',
+    );
+    const unknown = await cli(['speech', '--session', '9'], fake);
+    expect(unknown.code).toBe(EXIT.bridge);
+
+    await cli(['session', 'end'], fake);
+    expect((await cli(['text'], fake)).stdout).toBe('before\nSubmit, button\nName, edit\n');
+  });
+
+  it('reads the whole buffer on a bridge older than API 1.3', async () => {
+    const fake = fakeSpeech();
+    fake.api.speak('a');
+    const status = fake.api.status.bind(fake.api);
+    fake.api.status = async () => {
+      const old = await status();
+      delete old.session;
+      return { ...old, bridge: { ...old.bridge, apiVersion: '1.2' } };
+    };
+    expect((await cli(['text'], fake)).stdout).toBe('a\n');
+    const start = await cli(['session', 'start', 'x'], fake);
+    expect(start.code).toBe(EXIT.bridge);
+    expect(start.stderr).toContain('Sessions need a bridge with API 1.3');
+  });
+
   it.each([
     [new BridgeUnreachableError('http://vm:1'), 'not reachable'],
     [new BridgeHttpError(500, 'INTERNAL', 'boom'), 'boom (HTTP 500, INTERNAL)'],
@@ -265,6 +326,18 @@ describe('speech commands', () => {
     [['wait-silence', '--timeout', '1.5']],
     [['mark']],
     [['config', 'path', '--since', '1']],
+    [['session']],
+    [['session', 'pause']],
+    [['session', 'start']],
+    [['session', 'start', ' ']],
+    [['session', 'start', 'x', '--run', '']],
+    [['session', 'end', '--run', 'x']],
+    [['session', 'list', 'extra']],
+    [['speech', '--session', '0']],
+    [['speech', '--session', '1', '--all']],
+    [['text', '--session', 'current']],
+    [['wait', 'x', '--all', '--session', '2']],
+    [['mark', 'x', '--all']],
   ])('exits 3 for %j without calling the bridge', async (args) => {
     const fake = fakeSpeech();
     const { code, stderr } = await cli(args, fake);
@@ -357,6 +430,28 @@ describe('tail', () => {
       { type: 'clear' },
     ]);
     expect(t.api.calls).toContain('stream 1');
+  });
+
+  it('prints sessions that start and end, also as JSON', async () => {
+    const t = tail([]);
+    await vi.waitFor(() => expect(t.api.openStreams).toBe(1));
+    await t.api.startSession({ name: 'checkout' });
+    await t.api.endSession();
+    await vi.waitFor(() => expect(t.output.stdout).toContain('ended'));
+    await t.stop();
+    expect(t.output.stdout).toBe(
+      '--- session #1 "checkout" started ---\n--- session #1 "checkout" ended ---\n',
+    );
+
+    const j = tail(['--json']);
+    await vi.waitFor(() => expect(j.api.openStreams).toBe(1));
+    await j.api.startSession({ name: 'x' });
+    await vi.waitFor(() => expect(j.output.stdout).not.toBe(''));
+    await j.stop();
+    expect(JSON.parse(j.output.stdout)).toEqual({
+      type: 'session',
+      session: expect.objectContaining({ id: 1, name: 'x', endedAt: null }) as unknown,
+    });
   });
 
   it('reports a lost connection on stderr and goes on', async () => {
