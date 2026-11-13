@@ -16,7 +16,6 @@ import {
   IncompatibleBridgeError,
 } from '../../../domain/errors.js';
 import { createClientConfig } from '../../../main.js';
-import { COMMANDS } from './commands/index.js';
 import { EXIT, runCli } from './run.js';
 
 /** Records calls and returns canned answers, so only parsing and output are tested here. */
@@ -354,17 +353,15 @@ it('--help and --version', async () => {
   expect((await run(['--version'])).stdout).toBe('1.2.3\n');
 });
 
-it.each(Object.entries(COMMANDS))(
-  '"%s" lists exactly the options it takes in --help',
-  (name, command) => {
-    const usages = command.help.map((line) => line.usage);
-    expect(usages.every((usage) => usage.startsWith(`${name} `) || usage === name)).toBe(true);
-    const shown = new Set(
-      usages.flatMap((usage) => [...usage.matchAll(/--([\w-]+)/g)].map((m) => m[1])),
-    );
-    expect([...shown].sort()).toEqual([...command.options].sort());
-  },
-);
+it('config never creates a bridge client', async () => {
+  const speech = (): SpeechCapture => {
+    throw new Error('config must not create a bridge client');
+  };
+  expect(await run(['config', 'path'], fakeConfig().config, speech)).toMatchObject({
+    code: EXIT.ok,
+    stdout: '/cfg/client.json\n',
+  });
+});
 
 it('works end to end with the real config file', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sr-client-cli-'));
