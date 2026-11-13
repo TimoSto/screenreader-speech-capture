@@ -52,10 +52,8 @@ flowchart LR
     Agent -- "MCP over HTTP" --> MCP
 ```
 
-> **Status: work in progress.** Speech capture, the HTTP API and the test client (library, CLI,
-> live feed) work. The Playwright server and MCP, native input and the web UI are still design: the
-> docs describe the planned architecture and interfaces. Ports, endpoints and flags may change. See
-> the [Roadmap](docs/ROADMAP.md) for what is done and what comes next.
+> **Status: work in progress.** The [Roadmap](docs/ROADMAP.md) shows what works today and what is
+> still design.
 
 ## What it does
 
@@ -81,9 +79,12 @@ screenreader-speech-capture
 ```
 
 3. In NVDA or JAWS, select the voice **"Text To Socket 127.0.0.1:4449"**.
-4. Open <http://localhost:5151> and make the screen reader speak. The text appears live.
+4. Make the screen reader speak and watch the text arrive live with
+   `npx screenreader-speech-capture-client tail` (the web UI at <http://localhost:5151> comes with
+   M5).
 
-In your test project:
+In your test project (the Playwright fixture comes with M3; until then use the
+[library](docs/client.md#library)):
 
 ```ts
 import { test } from 'screenreader-speech-capture-client/playwright';
@@ -157,7 +158,7 @@ Details: [Test client → Live feed](docs/client.md#live-feed), wire format in
 | [Security](docs/security.md) | Risks of the open ports |
 | [Architecture](docs/architecture.md) | Why Node.js, monorepo, hexagonal bridge and client, UI structure |
 | [Development](docs/development.md) | Building, testing without Windows, CI and releases |
-| [Roadmap](docs/ROADMAP.md) | Milestones, state per topic, open questions |
+| [Roadmap](docs/ROADMAP.md) | Milestones and open questions |
 
 ## Security
 
