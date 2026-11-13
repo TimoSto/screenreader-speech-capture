@@ -11,7 +11,7 @@ import { logSpeechTranscript } from './adapters/out/log/speech-transcript.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
 import { MemorySessionRepository } from './adapters/out/memory/memory-session-repository.js';
 import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';
-import { playwrightMcp } from './adapters/out/mcp/mcp-server.js';
+import { playwrightMcp } from './adapters/out/mcp/playwright-mcp.js';
 import { defaultConfigFile, defaultLogFile, defaultPlaywrightDir } from './adapters/out/paths.js';
 import { playwrightServer } from './adapters/out/playwright/playwright-server.js';
 import type { Prepare } from './adapters/out/process/child-process-supervisor.js';
