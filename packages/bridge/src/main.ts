@@ -5,7 +5,7 @@ import { HttpServer } from './adapters/in/http/http-server.js';
 import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { FsConfigStore } from './adapters/out/fs-config/fs-config-store.js';
-import type { LogSink } from './adapters/out/log/log.js';
+import type { LogSink } from './adapters/out/log/bridge-log.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
 import { MemorySessionRepository } from './adapters/out/memory/memory-session-repository.js';
 import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';

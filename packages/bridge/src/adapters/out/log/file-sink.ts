@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { LogSink } from './log.js';
+import type { LogSink } from './bridge-log.js';
 
 export interface FileSinkOptions {
   /** Rotate when the file would grow past this size. Default 10 MB. */

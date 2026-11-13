@@ -1,4 +1,4 @@
-import type { BridgeLog } from '../adapters/out/log/log.js';
+import type { BridgeLog } from '../adapters/out/log/bridge-log.js';
 import { playwrightMcp } from '../adapters/out/mcp/playwright-mcp.js';
 import { defaultPlaywrightDir } from '../adapters/out/platform/paths.js';
 import { playwrightServer } from '../adapters/out/playwright/playwright-server.js';
