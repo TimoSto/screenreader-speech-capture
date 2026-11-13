@@ -1,9 +1,8 @@
 import type { HttpServer } from '../adapters/in/http/http-server.js';
 import type { TcpListener } from '../adapters/in/tcp/tcp-listener.js';
 import { ListenError } from '../adapters/shared/net/listen.js';
+import type { BridgeStateControl, Shutdown } from '../application/ports/in/lifecycle.js';
 import type { Logger } from '../application/ports/out/logger.js';
-import type { StatusService } from '../application/services/status-service.js';
-import type { WaitForSpeechService } from '../application/services/wait-for-speech-service.js';
 import type { Config } from '../domain/config/index.js';
 import type { Ports } from './reapply.js';
 import type { ChildService } from './services.js';
@@ -48,8 +47,8 @@ interface Stoppable {
  */
 export function runLifecycle(parts: {
   config: Config;
-  status: StatusService;
-  waits: WaitForSpeechService;
+  status: BridgeStateControl;
+  waits: Shutdown;
   logger: Logger;
   services: readonly ChildService[];
   /** Stopped in this order (docs/operations.md#shutdown). */
