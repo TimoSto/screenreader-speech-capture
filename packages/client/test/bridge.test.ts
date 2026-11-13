@@ -117,6 +117,43 @@ describe('library', () => {
   });
 });
 
+describe('sessions', () => {
+  it('startSession scopes the cursor; entries carry the sessionId; sessions lists them', async () => {
+    const { say, client } = await bridge();
+    const sr = client();
+    await say('earlier test');
+    await sr.waitForOutput('earlier');
+    const session = await sr.startSession('checkout', { run: 'nightly' });
+    expect(session).toMatchObject({ name: 'checkout', run: 'nightly', endedAt: null });
+    await say('Submit, button');
+    expect(await sr.waitForOutput('Submit')).toMatchObject({ sessionId: session.id });
+    expect(await sr.getText({ since: 0, session: 'current' })).toBe('Submit, button');
+    await sr.endSession();
+    expect(await sr.sessions()).toMatchObject({
+      currentId: null,
+      sessions: [{ id: session.id, entries: 1, endedAt: expect.any(String) as unknown }],
+    });
+    await expect(sr.getSpeech({ session: 'current' })).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('onSpeech reports sessions over SSE', async () => {
+    const { client } = await bridge();
+    const sr = client();
+    const log: string[] = [];
+    const stop = sr.onSpeech(() => undefined, {
+      onSession: (s) => log.push(`${s.name} ${s.endedAt === null ? 'started' : 'ended'}`),
+    });
+    onTestFinished(stop);
+    await vi.waitFor(async () => {
+      await sr.startSession('probe');
+      expect(log.length).toBeGreaterThan(0);
+    });
+    log.length = 0;
+    await sr.startSession('next');
+    await vi.waitFor(() => expect(log).toEqual(['probe ended', 'next started']));
+  });
+});
+
 describe('onSpeech', () => {
   it('delivers live speech, markers and clears over SSE', async () => {
     const { say, client, tcpPort } = await bridge();
@@ -232,6 +269,27 @@ describe('CLI', () => {
     expect((await cli(['text', '--since', seq, '--url', url])).stdout).toBe('Submit, button\n');
     expect((await cli(['wait', 'nope', '--timeout', '200', '--url', url])).code).toBe(EXIT.timeout);
     expect((await cli(['status', '--url', url])).stdout).toContain('ready');
+  });
+
+  it('session start → speech, text and wait read only the current session', async () => {
+    const { url, say } = await bridge();
+    await say('old');
+    const started = await cli(['session', 'start', 'agent task', '--url', url]);
+    expect(started.code).toBe(EXIT.ok);
+    const id = started.stdout.trim();
+    await say('Submit, button');
+    expect((await cli(['text', '--url', url])).stdout).toBe('Submit, button\n');
+    expect((await cli(['text', '--all', '--url', url])).stdout).toBe('old\nSubmit, button\n');
+    expect((await cli(['wait', 'old', '--timeout', '200', '--url', url])).code).toBe(EXIT.timeout);
+    expect((await cli(['wait', 'Submit', '--url', url])).code).toBe(EXIT.ok);
+    expect((await cli(['session', 'list', '--url', url])).stdout).toBe(
+      `#${id} agent task: current, 1 entry, seq 2-2\n`,
+    );
+    expect((await cli(['session', 'end', '--url', url])).code).toBe(EXIT.ok);
+    expect((await cli(['speech', '--session', id, '--url', url])).stdout).toBe(
+      '#2 Submit, button\n',
+    );
+    expect((await cli(['speech', '--session', '99', '--url', url])).code).toBe(EXIT.bridge);
   });
 
   it('exits 2 when the bridge is not reachable', async () => {

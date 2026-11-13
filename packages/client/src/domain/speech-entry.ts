@@ -15,6 +15,36 @@ export interface SpeechEntry {
   voice: string | null;
   /** TCP connection that delivered it, `null` for markers. */
   connectionId: number | null;
+  /** The session that was current when it was recorded, `null` outside any session. */
+  sessionId: number | null;
+}
+
+/** The speech of one test or agent task (docs/speech-capture.md#sessions). */
+export interface Session {
+  /** Increasing, restarts at 1 with the bridge. */
+  id: number;
+  name: string;
+  /** Optional label that groups sessions (for example one test run), `null` if not set. */
+  run: string | null;
+  /** ISO 8601, UTC, on the bridge's clock. */
+  startedAt: string;
+  /** ISO 8601, UTC. `null` while the session is current. */
+  endedAt: string | null;
+  /** First and last entry still in the buffer, `null` if none. */
+  firstSeq: number | null;
+  lastSeq: number | null;
+  /** Entries of this session still in the buffer. */
+  entries: number;
+}
+
+/** A session `id`, or `'current'`: the session that is current when the request arrives. */
+export type SessionRef = number | 'current';
+
+/** The sessions still in the bridge's buffer plus the current one, newest first. */
+export interface SessionList {
+  sessions: Session[];
+  /** `null` when no session is current. */
+  currentId: number | null;
 }
 
 export const isSpeech = (entry: SpeechEntry): boolean => entry.kind === 'speech';
@@ -42,11 +72,17 @@ export interface BridgeStatus {
   playwright?: ServiceStatus;
   mcp?: ServiceStatus;
   input: { enabled: boolean };
+  /** The current session and the number of listed sessions. Missing before API 1.3. */
+  session?: { current: Session | null; count: number };
 }
 
 /**
- * One event of the live feed (`GET /api/v1/speech/stream`): a new entry, a clear, or `truncated`
- * before a replay when some missed entries were already dropped from the bridge's buffer.
+ * One event of the live feed (`GET /api/v1/speech/stream`): a new entry, a clear, a session that
+ * started or ended, or `truncated` before a replay when some missed entries were already dropped
+ * from the bridge's buffer.
  */
 export type SpeechFeedEvent =
-  { type: 'entry'; entry: SpeechEntry } | { type: 'clear' } | { type: 'truncated' };
+  | { type: 'entry'; entry: SpeechEntry }
+  | { type: 'clear' }
+  | { type: 'session'; session: Session }
+  | { type: 'truncated' };

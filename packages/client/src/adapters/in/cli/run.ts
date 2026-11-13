@@ -9,7 +9,12 @@ import {
   IncompatibleBridgeError,
   SpeechTimeoutError,
 } from '../../../domain/errors.js';
-import type { BridgeStatus, SpeechEntry } from '../../../domain/speech-entry.js';
+import type {
+  BridgeStatus,
+  Session,
+  SessionRef,
+  SpeechEntry,
+} from '../../../domain/speech-entry.js';
 
 /** Exit codes (docs/client.md#cli-for-agents). */
 export const EXIT = { ok: 0, timeout: 1, bridge: 2, usage: 3 } as const;
@@ -47,12 +52,16 @@ Commands:
   status [--wait-ready] [--timeout <ms>]
                          Bridge health and versions; --wait-ready waits until it is ready
                          (default timeout 120000)
-  clear                  Clear the speech buffer
-  speech [--since <seq>] [--limit <n>] [--include-markers]
+  session start <name> [--run <label>]
+                         Start a session (the previous one ends) and print its id
+  session end            End the current session
+  session list           The sessions in the buffer, newest first
+  clear                  Wipe the whole speech buffer, all sessions (for manual use)
+  speech [--since <seq>] [--limit <n>] [--include-markers] [--session <id> | --all]
                          Recorded speech entries, oldest first
-  text [--since <seq>] [--separator <s>]
+  text [--since <seq>] [--separator <s>] [--session <id> | --all]
                          All speech joined into one text (one line per entry)
-  wait <text> [--regex] [--normalize] [--since <seq>] [--timeout <ms>]
+  wait <text> [--regex] [--normalize] [--since <seq>] [--timeout <ms>] [--session <id> | --all]
                          Wait until speech contains <text> (or matches the regex);
                          also finds speech that arrived before the call (default timeout 5000)
   wait-silence [--quiet-for <ms>] [--timeout <ms>]
@@ -73,8 +82,9 @@ Options:
   -h, --help    Show this help
   -v, --version Show the version
 
---since <seq> takes a seq printed by mark (default 0: everything since the last clear; for
-tail, default: only new speech).
+speech, text and wait read the current session (everything since "session start"), or the
+whole buffer when no session is current. --session <id> reads another session, --all the
+whole buffer. --since <seq> takes a seq printed by mark (for tail, default: only new speech).
 
 Exit codes: 0 success, 1 timeout / no match, 2 bridge not reachable, HTTP error or
 incompatible bridge, 3 invalid usage or config.
@@ -162,6 +172,9 @@ const OPTIONS = {
   regex: { type: 'boolean' },
   normalize: { type: 'boolean' },
   'wait-ready': { type: 'boolean' },
+  run: { type: 'string' },
+  session: { type: 'string' },
+  all: { type: 'boolean' },
 } as const;
 
 type Values = ReturnType<typeof parseArgs<{ options: typeof OPTIONS }>>['values'];
@@ -173,10 +186,11 @@ const GLOBAL_OPTIONS: readonly Option[] = ['url', 'json', 'help', 'version'];
 const COMMAND_OPTIONS = {
   config: [],
   status: ['wait-ready', 'timeout'],
+  session: ['run'],
   clear: [],
-  speech: ['since', 'limit', 'include-markers'],
-  text: ['since', 'separator'],
-  wait: ['regex', 'normalize', 'since', 'timeout'],
+  speech: ['since', 'limit', 'include-markers', 'session', 'all'],
+  text: ['since', 'separator', 'session', 'all'],
+  wait: ['regex', 'normalize', 'since', 'timeout', 'session', 'all'],
   'wait-silence': ['quiet-for', 'timeout'],
   mark: [],
   tail: ['since'],
@@ -225,6 +239,43 @@ const SPEECH_COMMANDS: Record<
     return EXIT.ok;
   },
 
+  async session(args, { values, speech, out }) {
+    const [action, ...rest] = args;
+    if (action !== 'start' && values.run !== undefined) {
+      throw new UsageError('--run only goes with "session start".');
+    }
+    switch (action) {
+      case 'start': {
+        const [name] = expectArgs(rest, 1, 'session start <name> [--run <label>]');
+        if (name.trim() === '') throw new UsageError('The session name must not be empty.');
+        if (values.run?.trim() === '') throw new UsageError('--run must not be empty.');
+        const session = await speech.startSession(name, { run: values.run });
+        out(session, String(session.id));
+        return EXIT.ok;
+      }
+      case 'end':
+        expectArgs(rest, 0, 'session end');
+        await speech.endSession();
+        out({ ended: true }, 'Session ended.');
+        return EXIT.ok;
+      case 'list': {
+        expectArgs(rest, 0, 'session list');
+        const list = await speech.sessions();
+        out(
+          list,
+          list.sessions.length === 0
+            ? 'No sessions.'
+            : list.sessions.map((s) => formatSession(s, s.id === list.currentId)).join('\n'),
+        );
+        return EXIT.ok;
+      }
+      case undefined:
+        throw new UsageError('Missing session action: start, end or list.');
+      default:
+        throw new UsageError(`Unknown session action "${action}": use start, end or list.`);
+    }
+  },
+
   async clear(args, { speech, out }) {
     expectArgs(args, 0, 'clear');
     await speech.clear();
@@ -234,10 +285,12 @@ const SPEECH_COMMANDS: Record<
 
   async speech(args, { values, speech, out }) {
     expectArgs(args, 0, 'speech [--since <seq>] [--limit <n>] [--include-markers]');
+    // Options are checked before the bridge is asked for the current session.
     const entries = await speech.getSpeech({
       since: optionalInt(values, 'since', 0) ?? 0,
       limit: optionalInt(values, 'limit', 1),
       includeMarkers: values['include-markers'] ?? false,
+      session: await scope(values, speech),
     });
     out({ entries }, entries.map(formatEntry).join('\n'));
     return EXIT.ok;
@@ -248,6 +301,7 @@ const SPEECH_COMMANDS: Record<
     const text = await speech.getText({
       since: optionalInt(values, 'since', 0) ?? 0,
       separator: values.separator,
+      session: await scope(values, speech),
     });
     out({ text }, text);
     return EXIT.ok;
@@ -264,12 +318,14 @@ const SPEECH_COMMANDS: Record<
         throw new UsageError(`Invalid --regex: ${(error as Error).message}`);
       }
     }
+    const options = {
+      since: optionalInt(values, 'since', 0) ?? 0,
+      timeout: optionalInt(values, 'timeout', 0),
+      normalize: values.normalize ?? false,
+      session: await scope(values, speech),
+    };
     try {
-      const entry = await speech.waitForOutput(match, {
-        since: optionalInt(values, 'since', 0) ?? 0,
-        timeout: optionalInt(values, 'timeout', 0),
-        normalize: values.normalize ?? false,
-      });
+      const entry = await speech.waitForOutput(match, options);
       out({ matched: true, entry }, formatEntry(entry));
       return EXIT.ok;
     } catch (error) {
@@ -320,6 +376,12 @@ const SPEECH_COMMANDS: Record<
       const stop = speech.onSpeech((entry) => print({ type: 'entry', entry }, formatEntry(entry)), {
         since,
         includeMarkers: true,
+        onSession: (session) =>
+          print(
+            { type: 'session', session },
+            `--- session #${session.id} ${JSON.stringify(session.name)} ` +
+              `${session.endedAt === null ? 'started' : 'ended'} ---`,
+          ),
         onClear: () => print({ type: 'clear' }, '--- buffer cleared ---'),
         onTruncated: () => {
           if (json) print({ type: 'truncated' }, '');
@@ -337,6 +399,19 @@ const SPEECH_COMMANDS: Record<
     });
   },
 };
+
+/**
+ * The session `speech`, `text` and `wait` read: `--session <id>`, nothing with `--all`, otherwise
+ * the current session. Its id, not `'current'`, so a bridge without a current session (or older
+ * than API 1.3) reads the whole buffer instead of answering 404.
+ */
+async function scope(values: Values, speech: SpeechCapture): Promise<SessionRef | undefined> {
+  const id = optionalInt(values, 'session', 1);
+  if (values.all && id !== undefined) throw new UsageError('Use either --session or --all.');
+  if (id !== undefined) return id;
+  if (values.all) return undefined;
+  return (await speech.status()).session?.current?.id;
+}
 
 /** An integer option >= `min`, `undefined` if not given. */
 function optionalInt(values: Values, name: Option, min: number): number | undefined {
@@ -360,13 +435,24 @@ function formatEntry(entry: SpeechEntry): string {
     : `#${entry.seq} ${entry.text}`;
 }
 
+function formatSession(session: Session, current: boolean): string {
+  const run = session.run === null ? '' : ` (run ${session.run})`;
+  const state = current ? 'current' : 'ended';
+  const count = `${session.entries} entr${session.entries === 1 ? 'y' : 'ies'}`;
+  const range =
+    session.firstSeq === null
+      ? ''
+      : `, seq ${session.firstSeq}-${session.lastSeq ?? session.firstSeq}`;
+  return `#${session.id} ${session.name}${run}: ${state}, ${count}${range}`;
+}
+
 function seenText(entries: SpeechEntry[]): string {
   if (entries.length === 0) return ' No speech arrived.';
   return ` Speech seen:\n${entries.map((e) => `  ${formatEntry(e)}`).join('\n')}`;
 }
 
 function formatStatus(status: BridgeStatus): string {
-  const { bridge, tcp, buffer, input } = status;
+  const { bridge, tcp, buffer, input, session } = status;
   const connections = tcp.connections.length;
   const range =
     buffer.firstSeq === null
@@ -378,6 +464,12 @@ function formatStatus(status: BridgeStatus): string {
       `${connections} voice connection${connections === 1 ? '' : 's'}, ${tcp.encoding}`,
     `buffer  ${buffer.size} of ${buffer.maxEntries} entries (${range})`,
     `input   ${input.enabled ? 'enabled' : 'disabled'}`,
+    ...(session === undefined
+      ? []
+      : [
+          `session ${session.current === null ? 'none current' : `#${session.current.id} ${session.current.name}`}, ` +
+            `${session.count} in the buffer`,
+        ]),
   ].join('\n');
 }
 

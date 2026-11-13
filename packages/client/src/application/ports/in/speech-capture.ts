@@ -1,4 +1,10 @@
-import type { BridgeStatus, SpeechEntry } from '../../../domain/speech-entry.js';
+import type {
+  BridgeStatus,
+  Session,
+  SessionList,
+  SessionRef,
+  SpeechEntry,
+} from '../../../domain/speech-entry.js';
 import type { SpeechMatch } from '../../../domain/text-match.js';
 
 export interface GetSpeechOptions {
@@ -8,6 +14,11 @@ export interface GetSpeechOptions {
   limit?: number | undefined;
   /** Include markers. Default `false`. */
   includeMarkers?: boolean | undefined;
+  /**
+   * Only entries of this session: its `id`, or `'current'` (the session current when the request
+   * arrives). Default: all entries. Needs a bridge with API 1.3.
+   */
+  session?: SessionRef | undefined;
 }
 
 export interface GetTextOptions {
@@ -15,6 +26,11 @@ export interface GetTextOptions {
   since?: number | undefined;
   /** Between two entries. Default `'\n'`. */
   separator?: string | undefined;
+  /**
+   * Only entries of this session: its `id`, or `'current'` (the session current when the request
+   * arrives). Default: all entries. Needs a bridge with API 1.3.
+   */
+  session?: SessionRef | undefined;
 }
 
 export interface WaitOptions {
@@ -24,6 +40,16 @@ export interface WaitOptions {
   since?: number | undefined;
   /** Ignore case and extra whitespace (strings and regular expressions). */
   normalize?: boolean | undefined;
+  /**
+   * Only entries of this session: its `id`, or `'current'` (the session current when the request
+   * arrives). Default: all entries. Needs a bridge with API 1.3.
+   */
+  session?: SessionRef | undefined;
+}
+
+export interface StartSessionOptions {
+  /** Label that groups sessions, for example one per test run. */
+  run?: string | undefined;
 }
 
 export interface SilenceOptions {
@@ -46,6 +72,8 @@ export interface OnSpeechOptions {
   since?: number | undefined;
   /** Also deliver markers. Default `false`. */
   includeMarkers?: boolean | undefined;
+  /** A session started or ended (`endedAt` is set when it ended). */
+  onSession?: ((session: Session) => void) | undefined;
   /** The bridge's buffer was cleared. */
   onClear?: (() => void) | undefined;
   /** Some entries of a replay were already dropped because the bridge's buffer was full. */
@@ -77,8 +105,18 @@ export interface SpeechCapture {
   getSpeech(options?: GetSpeechOptions): Promise<SpeechEntry[]>;
   /** All speech after the cursor (or `since`), joined into one string. */
   getText(options?: GetTextOptions): Promise<string>;
-  /** Clears the bridge's buffer and resets the cursor. */
+  /** Clears the bridge's buffer (all sessions) and resets the cursor. For manual use. */
   clear(): Promise<void>;
+  /**
+   * Starts a session (docs/speech-capture.md#sessions): it becomes current and the previous one
+   * ends. Moves the cursor to the session's start, so the next reads and waits only see its
+   * speech. Needs a bridge with API 1.3.
+   */
+  startSession(name: string, options?: StartSessionOptions): Promise<Session>;
+  /** Ends the current session. Speech after this belongs to no session. */
+  endSession(): Promise<void>;
+  /** The sessions still in the buffer plus the current one, newest first. */
+  sessions(): Promise<SessionList>;
   /** Inserts a marker. Its `seq` can be used as `since`. */
   mark(label: string): Promise<SpeechEntry>;
   /** Bridge health and versions. */

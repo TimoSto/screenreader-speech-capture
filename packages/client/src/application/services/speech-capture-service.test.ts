@@ -13,7 +13,7 @@ import { SpeechCaptureService } from './speech-capture-service.js';
 function setup() {
   const api = new FakeBridgeApi();
   const clock = new FakeClock();
-  const sr = new SpeechCaptureService({ api, clock, apiVersion: '1.0' });
+  const sr = new SpeechCaptureService({ api, clock, apiVersion: '1.3' });
   return { api, clock, sr };
 }
 
@@ -179,6 +179,81 @@ describe('record', () => {
   });
 });
 
+describe('sessions', () => {
+  it('startSession moves the cursor to the session start; reads and waits see only it', async () => {
+    const { api, sr } = setup();
+    api.speak('earlier test');
+    const session = await sr.startSession('checkout', { run: 'nightly' });
+    expect(session).toMatchObject({ id: 1, name: 'checkout', run: 'nightly', endedAt: null });
+    expect(sr.cursor()).toBe(1);
+    api.speak('Submit, button');
+    expect(await sr.waitForOutput('Submit')).toMatchObject({ seq: 2, sessionId: 1 });
+    expect(texts(await sr.getSpeech({ since: 0, session: 1 }))).toEqual(['Submit, button']);
+    expect(api.calls).toContain('list 0 session=1');
+  });
+
+  it('startSession handles speech that arrives around the request', async () => {
+    const { api, sr } = setup();
+    api.speak('old');
+    const start = api.startSession.bind(api);
+    api.startSession = async (request) => {
+      api.speak('still the old test');
+      const session = await start(request);
+      api.speak('already the new one');
+      return session;
+    };
+    await sr.startSession('next');
+    expect(sr.cursor()).toBe(2);
+    expect(texts(await sr.getSpeech())).toEqual(['already the new one']);
+  });
+
+  it('endSession and sessions', async () => {
+    const { api, sr } = setup();
+    await sr.startSession('one');
+    await sr.startSession('two');
+    await sr.endSession();
+    const list = await sr.sessions();
+    expect(list.currentId).toBeNull();
+    expect(list.sessions.map((s) => [s.name, s.endedAt === null])).toEqual([
+      ['two', false],
+      ['one', false],
+    ]);
+    expect(api.calls).toEqual([
+      'status',
+      'status',
+      'start one',
+      'list 0',
+      'status',
+      'start two',
+      'list 0',
+      'end',
+      'sessions',
+    ]);
+  });
+
+  it('a wait in a session only matches that session', async () => {
+    const { api, sr } = setup();
+    await sr.startSession('one');
+    api.speak('Submit, button');
+    await sr.startSession('two');
+    await expect(
+      sr.waitForOutput('Submit', { since: 0, session: 'current', timeout: 100 }),
+    ).rejects.toThrow(SpeechTimeoutError);
+    await expect(sr.getText({ since: 0, session: 7 })).rejects.toThrow(BridgeHttpError);
+  });
+
+  it('needs a bridge with API 1.3', async () => {
+    const { api, sr } = setup();
+    api.apiVersion = '1.2';
+    await expect(sr.startSession('x')).rejects.toThrow(
+      'Sessions need a bridge with API 1.3 or newer, this one speaks API 1.2',
+    );
+    await expect(sr.sessions()).rejects.toThrow(IncompatibleBridgeError);
+    await expect(sr.endSession()).rejects.toThrow(IncompatibleBridgeError);
+    expect(api.calls.filter((c) => c !== 'status')).toEqual([]);
+  });
+});
+
 describe('version check', () => {
   it('runs once before the first call', async () => {
     const { api, sr } = setup();
@@ -194,7 +269,7 @@ describe('version check', () => {
     api.apiVersion = '2.0';
     const error = await sr.status().catch((e: unknown) => e);
     expect(error).toBeInstanceOf(IncompatibleBridgeError);
-    expect(error).toMatchObject({ bridgeApiVersion: '2.0', clientApiVersion: '1.0' });
+    expect(error).toMatchObject({ bridgeApiVersion: '2.0', clientApiVersion: '1.3' });
   });
 
   it('is repeated after a failure', async () => {
@@ -258,6 +333,20 @@ describe('onSpeech', () => {
     await vi.waitFor(() => expect(log).toEqual(['2 Submit, button', 'clear', '4 after']));
     expect(errors).toEqual([]);
     expect(sr.cursor()).toBe(0);
+  });
+
+  it('reports sessions that start and end', async () => {
+    const { api, sr } = setup();
+    const { log } = subscribe(sr, {
+      onSession: (s) => log.push(`session ${s.id} ${s.endedAt === null ? 'started' : 'ended'}`),
+    });
+    await vi.waitFor(() => expect(api.openStreams).toBe(1));
+    await api.startSession({ name: 'one' });
+    api.speak('hello');
+    await api.endSession();
+    await vi.waitFor(() =>
+      expect(log).toEqual(['session 1 started', '1 hello', 'session 1 ended']),
+    );
   });
 
   it('delivers markers with includeMarkers and replays the buffer with since', async () => {
