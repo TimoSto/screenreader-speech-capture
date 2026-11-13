@@ -95,7 +95,7 @@ packages/bridge/src/
       routes/        one file per resource → driving ports
       sse/           open SSE streams (SseHub) and the frame format
       dto/           domain → API contract mappers, one file per resource
-    shared/net/      listen helper (ListenError) and reachable URLs of a listener,
+    shared/net/      listen helper (ListenError), port probe, reachable URLs of a listener,
                      used by in and out adapters
     in/cli/          flags / env → startup overrides (win over the config file)
     out/memory/      speech repository (capped list), in-process event bus

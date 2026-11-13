@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { eventually, freePort } from '../../../../test/helpers.js';
 import { MemoryLogger } from '../../../../test/fakes.js';
 import type { RestartPolicy } from '../../../domain/child-service.js';
-import { ChildProcessSupervisor, type Prepare } from './child-process-supervisor.js';
+import { ChildProcessSupervisor } from './child-process-supervisor.js';
+import type { Prepare } from './types.js';
 
 const FAKE_SERVICE = path.resolve(
   import.meta.dirname,
