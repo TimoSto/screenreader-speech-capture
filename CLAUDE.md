@@ -58,8 +58,9 @@ details in `docs/architecture.md`). The bridge:
   bus, clock, config store, logger, capture status), `application/services/` (use-case
   implementations depending only on domain + ports).
 - `adapters/in/` (tcp, http, cli, net) and `adapters/out/` (memory, fs-config, log, clock).
-- `main.ts` — the composition root and the **only** place that knows concrete adapters and
-  services.
+- The composition root: `main.ts` (a thin `startBridge`) plus `composition/` (config loading,
+  logging, child services, live re-apply, startup/shutdown). It is the **only** place that knows
+  concrete adapters and services.
 
 The client has the same layers: `ManageClientConfig` / `ClientConfigService` / `FsClientConfigStore`,
 `SpeechCapture` / `SpeechCaptureService` / `FetchBridgeApi` (waits poll `GET /speech`; `onSpeech`
@@ -70,7 +71,7 @@ re-exports it).
 `no-restricted-imports` in `eslint.config.js` (blocks built with `hexagon(layer)`, for both
 packages) enforces: domain/application must not import `node:*` or adapters; adapters must not
 import concrete services; `in` adapters must not import `out` adapters and vice versa. Test files (`*.test.ts`) are exempt. When adding a feature, add a port and
-wire it in `main.ts` rather than reaching across layers.
+wire it in the composition root (`main.ts` + `composition/`) rather than reaching across layers.
 
 Relative imports use `.js` extensions (ESM), and type-only imports must use `import type`
 (`consistent-type-imports` is an error).
@@ -87,7 +88,7 @@ Each hexagon owns its own domain model and maps to/from DTOs in its HTTP adapter
 Config precedence: CLI flags / `SR_SPEECH_*` env vars (parsed in `adapters/in/cli/options.ts`) win
 over the config file (`adapters/out/fs-config`). `PUT /config` validates a patch, persists it and
 live re-applies only the changed sections (see `changedSections` / `mergeConfig` in
-`domain/config.ts` and the wiring in `main.ts`). Overridden fields are reported back to clients.
+`domain/config.ts` and `composition/reapply.ts`). Overridden fields are reported back to clients.
 
 ### Tests
 

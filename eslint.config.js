@@ -11,7 +11,8 @@ const nodeBuiltins = {
 };
 const adapters = {
   group: ['**/adapters/**'],
-  message: 'Only main.ts may know the concrete adapters (adapters → application → domain).',
+  message:
+    'Only the composition root (main.ts, composition/) may know the concrete adapters (adapters → application → domain).',
 };
 const application = {
   group: ['**/application/**'],
@@ -28,11 +29,11 @@ const compositionRoot = {
 // Relative imports between adapters look like `../../out/...`, so match them with a regex.
 const outAdapters = {
   regex: '(^|/)(\\.\\./out|adapters/out)/',
-  message: 'Driving adapters must not import driven adapters. Wire them in main.ts.',
+  message: 'Driving adapters must not import driven adapters. Wire them in the composition root.',
 };
 const inAdapters = {
   regex: '(^|/)(\\.\\./in|adapters/in)/',
-  message: 'Driven adapters must not import driving adapters. Wire them in main.ts.',
+  message: 'Driven adapters must not import driving adapters. Wire them in the composition root.',
 };
 
 /** Both hexagons (bridge and client) follow the same layout and rules. */
