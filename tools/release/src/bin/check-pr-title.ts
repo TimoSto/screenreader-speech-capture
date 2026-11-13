@@ -1,12 +1,12 @@
 /**
  * CI check for PR titles (they become the squash commit titles that decide the versions).
  *
- *   PR_TITLE='feat(bridge): …' [BASE_REF=origin/main] tsx tools/release/src/check-pr-title.ts
+ *   PR_TITLE='feat(bridge): …' [BASE_REF=origin/main] tsx tools/release/src/bin/check-pr-title.ts
  */
 import { appendFileSync } from 'node:fs';
-import { checkPrTitle } from './check.js';
-import { config } from './config.js';
-import { changedFilesSince } from './git.js';
+import { checkPrTitle } from '../check.js';
+import { config } from '../config.js';
+import { changedFilesSince } from '../git.js';
 
 const title = process.env.PR_TITLE;
 if (title === undefined) {

@@ -1,7 +1,7 @@
 /**
  * Computes the version each package would be published with from the current branch.
  *
- *   tsx tools/release/src/determine-version.ts [--ref <branch>] [--run <n>] [--out <dir>]
+ *   tsx tools/release/src/bin/determine-version.ts [--ref <branch>] [--run <n>] [--out <dir>]
  *
  * - On the main branch: stable versions from the commit titles since each package's last tag
  *   (`<name>@<version>`). No releasing title → no release.
@@ -15,11 +15,11 @@
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
-import { slugify } from './branch.js';
-import { config } from './config.js';
-import { changedFilesSince, commitsSince, currentBranch, lastTaggedVersion } from './git.js';
-import { renderNotes } from './notes.js';
-import { planPreview, planRelease } from './plan.js';
+import { slugify } from '../branch.js';
+import { config } from '../config.js';
+import { changedFilesSince, commitsSince, currentBranch, lastTaggedVersion } from '../git.js';
+import { renderNotes } from '../notes.js';
+import { planPreview, planRelease } from '../plan.js';
 
 const { values } = parseArgs({
   options: { ref: { type: 'string' }, run: { type: 'string' }, out: { type: 'string' } },

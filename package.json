@@ -16,8 +16,8 @@
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r run typecheck",
     "fake-speech": "tsx tools/fake-speech/src/fake-speech.ts",
-    "release:check-title": "tsx tools/release/src/check-pr-title.ts",
-    "release:determine-version": "tsx tools/release/src/determine-version.ts"
+    "release:check-title": "tsx tools/release/src/bin/check-pr-title.ts",
+    "release:determine-version": "tsx tools/release/src/bin/determine-version.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
