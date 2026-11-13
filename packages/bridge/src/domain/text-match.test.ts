@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AppError } from './errors.js';
 import type { SpeechEntry } from './speech-entry.js';
-import { createSpeechMatcher, normalizeText } from './text-match.js';
+import { createSpeechMatcher } from './text-match.js';
 
 function entry(text: string, kind: SpeechEntry['kind'] = 'speech'): SpeechEntry {
   return {
@@ -17,19 +17,8 @@ function entry(text: string, kind: SpeechEntry['kind'] = 'speech'): SpeechEntry 
 }
 
 describe('createSpeechMatcher', () => {
-  it('matches a substring', () => {
-    const match = createSpeechMatcher({ contains: 'Submit, button' });
-    expect(match(entry('Form  Submit, button'))).toBe(true);
-    expect(match(entry('submit, button'))).toBe(false);
-  });
-
-  it('normalizes case and whitespace on both sides', () => {
-    const match = createSpeechMatcher({ contains: 'SUBMIT,   Button ', normalize: true });
-    expect(match(entry('Form submit,\tbutton'))).toBe(true);
-  });
-
-  it('matches a regex, case-insensitive with normalize', () => {
-    expect(createSpeechMatcher({ regex: '^Edit, \\w+' })(entry('Edit, Name, blank'))).toBe(true);
+  it('matches contains or regex (rules in packages/shared/src/text-match.ts)', () => {
+    expect(createSpeechMatcher({ contains: 'Submit' })(entry('Form Submit, button'))).toBe(true);
     expect(createSpeechMatcher({ regex: '^edit', normalize: true })(entry('  Edit'))).toBe(true);
   });
 
@@ -50,11 +39,5 @@ describe('createSpeechMatcher', () => {
       expect(error).toBeInstanceOf(AppError);
       expect((error as AppError).details?.field).toBe(field);
     }
-  });
-});
-
-describe('normalizeText', () => {
-  it('lower-cases and collapses whitespace', () => {
-    expect(normalizeText('  A\r\n  b  ')).toBe('a b');
   });
 });

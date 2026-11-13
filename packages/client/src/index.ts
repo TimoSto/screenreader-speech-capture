@@ -47,5 +47,6 @@ export type {
   SpeechEntry,
   SpeechFeedEvent,
 } from './domain/speech-entry.js';
-export { normalizeText, type SpeechMatch } from './domain/text-match.js';
+export { normalizeText } from '@screenreader-speech-capture/shared';
+export type { SpeechMatch } from './domain/text-match.js';
 export { CONFIG_PATH_ENV, clientConfigFile } from './adapters/out/fs-config/paths.js';

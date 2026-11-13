@@ -173,4 +173,6 @@ Components never call `fetch` directly. They go through the ports, so the UI can
 tested against fake adapters without a running bridge.
 
 `packages/shared` holds only the **API contract** (DTOs). Each hexagon owns its own domain model and
-maps to and from the DTOs in its HTTP adapter.
+maps to and from the DTOs in its HTTP adapter. The one piece of behaviour in it is the `normalize`
+text rule (`text-match.ts`): it is part of the contract, so the bridge's `GET /speech/wait` and the
+client's waits use the same copy.

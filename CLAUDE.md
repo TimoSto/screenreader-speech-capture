@@ -80,7 +80,8 @@ Relative imports use `.js` extensions (ESM), and type-only imports must use `imp
 ### Shared contract
 
 `packages/shared` holds only the HTTP API DTOs (exported from `src/index.ts`, consumed as TS
-source). It is private and bundled into published packages by tsdown — never published on its own.
+source), plus one contract rule: `text-match.ts` (`normalizeText`, `createTextTest`), used by both
+the bridge's wait and the client's waits. It is private and bundled into published packages by tsdown — never published on its own.
 Each hexagon owns its own domain model and maps to/from DTOs in its HTTP adapter
 (`adapters/in/http/dto.ts`). The OpenAPI spec lives at `packages/bridge/docs/openapi.yaml`.
 

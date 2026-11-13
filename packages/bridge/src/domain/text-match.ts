@@ -1,3 +1,4 @@
+import { createTextTest } from '@screenreader-speech-capture/shared';
 import { AppError, invalidField } from './errors.js';
 import type { SpeechEntry } from './speech-entry.js';
 
@@ -11,11 +12,6 @@ export interface TextMatchOptions {
 }
 
 export type SpeechMatcher = (entry: SpeechEntry) => boolean;
-
-/** Lower case, whitespace runs collapsed to one space, trimmed. */
-export function normalizeText(text: string): string {
-  return text.toLowerCase().replace(/\s+/g, ' ').trim();
-}
 
 /**
  * Builds a matcher for `wait`. Exactly one of `contains` and `regex` is required.
@@ -34,22 +30,16 @@ export function createSpeechMatcher(options: TextMatchOptions): SpeechMatcher {
     });
   }
 
-  const prepare = normalize ? normalizeText : (text: string) => text;
-  let test: (text: string) => boolean;
-
+  let pattern: RegExp | undefined;
   if (regex !== undefined) {
-    let pattern: RegExp;
     try {
-      pattern = new RegExp(regex, normalize ? 'iu' : 'u');
+      pattern = new RegExp(regex, 'u');
     } catch (error) {
       throw invalidField('regex', (error as Error).message);
     }
-    test = (text) => pattern.test(prepare(text));
-  } else {
-    const needle = prepare(contains ?? '');
-    if (needle === '') throw invalidField('contains', 'must not be empty');
-    test = (text) => prepare(text).includes(needle);
   }
+  const test = createTextTest(pattern ?? contains ?? '', normalize);
+  if (test === undefined) throw invalidField('contains', 'must not be empty');
 
   return (entry) => entry.kind === 'speech' && test(entry.text);
 }
