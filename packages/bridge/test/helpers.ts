@@ -68,12 +68,13 @@ export async function send(port: number, ...chunks: (string | Buffer)[]): Promis
   await new Promise((resolve) => socket.once('close', resolve));
 }
 
-/** Polls `read` until `ok` (at most about a second), then returns the last value. */
+/** Polls `read` every 10 ms until `ok` (at most `attempts` times), then returns the last value. */
 export async function eventually<T>(
   read: () => T | Promise<T>,
   ok: (value: T) => boolean,
+  attempts = 100,
 ): Promise<T> {
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < attempts; i++) {
     const value = await read();
     if (ok(value)) return value;
     await new Promise((resolve) => setTimeout(resolve, 10));
