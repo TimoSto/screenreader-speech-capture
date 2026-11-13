@@ -6,7 +6,6 @@ import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { FsConfigStore } from './adapters/out/fs-config/fs-config-store.js';
 import type { LogSink } from './adapters/out/log/log.js';
-import { logSpeechTranscript } from './adapters/out/log/speech-transcript.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
 import { MemorySessionRepository } from './adapters/out/memory/memory-session-repository.js';
 import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';
@@ -24,6 +23,7 @@ import { ConfigService } from './application/services/config-service.js';
 import { SessionService } from './application/services/session-service.js';
 import { SpeechService } from './application/services/speech-service.js';
 import { StatusService } from './application/services/status-service.js';
+import { TranscriptService } from './application/services/transcript-service.js';
 import { WaitForSpeechService } from './application/services/wait-for-speech-service.js';
 import { runLifecycle, startListeners } from './composition/lifecycle.js';
 import { loadConfig } from './composition/load-config.js';
@@ -113,7 +113,10 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     bridgeLogger.error(`event listener failed: ${String(error)}`),
   );
 
-  logSpeechTranscript(events, log.for('speech-capture', { channel: 'speech' }));
+  new TranscriptService({
+    events,
+    transcript: log.for('speech-capture', { channel: 'speech' }),
+  }).start();
   const speech = new SpeechService({ repository, events, clock, sessions: sessionRepository });
   const waits = new WaitForSpeechService({ repository, events, sessions: sessionRepository });
   const sessions = new SessionService({ sessions: sessionRepository, repository, events, clock });
