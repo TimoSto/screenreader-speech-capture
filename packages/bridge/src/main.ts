@@ -1,7 +1,7 @@
 // Composition root: the only place that knows the concrete adapters (docs/architecture.md).
 import { API_VERSION } from '@screenreader-speech-capture/shared';
 import { HttpServer } from './adapters/in/http/http-server.js';
-import { ListenError } from './adapters/in/net/listen.js';
+import { ListenError } from './adapters/shared/net/listen.js';
 import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { FsConfigStore } from './adapters/out/fs-config/fs-config-store.js';
