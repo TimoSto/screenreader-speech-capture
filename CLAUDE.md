@@ -87,7 +87,7 @@ the bridge's wait and the client's waits. A second, Node-only entry
 the DTOs) holds `appDir`, the per-user config/state/cache folders, so the bridge's `config.json` and
 the client's `client.json` agree. It is private and bundled into published packages by tsdown — never published on its own.
 Each hexagon owns its own domain model and maps to/from DTOs in its HTTP adapter
-(`adapters/in/http/dto/`, one file per resource). The OpenAPI spec lives at `packages/bridge/docs/openapi.yaml`.
+(`adapters/in/http/dto/`, one file per resource). The OpenAPI spec lives at `docs/openapi.yaml`.
 
 ### Config
 
@@ -110,4 +110,4 @@ live re-applies only the changed sections (see `changedSections` / `mergeConfig`
 
 Each fact has one home in `docs/`; other docs link to it in one line. The README only introduces the
 project and links into `docs/`. Update `docs/ROADMAP.md` checkboxes when a milestone item lands, and
-keep `docs/http-api.md` / `openapi.yaml` in sync with HTTP changes.
+keep `docs/http-api.md` / `docs/openapi.yaml` in sync with HTTP changes.

@@ -2,7 +2,7 @@
 
 The bridge's REST + SSE interface. Tests and agents usually use the [client](client.md) instead.
 
-Machine-readable spec: [`packages/bridge/docs/openapi.yaml`](../packages/bridge/docs/openapi.yaml)
+Machine-readable spec: [`openapi.yaml`](openapi.yaml)
 (OpenAPI 3.1, the endpoints the bridge serves today).
 
 Base URL: `http://<vm>:5151/api/v1`. All responses are JSON unless noted otherwise. Errors use one
