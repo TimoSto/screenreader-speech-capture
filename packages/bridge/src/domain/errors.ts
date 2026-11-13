@@ -1,4 +1,8 @@
-/** Error codes of the application. The HTTP adapter maps them to status codes. */
+/**
+ * Error codes of the application. The HTTP adapter maps them to status codes. Must be the same
+ * set as `ERROR_CODES` in the API contract (packages/shared): the bridge is the only producer of
+ * those codes. `adapters/in/http/errors.test.ts` checks it at type level.
+ */
 export type ErrorCode =
   'INVALID_REQUEST' | 'NOT_FOUND' | 'INPUT_DISABLED' | 'SERVICE_UNAVAILABLE' | 'INTERNAL';
 
