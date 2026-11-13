@@ -1,4 +1,5 @@
 import type net from 'node:net';
+import { AppError } from '../../../domain/errors.js';
 
 /** Thrown when a listener can't use its port (for example `EADDRINUSE`). */
 export class ListenError extends Error {
@@ -32,4 +33,14 @@ export async function listen(server: net.Server, host: string, port: number): Pr
     });
   });
   return (server.address() as net.AddressInfo).port;
+}
+
+/**
+ * `INVALID_REQUEST` naming the setting, for a listener that can't use a new address
+ * (`PUT /api/v1/config`). Any other error is returned as it is.
+ */
+export function toConfigError(section: 'tcp' | 'http', error: unknown): unknown {
+  if (!(error instanceof ListenError)) return error;
+  const field = error.code === 'EADDRNOTAVAIL' ? `${section}.host` : `${section}.port`;
+  return new AppError('INVALID_REQUEST', `${field}: ${error.message}`, { field });
 }
