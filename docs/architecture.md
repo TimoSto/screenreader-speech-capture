@@ -107,6 +107,7 @@ packages/bridge/src/
     out/robotjs/     InputInjector on @jitsi/robotjs (mouse click, key chords)
     out/log/         bridge log: console + file, prefixes, colours, rotation
     out/clock/       system clock
+    out/platform/    default file locations (config, log, Playwright cache) on shared `appDir`
   main.ts            composition root: startBridge, the only place adapters are wired to ports
   composition/       its helpers: config loading, logging, child services, live re-apply
                      (PUT /config), startup and shutdown order
@@ -181,3 +182,8 @@ tested against fake adapters without a running bridge.
 maps to and from the DTOs in its HTTP adapter. The one piece of behaviour in it is the `normalize`
 text rule (`text-match.ts`): it is part of the contract, so the bridge's `GET /speech/wait` and the
 client's waits use the same copy.
+
+It also has one Node-only entry, `@screenreader-speech-capture/shared/platform-paths`: `appDir`
+resolves the per-user config, state and cache folders (`%APPDATA%` / `%LOCALAPPDATA%` on Windows,
+XDG elsewhere). It is shared because the bridge's `config.json` and the client's `client.json` must
+sit in the same folder, and kept out of the main entry so the UI's bundle stays free of `node:*`.
