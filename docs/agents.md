@@ -2,6 +2,9 @@
 
 How AI agents use the bridge: the CLI, the agent skill and Playwright MCP.
 
+> **Partly planned.** The CLI loop and Playwright MCP work today. `press` needs native input
+> ([M4](ROADMAP.md#m4-native-input-)); the agent skill, `install-skill` and the subagents come with [M6](ROADMAP.md#m6-agents-).
+
 ## Agent loop
 
 Agents drive the browser through [Playwright MCP](playwright-mcp.md#playwright-mcp) and read speech through the
@@ -12,12 +15,14 @@ npx screenreader-speech-capture-client config set url http://my-test-vm:5151   #
 npx screenreader-speech-capture-client session start "audit checkout page"      # once per task
 SEQ=$(npx screenreader-speech-capture-client mark step-1)
 # … act through Playwright MCP, or send a screen reader command:
-npx screenreader-speech-capture-client press h
+npx screenreader-speech-capture-client press h            # planned (M4)
 npx screenreader-speech-capture-client wait-silence
 npx screenreader-speech-capture-client text --since "$SEQ" --json   # → judge the output
 ```
 
 ## Agent skill
+
+*(planned, [M6](ROADMAP.md#m6-agents-))*
 
 The client package ships an agent skill in the [Claude Code skill format](https://docs.claude.com/en/docs/claude-code/skills):
 

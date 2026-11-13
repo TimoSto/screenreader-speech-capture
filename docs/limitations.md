@@ -44,5 +44,5 @@ What this project can't do, so you can decide early whether it fits your tests.
 
 - Needs an **interactive, unlocked desktop session**. No Windows service, no locked screen, no
   disconnected RDP session ([Running on the VM](vm-setup.md#running-on-the-vm)).
-- Native clicks assume **100 % display scaling** and one monitor ([Native input](native-input.md)).
+- Native clicks *(planned, [M4](ROADMAP.md#m4-native-input-))* assume **100 % display scaling** and one monitor ([Native input](native-input.md)).
 - **No authentication.** Only use it on isolated test networks ([Security](security.md)).

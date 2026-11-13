@@ -58,11 +58,12 @@ flowchart LR
 ## What it does
 
 - **Records speech** from NVDA or JAWS, one entry per spoken phrase, with timestamps.
-- **HTTP API + live stream** to read, wait for and clear the recorded speech, plus a **web UI** to watch them.
-- **Test client**: a TypeScript library with a Playwright fixture (`waitForOutput('Submit, button')`)
-  and a CLI for scripts and AI agents.
+- **HTTP API + live stream** to read, wait for and clear the recorded speech, plus a **web UI** to watch them (UI planned, [M5](docs/ROADMAP.md#m5-web-ui-)).
+- **Test client**: a TypeScript library with a Playwright fixture (`waitForOutput('Submit, button')`,
+  fixture planned, [M3](docs/ROADMAP.md#m3-playwright--mcp-)) and a CLI for scripts and AI agents.
 - **Remote browser** on the screen reader's machine through a Playwright server and Playwright MCP.
-- **Native input** for screen reader commands (`Insert+T`, browse mode `H`) that Playwright can't send.
+- **Native input** for screen reader commands (`Insert+T`, browse mode `H`) that Playwright can't send
+  (planned, [M4](docs/ROADMAP.md#m4-native-input-)).
 
 ## Quick start
 
@@ -100,44 +101,9 @@ Details: [VM setup](docs/vm-setup.md), [Test client](docs/client.md).
 
 ## Following speech live
 
-The bridge pushes every speech entry the moment it arrives, over
-[Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events)
-(SSE): one long-lived HTTP response that the bridge keeps writing to. The client wraps it, so you
-never parse the stream yourself, and it reconnects without losing an entry.
-
-```mermaid
-sequenceDiagram
-    participant SR as NVDA / JAWS<br/>+ socket voice
-    participant B as Bridge :5151
-    participant C as Client<br/>(onSpeech / tail)
-
-    C->>B: GET /api/v1/speech/stream
-    B-->>C: 200 text/event-stream (stays open)
-    SR->>B: "Submit, button" (TCP :4449)
-    B-->>C: id: 41, event: entry, data: {"seq":41, "text":"Submit, button", ...}
-    Note over B,C: ": ping" every 15 s keeps the connection open,<br/>"event: clear" follows a clear
-    Note over B,C: connection lost (network, bridge restart)
-    C->>B: GET /api/v1/speech/stream<br/>Last-Event-ID: 41
-    B-->>C: replays the entries after seq 41, then goes on live
-```
-
-From a shell or an agent (one JSON event per line with `--json`):
-
-```bash
-npx screenreader-speech-capture-client tail      # until Ctrl+C
-```
-
-From code:
-
-```ts
-const sr = new SpeechCaptureClient();
-const stop = sr.onSpeech((entry) => console.log(entry.text)); // call stop() to unsubscribe
-```
-
-Or the raw stream: `curl -N http://my-test-vm:5151/api/v1/speech/stream`.
-
-Details: [Test client → Live feed](docs/client.md#live-feed), wire format in
-[HTTP API](docs/http-api.md#endpoints).
+The bridge pushes each speech entry the moment it arrives (Server-Sent Events). Watch it with
+`npx screenreader-speech-capture-client tail`, or subscribe in code with `sr.onSpeech(...)`. Details:
+[Test client → Live feed](docs/client.md#live-feed).
 
 ## Documentation
 
@@ -147,16 +113,17 @@ Details: [Test client → Live feed](docs/client.md#live-feed), wire format in
 | [Speech capture](docs/speech-capture.md) | Wire format of the socket voice, how the bridge turns it into speech entries, the buffer |
 | [HTTP API](docs/http-api.md) | Data model, endpoints, errors, versioning |
 | [Test client](docs/client.md) | Library, cursor, Playwright fixture, CLI and exit codes |
-| [Native input](docs/native-input.md) | Real clicks and key presses: when Playwright input isn't enough |
+| [Native input](docs/native-input.md) | Real clicks and key presses: when Playwright input isn't enough (planned) |
 | [Remote Playwright & MCP](docs/playwright-mcp.md) | The Playwright server and Playwright MCP run by the bridge |
-| [Agents](docs/agents.md) | Agent loop with the CLI, agent skill |
-| [Web UI](docs/web-ui.md) | Live log, settings, setup page |
+| [Agents](docs/agents.md) | Agent loop with the CLI, agent skill (partly planned) |
+| [Web UI](docs/web-ui.md) | Live log, settings, setup page (planned) |
 | [Configuration](docs/configuration.md) | CLI flags, environment variables, config file |
 | [Operations](docs/operations.md) | Startup, shutdown, crash recovery, logging |
 | [Troubleshooting](docs/troubleshooting.md) | Common problems and fixes |
 | [Limitations](docs/limitations.md) | What this project can't do |
 | [Security](docs/security.md) | Risks of the open ports |
-| [Architecture](docs/architecture.md) | Why Node.js, monorepo, hexagonal bridge and client, UI structure |
+| [Architecture](docs/architecture.md) | Monorepo, hexagonal bridge and client, UI structure |
+| [Decisions](docs/decisions.md) | Choices that rarely change and why (Node.js, not Go) |
 | [Development](docs/development.md) | Building, testing without Windows, CI and releases |
 | [Roadmap](docs/ROADMAP.md) | Milestones and open questions |
 

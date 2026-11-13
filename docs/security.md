@@ -5,7 +5,7 @@ There is **no authentication** by default. Anyone who can reach the ports can:
 - read what the screen reader said and change the configuration,
 - **run programs on the VM**: Playwright's `run-server` accepts launch options from the client,
   such as `executablePath` and `args`, so access to port 3000 is effectively remote command execution,
-- control the desktop through the native input endpoints and a browser through MCP.
+- control a browser through MCP, and the desktop through the native input endpoints *(planned, [M4](ROADMAP.md#m4-native-input-))*.
 
 Whoever can change the configuration also picks which published `playwright` version the bridge
 installs and runs, older ones with known issues included. That adds nothing to the access that port

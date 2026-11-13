@@ -111,3 +111,10 @@ live re-applies only the changed sections (see `changedSections` / `mergeConfig`
 Each fact has one home in `docs/`; other docs link to it in one line. The README only introduces the
 project and links into `docs/`. Update `docs/ROADMAP.md` checkboxes when a milestone item lands, and
 keep `docs/http-api.md` / `docs/openapi.yaml` in sync with HTTP changes.
+
+Docs may describe features that don't exist yet. Mark them so a reader who lands on a page can tell:
+a page that is entirely design gets a `> **Planned (Mx), not implemented yet.**` note under its
+title; a single planned endpoint, function, command, setting or section gets
+`*(planned, [Mx](ROADMAP.md#…))*`. A plain link to a planned page needs no marker (the page has
+one). Remove the markers when the milestone lands. Lasting decisions and their reasons go in
+`docs/decisions.md`, not in `architecture.md`.

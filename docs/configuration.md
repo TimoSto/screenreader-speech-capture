@@ -12,7 +12,7 @@ Precedence: **CLI flags > environment variables > config file > defaults**.
   `SR_SPEECH_TCP_PORT=4449`, `SR_SPEECH_HTTP_PORT=5151`, `SR_SPEECH_NO_MCP=1`. Switches
   (`SR_SPEECH_NO_MCP`, `SR_SPEECH_CONSOLE_SPEECH`, …) are on with `1`, `true`, `yes` or `on`;
   `0`, `false`, `no`, `off` or empty count as not set.
-- The **Settings** page in the UI edits the configuration through `PUT /api/v1/config`.
+- The **Settings** page in the UI *(planned, [M5](ROADMAP.md#m5-web-ui-))* edits the configuration through `PUT /api/v1/config`.
 - An invalid value stops the start with an error that names the flag, the variable or the config
   file, and the setting (exit code `2`).
 - If a flag or variable sets something the config file also sets, the bridge log warns at startup:
@@ -74,13 +74,13 @@ What each section does when it changes:
 | `--tcp-port <n>` | `4449` | Port the socket voice connects to (the default voice of `text-to-socket-engine` uses 4449). |
 | `--tcp-encoding <enc>` | `windows-1252` | Character encoding of the incoming text: the VM's ANSI code page (see [Wire format](speech-capture.md#wire-format)). |
 | `--host <addr>` | `0.0.0.0` | Interface for HTTP, Playwright server and MCP (these are reached remotely). |
-| `--http-port <n>` | `5151` | HTTP API + web UI. |
+| `--http-port <n>` | `5151` | HTTP API (and the web UI, [M5](ROADMAP.md#m5-web-ui-)). |
 | `--playwright-port <n>` | `3000` | Playwright server (WebSocket). |
 | `--playwright-version <v>` | *(bundled)* | Playwright version of the server, exact (`1.65.0`). Must match the clients (see [Version](playwright-mcp.md#version)). |
 | `--mcp-port <n>` | `8931` | Playwright MCP (HTTP). |
 | `--no-playwright` | | Don't start the Playwright server. |
 | `--no-mcp` | | Don't start Playwright MCP. |
-| `--no-input` | | Disable the native input endpoints. |
+| `--no-input` | | Disable the native input endpoints *(planned, [M4](ROADMAP.md#m4-native-input-))*. |
 | `--log-level <level>` | `info` | Level of the bridge's own log: `error`, `warn`, `info`, `debug`. |
 | `--bridge-log <path>` | `%LOCALAPPDATA%\screenreader-speech-capture\logs\bridge.log` | File for the bridge's own log (see [Operations](operations.md#logging)). |
 | `--console-speech` | off | Also write the received speech to the console. Causes a feedback loop when the console is on the VM ([Operations](operations.md#speech-text-stays-off-the-console)). |
