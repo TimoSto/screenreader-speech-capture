@@ -7,7 +7,7 @@ import type {
   ProcessSupervisor,
   ServiceSettings,
 } from '../application/ports/out/process-supervisor.js';
-import type { Config } from '../domain/config.js';
+import type { Config } from '../domain/config/index.js';
 
 /** The Playwright server listens on the same interface as the HTTP API (`--host`). */
 const playwrightSettings = (config: Config): ServiceSettings => ({

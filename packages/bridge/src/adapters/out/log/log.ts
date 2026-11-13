@@ -1,5 +1,5 @@
 import type { Logger } from '../../../application/ports/out/logger.js';
-import type { LogLevel } from '../../../domain/config.js';
+import type { LogLevel } from '../../../domain/config/index.js';
 
 /** Parts of the bridge that write to the log (docs/operations.md#line-format). */
 export type LogPrefix =

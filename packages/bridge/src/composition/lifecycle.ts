@@ -4,7 +4,7 @@ import { ListenError } from '../adapters/shared/net/listen.js';
 import type { Logger } from '../application/ports/out/logger.js';
 import type { StatusService } from '../application/services/status-service.js';
 import type { WaitForSpeechService } from '../application/services/wait-for-speech-service.js';
-import type { Config } from '../domain/config.js';
+import type { Config } from '../domain/config/index.js';
 import type { Ports } from './reapply.js';
 import type { ChildService } from './services.js';
 

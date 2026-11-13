@@ -1,0 +1,39 @@
+export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
+export const LOG_LEVELS: readonly LogLevel[] = ['error', 'warn', 'info', 'debug'];
+
+/** The bridge configuration. Documented in docs/configuration.md. */
+export interface Config {
+  readonly tcp: {
+    readonly host: string;
+    readonly port: number;
+    readonly format: 'text-to-socket';
+    /** TextDecoder label of the code page the socket voice uses. */
+    readonly encoding: string;
+    readonly maxLineBytes: number;
+  };
+  readonly http: { readonly host: string; readonly port: number };
+  readonly playwright: {
+    readonly enabled: boolean;
+    readonly port: number;
+    readonly version: string | null;
+  };
+  /** No version: the bridge runs the `@playwright/mcp` it depends on. */
+  readonly mcp: {
+    readonly enabled: boolean;
+    readonly port: number;
+  };
+  readonly input: { readonly enabled: boolean };
+  readonly buffer: { readonly maxEntries: number };
+  readonly log: {
+    readonly level: LogLevel;
+    /** Bridge log file, `null` = default path. */
+    readonly file: string | null;
+    /** Also write the speech text to the console (feedback loop on the VM, see docs). */
+    readonly consoleSpeech: boolean;
+  };
+}
+
+export type ConfigPatch = { readonly [K in keyof Config]?: Partial<Config[K]> };
+
+/** One setting as `section.key`, for example `tcp.port`. */
+export type ConfigField = `${string}.${string}`;

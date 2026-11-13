@@ -1,4 +1,4 @@
-import type { ConfigPatch } from '../../../domain/config.js';
+import type { ConfigPatch } from '../../../domain/config/index.js';
 
 /** The config file. */
 export interface ConfigStore {

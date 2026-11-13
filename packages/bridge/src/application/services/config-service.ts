@@ -7,7 +7,7 @@ import {
   type Config,
   type ConfigField,
   type ConfigPatch,
-} from '../../domain/config.js';
+} from '../../domain/config/index.js';
 import type { ConfigChangeListener, ManageConfig } from '../ports/in/manage-config.js';
 import type { ConfigStore } from '../ports/out/config-store.js';
 import type { Logger } from '../ports/out/logger.js';

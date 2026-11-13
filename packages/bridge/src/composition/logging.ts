@@ -1,7 +1,7 @@
 import { fileSink } from '../adapters/out/log/file-sink.js';
 import { BridgeLog, consoleSink, type LogSink } from '../adapters/out/log/log.js';
 import { defaultLogFile } from '../adapters/out/platform/paths.js';
-import type { Config } from '../domain/config.js';
+import type { Config } from '../domain/config/index.js';
 
 function startupMessage(config: Config, version: string, configFile: string, file: string | null) {
   const { level, consoleSpeech } = config.log;

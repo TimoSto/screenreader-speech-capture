@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MemorySessionRepository } from '../../adapters/out/memory/memory-session-repository.js';
 import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
-import { DEFAULT_CONFIG } from '../../domain/config.js';
+import { DEFAULT_CONFIG } from '../../domain/config/index.js';
 import type { CaptureStatus } from '../../domain/capture.js';
 import { StatusService } from './status-service.js';
 

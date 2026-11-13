@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Logger } from '../../../application/ports/out/logger.js';
-import { isExactVersion } from '../../../domain/config.js';
+import { isExactVersion } from '../../../domain/version.js';
 import type { RunCommand } from '../process/run-command.js';
 
 export interface EnsureNpmPackageOptions {

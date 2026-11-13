@@ -4,7 +4,7 @@ import type { CaptureStatusSource } from '../../../application/ports/out/capture
 import type { Clock } from '../../../application/ports/out/clock.js';
 import type { Logger } from '../../../application/ports/out/logger.js';
 import type { CaptureStatus, ConnectionInfo, ListenerState } from '../../../domain/capture.js';
-import type { Config } from '../../../domain/config.js';
+import type { Config } from '../../../domain/config/index.js';
 import { listen } from '../../shared/net/listen.js';
 import { TextToSocketParser } from './text-to-socket-parser.js';
 

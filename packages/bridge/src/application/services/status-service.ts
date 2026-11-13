@@ -1,4 +1,4 @@
-import type { Config } from '../../domain/config.js';
+import type { Config } from '../../domain/config/index.js';
 import type { BridgeState, GetStatus, Status } from '../ports/in/get-status.js';
 import type { CaptureStatusSource } from '../ports/out/capture-status.js';
 import type { ProcessSupervisor } from '../ports/out/process-supervisor.js';
