@@ -8,3 +8,7 @@ export function sendJson(res: http.ServerResponse, status: number, body: unknown
   });
   res.end(data);
 }
+
+export function sendNoContent(res: http.ServerResponse): void {
+  res.writeHead(204).end();
+}

@@ -2,7 +2,7 @@ import type http from 'node:http';
 import { invalidField } from '../../../domain/errors.js';
 import type { SessionFilter } from '../../../domain/session.js';
 
-// Parsing of the request: query parameters and the JSON body. Syntax only.
+// Parsing of the request: query parameters, headers and the JSON body. Syntax only.
 
 /**
  * An integer query parameter, `undefined` if it is missing. Only the syntax is checked here:
@@ -72,4 +72,41 @@ export async function readJson(req: http.IncomingMessage): Promise<unknown> {
   } catch {
     throw invalidField('body', 'must be valid JSON');
   }
+}
+
+/** The JSON body of a POST/PUT: checks the content type, then reads it. */
+export async function jsonBody(req: http.IncomingMessage): Promise<unknown> {
+  requireJson(req);
+  return readJson(req);
+}
+
+/** `body[name]`, or `undefined` when the body isn't a JSON object. */
+function field(body: unknown, name: string): unknown {
+  const isObject = typeof body === 'object' && body !== null && !Array.isArray(body);
+  return isObject ? (body as Record<string, unknown>)[name] : undefined;
+}
+
+/** A required string field of a JSON body. */
+export function stringField(body: unknown, name: string): string {
+  const value = field(body, name);
+  if (typeof value !== 'string') throw invalidField(name, 'must be a string');
+  return value;
+}
+
+/** An optional string field of a JSON body that may also be `null`. */
+export function nullableStringField(body: unknown, name: string): string | null | undefined {
+  const value = field(body, name);
+  if (value !== undefined && value !== null && typeof value !== 'string') {
+    throw invalidField(name, 'must be a string or null');
+  }
+  return value;
+}
+
+/** `Last-Event-ID` of an SSE reconnect, `null` on a first connect. */
+export function lastEventId(req: http.IncomingMessage): number | null {
+  const raw = req.headers['last-event-id'];
+  if (raw === undefined || raw === '') return null;
+  const value = typeof raw === 'string' && /^\d+$/.test(raw) ? Number(raw) : NaN;
+  if (!Number.isSafeInteger(value)) throw invalidField('Last-Event-ID', 'must be a seq');
+  return value;
 }
