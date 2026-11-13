@@ -1,5 +1,7 @@
 // Public API of screenreader-speech-capture-client.
 export {
+  clientConfigFile,
+  CONFIG_PATH_ENV,
   createClientConfig,
   SpeechCaptureClient,
   type SpeechCaptureClientOptions,
@@ -42,4 +44,3 @@ export type { Session, SessionList, SessionRef } from './domain/session.js';
 export type { SpeechEntry } from './domain/speech-entry.js';
 export { normalizeText } from '@screenreader-speech-capture/shared';
 export type { SpeechMatch } from './domain/text-match.js';
-export { CONFIG_PATH_ENV, clientConfigFile } from './adapters/out/fs-config/paths.js';
