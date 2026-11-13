@@ -19,8 +19,8 @@ const application = {
   message: 'The domain imports nothing from the outer layers.',
 };
 const services = {
-  group: ['**/application/services/**'],
-  message: 'Adapters talk to the application through ports, not the concrete services.',
+  group: ['**/application/services/**', '**/application/shared/**'],
+  message: 'Adapters talk to the application through ports, not the services or their helpers.',
 };
 const compositionRoot = {
   group: ['**/main.js', '**/composition/**'],

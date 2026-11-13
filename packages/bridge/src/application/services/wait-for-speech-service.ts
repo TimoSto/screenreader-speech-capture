@@ -9,8 +9,8 @@ import {
 import type { SessionRepository } from '../ports/out/session-repository.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
-import { intOption } from './int-option.js';
-import { resolveSessionFilter } from './session-filter.js';
+import { intOption } from '../shared/int-option.js';
+import { resolveSessionFilter } from '../shared/session-filter.js';
 
 export interface WaitForSpeechDeps {
   repository: SpeechRepository;
