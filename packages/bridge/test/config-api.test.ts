@@ -106,12 +106,12 @@ describe('PUT /api/v1/config', () => {
 describe('config file at startup', () => {
   it('loads the file, lets flags win and warns about each overridden setting', async () => {
     const { lines, sinks } = captureLog();
-    const store = new MemoryConfigStore({ buffer: { maxEntries: 42 }, input: { enabled: false } });
+    const store = new MemoryConfigStore({ buffer: { maxEntries: 42 }, log: { level: 'warn' } });
     const bridge = await start({ buffer: { maxEntries: 7 } }, { store, sinks });
 
     const config = await json<ConfigDto>(await fetch(api(bridge, '/config')));
     expect(config.buffer.maxEntries).toBe(7);
-    expect(config.input.enabled).toBe(false);
+    expect(config.log.level).toBe('warn');
     expect(lines.filter((line) => line.includes('WARN'))).toEqual([
       expect.stringMatching(
         /^\[config\] .* WARN {2}buffer\.maxEntries: the config file sets 42, but a flag or environment variable sets 7, which wins$/,

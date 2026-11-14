@@ -17,10 +17,7 @@ export class BridgeNotReadyError extends Error {
   override name = 'BridgeNotReadyError';
 }
 
-/**
- * The bridge speaks another major version of the HTTP API (docs/http-api.md#versioning), or an
- * older minor version that lacks a feature the call needs.
- */
+/** The bridge speaks another major version of the HTTP API (docs/http-api.md#versioning). */
 export class IncompatibleBridgeError extends Error {
   override name = 'IncompatibleBridgeError';
 
@@ -29,10 +26,11 @@ export class IncompatibleBridgeError extends Error {
     readonly bridgeApiVersion: string,
     /** The API version this client was built for. */
     readonly clientApiVersion: string,
-    message = `The bridge speaks API ${bridgeApiVersion}, this client needs API ${clientApiVersion}. ` +
-      'Install the bridge and the client in the same version.',
   ) {
-    super(message);
+    super(
+      `The bridge speaks API ${bridgeApiVersion}, this client needs API ${clientApiVersion}. ` +
+        'Install the bridge and the client in the same version.',
+    );
   }
 }
 

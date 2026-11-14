@@ -16,15 +16,7 @@ export function toServiceStatusDto(service: ServiceStatus): ServiceStatusDto {
   };
 }
 
-export function toStatusDto({
-  bridge,
-  tcp,
-  buffer,
-  playwright,
-  mcp,
-  input,
-  session,
-}: Status): StatusDto {
+export function toStatusDto({ bridge, tcp, buffer, playwright, mcp, session }: Status): StatusDto {
   return {
     bridge: {
       version: bridge.version,
@@ -51,7 +43,6 @@ export function toStatusDto({
     },
     playwright: toServiceStatusDto(playwright),
     mcp: toServiceStatusDto(mcp),
-    input: { enabled: input.enabled },
     session: {
       current: session.current === null ? null : toSessionDto(session.current),
       count: session.count,

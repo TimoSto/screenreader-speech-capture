@@ -1,5 +1,6 @@
 import {
   API_PREFIX,
+  API_VERSION,
   type ErrorBodyDto,
   type MarkerRequestDto,
   type ServiceStatusDto,
@@ -11,7 +12,7 @@ import {
   type StatusDto,
 } from '@screenreader-speech-capture/shared';
 import type { BridgeApi, SpeechPage } from '../../../application/ports/out/bridge-api.js';
-import { MIN_BRIDGE_API, requireApiVersion } from '../../../domain/api-version.js';
+import { checkApiVersion } from '../../../domain/api-version.js';
 import { BridgeHttpError, BridgeUnreachableError } from '../../../domain/errors.js';
 import type { BridgeStatus, ServiceStatus } from '../../../domain/bridge-status.js';
 import type { SpeechFeedEvent } from '../../../domain/feed-event.js';
@@ -49,8 +50,8 @@ export class FetchBridgeApi implements BridgeApi {
 
   async status(): Promise<BridgeStatus> {
     const dto = await this.json<StatusDto>('GET', '/status');
-    // Older bridges lack fields this client's status requires (`session`, ...).
-    requireApiVersion(dto.bridge.apiVersion, MIN_BRIDGE_API, 'Clients of this version');
+    // Checked before mapping: another major version may answer in another shape.
+    checkApiVersion(dto.bridge.apiVersion, API_VERSION);
     return toStatus(dto);
   }
 
@@ -243,15 +244,7 @@ const toServiceStatus = (dto: ServiceStatusDto): ServiceStatus => ({
   exitCode: dto.exitCode,
 });
 
-const toStatus = ({
-  bridge,
-  tcp,
-  buffer,
-  playwright,
-  mcp,
-  input,
-  session,
-}: StatusDto): BridgeStatus => ({
+const toStatus = ({ bridge, tcp, buffer, playwright, mcp, session }: StatusDto): BridgeStatus => ({
   bridge: {
     version: bridge.version,
     apiVersion: bridge.apiVersion,
@@ -273,7 +266,6 @@ const toStatus = ({
   },
   playwright: toServiceStatus(playwright),
   mcp: toServiceStatus(mcp),
-  input: { enabled: input.enabled },
   session: {
     current: session.current === null ? null : toSession(session.current),
     count: session.count,

@@ -65,7 +65,7 @@ with every run.
 | `POST /api/v1/set-focus` `{ "x": 640, "y": 12, "button": "left" }` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
 | `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Native key presses: one chord, or a sequence with `delayMs` between them. |
 | `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. `PUT` takes any subset as `application/json`, saves it to the config file, applies what can change while running and answers with the configuration in use plus `restartRequired` (since API 1.6): the restart-only settings, such as ports, saved for the next start. See [Changing settings](configuration.md#changing-settings). |
-| `GET /api/v1/status` | Bridge and API version, when the bridge started (`startedAt`), state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, native input available, current session. |
+| `GET /api/v1/status` | Bridge and API version, when the bridge started (`startedAt`), state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, current session. |
 
 `GET /api/v1/status` example:
 
@@ -73,7 +73,7 @@ with every run.
 {
   "bridge": {
     "version": "0.3.0",
-    "apiVersion": "1.7",
+    "apiVersion": "1.8",
     "state": "ready",
     "startedAt": "2026-11-07T14:00:58.000Z"
   },
@@ -87,7 +87,6 @@ with every run.
   "buffer": { "size": 120, "maxEntries": 10000, "firstSeq": 223, "lastSeq": 342 },
   "playwright": { "state": "running", "version": "1.65.0", "port": 3000, "restarts": 0, "exitCode": null },
   "mcp": { "state": "running", "version": "0.0.85", "port": 8931, "restarts": 0, "exitCode": null },
-  "input": { "enabled": true },
   "session": { "current": { "id": 7, "name": "checkout test", "run": null, "startedAt": "2026-11-07T14:02:55.000Z", "endedAt": null, "firstSeq": 340, "lastSeq": 342, "entries": 3 }, "count": 12 }
 }
 ```
@@ -127,7 +126,7 @@ Every error response has the same body:
 | `400` | `INVALID_REQUEST` | Bad query or body (unknown key name, invalid regex, invalid config value). `details.field` names the field. |
 | `403` | `FORBIDDEN` | The `Host` header names a host the bridge doesn't answer to, or a `POST` / `PUT` / `DELETE` comes from another page's `Origin` ([Host and origin](security.md#host-and-origin)). Since API 1.5. |
 | `404` | `NOT_FOUND` | Unknown endpoint. |
-| `409` | `INPUT_DISABLED` | Native input endpoint called, but input is off (`--no-input`, or not on Windows). |
+| `409` | `INPUT_DISABLED` | Native input endpoint called, but input is off (`--no-input`, or not on Windows). *(planned, [M4](ROADMAP.md#m4-native-input-))* |
 | `503` | `SERVICE_UNAVAILABLE` | The bridge is shutting down (for example a pending `wait`). |
 | `500` | `INTERNAL` | Anything else. The bridge log has the details. |
 
@@ -146,7 +145,5 @@ status.
   versions.
 - The client checks `apiVersion` on its first call:
   - **different major version:** error (`IncompatibleBridgeError`, CLI exit code `2`),
-  - **bridge older than the client (minor):** error if it is older than the oldest API the client
-    supports (API 1.4 for the current client), otherwise only when a function needs something the
-    bridge doesn't have yet,
-  - **bridge newer (minor):** works, no warning.
+  - **another minor version:** works, no warning. Install the bridge and the client from the same
+    release; the client doesn't check for features an older bridge lacks.

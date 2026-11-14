@@ -24,7 +24,6 @@ describe('parseCli', () => {
         '8932',
         '--no-playwright',
         '--no-mcp',
-        '--no-input',
         '--log-level',
         'debug',
         '--bridge-log',
@@ -40,12 +39,11 @@ describe('parseCli', () => {
       http: { host: '127.0.0.1', port: 5152, allowedHosts: ['a.example', 'b.example'] },
       playwright: { port: 3001, version: '1.56.1', enabled: false },
       mcp: { port: 8932, enabled: false },
-      input: { enabled: false },
       log: { level: 'debug', file: '/tmp/b.log', consoleSpeech: true },
     });
     expect(options.configFile).toBe('/tmp/c.json');
     expect(options.sources.get('tcp.port')).toBe('--tcp-port');
-    expect(options.sources.get('input.enabled')).toBe('--no-input');
+    expect(options.sources.get('mcp.enabled')).toBe('--no-mcp');
   });
 
   it('reads SR_SPEECH_* variables, and flags win over them', () => {
@@ -87,7 +85,7 @@ describe('parseCli', () => {
   it.each([
     [['--tcp-port', 'abc'], {}, '--tcp-port: must be a whole number'],
     [[], { SR_SPEECH_HTTP_PORT: '-1' }, 'SR_SPEECH_HTTP_PORT: must be a whole number'],
-    [[], { SR_SPEECH_NO_INPUT: 'maybe' }, 'SR_SPEECH_NO_INPUT: must be 1 or 0'],
+    [[], { SR_SPEECH_NO_MCP: 'maybe' }, 'SR_SPEECH_NO_MCP: must be 1 or 0'],
     [['--nope'], {}, "Unknown option '--nope'"],
     [['extra'], {}, 'extra'],
   ])('rejects %j %j, naming the flag or variable', (argv, env, message) => {

@@ -51,13 +51,12 @@ GitHub issues. This file only tracks milestones.
 - [ ] `POST /api/v1/set-focus`, `POST /api/v1/input/keys` on `@jitsi/robotjs`, as an optional
       dependency with a disabled fallback, so Linux CI and `pnpm dev` keep working
       ([input injector](architecture.md#native-input-in-the-bridge))
-- [ ] Status `input: { enabled, reason }` (today `enabled` only reflects the config)
+- [ ] Setting `input.enabled` / `--no-input` and status `input: { enabled, reason }`, error code
+      `INPUT_DISABLED`
 - [ ] Key-name parsing incl. `Insert` / `CapsLock` as held modifiers
 - [ ] Client `NativeInput` in-port in screen coordinates
       ([client ports](architecture.md#native-input-in-the-client)), `setFocus(page)` (coordinate
       calculation), `click`, `pressKeys`. CLI `focus`, `press`
-- [ ] Client input functions check the bridge API themselves (`requireApiVersion`), instead of
-      raising `MIN_BRIDGE_API` for the whole client
 
 ### M5 Web UI ⬜
 

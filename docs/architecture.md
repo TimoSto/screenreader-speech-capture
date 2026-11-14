@@ -110,7 +110,8 @@ each other (`in` ↔ `out`); the executables in `bin/` sit outside the adapters 
 
 **Extending:**
 
-- A different socket-voice wire format is a new parser in `adapters/in/tcp/`, selected with `tcp.format`.
+- A different socket-voice wire format is a new parser in `adapters/in/tcp/`, selected by a new
+  `tcp.format` setting.
 - Persistent storage (for example SQLite) is a new `SpeechRepository` in `adapters/out/`.
 - A different screen reader capture (for example an NVDA add-on instead of SAPI) is a new
   driving adapter calling `RecordSpeech`.

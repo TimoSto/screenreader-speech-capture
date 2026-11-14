@@ -11,13 +11,11 @@ it('keeps exactly the restart-only settings of the running config', () => {
     http: { host: '127.0.0.1', port: 2, allowedHosts: ['vm'] },
     playwright: { enabled: false, port: 3, version: '1.0.0' },
     mcp: { enabled: false, port: 4 },
-    input: { enabled: false },
     buffer: { maxEntries: 5 },
     log: { level: 'debug', file: 'x.log', consoleSpeech: true },
   });
   const live = configFields(liveConfig(next, DEFAULT_CONFIG));
   const running = configFields(DEFAULT_CONFIG);
   const kept = [...live].filter(([field, value]) => value === running.get(field)).map(([f]) => f);
-  // `tcp.format` has only one possible value, so it is never changed above.
   expect(new Set(kept)).toEqual(RESTART_FIELDS);
 });

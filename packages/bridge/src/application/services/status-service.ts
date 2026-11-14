@@ -52,7 +52,7 @@ export class StatusService implements GetStatus, BridgeStateControl {
       startedAt,
     } = this.deps;
     const { listener, connections } = capture.captureStatus();
-    const { tcp, input } = config();
+    const { tcp } = config();
     const listed = listSessions(sessions, repository);
     const currentId = sessions.current()?.id;
     return {
@@ -72,7 +72,6 @@ export class StatusService implements GetStatus, BridgeStateControl {
       buffer: repository.stats(),
       playwright: playwright.status(),
       mcp: mcp.status(),
-      input: { enabled: input.enabled },
       session: {
         current: listed.find((session) => session.id === currentId) ?? null,
         count: listed.length,

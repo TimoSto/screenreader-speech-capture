@@ -8,7 +8,6 @@ import { TcpListener, type TcpSettings } from './tcp-listener.js';
 const settings = (overrides: Partial<TcpSettings> = {}): TcpSettings => ({
   host: '127.0.0.1',
   port: 0,
-  format: 'text-to-socket',
   encoding: 'utf-8',
   maxLineBytes: 65536,
   ...overrides,

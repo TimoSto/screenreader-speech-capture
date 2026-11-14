@@ -362,7 +362,6 @@ describe('HTTP API', () => {
         restarts: 0,
         exitCode: null,
       },
-      input: { enabled: true },
       session: { current: null, count: 0 },
     });
   });

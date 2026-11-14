@@ -172,7 +172,7 @@ stop();
 | `BridgeNotReadyError` | `waitForReady` timed out. |
 | `BridgeUnreachableError` | No connection to the bridge (wrong URL, bridge not running, network). |
 | `BridgeHttpError` | The bridge answered with an [error](http-api.md#errors): `status`, `code`, `details`. |
-| `IncompatibleBridgeError` | The bridge has another major API version (see [Versioning](http-api.md#versioning)), or is older than API 1.4, the oldest this client supports. |
+| `IncompatibleBridgeError` | The bridge has another major API version (see [Versioning](http-api.md#versioning)). |
 | `ClientConfigError` | Invalid bridge URL or client config file. |
 
 ## Playwright fixture

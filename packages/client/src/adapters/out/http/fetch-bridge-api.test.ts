@@ -74,7 +74,6 @@ const statusDto = (apiVersion = '1.4'): StatusDto => ({
   buffer: { size: 0, maxEntries: 10, firstSeq: null, lastSeq: null },
   playwright: { state: 'stopped', version: '1.0.0', port: 3000, restarts: 0, exitCode: null },
   mcp: { state: 'stopped', version: '0.0.1', port: 8931, restarts: 0, exitCode: null },
-  input: { enabled: true },
   session: { current: sessionDto, count: 1 },
 });
 
@@ -144,9 +143,14 @@ describe('FetchBridgeApi requests', () => {
     ]);
   });
 
-  it('rejects a bridge whose API is older than the client needs', async () => {
-    const { fetch } = fakeFetch(() => json(statusDto('1.3')));
+  it('rejects a bridge with another major API version before reading its status', async () => {
+    const { fetch } = fakeFetch(() => json({ bridge: { apiVersion: '2.0' } }));
     await expect(api(fetch).status()).rejects.toBeInstanceOf(IncompatibleBridgeError);
+  });
+
+  it('accepts a bridge with an older minor API version', async () => {
+    const { fetch } = fakeFetch(() => json(statusDto('1.0')));
+    expect((await api(fetch).status()).bridge.apiVersion).toBe('1.0');
   });
 
   it('resolves the base URL once, and again after it failed', async () => {

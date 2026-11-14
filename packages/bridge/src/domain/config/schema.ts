@@ -18,14 +18,12 @@ export const SCHEMA: { readonly [S in keyof Config]: { readonly [K in keyof Conf
     tcp: {
       host: nonEmptyString,
       port,
-      format: oneOf(['text-to-socket']),
       encoding,
       maxLineBytes: integer(1024, 16 * 1024 * 1024),
     },
     http: { host: nonEmptyString, port, allowedHosts: hostList },
     playwright: { enabled: boolean, port, version: nullableVersion },
     mcp: { enabled: boolean, port },
-    input: { enabled: boolean },
     buffer: { maxEntries: integer(1, 1_000_000) },
     log: { level: oneOf(LOG_LEVELS), file: nullableString, consoleSpeech: boolean },
   };

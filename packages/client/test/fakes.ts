@@ -293,7 +293,6 @@ export class FakeBridgeApi implements BridgeApi {
       },
       playwright: { state: 'stopped', version: '1.65.0', port: 3000, restarts: 0, exitCode: null },
       mcp: { state: 'stopped', version: '0.0.85', port: 8931, restarts: 0, exitCode: null },
-      input: { enabled: false },
       session: {
         current: this.current ? { ...this.current } : null,
         count: this.allSessions.length,
