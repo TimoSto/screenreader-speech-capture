@@ -79,6 +79,8 @@ packages/bridge/src/
     in/http/         server, router, request/response helpers; serves the built UI
       routes/        one file per resource → driving ports
       sse/           open SSE streams (SseHub) and the frame format
+      proxy/         passes /playwright and /playwright-mcp through to the child services
+                     on loopback (HTTP streams and WebSocket tunnels)
       dto/           domain → API contract mappers, one file per resource
     shared/net/      listen helper (ListenError), port probe, reachable URLs of a listener,
                      used by in and out adapters

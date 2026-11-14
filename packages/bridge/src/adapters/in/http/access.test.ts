@@ -75,4 +75,19 @@ describe('checkAccess', () => {
       refusal(request({ host: '127.0.0.1:5151', origin: 'http://evil.example' })),
     ).toBeUndefined();
   });
+
+  it('refuses reads from another origin too with strictOrigin (the proxied services)', () => {
+    const strict = (headers: http.IncomingHttpHeaders) => {
+      try {
+        checkAccess(request(headers), rules, { strictOrigin: true });
+        return undefined;
+      } catch (error) {
+        return (error as AppError).code;
+      }
+    };
+    expect(strict({ host: '127.0.0.1:5151', origin: 'http://evil.example' })).toBe('FORBIDDEN');
+    expect(strict({ host: '127.0.0.1:5151', origin: 'http://127.0.0.1:5151' })).toBeUndefined();
+    expect(strict({ host: '127.0.0.1:5151' })).toBeUndefined();
+    expect(strict({ host: 'evil.example' })).toBe('FORBIDDEN');
+  });
 });

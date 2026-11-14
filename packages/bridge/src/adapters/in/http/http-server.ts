@@ -1,4 +1,5 @@
 import http from 'node:http';
+import type { Duplex } from 'node:stream';
 import { API_PREFIX } from '@screenreader-speech-capture/shared';
 import type { GetStatus } from '../../../application/ports/in/get-status.js';
 import type { ManageConfig } from '../../../application/ports/in/manage-config.js';
@@ -11,7 +12,8 @@ import { AppError } from '../../../domain/errors.js';
 import { checkAccess } from './access.js';
 import { listen } from '../../shared/net/listen.js';
 import { describeListener } from '../../shared/net/reachable-urls.js';
-import { sendError } from './errors.js';
+import { sendError, sendSocketError } from './errors.js';
+import { type ProxyRoute, ServiceProxy } from './proxy/service-proxy.js';
 import { Router } from './router.js';
 import { configRoutes } from './routes/config-routes.js';
 import { sessionRoutes } from './routes/session-routes.js';
@@ -33,6 +35,8 @@ export interface HttpServerDeps {
   pingMs?: number;
   /** This machine's names, accepted as `Host` like `localhost`. Default: none. */
   hostnames?: readonly string[];
+  /** Child services passed through on their own paths (docs/playwright-mcp.md). Default: none. */
+  proxies?: readonly ProxyRoute[];
 }
 
 /** How long `stop()` waits for open requests before it closes their connections. */
@@ -50,8 +54,10 @@ export class HttpServer {
   private allowedHosts: readonly string[] = [];
   private readonly router = new Router(API_PREFIX);
   private readonly sse: SseHub;
+  private readonly proxy: ServiceProxy;
 
   constructor(private readonly deps: HttpServerDeps) {
+    this.proxy = new ServiceProxy(deps.proxies ?? [], deps.logger);
     this.sse = new SseHub({
       pingMs: deps.pingMs ?? 15_000,
       maxBufferedBytes: SSE_MAX_BUFFERED_BYTES,
@@ -78,12 +84,19 @@ export class HttpServer {
         res.destroy();
       });
     });
+    server.on('upgrade', (req: http.IncomingMessage, socket: Duplex, head: Buffer) => {
+      this.upgrade(req, socket, head);
+    });
     const port = await listen(server, settings.host, settings.port);
     server.on('error', (error) => this.deps.logger.error(`HTTP server error: ${error.message}`));
     this.server = server;
     this.allowedHosts = settings.allowedHosts;
     // On 0.0.0.0, name the addresses clients can actually use (docs/operations.md#line-format).
     this.deps.logger.info(`listening on ${describeListener('http', settings.host, port)}`);
+    for (const route of this.deps.proxies ?? []) {
+      const at = describeListener(route.scheme, settings.host, port, route.path);
+      this.deps.logger.info(`${route.name} at ${at}`);
+    }
     return port;
   }
 
@@ -102,6 +115,8 @@ export class HttpServer {
     this.server = null;
     const closed = new Promise<void>((resolve) => server.close(() => resolve()));
     this.sse.close();
+    // Upgraded sockets still count as the server's connections, so `close` waits for them.
+    this.proxy.closeTunnels();
     server.closeIdleConnections();
     const force = setTimeout(() => server.closeAllConnections(), CLOSE_GRACE_MS);
     await closed;
@@ -118,14 +133,48 @@ export class HttpServer {
     try {
       const url = parseUrl(req.url);
       path = url.pathname;
-      checkAccess(req, {
-        allowedHosts: this.allowedHosts,
-        ownHostnames: this.deps.hostnames ?? [],
-      });
-      await this.router.find(method, url.pathname)({ req, res, url });
+      const route = this.proxy.match(url.pathname);
+      this.checkAccess(req, route !== undefined);
+      if (route) this.proxy.forward(route, req, res, url);
+      else await this.router.find(method, url.pathname)({ req, res, url });
     } catch (error) {
       sendError(res, error, this.deps.logger);
     }
+  }
+
+  /**
+   * A WebSocket handshake: only the services' `ws` paths take one (the Playwright server). Every
+   * refusal is answered on the socket in the API's error format.
+   */
+  private upgrade(req: http.IncomingMessage, socket: Duplex, head: Buffer): void {
+    socket.on('error', (error) => this.deps.logger.debug(`upgrade: ${error.message}`));
+    try {
+      if (this.server === null) {
+        throw new AppError('SERVICE_UNAVAILABLE', 'The bridge is shutting down');
+      }
+      const url = parseUrl(req.url);
+      const route = this.proxy.match(url.pathname);
+      if (route?.scheme !== 'ws') {
+        throw new AppError('NOT_FOUND', `No WebSocket endpoint at ${url.pathname}`);
+      }
+      this.checkAccess(req, true);
+      this.deps.logger.debug(`upgrade ${url.pathname} → ${route.name}`);
+      this.proxy.upgrade(route, req, socket, head, url);
+    } catch (error) {
+      sendSocketError(socket, error, this.deps.logger);
+    }
+  }
+
+  /**
+   * Host and origin rules (docs/security.md#host-and-origin). The services refuse a foreign
+   * origin for every method: a page could open a WebSocket or read an event stream.
+   */
+  private checkAccess(req: http.IncomingMessage, proxied: boolean): void {
+    checkAccess(
+      req,
+      { allowedHosts: this.allowedHosts, ownHostnames: this.deps.hostnames ?? [] },
+      { strictOrigin: proxied },
+    );
   }
 }
 

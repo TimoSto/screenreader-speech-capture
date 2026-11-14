@@ -2,19 +2,34 @@
 
 The Playwright server and Playwright MCP that the bridge runs and supervises.
 
+Both listen on `127.0.0.1` only. Clients reach them through the bridge's HTTP port (`5151`), on
+fixed paths:
+
+| Service | URL |
+|---|---|
+| Playwright server | `ws://my-test-vm:5151/playwright` |
+| Playwright MCP | `http://my-test-vm:5151/playwright-mcp` |
+
+The bridge passes the requests on unchanged, apart from the path and the `Host` header. It applies
+the same [Host and origin](security.md#host-and-origin) rules as for the API, so a name that isn't
+an IP address needs `http.allowedHosts`, and a request from a web page with a foreign `Origin` is
+refused, even a read. A service that is disabled or not running yet answers
+`503 SERVICE_UNAVAILABLE`, in the [error format](http-api.md#errors) of the API. The bridge log's
+startup lines list the URLs ([Line format](operations.md#line-format)). The paths are exported by
+the shared contract as `PLAYWRIGHT_PATH` and `PLAYWRIGHT_MCP_PATH`.
+
 ## Playwright server
 
-The bridge runs `playwright run-server --port 3000 --host 0.0.0.0` as a supervised child process
+The bridge runs `playwright run-server --port 3000 --host 127.0.0.1` as a supervised child process
 (restarts, process-tree kill: see [Operations](operations.md#child-service-crashes)). Connect from
-anywhere with the same Playwright version, to a `ws://` URL from the bridge log's
-`playwright running on …, reachable at …` line ([Line format](operations.md#line-format)):
+anywhere with the same Playwright version, through the bridge:
 
 ```ts
 // @playwright/test (playwright.config.ts): `headless` from `use` is sent to the server.
-use: { headless: false, connectOptions: { wsEndpoint: 'ws://my-test-vm:3000/' } }
+use: { headless: false, connectOptions: { wsEndpoint: 'ws://my-test-vm:5151/playwright' } }
 
 // Plain `playwright`: launch options go in a header, `connect()` has no `headless` option.
-const browser = await chromium.connect('ws://my-test-vm:3000/', {
+const browser = await chromium.connect('ws://my-test-vm:5151/playwright', {
   headers: { 'x-playwright-launch-options': JSON.stringify({ headless: false }) },
 });
 ```
@@ -57,24 +72,23 @@ second supervised child service (same restarts and process-tree kill as the Play
 
 ```
 node <bridge>/node_modules/@playwright/mcp/cli.js
-  --port 8931 --host 0.0.0.0 --allowed-hosts * --browser chromium --isolated
+  --port 8931 --host 127.0.0.1 --browser chromium --isolated
 ```
 
-- `--allowed-hosts *`: MCP rejects requests for other host names by default, so clients on other
-  machines would be turned away.
+- MCP's own host check stays on (it accepts loopback names only): the bridge sends it a loopback
+  `Host` and does the check for the clients' host names itself.
 - `--browser chromium`: Playwright's Chromium (Chrome for Testing), which the bridge installs. MCP's
   default would be branded Chrome. The browser is headed, so the screen reader can read it.
 - `--isolated`: every MCP session gets a fresh browser profile in memory. Nothing (cookies,
   logins) carries over between sessions, and several clients don't fight over one profile on disk.
 
-Point an MCP client at one of the URLs from the bridge log's `mcp running on …, reachable at …`
-line ([Line format](operations.md#line-format)):
+Point an MCP client at the bridge's `/playwright-mcp` path:
 
 ```json
 {
   "mcpServers": {
     "screenreader-vm": {
-      "url": "http://my-test-vm:8931/mcp"
+      "url": "http://my-test-vm:5151/playwright-mcp"
     }
   }
 }

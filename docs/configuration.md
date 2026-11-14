@@ -22,8 +22,8 @@ Precedence: **CLI flags > environment variables > config file > defaults**.
 {
   "tcp":        { "host": "127.0.0.1", "port": 4449, "encoding": "windows-1252", "maxLineBytes": 65536 },
   "http":       { "host": "0.0.0.0",   "port": 5151, "allowedHosts": [] },  // more host names, see Security
-  "playwright": { "enabled": true, "port": 3000, "version": null },  // exact version, null = bundled
-  "mcp":        { "enabled": true, "port": 8931 },                   // version: the bundled one
+  "playwright": { "enabled": true, "port": 3000, "version": null },  // loopback port; exact version, null = bundled
+  "mcp":        { "enabled": true, "port": 8931 },                   // loopback port; version: the bundled one
   "buffer":     { "maxEntries": 10000 },
   "log":        { "level": "info", "file": null, "consoleSpeech": false }  // bridge log, file null = default path
 }
@@ -80,12 +80,12 @@ What each section does when it changes:
 | `--tcp-host <addr>` | `127.0.0.1` | Interface for the speech TCP listener. The voice runs locally, so keep it on loopback. |
 | `--tcp-port <n>` | `4449` | Port the socket voice connects to (the default voice of `text-to-socket-engine` uses 4449). |
 | `--tcp-encoding <enc>` | `windows-1252` | Character encoding of the incoming text: the VM's ANSI code page (see [Wire format](speech-capture.md#wire-format)). |
-| `--host <addr>` | `0.0.0.0` | Interface for HTTP, Playwright server and MCP (these are reached remotely). |
-| `--http-port <n>` | `5151` | HTTP API (and the web UI, [M5](ROADMAP.md#m5-web-ui-)). |
-| `--allowed-hosts <names>` | | More host names the API answers to, comma-separated (`bridge.lab.example,vm42`), `*` for any ([Host and origin](security.md#host-and-origin)). |
-| `--playwright-port <n>` | `3000` | Playwright server (WebSocket). |
+| `--host <addr>` | `0.0.0.0` | Interface for HTTP, which is reached remotely. The Playwright server and MCP are reached through it ([Remote Playwright & MCP](playwright-mcp.md)). |
+| `--http-port <n>` | `5151` | HTTP API, the paths `/playwright` and `/playwright-mcp` (see [Remote Playwright & MCP](playwright-mcp.md)), and the web UI ([M5](ROADMAP.md#m5-web-ui-)). |
+| `--allowed-hosts <names>` | | More host names the HTTP port answers to, comma-separated (`bridge.lab.example,vm42`), `*` for any ([Host and origin](security.md#host-and-origin)). |
+| `--playwright-port <n>` | `3000` | Internal port of the Playwright server, on `127.0.0.1`. Clients use `/playwright` on the HTTP port. |
 | `--playwright-version <v>` | *(bundled)* | Playwright version of the server, exact (`1.65.0`). Must match the clients (see [Version](playwright-mcp.md#version)). |
-| `--mcp-port <n>` | `8931` | Playwright MCP (HTTP). |
+| `--mcp-port <n>` | `8931` | Internal port of Playwright MCP, on `127.0.0.1`. Clients use `/playwright-mcp` on the HTTP port. |
 | `--no-playwright` | | Don't start the Playwright server. |
 | `--no-mcp` | | Don't start Playwright MCP. |
 | `--no-input` | | Disable the native input endpoints. *(planned, [M4](ROADMAP.md#m4-native-input-))* |

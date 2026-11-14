@@ -116,7 +116,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     file: savedFile,
     pinned: new Map([...configFields(overrides).keys()].map((field) => [field, sourceOf(field)])),
   });
-  const services = createServices(config, seams, log);
+  const services = createServices(config, () => configService.get(), seams, log);
 
   const captureState = new CaptureState();
   const tcp = new TcpListener(
@@ -142,6 +142,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     sessions,
     logger: log.for('http-api'),
     hostnames: [hostname()],
+    proxies: services.proxies,
     ...(seams.ssePingMs === undefined ? {} : { pingMs: seams.ssePingMs }),
   });
 

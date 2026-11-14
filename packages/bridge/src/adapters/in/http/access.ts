@@ -17,8 +17,16 @@ export interface AccessRules {
 /** Methods that don't change anything. Other methods with a foreign `Origin` are refused. */
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-/** Throws `FORBIDDEN` if the request comes through a foreign host name or from a foreign page. */
-export function checkAccess(req: http.IncomingMessage, rules: AccessRules): void {
+/**
+ * Throws `FORBIDDEN` if the request comes through a foreign host name or from a foreign page.
+ * `strictOrigin` refuses a foreign `Origin` for every method: for the proxied services, where a
+ * page could open a WebSocket or read an event stream (docs/security.md#host-and-origin).
+ */
+export function checkAccess(
+  req: http.IncomingMessage,
+  rules: AccessRules,
+  { strictOrigin = false }: { strictOrigin?: boolean } = {},
+): void {
   const host = (req.headers.host ?? '').toLowerCase();
   const hostname = hostnameOf(host);
   if (hostname === undefined) {
@@ -34,7 +42,8 @@ export function checkAccess(req: http.IncomingMessage, rules: AccessRules): void
   }
 
   const origin = req.headers.origin;
-  if (origin === undefined || SAFE_METHODS.has(req.method ?? 'GET')) return;
+  if (origin === undefined) return;
+  if (!strictOrigin && SAFE_METHODS.has(req.method ?? 'GET')) return;
   if (origin.toLowerCase() !== `http://${host}`) {
     throw new AppError('FORBIDDEN', `Requests from origin "${origin}" are not allowed`, {
       origin,
