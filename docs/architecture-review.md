@@ -13,19 +13,9 @@ decisions go to [decisions.md](decisions.md) and this file can be deleted.
 | 1 | ~~No Host / Origin check on the API~~ | Done: #94 |
 | 2 | ~~No session filter for entries outside sessions~~ | Done: #95 |
 | 3 | ~~Reading the status prunes the repositories~~ | Done: #96 |
-| 4 | ~~`setMaxEntries` is not on the repository port~~ | Done: on the port |
-| 5 | Test seams in the public `BridgeOptions` | Low |
+| 4 | ~~`setMaxEntries` is not on the repository port~~ | Done: #97 |
+| 5 | ~~Test seams in the public `BridgeOptions`~~ | Done: `testSeams` |
 | 6 | `HttpServer.retire()` closes streams of the new server | Low |
-
-## 5. Test seams in the public `BridgeOptions`
-
-**What:** `BridgeOptions` in `main.ts` imports the `Prepare` type from
-`adapters/out/process/types.ts` (`playwrightLaunch`, `mcpLaunch`): a test seam that exposes an
-adapter type through the composition root's public options.
-
-**Proposal:** group the test-only options under one object (for example `testSeams`; the name
-`testOverrides` is taken by the config helper in `test/helpers.ts`), so the production options stay
-small.
 
 ## 6. `HttpServer.retire()` closes streams of the new server
 

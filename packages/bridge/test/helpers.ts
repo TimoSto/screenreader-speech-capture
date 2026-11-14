@@ -8,7 +8,8 @@ import {
   type Config,
   type ConfigPatch,
 } from '../src/domain/config/index.js';
-import { startBridge, type Bridge, type BridgeOptions } from '../src/main.js';
+import type { TestSeams } from '../src/composition/test-seams.js';
+import { startBridge, type Bridge } from '../src/main.js';
 import { MemoryConfigStore } from './fakes.js';
 
 /** Free loopback ports, plus `patch`: what tests pass like flags. */
@@ -43,7 +44,7 @@ afterEach(async () => {
 export async function start(
   patch: unknown = {},
   options: { store?: MemoryConfigStore } & Pick<
-    BridgeOptions,
+    TestSeams,
     'sinks' | 'ssePingMs' | 'playwrightLaunch' | 'mcpLaunch' | 'instanceId'
   > = {},
 ): Promise<Bridge> {
@@ -51,9 +52,7 @@ export async function start(
   const bridge = await startBridge({
     version: '0.0.0-test',
     overrides: testOverrides(patch),
-    configStore: store ?? new MemoryConfigStore(),
-    sinks: sinks ?? [],
-    ...rest,
+    testSeams: { configStore: store ?? new MemoryConfigStore(), sinks: sinks ?? [], ...rest },
   });
   bridges.push(bridge);
   return bridge;
