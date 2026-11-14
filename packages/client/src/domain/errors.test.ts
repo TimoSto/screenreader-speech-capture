@@ -42,6 +42,14 @@ describe('client errors', () => {
     expect([error.bridgeApiVersion, error.clientApiVersion]).toEqual(['2.0', '1.3']);
   });
 
+  it('SpeechTimeoutError adds the buffer hint only when speech was dropped', () => {
+    const plain = new SpeechTimeoutError('No speech matched "x" within 5 ms', []);
+    expect(plain.truncated).toBe(false);
+    expect(plain.message).toBe('No speech matched "x" within 5 ms');
+    const dropped = new SpeechTimeoutError('No speech matched "x" within 5 ms', [], true);
+    expect(dropped.message).toMatch(/; some speech was dropped .*raise buffer\.maxEntries\)$/);
+  });
+
   it('every error has its class name', () => {
     expect(
       [

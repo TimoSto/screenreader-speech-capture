@@ -190,7 +190,10 @@ export const wait: Command = {
       return EXIT.ok;
     } catch (error) {
       if (!(error instanceof SpeechTimeoutError)) throw error;
-      if (json) io.stdout(`${JSON.stringify({ matched: false, entries: error.entries })}\n`);
+      if (json)
+        io.stdout(
+          `${JSON.stringify({ matched: false, entries: error.entries, truncated: error.truncated })}\n`,
+        );
       io.stderr(`${NAME}: ${error.message}.${seenText(error.entries)}\n`);
       return EXIT.timeout;
     }

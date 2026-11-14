@@ -63,7 +63,7 @@ export class SpeechCaptureService implements SpeechCapture {
 
   async getSpeech(options: GetSpeechOptions = {}): Promise<SpeechEntry[]> {
     await this.compatible();
-    const entries = await this.fetchSince(options.since ?? this.#cursor, options.session);
+    const { entries } = await this.fetchSince(options.since ?? this.#cursor, options.session);
     const wanted = options.includeMarkers ? entries : entries.filter(isSpeech);
     return options.limit === undefined ? wanted : wanted.slice(0, options.limit);
   }
@@ -199,10 +199,10 @@ export class SpeechCaptureService implements SpeechCapture {
     const start = await this.endSeq();
     const result = await fn();
     await this.waitForSilence(options);
-    const entries = await this.fetchSince(start);
+    const { entries, truncated } = await this.fetchSince(start);
     const last = entries.at(-1)?.seq;
     if (last !== undefined) this.#cursor = last;
-    return { result, entries: entries.filter(isSpeech) };
+    return { result, entries: entries.filter(isSpeech), truncated };
   }
 
   onSpeech(listener: (entry: SpeechEntry) => void, options: OnSpeechOptions = {}): () => void {
@@ -231,9 +231,16 @@ export class SpeechCaptureService implements SpeechCapture {
     return (await this.deps.api.status()).buffer.lastSeq ?? 0;
   }
 
-  /** Every entry with `seq > since` (of `session`, if given), across pages. */
-  private async fetchSince(since: number, session?: SessionRef): Promise<SpeechEntry[]> {
-    const all: SpeechEntry[] = [];
+  /**
+   * Every entry with `seq > since` (of `session`, if given), across pages, and whether some of
+   * them were already dropped from the bridge's full buffer.
+   */
+  private async fetchSince(
+    since: number,
+    session?: SessionRef,
+  ): Promise<{ entries: SpeechEntry[]; truncated: boolean }> {
+    const entries: SpeechEntry[] = [];
+    let truncated = false;
     let from = since;
     for (;;) {
       const page = await this.deps.api.listSpeech({
@@ -241,9 +248,10 @@ export class SpeechCaptureService implements SpeechCapture {
         limit: MAX_PAGE,
         ...(session === undefined ? {} : { session }),
       });
-      all.push(...page.entries);
+      entries.push(...page.entries);
+      truncated ||= page.truncated;
       const last = page.entries.at(-1);
-      if (!page.hasMore || last === undefined) return all;
+      if (!page.hasMore || last === undefined) return { entries, truncated };
       from = last.seq;
     }
   }
@@ -282,25 +290,35 @@ export class SpeechCaptureService implements SpeechCapture {
     };
     // Speech that is already there is found without opening the live feed.
     const buffered = await this.fetchSince(since, session);
-    let result = consume(buffered);
+    // Speech dropped from the bridge's full buffer before it was read: the match may have been
+    // among it. Only a failure says so; a match found anyway is a match.
+    let truncated = buffered.truncated;
+    let result = consume(buffered.entries);
     const left = deadline - clock.now();
     if (result === undefined && left > 0) {
-      const from = buffered.at(-1)?.seq ?? since;
-      result = await this.follow({ since: from, session }, left, (entry) => consume([entry]));
+      const from = buffered.entries.at(-1)?.seq ?? since;
+      result = await this.follow(
+        { since: from, session },
+        left,
+        (entry) => consume([entry]),
+        () => (truncated = true),
+      );
     }
     if (result !== undefined) return result;
     const message = typeof failure === 'string' ? failure : failure();
-    throw new SpeechTimeoutError(`${message} within ${timeout} ms`, seen);
+    throw new SpeechTimeoutError(`${message} within ${timeout} ms`, seen, truncated);
   }
 
   /**
    * Reads the live feed from `since` and hands each entry to `onEntry` until it returns a result,
    * or the timer (first set to `ms`, `onEntry` may set it again) runs out: then `undefined`.
+   * `onTruncated`: a reconnect's replay found entries already dropped from the bridge's buffer.
    */
   private async follow<T>(
     from: { since: number; session?: number | undefined },
     ms: number,
     onEntry: (entry: SpeechEntry, timer: Timer) => T | undefined,
+    onTruncated?: () => void,
   ): Promise<T | undefined> {
     const { api, clock } = this.deps;
     const feed = new AbortController();
@@ -312,6 +330,7 @@ export class SpeechCaptureService implements SpeechCapture {
         { since: from.since, session: from.session, signal: feed.signal },
       );
       for await (const event of events) {
+        if (event.type === 'truncated') onTruncated?.();
         if (event.type === 'entry') {
           const result = onEntry(event.entry, timer);
           if (result !== undefined) return result;

@@ -223,7 +223,7 @@ describe('speech commands', () => {
       'No speech matched "Submit" within 200 ms. Speech seen:\n  #1 Name, edit',
     );
     const json = await cli(['wait', 'Submit', '--timeout', '0', '--json', '--since', '1'], fake);
-    expect(JSON.parse(json.stdout)).toEqual({ matched: false, entries: [] });
+    expect(JSON.parse(json.stdout)).toEqual({ matched: false, entries: [], truncated: false });
     expect(json.stderr).toContain('No speech arrived.');
   });
 
