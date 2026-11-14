@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AppError } from './errors.js';
 import type { SpeechEntry } from './speech-entry.js';
-import { createSpeechMatcher } from './text-match.js';
+import { createSpeechMatcher, MAX_REGEX_LENGTH } from './text-match.js';
 
 function entry(text: string, kind: SpeechEntry['kind'] = 'speech'): SpeechEntry {
   return {
@@ -39,5 +39,40 @@ describe('createSpeechMatcher', () => {
       expect(error).toBeInstanceOf(AppError);
       expect((error as AppError).details?.field).toBe(field);
     }
+  });
+
+  describe('regex cost', () => {
+    it.each([
+      '(a+)+$',
+      '(a*)*b',
+      '(\\w+\\s?)*$',
+      '((ab)+)+',
+      '(?:x+){2,}',
+      '(a{1,9})+',
+      '((a+)b)*',
+    ])('rejects the nested repeat %s', (regex) => {
+      expect(() => createSpeechMatcher({ regex })).toThrow(
+        expect.objectContaining({ details: { field: 'regex' } }) as Error,
+      );
+    });
+
+    it.each([
+      '(ab)+',
+      'a+b*',
+      '(Submit|OK), button',
+      '[(a+)]+',
+      '\\(a+\\)+',
+      '(a+)?',
+      '^(\\d{3}) items$',
+    ])('accepts %s', (regex) => {
+      expect(() => createSpeechMatcher({ regex })).not.toThrow();
+    });
+
+    it('rejects a regex over the length limit', () => {
+      expect(() => createSpeechMatcher({ regex: 'a'.repeat(MAX_REGEX_LENGTH + 1) })).toThrow(
+        `at most ${MAX_REGEX_LENGTH} characters`,
+      );
+      expect(() => createSpeechMatcher({ regex: 'a'.repeat(MAX_REGEX_LENGTH) })).not.toThrow();
+    });
   });
 });
