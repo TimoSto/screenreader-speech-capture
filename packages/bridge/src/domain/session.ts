@@ -15,7 +15,7 @@ export interface Session {
   readonly endedAt: Date | null;
 }
 
-/** A session before the repository has given it an `id`. */
+/** A session before the speech log has given it an `id`. */
 export type NewSession = Pick<Session, 'name' | 'run' | 'startedAt'>;
 
 /** What the buffer still holds of one session. */
@@ -50,14 +50,6 @@ export function summarize(session: Session, stats: SessionStats): SessionSummary
     lastSeq: stats.lastSeq,
     entries: stats.entries,
   };
-}
-
-/**
- * Whether a session is listed: the current one always, an ended one while some of its entries are
- * still in the buffer.
- */
-export function isListed(session: Session, stats: SessionStats): boolean {
-  return session.endedAt === null || stats.entries > 0;
 }
 
 /** `name` (required) or `run` (optional), trimmed. `INVALID_REQUEST` if empty or too long. */

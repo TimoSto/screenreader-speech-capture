@@ -1,16 +1,13 @@
 import type { Config } from '../../domain/config/index.js';
+import type { SpeechLog } from '../../domain/speech-log.js';
 import type { BridgeState, GetStatus, Status } from '../ports/in/get-status.js';
 import type { BridgeStateControl } from '../ports/in/lifecycle.js';
 import type { CaptureStatusSource } from '../ports/out/capture-status.js';
 import type { ProcessSupervisor } from '../ports/out/process-supervisor.js';
-import type { SessionRepository } from '../ports/out/session-repository.js';
-import type { SpeechRepository } from '../ports/out/speech-repository.js';
-import { listSessions } from '../shared/sessions.js';
 
 export interface StatusServiceDeps {
   capture: CaptureStatusSource;
-  repository: SpeechRepository;
-  sessions: SessionRepository;
+  log: Pick<SpeechLog, 'stats' | 'sessions' | 'currentSession'>;
   playwright: Pick<ProcessSupervisor, 'status'>;
   mcp: Pick<ProcessSupervisor, 'status'>;
   /**
@@ -40,21 +37,11 @@ export class StatusService implements GetStatus, BridgeStateControl {
   }
 
   status(): Status {
-    const {
-      capture,
-      repository,
-      sessions,
-      playwright,
-      mcp,
-      config,
-      version,
-      apiVersion,
-      startedAt,
-    } = this.deps;
+    const { capture, log, playwright, mcp, config, version, apiVersion, startedAt } = this.deps;
     const { listener, connections } = capture.captureStatus();
     const { tcp } = config();
-    const listed = listSessions(sessions, repository);
-    const currentId = sessions.current()?.id;
+    const listed = log.sessions();
+    const currentId = log.currentSession()?.id;
     return {
       bridge: {
         version,
@@ -69,7 +56,7 @@ export class StatusService implements GetStatus, BridgeStateControl {
         encoding: listener?.encoding ?? tcp.encoding,
         connections,
       },
-      buffer: repository.stats(),
+      buffer: log.stats(),
       playwright: playwright.status(),
       mcp: mcp.status(),
       session: {

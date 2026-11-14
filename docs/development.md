@@ -28,7 +28,7 @@ project and links into `docs/`.
 **Testing strategy**
 
 - **Domain / application:** unit tests against in-memory fakes of the driven ports (fake clock,
-  in-memory repository, fake input injector), with no sockets or processes involved.
+  the real `SpeechLog`, fake input injector), with no sockets or processes involved.
 - **Adapters:** integration tests per adapter (real TCP socket, real HTTP server, temporary config dir).
   The robotjs adapter *(planned, [M4](ROADMAP.md#m4-native-input-))* will be tested only on Windows.
 - **Client:** library and CLI tested against a real bridge fed by `fake-speech`, covering

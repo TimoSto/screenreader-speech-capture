@@ -32,12 +32,12 @@ flowchart LR
 
     subgraph CORE["Application core"]
         APP["application<br/>use cases + ports"]
-        DOM["domain<br/>SpeechEntry, Marker, Config, KeyChord"]
+        DOM["domain<br/>SpeechLog, SpeechEntry, Session, Config, KeyChord"]
         APP --> DOM
     end
 
     subgraph OUT["Driven adapters"]
-        MEM["out/memory<br/>repository, event bus"]
+        MEM["out/memory<br/>event bus"]
         CFG["out/fs-config<br/>config.json"]
         SUP["out/process, out/playwright, out/mcp<br/>process supervisors"]
         ROBOT["out/robotjs<br/>InputInjector (planned)"]
@@ -63,16 +63,16 @@ flowchart LR
 
 ```
 packages/bridge/src/
-  domain/            SpeechEntry, Marker, Session, Config, KeyChord (key-name parsing + validation). Pure, no I/O.
+  domain/            SpeechLog (the buffer and the sessions, with their rules), SpeechEntry,
+                     Session, Config, KeyChord (key-name parsing + validation). Pure, no I/O.
   application/
     ports/in/        driving ports (use cases): RecordSpeech, SpeechUseCases (list, watch, clear,
                      mark), ResizeBuffer, WaitForSpeech, ManageSessions, SendNativeInput,
                      ManageConfig, GetStatus
-    ports/out/       driven ports: SpeechRepository, SpeechEventBus, CaptureStatusSource,
+    ports/out/       driven ports: SpeechEventBus, CaptureStatusSource,
                      ConfigStore, ProcessSupervisor, InputInjector, Logger, Clock
     services/        use-case implementations (only depend on domain + ports)
-    shared/          helpers several services use: option checks, session filter,
-                     session listing, pruning of ended sessions (on writes that drop entries)
+    shared/          helpers several services use: option checks
   adapters/
     in/tcp/          socket listener + wire-format parsers → RecordSpeech;
                      tracks its connections (CaptureStatusSource)
@@ -83,7 +83,7 @@ packages/bridge/src/
     shared/net/      listen helper (ListenError), port probe, reachable URLs of a listener,
                      used by in and out adapters
     in/cli/          flags / env → startup overrides (win over the config file)
-    out/memory/      speech repository (capped list), in-process event bus
+    out/memory/      in-process event bus
     out/fs-config/   config.json in %APPDATA%
     out/process/     generic supervisor (ProcessSupervisor): spawn, readiness, restarts
                      with backoff, process-tree kill
@@ -112,7 +112,9 @@ each other (`in` ↔ `out`); the executables in `bin/` sit outside the adapters 
 
 - A different socket-voice wire format is a new parser in `adapters/in/tcp/`, selected by a new
   `tcp.format` setting.
-- Persistent storage (for example SQLite) is a new `SpeechRepository` in `adapters/out/`.
+- Persistent storage (for example SQLite) would add a driven port that the services write each
+  `SpeechLog` change to, with the log staying the owner of the rules
+  ([decisions](decisions.md#the-speech-log-owns-the-buffer-and-session-rules)).
 - A different screen reader capture (for example an NVDA add-on instead of SAPI) is a new
   driving adapter calling `RecordSpeech`.
 - A different input method (for example direct `SendInput` through FFI, or the hypervisor's

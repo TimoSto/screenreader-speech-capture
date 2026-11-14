@@ -1,23 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SystemClock } from '../../adapters/out/clock/system-clock.js';
 import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bus.js';
-import { MemorySessionRepository } from '../../adapters/out/memory/memory-session-repository.js';
-import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
 import type { AppError } from '../../domain/errors.js';
+import { SpeechLog } from '../../domain/speech-log.js';
 import { WAIT_TIMEOUT_MS } from '../ports/in/wait-for-speech.js';
 import { SpeechService } from './speech-service.js';
 import { WaitForSpeechService } from './wait-for-speech-service.js';
 
 function setup() {
-  const repository = new MemorySpeechRepository(100);
+  const log = new SpeechLog(100);
   const events = new InProcessEventBus();
-  const sessions = new MemorySessionRepository();
-  const speech = new SpeechService({ repository, events, clock: new SystemClock(), sessions });
-  const waits = new WaitForSpeechService({ repository, events, sessions });
+  const speech = new SpeechService({ log, events, clock: new SystemClock() });
+  const waits = new WaitForSpeechService({ log, events });
   const say = (text: string) => speech.record({ text, voice: null, connectionId: 1 });
   const startSession = (name: string) => {
-    sessions.endCurrent(new Date());
-    sessions.create({ name, run: null, startedAt: new Date() });
+    log.startSession({ name, run: null, startedAt: new Date() });
   };
   return { speech, waits, say, events, startSession };
 }

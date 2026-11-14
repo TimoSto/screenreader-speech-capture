@@ -1,19 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
-import { MemorySessionRepository } from '../../adapters/out/memory/memory-session-repository.js';
-import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
+import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../../domain/config/index.js';
 import type { CaptureStatus } from '../../domain/capture.js';
+import { SpeechLog } from '../../domain/speech-log.js';
 import { StatusService } from './status-service.js';
 
 const STARTED_AT = new Date('2026-11-07T13:00:00.000Z');
 
 function setup(capture: CaptureStatus) {
-  const repository = new MemorySpeechRepository(10);
-  const sessions = new MemorySessionRepository();
+  const log = new SpeechLog(10);
   const status = new StatusService({
     capture: { captureStatus: () => capture },
-    repository,
-    sessions,
+    log,
     playwright: {
       status: () => ({ state: 'running', version: '1.65.0', port: 3000, restarts: 1, exitCode: 1 }),
     },
@@ -25,24 +22,23 @@ function setup(capture: CaptureStatus) {
     apiVersion: '1.0',
     startedAt: STARTED_AT,
   });
-  return { status, repository, sessions };
+  return { status, log };
 }
 
 describe('StatusService', () => {
   it('reports the listener, connections, buffer and versions', () => {
     const connectedAt = new Date('2026-11-07T14:00:00.000Z');
-    const { status, repository } = setup({
+    const { status, log } = setup({
       listener: { listening: true, host: '127.0.0.1', port: 5000, encoding: 'utf-8' },
       connections: [{ id: 2, voice: 'dev', connectedAt }],
     });
-    repository.add({
+    log.append({
       kind: 'marker',
       text: 'm',
       receivedAt: connectedAt,
       source: 'api',
       voice: null,
       connectionId: null,
-      sessionId: null,
     });
     status.setState('ready');
 
@@ -80,20 +76,18 @@ describe('StatusService', () => {
   });
 
   it('reports the current session and how many are listed', () => {
-    const { status, repository, sessions } = setup({ listener: null, connections: [] });
+    const { status, log } = setup({ listener: null, connections: [] });
     const startedAt = new Date('2026-11-12T09:00:00.000Z');
-    sessions.create({ name: 'a', run: null, startedAt });
-    repository.add({
+    log.startSession({ name: 'a', run: null, startedAt });
+    log.append({
       kind: 'marker',
       text: 'm',
       receivedAt: startedAt,
       source: 'api',
       voice: null,
       connectionId: null,
-      sessionId: 1,
     });
-    sessions.endCurrent(startedAt);
-    sessions.create({ name: 'b', run: 'r', startedAt });
+    log.startSession({ name: 'b', run: 'r', startedAt });
     expect(status.status().session).toEqual({
       current: {
         id: 2,
@@ -107,16 +101,5 @@ describe('StatusService', () => {
       },
       count: 2,
     });
-  });
-
-  it('reads the sessions without changing the repositories', () => {
-    const { status, sessions } = setup({ listener: null, connections: [] });
-    const at = new Date('2026-11-12T09:00:00.000Z');
-    sessions.create({ name: 'a', run: null, startedAt: at });
-    sessions.endCurrent(at);
-    const remove = vi.spyOn(sessions, 'removeEnded');
-    expect(status.status().session.count).toBe(0);
-    expect(remove).not.toHaveBeenCalled();
-    expect(sessions.list()).toHaveLength(1);
   });
 });

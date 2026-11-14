@@ -52,10 +52,10 @@ stages on npm; the maintainer approves with 2FA (rules in `docs/development.md#r
 `packages/bridge/src/` and `packages/client/src/` share one layout and one rule set (client
 details in `docs/architecture.md`). The bridge:
 
-- `domain/` — pure model (speech entries, buffer, config, text matching, errors). No I/O, imports
-  nothing from outer layers.
-- `application/ports/in/` (use cases), `application/ports/out/` (driven ports: repository, event
-  bus, clock, config store, logger, capture status), `application/services/` (use-case
+- `domain/` — pure model (`SpeechLog`: the buffer and the sessions with their rules; speech
+  entries, config, text matching, errors). No I/O, imports nothing from outer layers.
+- `application/ports/in/` (use cases), `application/ports/out/` (driven ports: event bus,
+  clock, config store, logger, capture status), `application/services/` (use-case
   implementations depending only on domain + ports), `application/shared/` (helpers several
   services use; adapters may not import it).
 - `adapters/in/` (tcp, http, cli, net) and `adapters/out/` (memory, fs-config, log, clock).

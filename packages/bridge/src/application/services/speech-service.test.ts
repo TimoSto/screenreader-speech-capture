@@ -1,9 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bus.js';
-import { MemorySessionRepository } from '../../adapters/out/memory/memory-session-repository.js';
-import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
 import { SystemClock } from '../../adapters/out/clock/system-clock.js';
 import type { SpeechEvent } from '../../domain/speech-event.js';
+import { SpeechLog } from '../../domain/speech-log.js';
 import { LIST_LIMIT } from '../ports/in/speech.js';
 import { SpeechService } from './speech-service.js';
 
@@ -12,10 +11,9 @@ function setup(maxEntries = 100) {
   const published: SpeechEvent[] = [];
   events.subscribe((event) => published.push(event));
   const speech = new SpeechService({
-    repository: new MemorySpeechRepository(maxEntries),
+    log: new SpeechLog(maxEntries),
     events,
     clock: new SystemClock(),
-    sessions: new MemorySessionRepository(),
   });
   return { speech, published };
 }

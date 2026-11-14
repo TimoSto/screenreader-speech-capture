@@ -1,6 +1,7 @@
-import type { SpeechPage } from '../../domain/speech-buffer.js';
-import type { NewSpeechEntry, SpeechEntry } from '../../domain/speech-entry.js';
 import { invalidField } from '../../domain/errors.js';
+import type { SpeechPage } from '../../domain/speech-buffer.js';
+import type { SpeechEntry } from '../../domain/speech-entry.js';
+import type { SpeechDraft, SpeechLog } from '../../domain/speech-log.js';
 import type { CapturedSpeech, RecordSpeech } from '../ports/in/record-speech.js';
 import {
   LIST_LIMIT,
@@ -11,25 +12,20 @@ import {
   type WatchOptions,
 } from '../ports/in/speech.js';
 import type { Clock } from '../ports/out/clock.js';
-import type { SessionRepository } from '../ports/out/session-repository.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
-import type { SpeechRepository } from '../ports/out/speech-repository.js';
 import { intOption } from '../shared/int-option.js';
-import { resolveSessionFilter } from '../shared/session-filter.js';
 
 export interface SpeechServiceDeps {
-  repository: SpeechRepository;
+  log: SpeechLog;
   events: SpeechEventBus;
   clock: Clock;
-  sessions: SessionRepository;
 }
 
 export const MAX_MARKER_LENGTH = 1000;
 
 /**
- * Recording, reading, clearing and marking speech: every entry gets its `seq` from the repository
- * and `receivedAt` from the clock, its `sessionId` from the current session, and is published on
- * the event bus
+ * Recording, reading, clearing and marking speech: every entry gets its `seq` and `sessionId`
+ * from the speech log and `receivedAt` from the clock, and is published on the event bus
  * (docs/speech-capture.md#from-line-to-speech-entry).
  */
 export class SpeechService implements RecordSpeech, SpeechUseCases, ResizeBuffer {
@@ -50,15 +46,15 @@ export class SpeechService implements RecordSpeech, SpeechUseCases, ResizeBuffer
       min: 1,
       max: LIST_LIMIT.max,
     });
-    const sessionId = resolveSessionFilter(options.session, this.deps.sessions);
-    return this.deps.repository.list(since, limit, sessionId);
+    const sessionId = this.deps.log.resolveFilter(options.session);
+    return this.deps.log.page(since, limit, sessionId);
   }
 
   watch(since: number | null, listener: WatchListener, options: WatchOptions = {}): () => void {
-    const sessionId = resolveSessionFilter(options.session, this.deps.sessions);
+    const sessionId = this.deps.log.resolveFilter(options.session);
     // Replay and subscription in one synchronous block: nothing is missed or sent twice.
     if (since !== null) {
-      const { entries, truncated } = this.deps.repository.list(since, undefined, sessionId);
+      const { entries, truncated } = this.deps.log.page(since, undefined, sessionId);
       if (truncated) listener({ type: 'truncated' });
       for (const entry of entries) listener({ type: 'entry', entry });
     }
@@ -70,13 +66,12 @@ export class SpeechService implements RecordSpeech, SpeechUseCases, ResizeBuffer
 
   /** Wipes the buffer and the ended sessions. The current session stays current. */
   clear(): void {
-    this.deps.repository.clear();
-    this.deps.sessions.removeEnded(() => false);
+    this.deps.log.clear();
     this.deps.events.publish({ type: 'clear' });
   }
 
   setMaxEntries(maxEntries: number): void {
-    this.deps.repository.setMaxEntries(maxEntries);
+    this.deps.log.resize(maxEntries);
   }
 
   addMarker(label: string): SpeechEntry {
@@ -88,12 +83,8 @@ export class SpeechService implements RecordSpeech, SpeechUseCases, ResizeBuffer
     return this.add({ kind: 'marker', text, source: 'api', voice: null, connectionId: null });
   }
 
-  private add(entry: Omit<NewSpeechEntry, 'receivedAt' | 'sessionId'>): SpeechEntry {
-    const stored = this.deps.repository.add({
-      ...entry,
-      receivedAt: this.deps.clock.now(),
-      sessionId: this.deps.sessions.current()?.id ?? null,
-    });
+  private add(entry: Omit<SpeechDraft, 'receivedAt'>): SpeechEntry {
+    const stored = this.deps.log.append({ ...entry, receivedAt: this.deps.clock.now() });
     this.deps.events.publish({ type: 'entry', entry: stored });
     return stored;
   }

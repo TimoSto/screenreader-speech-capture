@@ -14,6 +14,3 @@ export interface SpeechEntry {
   /** The session that was current when it was recorded, `null` outside any session. */
   readonly sessionId: number | null;
 }
-
-/** A speech entry before the repository has given it a `seq`. */
-export type NewSpeechEntry = Omit<SpeechEntry, 'seq'>;

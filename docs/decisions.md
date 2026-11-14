@@ -87,3 +87,16 @@ guarded a combination nobody runs, and they made every API addition a compatibil
 Settings and status fields of features that don't exist yet (`input.enabled`, `--no-input`,
 `tcp.format` with its single value) were removed for the same reason: they return with the feature.
 
+## The speech log owns the buffer and session rules
+
+`SpeechLog` in the bridge's domain holds the entries and the sessions together: it gives out `seq`
+and session ids, tags each entry with the current session, caps the buffer, tracks what was
+dropped (`truncated`, globally and per session), and forgets an ended session once its last entry
+is gone. The services only validate input and publish events.
+
+Before, these rules sat in two in-memory repository adapters plus helpers in
+`application/shared/`, and four services each kept a part of the session rules in step. The
+bridge keeps its speech in memory by design, so the repository ports only hid the rules from the
+domain. The log also keeps an index per session and drops the oldest entry in O(1), so
+`/status`, the session list and reads after a `seq` don't scan the whole buffer (up to a million
+entries).
