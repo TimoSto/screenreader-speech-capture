@@ -27,10 +27,10 @@ consumers on the same VM would disturb each other however the bridge arbitrated 
 
 So the bridge has no locks, leases or per-client state:
 
-- There is one current [session](speech-capture.md#sessions). Starting a session ends the previous
+- There is one current [session](../usage/speech-capture.md#sessions). Starting a session ends the previous
   one, whoever started it.
 - Tests that use the screen reader run serially (`workers: 1`). Parallel runs use several VMs,
-  each with its own bridge ([Limitations](limitations.md#scale-and-parallelism)).
+  each with its own bridge ([Limitations](../usage/limitations.md#scale-and-parallelism)).
 - The Playwright server, Playwright MCP and the web UI share the same screen reader. Use one at a
   time.
 
@@ -147,13 +147,13 @@ then the bridge only claims to protect what goes through it.
 
 The DTOs in `packages/shared` are [valibot](https://valibot.dev) schemas, and their TS types are
 inferred from them. Before, the contract lived in three hand-synced places: the TS types, the
-schemas in `docs/openapi.yaml` and the prose in `docs/http-api.md`. Nothing checked them, and they
+schemas in `docs/usage/openapi.yaml` and the prose in `docs/usage/http-api.md`. Nothing checked them, and they
 drifted (a `seq` comment from API 1.6, limits copied into the client).
 
 Now one definition gives:
 
 - the types bridge and client compile against;
-- `components.schemas` of `docs/openapi.yaml`, generated with `pnpm openapi` and checked by a test;
+- `components.schemas` of `docs/usage/openapi.yaml`, generated with `pnpm openapi` and checked by a test;
 - the client's check of every answer (`checkDto`). A body that doesn't match fails at the boundary
   with the field that is wrong (`INVALID_RESPONSE`), not somewhere inside the client. Unknown
   fields pass and are dropped, because minor versions may add them.

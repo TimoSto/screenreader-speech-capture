@@ -1,6 +1,6 @@
 import * as v from 'valibot';
 
-/** Stable, machine-readable error codes (docs/http-api.md#errors). */
+/** Stable, machine-readable error codes (docs/usage/http-api.md#errors). */
 export const ERROR_CODES = [
   'INVALID_REQUEST',
   'NOT_FOUND',

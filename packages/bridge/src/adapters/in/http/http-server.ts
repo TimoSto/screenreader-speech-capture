@@ -35,7 +35,9 @@ export interface HttpServerDeps {
   pingMs?: number;
   /** This machine's names, accepted as `Host` like `localhost`. Default: none. */
   hostnames?: readonly string[];
-  /** Child services passed through on their own paths (docs/playwright-mcp.md). Default: none. */
+  /**
+   * Child services passed through on their own paths (docs/usage/playwright-mcp.md). Default: none.
+   */
   proxies?: readonly ProxyRoute[];
 }
 
@@ -46,8 +48,8 @@ const CLOSE_GRACE_MS = 1000;
 const SSE_MAX_BUFFERED_BYTES = 1024 * 1024;
 
 /**
- * Driving adapter for the REST + SSE API (docs/http-api.md), on plain `node:http`. Its address
- * is set at start; a new one takes effect on the next start of the bridge.
+ * Driving adapter for the REST + SSE API (docs/usage/http-api.md), on plain `node:http`. Its
+ * address is set at start; a new one takes effect on the next start of the bridge.
  */
 export class HttpServer {
   private server: http.Server | null = null;
@@ -91,7 +93,8 @@ export class HttpServer {
     server.on('error', (error) => this.deps.logger.error(`HTTP server error: ${error.message}`));
     this.server = server;
     this.allowedHosts = settings.allowedHosts;
-    // On 0.0.0.0, name the addresses clients can actually use (docs/operations.md#line-format).
+    // On 0.0.0.0, name the addresses clients can actually use
+    // (docs/usage/operations.md#line-format).
     this.deps.logger.info(`listening on ${describeListener('http', settings.host, port)}`);
     for (const route of this.deps.proxies ?? []) {
       const at = describeListener(route.scheme, settings.host, port, route.path);
@@ -128,7 +131,7 @@ export class HttpServer {
     const method = req.method ?? 'GET';
     let path = '(invalid URL)';
     // Path only: the query can hold speech text (`wait?contains=`), which must stay off the
-    // console (feedback loop, docs/operations.md#logging).
+    // console (feedback loop, docs/usage/operations.md#logging).
     res.on('finish', () => this.deps.logger.debug(`${method} ${path} → ${res.statusCode}`));
     try {
       const url = parseUrl(req.url);
@@ -166,7 +169,7 @@ export class HttpServer {
   }
 
   /**
-   * Host and origin rules (docs/security.md#host-and-origin). The services refuse a foreign
+   * Host and origin rules (docs/usage/security.md#host-and-origin). The services refuse a foreign
    * origin for every method: a page could open a WebSocket or read an event stream.
    */
   private checkAccess(req: http.IncomingMessage, proxied: boolean): void {

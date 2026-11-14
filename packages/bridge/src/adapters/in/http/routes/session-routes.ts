@@ -8,7 +8,7 @@ export interface SessionRoutesDeps {
   sessions: ManageSessions;
 }
 
-/** `POST /sessions`, `POST /sessions/end`, `GET /sessions` (docs/http-api.md#endpoints). */
+/** `POST /sessions`, `POST /sessions/end`, `GET /sessions` (docs/usage/http-api.md#endpoints). */
 export function sessionRoutes(router: Router, { sessions }: SessionRoutesDeps): void {
   router
     .add('POST', '/sessions', async ({ req, res }) => {

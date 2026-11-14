@@ -46,7 +46,7 @@ export class BridgeNotReadyError extends Error {
   override name = 'BridgeNotReadyError';
 }
 
-/** The bridge speaks another major version of the HTTP API (docs/http-api.md#versioning). */
+/** The bridge speaks another major version of the HTTP API (docs/usage/http-api.md#versioning). */
 export class IncompatibleBridgeError extends Error {
   override name = 'IncompatibleBridgeError';
 
@@ -82,7 +82,7 @@ export class BridgeUnreachableError extends Error {
  */
 export const INVALID_RESPONSE = 'INVALID_RESPONSE';
 
-/** The bridge answered with an error (docs/http-api.md#errors). */
+/** The bridge answered with an error (docs/usage/http-api.md#errors). */
 export class BridgeHttpError extends Error {
   override name = 'BridgeHttpError';
 

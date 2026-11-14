@@ -42,7 +42,7 @@ CI (`.github/workflows/ci.yml`) runs on every push: lint + format:check + typech
 whose scopes name the released packages (`feat(bridge): …`, `fix(bridge,client)!: …`). It decides
 the versions, which live only in git tags (package.json versions stay `0.0.0-dev`). Publishing is
 manual via the `Publish` workflow (stable from `main`, previews from other branches). CI only
-stages on npm; the maintainer approves with 2FA (rules in `docs/development.md#releases`, code in
+stages on npm; the maintainer approves with 2FA (rules in `docs/implementation/development.md#releases`, code in
 `tools/release`).
 
 ## Architecture
@@ -50,7 +50,7 @@ stages on npm; the maintainer approves with 2FA (rules in `docs/development.md#r
 ### Hexagonal packages (bridge, client), enforced by ESLint
 
 `packages/bridge/src/` and `packages/client/src/` share one layout and one rule set (client
-details in `docs/architecture.md`). The bridge:
+details in `docs/implementation/architecture.md`). The bridge:
 
 - `domain/` — pure model (`SpeechLog`: the buffer and the sessions with their rules; speech
   entries, config, text matching, errors). No I/O, imports nothing from outer layers.
@@ -96,7 +96,7 @@ the DTOs) holds `appDir`, the per-user config/state/cache folders, so the bridge
 the client's `client.json` agree. It is private and bundled into published packages by tsdown — never published on its own.
 Each hexagon owns its own domain model and maps to/from DTOs in its HTTP adapter
 (`adapters/in/http/dto/`, one file per resource; `dto/contract.test.ts` checks their output
-against the schemas). The OpenAPI spec lives at `docs/openapi.yaml`: its `components.schemas` are
+against the schemas). The OpenAPI spec lives at `docs/usage/openapi.yaml`: its `components.schemas` are
 **generated** from the schemas (`pnpm openapi`, list in `shared/src/schemas.ts`), the rest is
 hand-written. `shared/src/openapi/openapi.test.ts` fails when the file drifts from the schemas
 or from `API_VERSION`. valibot is bundled into bridge and client with `shared` (`deps.onlyBundle`
@@ -124,18 +124,26 @@ except the restart-only settings (`RESTART_FIELDS` in
 
 ## Docs conventions
 
+`docs/` holds `ROADMAP.md`, the index `README.md` (list every page there) and two folders:
+`usage/` (setting up, the HTTP API, client, Playwright/MCP, agents, operations: for people who use
+the bridge) and `implementation/` (architecture, decisions, development, internals: for
+contributors). Each has a `flows/` folder of mermaid sequence diagrams, grouped by topic; every
+flow file starts with a contents list linking to its diagrams, and each diagram links to the prose
+that is the fact's home (a diagram illustrates, it isn't a second home). When a flow changes, update
+its diagram with the prose. Source comments link to docs by repo path (`docs/usage/…md#anchor`).
+
 Each fact has one home in `docs/`; other docs link to it in one line. The README only introduces the
 project and links into `docs/`. Update `docs/ROADMAP.md` checkboxes when a milestone item lands, and
-keep `docs/http-api.md` / `docs/openapi.yaml` in sync with HTTP changes (change a schema in
+keep `docs/usage/http-api.md` / `docs/usage/openapi.yaml` in sync with HTTP changes (change a schema in
 `packages/shared`, then run `pnpm openapi`; paths and prose in the YAML are edited by hand). The
 client CLI's `--json` output is a contract too: one valibot schema per command in
 `packages/client/src/adapters/in/cli/output.ts` (`out(command, json, text)` only accepts what it
-describes), published as `docs/cli-output.schema.json` with `pnpm cli-schema`. Tests check every
+describes), published as `docs/usage/cli-output.schema.json` with `pnpm cli-schema`. Tests check every
 `--json` output against it (`packages/client/test/cli-output.ts`).
 
 Docs may describe features that don't exist yet. Mark them so a reader who lands on a page can tell:
 a page that is entirely design gets a `> **Planned (Mx), not implemented yet.**` note under its
 title; a single planned endpoint, function, command, setting or section gets
-`*(planned, [Mx](ROADMAP.md#…))*`. A plain link to a planned page needs no marker (the page has
+`*(planned, [Mx](../ROADMAP.md#…))*`; the same goes for a planned flow file or diagram. A plain link to a planned page needs no marker (the page has
 one). Remove the markers when the milestone lands. Lasting decisions and their reasons go in
-`docs/decisions.md`, not in `architecture.md`.
+`docs/implementation/decisions.md`, not in `architecture.md`.

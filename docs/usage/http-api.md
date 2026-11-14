@@ -2,6 +2,8 @@
 
 The bridge's REST + SSE interface. Tests and agents usually use the [client](client.md) instead.
 
+Flows: [HTTP](flows/http.md), [live feed (SSE)](flows/sse.md), [truncation](flows/truncation.md).
+
 Machine-readable spec: [`openapi.yaml`](openapi.yaml)
 (OpenAPI 3.1, the endpoints the bridge serves today).
 
@@ -64,8 +66,8 @@ with every run.
 | `POST /api/v1/sessions` `{ "name": "checkout test", "run": "nightly-42" }` | Start a [session](speech-capture.md#sessions): it becomes current and the previous one ends. `name` is required, `run` optional (both trimmed, not empty, at most 1000 characters). Requires `content-type: application/json`. Returns `201` with the new `Session`; its `startSeq` is the `since` that reads it from its start. If another client's session was current (see [Clients](#clients)), it is not refused: the bridge logs a warning and the answer has that session in `replaced` (otherwise `null`, since API 1.10). |
 | `POST /api/v1/sessions/end` | End the current session (`204`). Entries after this have `sessionId: null`. Does nothing if no session is current. Ending another client's session is logged as a warning. |
 | `GET /api/v1/sessions` | `{ "sessions": [...], "currentId": 7 }`: the sessions that still have entries in the buffer, plus the current one, newest first. `currentId` is `null` when no session is current. |
-| `POST /api/v1/set-focus` `{ "x": 640, "y": 12, "button": "left" }` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
-| `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Native key presses: one chord, or a sequence with `delayMs` between them. |
+| `POST /api/v1/set-focus` `{ "x": 640, "y": 12, "button": "left" }` | *(planned, [M4](../ROADMAP.md#m4-native-input-))* Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
+| `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | *(planned, [M4](../ROADMAP.md#m4-native-input-))* Native key presses: one chord, or a sequence with `delayMs` between them. |
 | `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. `PUT` takes any subset as `application/json`, saves it to the config file, applies what can change while running and answers with the configuration in use plus `restartRequired` (since API 1.6): the restart-only settings, such as ports, saved for the next start. See [Changing settings](configuration.md#changing-settings). |
 | `GET /api/v1/status` | Bridge and API version, when the bridge started (`startedAt`), state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, current session. |
 
@@ -109,7 +111,7 @@ session's `client`. One screen reader means one current session, so when a clien
 a session another client started, the bridge doesn't refuse: it logs a `[bridge]` warning and
 `POST /sessions` returns the replaced session in `replaced`. Without the header the client is
 unknown (`null`); replacing an unknown client's session as an unknown client is not warned about
-([decisions](decisions.md#sessions-warn-instead-of-locking)).
+([decisions](../implementation/decisions.md#sessions-warn-instead-of-locking)).
 
 ## curl examples
 
@@ -146,7 +148,7 @@ Every error response has the same body:
 | `400` | `INVALID_REQUEST` | Bad query or body (unknown key name, invalid regex, invalid config value). `details.field` names the field. |
 | `403` | `FORBIDDEN` | The `Host` header names a host the bridge doesn't answer to, or a `POST` / `PUT` / `DELETE` comes from another page's `Origin` ([Host and origin](security.md#host-and-origin)). Since API 1.5. |
 | `404` | `NOT_FOUND` | Unknown endpoint. |
-| `409` | `INPUT_DISABLED` | Native input endpoint called, but input is off (`--no-input`, or not on Windows). *(planned, [M4](ROADMAP.md#m4-native-input-))* |
+| `409` | `INPUT_DISABLED` | Native input endpoint called, but input is off (`--no-input`, or not on Windows). *(planned, [M4](../ROADMAP.md#m4-native-input-))* |
 | `503` | `SERVICE_UNAVAILABLE` | The bridge is shutting down (for example a pending `wait`). |
 | `500` | `INTERNAL` | Anything else. The bridge log has the details. |
 

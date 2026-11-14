@@ -8,7 +8,7 @@ function major(version: string): number | undefined {
 
 /**
  * Throws {@link IncompatibleBridgeError} unless the bridge's API has the client's major version
- * (docs/http-api.md#versioning). Any minor version is accepted: the bridge and the client are
+ * (docs/usage/http-api.md#versioning). Any minor version is accepted: the bridge and the client are
  * released together.
  */
 export function checkApiVersion(bridgeApiVersion: string, clientApiVersion: string): void {

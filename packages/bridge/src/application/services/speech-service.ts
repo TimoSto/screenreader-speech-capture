@@ -28,7 +28,7 @@ export const MAX_MARKER_LENGTH = API_LIMITS.markerLength;
 /**
  * Recording, reading, clearing and marking speech: every entry gets its `seq` and `sessionId`
  * from the speech log and `receivedAt` from the clock, and is published on the event bus
- * (docs/speech-capture.md#from-line-to-speech-entry).
+ * (docs/implementation/tcp-capture.md#from-line-to-speech-entry).
  */
 export class SpeechService implements RecordSpeech, SpeechUseCases, ResizeBuffer {
   constructor(private readonly deps: SpeechServiceDeps) {}

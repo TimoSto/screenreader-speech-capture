@@ -50,17 +50,17 @@ GitHub issues. This file only tracks milestones.
 
 - [ ] `POST /api/v1/set-focus`, `POST /api/v1/input/keys` on `@jitsi/robotjs`, as an optional
       dependency with a disabled fallback, so Linux CI and `pnpm dev` keep working
-      ([input injector](architecture.md#native-input-in-the-bridge))
+      ([input injector](implementation/architecture.md#native-input-in-the-bridge))
 - [ ] Setting `input.enabled` / `--no-input` and status `input: { enabled, reason }`, error code
       `INPUT_DISABLED`
 - [ ] Key-name parsing incl. `Insert` / `CapsLock` as held modifiers
 - [ ] Client `NativeInput` in-port in screen coordinates
-      ([client ports](architecture.md#native-input-in-the-client)), `setFocus(page)` (coordinate
+      ([client ports](implementation/architecture.md#native-input-in-the-client)), `setFocus(page)` (coordinate
       calculation), `click`, `pressKeys`. CLI `focus`, `press`
 
 ### M5 Web UI ⬜
 
-- [ ] Bridge serves the built UI ([static files](architecture.md#serving-the-ui))
+- [ ] Bridge serves the built UI ([static files](implementation/architecture.md#serving-the-ui))
 - [ ] ESLint hexagon rules for `packages/ui` (components must not call `fetch`)
 - [ ] Layout, status bar and status panel (polls `GET /status`, or an SSE `status` event instead
       of polling)
@@ -82,11 +82,11 @@ GitHub issues. This file only tracks milestones.
 - [x] Releases from PR titles (independent versions, tags as the source of truth), manual npm
       publish from CI (stable from main, previews from branches)
 - [ ] Smoke test on a real VM (NVDA + socket voice + Chrome). It also verifies
-      [VM setup](vm-setup.md), which is not yet checked on a real VM
+      [VM setup](usage/vm-setup.md), which is not yet checked on a real VM
 
 ### M8 Own SAPI voice (Rust) ⬜
 
-Replaces the third-party C++ [`text-to-socket-engine`](vm-setup.md#socket-voice-setup) with our
+Replaces the third-party C++ [`text-to-socket-engine`](usage/vm-setup.md#socket-voice-setup) with our
 own SAPI 5 voice written in Rust.
 
 - [ ] SAPI 5 TTS engine as a COM DLL (`ISpTTSEngine`, `ISpObjectWithToken`), 32-bit and 64-bit
@@ -100,7 +100,7 @@ own SAPI 5 voice written in Rust.
 - [ ] If the bridge supervises a voice helper: child services as a keyed map instead of one field
       per service (`ChildService.section`, `StatusServiceDeps`, status DTO)
 - [ ] Windows CI build of both DLLs, shipped with the bridge; update
-      [vm-setup.md](vm-setup.md#socket-voice-setup)
+      [vm-setup.md](usage/vm-setup.md#socket-voice-setup)
 
 ### Later
 
@@ -119,7 +119,7 @@ own SAPI 5 voice written in Rust.
 - **Default versions:** `DEFAULT_PLAYWRIGHT_VERSION` (1.65.0) and the `@playwright/mcp`
   dependency (0.0.85) are both pinned. Still open: how often to update them.
 - **Windows job object:** tie the child services to the bridge's process, so a hard kill of the
-  bridge ends them too (see [Shutdown](operations.md#shutdown)).
+  bridge ends them too (see [Shutdown](usage/operations.md#shutdown)).
 - **JAWS in CI:** license the VM, or reset a snapshot before each run (demo mode stops after 40 minutes)?
 - **Own voice encoding:** should the Rust voice (M8) send UTF-8 instead of the ANSI code page, so
   `tcp.encoding` no longer depends on the VM? That needs a new `tcp.format` or a header flag.

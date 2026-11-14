@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { CLI_OUTPUT } from './output.js';
 import { cliOutputSchema, SCHEMA_FILE } from './output-schema.js';
 
-describe('docs/cli-output.schema.json', () => {
+describe('docs/usage/cli-output.schema.json', () => {
   it('is generated from the CLI output schemas (run `pnpm cli-schema` after a change)', () => {
     const file = JSON.parse(readFileSync(SCHEMA_FILE, 'utf8')) as unknown;
     expect(file).toEqual(JSON.parse(JSON.stringify(cliOutputSchema())));

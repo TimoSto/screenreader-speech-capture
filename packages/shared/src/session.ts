@@ -44,7 +44,7 @@ const sessionEntries = {
 
 export const SessionSchema = v.pipe(
   v.object(sessionEntries),
-  v.description('A session (docs/speech-capture.md#sessions). Added in API 1.3.'),
+  v.description('A session (docs/usage/speech-capture.md#sessions). Added in API 1.3.'),
   v.examples([
     {
       id: 7,
@@ -61,7 +61,7 @@ export const SessionSchema = v.pipe(
   ]),
 );
 
-/** A session: the speech of one test or agent task (docs/speech-capture.md#sessions). */
+/** A session: the speech of one test or agent task (docs/usage/speech-capture.md#sessions). */
 export type SessionDto = v.InferOutput<typeof SessionSchema>;
 
 export const StartSessionRequestSchema = v.object({

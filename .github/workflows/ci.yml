@@ -57,7 +57,7 @@ jobs:
       - run: pnpm build
 
   # Shows what the manual Publish workflow would release from this branch
-  # (see docs/development.md#releases).
+  # (see docs/implementation/development.md#releases).
   determine-version:
     name: Determine versions
     runs-on: ubuntu-latest

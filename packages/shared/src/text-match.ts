@@ -1,5 +1,5 @@
 /**
- * The `normalize` rule of the HTTP API (docs/http-api.md). The bridge applies it in
+ * The `normalize` rule of the HTTP API (docs/usage/http-api.md). The bridge applies it in
  * `GET /speech/wait`, the client in its own waits, so both must use this one copy. It is the only
  * behaviour in this package: it belongs to the contract, not to either side.
  */

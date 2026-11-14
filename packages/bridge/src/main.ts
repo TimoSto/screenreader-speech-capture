@@ -1,5 +1,5 @@
 // Composition root, with the helpers in composition/: the only place that knows the concrete
-// adapters (docs/architecture.md).
+// adapters (docs/implementation/architecture.md).
 import { hostname } from 'node:os';
 import { API_VERSION } from '@screenreader-speech-capture/shared';
 import { HttpServer } from './adapters/in/http/http-server.js';
@@ -55,8 +55,8 @@ export interface Bridge {
   /** The `[bridge]` log, for lifecycle messages from outside (signals, crashes). */
   readonly log: Logger;
   /**
-   * Stops the bridge (docs/operations.md#shutdown). `reason`, for example the signal, goes into
-   * the log. Calling it again returns the same shutdown.
+   * Stops the bridge (docs/usage/operations.md#shutdown). `reason`, for example the signal, goes
+   * into the log. Calling it again returns the same shutdown.
    */
   stop(reason?: string): Promise<void>;
 }
@@ -95,7 +95,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
 
   const clock = seams.clock ?? new SystemClock();
   const startedAt = clock.now();
-  // `seq` starts at the start time, so it keeps rising across restarts (docs/http-api.md).
+  // `seq` starts at the start time, so it keeps rising across restarts (docs/usage/http-api.md).
   const speechLog = new SpeechLog(config.buffer.maxEntries, startedAt.getTime());
   const events = new InProcessEventBus((error) =>
     bridgeLogger.error(`event listener failed: ${String(error)}`),
@@ -110,7 +110,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     log: speechLog,
     events,
     clock,
-    // A long buffer lets speech capture run in between (docs/http-api.md, `/speech/wait`).
+    // A long buffer lets speech capture run in between (docs/usage/http-api.md, `/speech/wait`).
     pace: () => yieldEvery(256),
   });
   const sessions = new SessionService({

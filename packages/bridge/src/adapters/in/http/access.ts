@@ -2,10 +2,10 @@ import type http from 'node:http';
 import net from 'node:net';
 import { AppError } from '../../../domain/errors.js';
 
-// Protection against DNS rebinding and cross-site requests (docs/security.md#host-and-origin).
-// A page in the VM's browser can point a domain of its own at the bridge and so become
-// same-origin with it, or post a form to it. The `Host` header shows the first, the `Origin`
-// header the second.
+// Protection against DNS rebinding and cross-site requests
+// (docs/usage/security.md#host-and-origin). A page in the VM's browser can point a domain of its
+// own at the bridge and so become same-origin with it, or post a form to it. The `Host` header
+// shows the first, the `Origin` header the second.
 
 export interface AccessRules {
   /** `http.allowedHosts`: more accepted host names. `*` accepts any. */
@@ -20,7 +20,7 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 /**
  * Throws `FORBIDDEN` if the request comes through a foreign host name or from a foreign page.
  * `strictOrigin` refuses a foreign `Origin` for every method: for the proxied services, where a
- * page could open a WebSocket or read an event stream (docs/security.md#host-and-origin).
+ * page could open a WebSocket or read an event stream (docs/usage/security.md#host-and-origin).
  */
 export function checkAccess(
   req: http.IncomingMessage,

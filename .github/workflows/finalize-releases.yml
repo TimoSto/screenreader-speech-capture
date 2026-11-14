@@ -1,7 +1,8 @@
 name: Finalize releases
 
 # Manual, after approving staged versions on npmjs.com (npm doesn't notify GitHub): publishes every
-# draft GitHub release whose version is now live on npm (see docs/development.md#releases).
+# draft GitHub release whose version is now live on npm (see
+# docs/implementation/development.md#releases).
 on:
   workflow_dispatch:
 

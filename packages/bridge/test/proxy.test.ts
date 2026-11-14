@@ -1,5 +1,5 @@
 // The bridge passes the Playwright server and Playwright MCP through on its HTTP port
-// (docs/playwright-mcp.md). Fake child services in HTTP mode show what arrives at them.
+// (docs/usage/playwright-mcp.md). Fake child services in HTTP mode show what arrives at them.
 import {
   PLAYWRIGHT_MCP_PATH,
   PLAYWRIGHT_PATH,

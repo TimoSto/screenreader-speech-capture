@@ -5,7 +5,7 @@ export interface TranscriptServiceDeps {
   events: SpeechEventBus;
   /**
    * Where the lines go. Should be a logger on the `speech` channel, so the text stays off the
-   * console by default (docs/operations.md#logging).
+   * console by default (docs/usage/operations.md#logging).
    */
   transcript: Logger;
 }

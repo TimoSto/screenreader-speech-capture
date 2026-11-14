@@ -12,7 +12,7 @@ export interface BridgeLifecycleDeps {
   waits: Shutdown;
   /** Starts the enabled child services; resolves once each is running or has failed. */
   startServices: () => Promise<void>;
-  /** Stopped in this order (docs/operations.md#shutdown). */
+  /** Stopped in this order (docs/usage/operations.md#shutdown). */
   stopOrder: readonly Stoppable[];
   /** `[bridge]` log. */
   logger: Logger;

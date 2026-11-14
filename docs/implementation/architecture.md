@@ -2,6 +2,8 @@
 
 How the code is organised. Why it is written in Node.js is in [Decisions](decisions.md#nodejs-not-go).
 
+Flows: [capture](flows/capture.md), [lifecycle](flows/lifecycle.md), [config](flows/config.md), [child services](flows/child-services.md).
+
 ## Monorepo
 
 pnpm monorepo:
@@ -107,7 +109,7 @@ packages/bridge/src/
 ```
 
 Planned, not in the code yet: `KeyChord`, `SendNativeInput`, `InputInjector` and `out/robotjs/`
-([M4](ROADMAP.md#m4-native-input-)), and serving the built UI ([M5](ROADMAP.md#m5-web-ui-)).
+([M4](../ROADMAP.md#m4-native-input-)), and serving the built UI ([M5](../ROADMAP.md#m5-web-ui-)).
 
 **Dependency rule:** `adapters → application → domain`. The domain imports nothing, the application
 imports only the domain and its own ports, and the adapters implement or call the ports. Only the
@@ -131,7 +133,7 @@ and `performance`: time and timers come through the `Clock` port, so tests can r
 
 ### Native input in the bridge
 
-*(planned, [M4](ROADMAP.md#m4-native-input-))*
+*(planned, [M4](../ROADMAP.md#m4-native-input-))*
 
 The bridge is bundled into one `cli.mjs`, and CI and development run on Linux, so robotjs must not
 be required to build or start it:
@@ -150,7 +152,7 @@ be required to build or start it:
 
 The client uses the bridge's layout and the same ESLint rules (see the dependency rule above). The
 CLI and the Playwright fixture (planned) are **driving adapters on the same in-ports as the library**, so they
-can't drift from it (see [Test client](client.md)).
+can't drift from it (see [Test client](../usage/client.md)).
 
 ```
 packages/client/src/
@@ -181,7 +183,7 @@ of extending it, so the service's internals never become public types.
 
 ### Native input in the client
 
-*(planned, [M4](ROADMAP.md#m4-native-input-))*
+*(planned, [M4](../ROADMAP.md#m4-native-input-))*
 
 Native input gets its own in-port, `NativeInput` (`click(point)`, `pressKeys(keys)`,
 `setFocus(point)`), instead of growing `SpeechCapture`: it has a different availability (Windows
@@ -190,7 +192,7 @@ in **screen coordinates** and has no Playwright types, so `@playwright/test` nev
 dependency of the core.
 
 The fixture (the `./playwright` subpath, a driving adapter) reads the window geometry from the
-`Page` (see [Native input](native-input.md)) and calls `NativeInput`. A pure domain function
+`Page` (see [Native input](../usage/native-input.md)) and calls `NativeInput`. A pure domain function
 `clickPoint(geometry, target?)` does the math, so it is unit-tested without a browser. The fixture
 can still expose one `speech` object composed from both ports. To avoid a hand-written forwarding
 method per function in `main.ts`, generate the delegation (a small `delegate()` helper or a
@@ -198,7 +200,7 @@ method per function in `main.ts`, generate the delegation (a small `delegate()` 
 
 ## UI: SvelteKit, hexagonal-lite
 
-*(planned, [M5](ROADMAP.md#m5-web-ui-))*
+*(planned, [M5](../ROADMAP.md#m5-web-ui-))*
 
 ```
 packages/ui/src/

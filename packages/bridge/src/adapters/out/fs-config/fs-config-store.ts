@@ -4,8 +4,8 @@ import type { ConfigStore } from '../../../application/ports/out/config-store.js
 import type { ConfigPatch } from '../../../domain/config/index.js';
 
 /**
- * The config file (docs/configuration.md): JSON with the settings saved so far. Only the file's
- * own settings are written, never values from flags or environment variables.
+ * The config file (docs/usage/configuration.md): JSON with the settings saved so far. Only the
+ * file's own settings are written, never values from flags or environment variables.
  */
 export class FsConfigStore implements ConfigStore {
   constructor(readonly location: string) {}

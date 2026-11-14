@@ -3,7 +3,7 @@ import type { SpeechCapture } from '../../../application/ports/in/speech-capture
 import type { Option, Values } from './options.js';
 import type { CliCommand, CliOutput } from './output.js';
 
-/** Exit codes (docs/client.md#cli-for-agents). */
+/** Exit codes (docs/usage/client.md#cli-for-agents). */
 export const EXIT = { ok: 0, timeout: 1, bridge: 2, usage: 3 } as const;
 
 export interface CliIo {

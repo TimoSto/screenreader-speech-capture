@@ -13,7 +13,7 @@ export interface EnsurePlaywrightOptions {
 }
 
 /**
- * Makes sure `playwright@<version>` and its Chromium are installed (docs/playwright-mcp.md)
+ * Makes sure `playwright@<version>` and its Chromium are installed (docs/usage/playwright-mcp.md)
  * and returns the path of its `cli.js`. The package goes into `<cacheRoot>/<version>` once.
  * The Chromium install runs every time: Playwright skips it when the build is already there.
  */

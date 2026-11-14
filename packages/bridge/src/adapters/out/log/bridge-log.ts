@@ -17,7 +17,7 @@ export interface LogSink {
 /**
  * `log`: what the bridge does. `speech`: the text the screen reader said. Speech is kept off the
  * console by default, because a screen reader reading the console would speak it again and the
- * bridge would log it again, in an endless loop (docs/operations.md#logging).
+ * bridge would log it again, in an endless loop (docs/usage/operations.md#logging).
  */
 export type LogChannel = 'log' | 'speech';
 

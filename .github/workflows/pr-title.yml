@@ -1,7 +1,7 @@
 name: PR title
 
 # The PR title becomes the squash commit title on main, which decides the package versions
-# (see docs/development.md#releases).
+# (see docs/implementation/development.md#releases).
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened]

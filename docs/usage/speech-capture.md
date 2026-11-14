@@ -1,6 +1,8 @@
 # Speech capture
 
-What the socket voice sends, and how the bridge turns it into speech entries.
+What the socket voice sends, and how the bridge keeps the speech entries: buffer and sessions.
+
+Flows: [sessions](flows/http.md#one-session-per-test), [truncation](flows/truncation.md), [capture internals](../implementation/flows/capture.md).
 
 ## Wire format
 
@@ -27,47 +29,8 @@ From the engine's source (`ttsengobj.cpp`):
   interrupts or cancels a moment later (for example when you press the next key) is still recorded.
   The recording shows what was **sent to speech**, which can be more than a listener would hear.
 
-This is how the bridge turns the bytes from the socket voice into speech entries
-(`adapters/in/tcp/` → `RecordSpeech`).
-
-## Listening and connections
-
-- The bridge listens on `tcp.host:tcp.port` (default `127.0.0.1:4449`) and accepts any number of
-  connections at the same time. Each one gets an increasing `connectionId`.
-- Connections are listed in `GET /api/v1/status` (`tcp.connections`) while they are open, and
-  connects and disconnects are logged. A connection that closes is normal: the engine opens a new one
-  the next time it speaks.
-- If the port is already in use (for example by a second bridge), the bridge **exits with an error**.
-  It doesn't silently pick another port, because the voice only knows its configured port.
-- Changing `tcp.*` through `PUT /api/v1/config` closes the listener and all open connections and starts
-  a new listener. The engine reconnects on its next `Speak` call.
-
-## Framing and decoding
-
-Per connection, the `text-to-socket` parser:
-
-1. collects the incoming **bytes** in a buffer and cuts it at `\n` (a trailing `\r` is removed).
-   Bytes are split *before* decoding, so a multi-byte character (UTF-8 code page) that is split
-   across two TCP packets is still decoded correctly,
-2. decodes each complete line with `tcp.encoding` (default `windows-1252`),
-3. handles the **first line** of a connection specially: if it matches `voice=<id>`, it is taken as
-   the voice header and not recorded. Otherwise it is speech, and `voice` stays `null`,
-4. **skips** lines that are empty or contain only whitespace (SAPI sends these for pauses),
-5. cuts lines longer than `tcp.maxLineBytes` (default 64 KiB) and logs a warning, so a broken
-   sender can't use up memory,
-6. records a text that is still in the buffer when the connection closes as a final speech entry.
-
-## From line to speech entry
-
-For each line, the TCP listener calls `RecordSpeech` with the text, the connection's voice and its
-`connectionId`. `RecordSpeech`:
-
-- assigns the next `seq` and takes `receivedAt` from the clock when the line is complete (the engine sends no timestamps of its own),
-- stores the entry in the buffer and publishes it on the event bus (SSE stream, waiting
-  `wait` requests, UI).
-
-Entries from different connections are ordered by when the bridge received them. The bridge
-doesn't try to merge entries: one `Speak` call is one entry.
+How the bridge listens, frames and decodes those lines is in
+[TCP capture](../implementation/tcp-capture.md).
 
 ## Buffer
 
@@ -93,7 +56,7 @@ and readers can tell them apart.
 - Two clients (for example two Playwright workers) can't share the screen reader: each new
   session ends the other one's. The bridge doesn't lock sessions, but it warns when a client
   ends or replaces another client's session ([Clients](http-api.md#clients)).
-- **Sessions replace clearing between tests.** The [fixture](client.md#playwright-fixture) *(planned, [M3](ROADMAP.md#m3-playwright--mcp-))*
+- **Sessions replace clearing between tests.** The [fixture](client.md#playwright-fixture) *(planned, [M3](../ROADMAP.md#m3-playwright--mcp-))*
   starts one session per test, and agents start one per task. Reads are scoped to the current session, so
   earlier sessions stay in the buffer and stay visible in the UI.
 - Sessions share the capped buffer: an ended session disappears from the session list once all

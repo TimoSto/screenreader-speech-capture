@@ -31,7 +31,7 @@ const entryOf = (dir: string, name: string, entry: string) =>
 
 /**
  * Makes sure `<name>@<version>` is installed into `<cacheRoot>/<version>` (once per version,
- * docs/playwright-mcp.md#install). npm install scripts are off.
+ * docs/usage/playwright-mcp.md#install). npm install scripts are off.
  */
 export async function ensureNpmPackage(options: EnsureNpmPackageOptions): Promise<NpmPackage> {
   const { name, version, cacheRoot, entry, run, logger, signal } = options;

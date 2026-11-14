@@ -1,4 +1,4 @@
-/** The speech of one test or agent task (docs/speech-capture.md#sessions). */
+/** The speech of one test or agent task (docs/usage/speech-capture.md#sessions). */
 export interface Session {
   /** Increasing, restarts at 1 with the bridge. */
   id: number;

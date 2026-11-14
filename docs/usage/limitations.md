@@ -19,7 +19,7 @@ What this project can't do, so you can decide early whether it fits your tests.
 - **NVDA and JAWS on Windows only.** Both can use SAPI 5 voices.
 - **Not Narrator.** Narrator doesn't use third-party SAPI 5 voices.
 - **Not VoiceOver, TalkBack, Orca or mobile.** They don't use SAPI. A different capture would be a
-  new driving adapter (see [Architecture](architecture.md#bridge-hexagonal-ports--adapters)).
+  new driving adapter (see [Architecture](../implementation/architecture.md#bridge-hexagonal-ports--adapters)).
 - **Wording is not portable.** The text depends on the screen reader, its version, the language and
   the verbosity settings. A test written against NVDA needs its own expectations for JAWS, and may
   need updating after a screen reader update.
@@ -44,5 +44,5 @@ What this project can't do, so you can decide early whether it fits your tests.
 
 - Needs an **interactive, unlocked desktop session**. No Windows service, no locked screen, no
   disconnected RDP session ([Running on the VM](vm-setup.md#running-on-the-vm)).
-- Native clicks *(planned, [M4](ROADMAP.md#m4-native-input-))* assume **100 % display scaling** and one monitor ([Native input](native-input.md)).
+- Native clicks *(planned, [M4](../ROADMAP.md#m4-native-input-))* assume **100 % display scaling** and one monitor ([Native input](native-input.md)).
 - **No authentication.** Only use it on isolated test networks ([Security](security.md)).

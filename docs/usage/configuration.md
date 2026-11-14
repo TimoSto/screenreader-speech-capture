@@ -2,6 +2,8 @@
 
 All settings of the bridge: CLI flags, environment variables and the config file.
 
+Flows: [changing settings](flows/http.md#change-the-configuration), [through the layers](../implementation/flows/config.md).
+
 Precedence: **CLI flags > environment variables > config file > defaults**.
 
 - Config file: `%APPDATA%\screenreader-speech-capture\config.json` (on Linux and macOS, for
@@ -12,7 +14,7 @@ Precedence: **CLI flags > environment variables > config file > defaults**.
   `SR_SPEECH_TCP_PORT=4449`, `SR_SPEECH_HTTP_PORT=5151`, `SR_SPEECH_NO_MCP=1`. Switches
   (`SR_SPEECH_NO_MCP`, `SR_SPEECH_CONSOLE_SPEECH`, …) are on with `1`, `true`, `yes` or `on`;
   `0`, `false`, `no`, `off` or empty count as not set.
-- The **Settings** page in the UI *(planned, [M5](ROADMAP.md#m5-web-ui-))* edits the configuration through `PUT /api/v1/config`.
+- The **Settings** page in the UI *(planned, [M5](../ROADMAP.md#m5-web-ui-))* edits the configuration through `PUT /api/v1/config`.
 - An invalid value stops the start with an error that names the flag, the variable or the config
   file, and the setting (exit code `2`).
 - If a flag or variable sets something the config file also sets, the bridge log warns at startup:
@@ -81,14 +83,14 @@ What each section does when it changes:
 | `--tcp-port <n>` | `4449` | Port the socket voice connects to (the default voice of `text-to-socket-engine` uses 4449). |
 | `--tcp-encoding <enc>` | `windows-1252` | Character encoding of the incoming text: the VM's ANSI code page (see [Wire format](speech-capture.md#wire-format)). |
 | `--host <addr>` | `0.0.0.0` | Interface for HTTP, which is reached remotely. The Playwright server and MCP are reached through it ([Remote Playwright & MCP](playwright-mcp.md)). |
-| `--http-port <n>` | `5151` | HTTP API, the paths `/playwright` and `/playwright-mcp` (see [Remote Playwright & MCP](playwright-mcp.md)), and the web UI ([M5](ROADMAP.md#m5-web-ui-)). |
+| `--http-port <n>` | `5151` | HTTP API, the paths `/playwright` and `/playwright-mcp` (see [Remote Playwright & MCP](playwright-mcp.md)), and the web UI ([M5](../ROADMAP.md#m5-web-ui-)). |
 | `--allowed-hosts <names>` | | More host names the HTTP port answers to, comma-separated (`bridge.lab.example,vm42`), `*` for any ([Host and origin](security.md#host-and-origin)). |
 | `--playwright-port <n>` | `3000` | Internal port of the Playwright server, on `127.0.0.1`. Clients use `/playwright` on the HTTP port. |
 | `--playwright-version <v>` | *(bundled)* | Playwright version of the server, exact (`1.65.0`). Must match the clients (see [Version](playwright-mcp.md#version)). |
 | `--mcp-port <n>` | `8931` | Internal port of Playwright MCP, on `127.0.0.1`. Clients use `/playwright-mcp` on the HTTP port. |
 | `--no-playwright` | | Don't start the Playwright server. |
 | `--no-mcp` | | Don't start Playwright MCP. |
-| `--no-input` | | Disable the native input endpoints. *(planned, [M4](ROADMAP.md#m4-native-input-))* |
+| `--no-input` | | Disable the native input endpoints. *(planned, [M4](../ROADMAP.md#m4-native-input-))* |
 | `--log-level <level>` | `info` | Level of the bridge's own log: `error`, `warn`, `info`, `debug`. |
 | `--bridge-log <path>` | `%LOCALAPPDATA%\screenreader-speech-capture\logs\bridge.log` | File for the bridge's own log (see [Operations](operations.md#logging)). |
 | `--console-speech` | off | Also write the received speech to the console. Causes a feedback loop when the console is on the VM ([Operations](operations.md#speech-text-stays-off-the-console)). |

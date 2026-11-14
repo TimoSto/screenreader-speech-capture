@@ -9,8 +9,8 @@ import type { Prepare } from '../process/types.js';
 import { runCommand } from '../process/run-command.js';
 
 /**
- * The `@playwright/mcp` the bridge depends on (docs/playwright-mcp.md#mcp-version): its pinned
- * version and the path of its `cli.js`.
+ * The `@playwright/mcp` the bridge depends on (docs/usage/playwright-mcp.md#mcp-version): its
+ * pinned version and the path of its `cli.js`.
  */
 export function bundledMcp(): { version: string; cli: string } {
   const manifest = createRequire(import.meta.url).resolve('@playwright/mcp/package.json');

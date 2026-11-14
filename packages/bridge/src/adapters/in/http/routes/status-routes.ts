@@ -7,7 +7,7 @@ export interface StatusRoutesDeps {
   status: GetStatus;
 }
 
-/** `GET /status` (docs/http-api.md#endpoints). */
+/** `GET /status` (docs/usage/http-api.md#endpoints). */
 export function statusRoutes(router: Router, { status }: StatusRoutesDeps): void {
   router.add('GET', '/status', ({ res }) => sendJson(res, 200, toStatusDto(status.status())));
 }

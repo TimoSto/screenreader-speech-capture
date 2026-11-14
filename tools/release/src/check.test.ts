@@ -32,7 +32,7 @@ describe('checkPrTitle', () => {
   });
 
   it('accepts titles that release nothing', () => {
-    const result = checkPrTitle('docs: firewall rule', ['docs/vm-setup.md'], config);
+    const result = checkPrTitle('docs: firewall rule', ['docs/usage/vm-setup.md'], config);
     expect(result).toEqual({ errors: [], warnings: [], effects: { bridge: '–', client: '–' } });
   });
 

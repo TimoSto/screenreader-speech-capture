@@ -8,7 +8,7 @@ export interface ConfigRoutesDeps {
   config: ManageConfig;
 }
 
-/** `GET /config`, `PUT /config` (docs/http-api.md#endpoints). */
+/** `GET /config`, `PUT /config` (docs/usage/http-api.md#endpoints). */
 export function configRoutes(router: Router, { config }: ConfigRoutesDeps): void {
   router
     .add('GET', '/config', ({ res }) => {

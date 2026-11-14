@@ -5,7 +5,7 @@ import type { ResizeBuffer } from '../application/ports/in/speech.js';
 import type { ConfigService } from '../application/services/config-service.js';
 
 /**
- * Live re-apply of PUT /api/v1/config (docs/configuration.md#changing-settings): hands each
+ * Live re-apply of PUT /api/v1/config (docs/usage/configuration.md#changing-settings): hands each
  * change to the parts that apply it. The listeners' addresses and the log output wait for the
  * next start (`RESTART_FIELDS`). The child services decide themselves what a change means for
  * them (`ChildServices.apply`).

@@ -1,11 +1,14 @@
-// Generates `components.schemas` of docs/openapi.yaml from the valibot schemas (`pnpm openapi`).
-// The rest of the file (paths, parameters, responses, prose) is written by hand.
+// Generates `components.schemas` of docs/usage/openapi.yaml from the valibot schemas (`pnpm
+// openapi`). The rest of the file (paths, parameters, responses, prose) is written by hand.
 import { toJsonSchemaDefs } from '@valibot/to-json-schema';
 import path from 'node:path';
 import { stringify } from 'yaml';
 import { API_SCHEMAS } from '../schemas.js';
 
-export const OPENAPI_FILE = path.resolve(import.meta.dirname, '../../../../docs/openapi.yaml');
+export const OPENAPI_FILE = path.resolve(
+  import.meta.dirname,
+  '../../../../docs/usage/openapi.yaml',
+);
 
 export const BEGIN =
   '    # BEGIN GENERATED from packages/shared (pnpm openapi). Do not edit by hand.';
@@ -25,7 +28,7 @@ export function withGeneratedSchemas(file: string): string {
   const end = file.indexOf(END);
   if (start === -1 || end === -1 || end < start) {
     throw new Error(
-      `docs/openapi.yaml needs the lines\n${BEGIN}\n${END}\nunder components.schemas`,
+      `docs/usage/openapi.yaml needs the lines\n${BEGIN}\n${END}\nunder components.schemas`,
     );
   }
   const yaml = stringify(componentSchemas(), {

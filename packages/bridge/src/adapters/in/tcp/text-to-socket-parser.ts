@@ -14,9 +14,10 @@ const CR = 0x0d;
 const HEADER = /^voice=(\S.*)$/;
 
 /**
- * Parser for the `text-to-socket` wire format (docs/speech-capture.md#framing-and-decoding),
- * one instance per connection. Bytes are split at `\n` *before* decoding, so a multi-byte
- * character split across two TCP packets is decoded correctly.
+ * Parser for the `text-to-socket` wire format
+ * (docs/implementation/tcp-capture.md#framing-and-decoding), one instance per connection. Bytes are
+ * split at `\n` *before* decoding, so a multi-byte character split across two TCP packets is
+ * decoded correctly.
  */
 export class TextToSocketParser {
   private readonly decoder: TextDecoder;

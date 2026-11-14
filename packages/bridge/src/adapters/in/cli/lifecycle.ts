@@ -45,7 +45,7 @@ function describeError(error: unknown): string {
 
 /**
  * Starts the bridge with `start`, then stops it gracefully and exits the process
- * (docs/operations.md#shutdown):
+ * (docs/usage/operations.md#shutdown):
  *
  * - on a shutdown signal. A second signal exits at once.
  * - on an uncaught exception or unhandled rejection, which is logged with its stack. Exit code 1.
