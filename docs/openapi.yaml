@@ -14,8 +14,8 @@ info:
     Changes: 1.1 added `playwright` to `GET /status`, 1.2 added `mcp`, 1.3 added sessions
     (`/sessions`, `sessionId` on entries, the `session` filter and SSE event, `session` in the
     status), 1.4 added the bridge run (`instanceId` and `startedAt` in the status, `instanceId`
-    in `SpeechList`, the SSE `bridge` event), 1.5 added `http.allowedHosts` to the config and the
-    `FORBIDDEN` error.
+    in `SpeechList`, the SSE `bridge` event), 1.5 added `http.allowedHosts` to the config, the
+    `FORBIDDEN` error and `session=none`.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -345,12 +345,13 @@ components:
       name: session
       in: query
       description: |
-        Only entries of this session: its `id`, or `current` for the session that is current
-        when the request arrives (it is not followed to later sessions).
+        Only entries of this session: its `id`, `current` for the session that is current
+        when the request arrives (it is not followed to later sessions), or `none` for the
+        entries recorded outside any session (`sessionId: null`, since 1.5).
       schema:
         oneOf:
           - { type: integer, minimum: 1 }
-          - { type: string, enum: [current] }
+          - { type: string, enum: [current, none] }
 
   responses:
     SessionNotFound:

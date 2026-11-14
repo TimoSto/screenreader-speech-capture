@@ -7,9 +7,10 @@ export interface SpeechRepository {
   add(entry: NewSpeechEntry): SpeechEntry;
   /**
    * Entries with `seq > since`, oldest first, at most `limit` (all without it). With `sessionId`,
-   * only that session's entries, and `truncated` only when some of them were dropped.
+   * only that session's entries (`null`: the entries outside sessions), and `truncated` only when
+   * some of them were dropped.
    */
-  list(since: number, limit?: number, sessionId?: number): SpeechPage;
+  list(since: number, limit?: number, sessionId?: number | null): SpeechPage;
   /** Removes all entries. `seq` keeps counting. */
   clear(): void;
   stats(): BufferStats;

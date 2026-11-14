@@ -29,14 +29,14 @@ export function booleanParam(url: URL, name: string): boolean | undefined {
   throw invalidField(name, 'must be 1, true, 0 or false');
 }
 
-/** The `session` query parameter (a session id or `current`), `undefined` if it is missing. */
+/** The `session` query parameter (an id, `current` or `none`), `undefined` if it is missing. */
 export function sessionParam(url: URL): SessionFilter | undefined {
   const raw = url.searchParams.get('session');
   if (raw === null || raw === '') return undefined;
-  if (raw === 'current') return 'current';
+  if (raw === 'current' || raw === 'none') return raw;
   const id = /^\d+$/.test(raw) ? Number(raw) : NaN;
   if (!Number.isSafeInteger(id) || id < 1) {
-    throw invalidField('session', 'must be a session id or current');
+    throw invalidField('session', 'must be a session id, current or none');
   }
   return id;
 }

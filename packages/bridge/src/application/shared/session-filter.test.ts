@@ -29,6 +29,11 @@ describe('resolveSessionFilter', () => {
     );
   });
 
+  it('resolves none to null, with or without a current session', () => {
+    expect(resolveSessionFilter('none', sessions(current))).toBeNull();
+    expect(resolveSessionFilter('none', sessions(null, 0))).toBeNull();
+  });
+
   it('accepts any id given out so far, ended or not', () => {
     expect(resolveSessionFilter(1, sessions(null))).toBe(1);
     expect(resolveSessionFilter(3, sessions(null))).toBe(3);

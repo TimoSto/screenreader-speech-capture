@@ -11,7 +11,7 @@ export interface WaitOptions extends TextMatchOptions {
   /** Default and maximum: `WAIT_TIMEOUT_MS`. */
   timeoutMs?: number | undefined;
   /**
-   * Only this session's entries match. `current` is resolved when the wait starts, so speech of
+   * Only this session's entries match (`none`: only those outside sessions). `current` is resolved when the wait starts, so speech of
    * a session started later never matches.
    */
   session?: SessionFilter | undefined;

@@ -16,6 +16,8 @@ export class MemorySpeechRepository implements SpeechRepository {
   private nextSeq = 1;
   /** Highest `seq` dropped because the list was full, since the last clear. */
   private droppedUpToSeq = 0;
+  /** The same for entries outside sessions (`sessionId: null`). */
+  private outsideDroppedUpToSeq = 0;
   /** Stats of the sessions with entries since the last clear, until they are forgotten. */
   private sessions = new Map<number, SessionStats>();
 
@@ -35,12 +37,16 @@ export class MemorySpeechRepository implements SpeechRepository {
     return stored;
   }
 
-  list(since: number, limit?: number, sessionId?: number): SpeechPage {
+  list(since: number, limit?: number, sessionId?: number | null): SpeechPage {
     const after = this.entries.filter(
       (entry) => entry.seq > since && (sessionId === undefined || entry.sessionId === sessionId),
     );
     const droppedUpToSeq =
-      sessionId === undefined ? this.droppedUpToSeq : this.sessionStats(sessionId).droppedUpToSeq;
+      sessionId === undefined
+        ? this.droppedUpToSeq
+        : sessionId === null
+          ? this.outsideDroppedUpToSeq
+          : this.sessionStats(sessionId).droppedUpToSeq;
     return {
       entries: limit === undefined ? after : after.slice(0, limit),
       truncated: since < droppedUpToSeq,
@@ -60,6 +66,7 @@ export class MemorySpeechRepository implements SpeechRepository {
   clear(): void {
     this.entries = [];
     this.droppedUpToSeq = 0;
+    this.outsideDroppedUpToSeq = 0;
     this.sessions.clear();
   }
 
@@ -84,6 +91,7 @@ export class MemorySpeechRepository implements SpeechRepository {
     while (this.entries.length > this.maxEntries) {
       const dropped = this.entries.shift()!;
       this.droppedUpToSeq = dropped.seq;
+      if (dropped.sessionId === null) this.outsideDroppedUpToSeq = dropped.seq;
       const stats = dropped.sessionId === null ? undefined : this.sessions.get(dropped.sessionId);
       if (!stats) continue;
       stats.entries--;

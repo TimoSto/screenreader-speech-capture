@@ -62,18 +62,25 @@ describe('requireJson', () => {
 });
 
 describe('sessionParam', () => {
-  it('accepts current and positive ids, and treats missing as undefined', () => {
+  it('accepts current, none and positive ids, and treats missing as undefined', () => {
     expect(sessionParam(url(''))).toBeUndefined();
     expect(sessionParam(url('session='))).toBeUndefined();
     expect(sessionParam(url('session=current'))).toBe('current');
+    expect(sessionParam(url('session=none'))).toBe('none');
     expect(sessionParam(url('session=7'))).toBe(7);
   });
 
-  it.each(['0', '-1', '1.5', 'latest', '99999999999999999999'])('rejects %s', (value) => {
-    expect(() => sessionParam(url(`session=${value}`))).toThrow(
-      expect.objectContaining({ code: 'INVALID_REQUEST', details: { field: 'session' } }) as Error,
-    );
-  });
+  it.each(['0', '-1', '1.5', 'latest', 'None', 'null', '99999999999999999999'])(
+    'rejects %s',
+    (value) => {
+      expect(() => sessionParam(url(`session=${value}`))).toThrow(
+        expect.objectContaining({
+          code: 'INVALID_REQUEST',
+          details: { field: 'session' },
+        }) as Error,
+      );
+    },
+  );
 });
 
 describe('body fields', () => {
