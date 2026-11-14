@@ -78,6 +78,16 @@ lot of code in both packages for a rare event in development, where the test tha
 fails anyway. It holds as long as a run records fewer entries than it runs milliseconds, far more
 than any screen reader says. Session ids still start at 1; tests start a new session anyway.
 
+The start time is the wall clock, so this also assumes the clock doesn't go backwards between a
+client's cursor and the next run. That holds in the intended setup: VM snapshots are restored
+between tests, never during one, and the client always restarts afterwards, so it has no cursor
+from before. A bridge resumed from a memory snapshot keeps its counter and doesn't read the clock
+again; one that starts fresh after the restore takes the new time with a fresh client. Only a clock
+step backwards during a test, or a long-lived client that keeps its cursor across a bridge restart,
+could make a cursor higher than every new `seq` (the log then drops those entries as already
+delivered). That is accepted, not handled: persisting the last `seq` would not help after a
+restore, because the state folder rolls back with the VM.
+
 ## Bridge and client are released together
 
 The client only checks the bridge's **major** API version. It used to also require a minimum minor
