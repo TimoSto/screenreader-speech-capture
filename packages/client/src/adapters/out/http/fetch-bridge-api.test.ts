@@ -98,7 +98,9 @@ describe('FetchBridgeApi requests', () => {
 
   it('sends JSON bodies with a content type', async () => {
     const { fetch, calls } = fakeFetch(({ url }) =>
-      url.endsWith('/markers') ? json({ ...entryDto, kind: 'marker' }, 201) : json(sessionDto, 201),
+      url.endsWith('/markers')
+        ? json({ ...entryDto, kind: 'marker' }, 201)
+        : json({ ...sessionDto, replaced: null }, 201),
     );
     const bridge = api(fetch);
     expect((await bridge.mark('step 1')).kind).toBe('marker');
@@ -218,6 +220,40 @@ describe('FetchBridgeApi errors', () => {
     });
   });
 
+  it('passes on an error code this client does not know yet', async () => {
+    const { fetch } = fakeFetch(() =>
+      json({ error: { code: 'INPUT_DISABLED', message: 'Native input is off' } }, 409),
+    );
+    await expect(api(fetch).clear()).rejects.toMatchObject({ status: 409, code: 'INPUT_DISABLED' });
+  });
+
+  it('rejects an answer that does not match the contract, naming the field', async () => {
+    const { fetch } = fakeFetch(() =>
+      json({ entries: [{ ...entryDto, seq: 'x' }], truncated: false, hasMore: false }),
+    );
+    const error = await api(fetch)
+      .listSpeech({ since: 0 })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(BridgeHttpError);
+    expect(error).toMatchObject({ status: 200, code: 'INVALID_RESPONSE' });
+    expect((error as Error).message).toMatch(
+      /^The bridge answered GET \/speech with an unexpected body: entries\.0\.seq: /,
+    );
+  });
+
+  it('accepts and drops fields a newer bridge adds', async () => {
+    const { fetch } = fakeFetch(() =>
+      json({
+        entries: [{ ...entryDto, mood: 'happy' }],
+        truncated: false,
+        hasMore: false,
+        next: 1,
+      }),
+    );
+    const page = await api(fetch).listSpeech({ since: 0 });
+    expect(page.entries).toEqual([entryDto]);
+  });
+
   it('keeps an error that is not the bridge format as HTTP_ERROR', async () => {
     const { fetch } = fakeFetch(
       () => new Response('<html>bad gateway</html>', { status: 502, statusText: 'Bad Gateway' }),
@@ -288,6 +324,22 @@ describe('FetchBridgeApi.streamSpeech', () => {
     expect(request?.headers).toMatchObject({
       accept: 'text/event-stream',
       'last-event-id': '7',
+    });
+  });
+
+  it('ends the feed with INVALID_RESPONSE for an event that does not match the contract', async () => {
+    const fetch = ((_url: string, init: RequestInit) =>
+      sse(
+        [`id: 1\nevent: entry\ndata: ${JSON.stringify({ ...entryDto, kind: 'shout' })}\n\n`],
+        init.signal,
+      )) as unknown as typeof globalThis.fetch;
+    const events = api(fetch).streamSpeech({
+      lastEventId: null,
+      signal: new AbortController().signal,
+    });
+    await expect(events.next()).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+      message: expect.stringContaining("the live feed's entry event") as string,
     });
   });
 

@@ -1,3 +1,4 @@
+import { API_LIMITS } from '@screenreader-speech-capture/shared';
 import { checkApiVersion } from '../../domain/api-version.js';
 import {
   BridgeHttpError,
@@ -33,7 +34,7 @@ export interface SpeechCaptureServiceDeps {
 }
 
 /** Largest `limit` the bridge accepts for `GET /api/v1/speech`. */
-const MAX_PAGE = 10_000;
+const MAX_PAGE = API_LIMITS.list.max;
 
 const DEFAULTS = { timeout: 5000, quietFor: 500, silenceTimeout: 10_000, readyTimeout: 120_000 };
 

@@ -1,3 +1,4 @@
+import { API_LIMITS } from '@screenreader-speech-capture/shared';
 import { invalidField } from '../../domain/errors.js';
 import type { SpeechPage } from '../../domain/speech-buffer.js';
 import type { SpeechEntry } from '../../domain/speech-entry.js';
@@ -22,7 +23,7 @@ export interface SpeechServiceDeps {
   clock: Clock;
 }
 
-export const MAX_MARKER_LENGTH = 1000;
+export const MAX_MARKER_LENGTH = API_LIMITS.markerLength;
 
 /**
  * Recording, reading, clearing and marking speech: every entry gets its `seq` and `sessionId`

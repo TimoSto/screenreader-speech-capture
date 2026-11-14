@@ -56,6 +56,12 @@ export class BridgeUnreachableError extends Error {
   }
 }
 
+/**
+ * `BridgeHttpError.code` when the bridge's answer doesn't match the API contract: a wrong
+ * version, a proxy, a bug. Asking again won't help.
+ */
+export const INVALID_RESPONSE = 'INVALID_RESPONSE';
+
 /** The bridge answered with an error (docs/http-api.md#errors). */
 export class BridgeHttpError extends Error {
   override name = 'BridgeHttpError';
