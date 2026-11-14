@@ -91,6 +91,10 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
   what came after it.
 - `mark()` and an explicit `since` option let you control the range yourself.
 - `cursor()` returns the current value, `setCursor(seq)` sets it.
+- **Concurrent calls** on one client (`Promise.all` of two waits, a wait during `record`) are
+  safe: each call reads the cursor when it is called, a finished wait or recording only moves the
+  cursor **forward**, and an explicit move (`setCursor`, `clear`, `startSession`) wins over calls
+  that were already running. Pass `since` when a call must read a fixed range.
 - The cursor survives a bridge restart: `seq` keeps rising across runs
   ([data model](http-api.md#data-model)), so after a restart the next read or wait starts at the
   new run's first entry. The speech of the old run is gone.

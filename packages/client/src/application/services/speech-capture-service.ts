@@ -47,6 +47,11 @@ export class SpeechCaptureService implements SpeechCapture {
    * from before a restart reads the new run from its start.
    */
   #cursor = 0;
+  /**
+   * Counts the explicit moves (`setCursor`, `clear`, `startSession`). A wait or recording only
+   * moves the cursor if none happened since it started: the explicit move wins.
+   */
+  #moves = 0;
   #compatible: Promise<void> | undefined;
 
   constructor(private readonly deps: SpeechCaptureServiceDeps) {}
@@ -59,12 +64,37 @@ export class SpeechCaptureService implements SpeechCapture {
     if (!Number.isSafeInteger(seq) || seq < 0) {
       throw new RangeError(`The cursor must be a seq (an integer >= 0), got ${seq}`);
     }
+    this.#moveTo(seq);
+  }
+
+  /** An explicit move: sets the cursor, also backwards. */
+  #moveTo(seq: number): void {
     this.#cursor = seq;
+    this.#moves++;
+  }
+
+  /**
+   * Where a wait starts, taken when it is called (before any `await`): its `since` (the cursor
+   * unless given) and the explicit moves so far. Call order decides, not when the wait gets to
+   * read.
+   */
+  #start(options: WaitOptions): { options: WaitOptions; moves: number } {
+    return { options: { ...options, since: options.since ?? this.#cursor }, moves: this.#moves };
+  }
+
+  /**
+   * After an operation that consumed up to `seq` and started at `moves`: only forward, so calls
+   * running at the same time can't move it back, and not past an explicit move made meanwhile.
+   */
+  #advance(seq: number, moves: number): void {
+    if (moves === this.#moves && seq > this.#cursor) this.#cursor = seq;
   }
 
   async getSpeech(options: GetSpeechOptions = {}): Promise<SpeechEntry[]> {
+    // Read when the call starts, so a cursor move after it doesn't change this read.
+    const since = options.since ?? this.#cursor;
     await this.compatible();
-    const { entries } = await this.fetchSince(options.since ?? this.#cursor, options.session);
+    const { entries } = await this.fetchSince(since, options.session);
     const wanted = options.includeMarkers ? entries : entries.filter(isSpeech);
     return options.limit === undefined ? wanted : wanted.slice(0, options.limit);
   }
@@ -78,14 +108,14 @@ export class SpeechCaptureService implements SpeechCapture {
     await this.compatible();
     await this.deps.api.clear();
     // seq survives a clear, so everything in the buffer from now on is newer than the clear.
-    this.#cursor = 0;
+    this.#moveTo(0);
   }
 
   async startSession(name: string, options: StartSessionOptions = {}): Promise<StartedSession> {
     await this.compatible();
     const session = await this.deps.api.startSession({ name, run: options.run });
     // Everything after `startSeq` belongs to the session (or a later one).
-    this.#cursor = session.startSeq;
+    this.#moveTo(session.startSeq);
     return session;
   }
 
@@ -136,13 +166,14 @@ export class SpeechCaptureService implements SpeechCapture {
 
   async waitForOutput(match: SpeechMatch, options: WaitOptions = {}): Promise<SpeechEntry> {
     const test = toMatcher(match, options);
+    const start = this.#start(options);
     await this.compatible();
     const entry = await this.search(
-      options,
+      start.options,
       (entries) => entries.find(test),
       `No speech matched ${describe(match)}`,
     );
-    this.#cursor = entry.seq;
+    this.#advance(entry.seq, start.moves);
     return entry;
   }
 
@@ -152,10 +183,11 @@ export class SpeechCaptureService implements SpeechCapture {
   ): Promise<SpeechEntry[]> {
     if (matches.length === 0) throw new TypeError('waitForSequence needs at least one match');
     const matchers = matches.map((m) => toMatcher(m, options));
+    const start = this.#start(options);
     await this.compatible();
     let found: SpeechEntry[] = [];
     const result = await this.search(
-      options,
+      start.options,
       (entries) => {
         found = advanceSequence(matchers, found, entries);
         return found.length === matchers.length ? found : undefined;
@@ -164,7 +196,7 @@ export class SpeechCaptureService implements SpeechCapture {
         `Only ${found.length} of ${matches.length} matches occurred in order ` +
         `(next: ${describe(matches[found.length]!)})`,
     );
-    this.#cursor = result.at(-1)!.seq;
+    this.#advance(result.at(-1)!.seq, start.moves);
     return result;
   }
 
@@ -196,13 +228,14 @@ export class SpeechCaptureService implements SpeechCapture {
   }
 
   async record<T>(fn: () => T | Promise<T>, options: SilenceOptions = {}): Promise<Recording<T>> {
+    const moves = this.#moves;
     await this.compatible();
     const start = await this.endSeq();
     const result = await fn();
     await this.waitForSilence(options);
     const { entries, truncated } = await this.fetchSince(start);
     const last = entries.at(-1)?.seq;
-    if (last !== undefined) this.#cursor = last;
+    if (last !== undefined) this.#advance(last, moves);
     return { result, entries: entries.filter(isSpeech), truncated };
   }
 
