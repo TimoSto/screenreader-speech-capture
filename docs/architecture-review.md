@@ -11,20 +11,11 @@ decisions go to [decisions.md](decisions.md) and this file can be deleted.
 | # | Finding | Severity |
 |---|---|---|
 | 1 | ~~No Host / Origin check on the API~~ | Done: #94 |
-| 2 | ~~No session filter for entries outside sessions~~ | Done: `session=none` |
-| 3 | Reading the status prunes the repositories | Low |
+| 2 | ~~No session filter for entries outside sessions~~ | Done: #95 |
+| 3 | ~~Reading the status prunes the repositories~~ | Done: prune on write |
 | 4 | `setMaxEntries` is not on the repository port | Low |
 | 5 | Test seams in the public `BridgeOptions` | Low |
 | 6 | `HttpServer.retire()` closes streams of the new server | Low |
-
-## 3. Reading the status prunes the repositories
-
-**What:** `GET /status` calls `pruneAndListSessions`, which mutates both repositories
-(`application/shared/prune-and-list-sessions.ts`, also used by `session-service.ts`). A read with a
-side effect is surprising, and the UI will poll the status every 2 s.
-
-**Proposal:** prune when entries are dropped (in the repository's `add`) instead of on read. An SSE
-`status` event, so the UI doesn't poll, can come with M5.
 
 ## 4. `setMaxEntries` is not on the repository port
 

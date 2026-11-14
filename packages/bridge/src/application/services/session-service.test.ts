@@ -22,7 +22,7 @@ function setup(maxEntries = 100) {
     clock,
   });
   const say = (text: string) => speech.record({ text, voice: null, connectionId: 1 });
-  return { speech, sessions, say, published };
+  return { speech, sessions, say, published, sessionRepository };
 }
 
 const notFound = expect.objectContaining({ code: 'NOT_FOUND' }) as Error;
@@ -162,5 +162,27 @@ describe('SpeechService with sessions', () => {
     });
     say('b2');
     expect(speech.list({ session: 'current' }).entries.map((e) => e.text)).toEqual(['b2']);
+  });
+});
+
+describe('pruning ended sessions', () => {
+  it('forgets a session that ends without entries, and keeps one that has some', () => {
+    const { sessions, say, sessionRepository } = setup();
+    sessions.start({ name: 'empty' });
+    sessions.start({ name: 'spoken' });
+    say('s1');
+    sessions.end();
+    expect(sessionRepository.list().map((s) => s.name)).toEqual(['spoken']);
+  });
+
+  it('forgets an ended session as soon as the full buffer drops its last entry', () => {
+    const { sessions, say, sessionRepository } = setup(2);
+    sessions.start({ name: 'a' });
+    say('a1');
+    sessions.start({ name: 'b' });
+    say('b1');
+    expect(sessionRepository.list().map((s) => s.name)).toEqual(['b', 'a']);
+    say('b2'); // pushes a1 out
+    expect(sessionRepository.list().map((s) => s.name)).toEqual(['b']);
   });
 });

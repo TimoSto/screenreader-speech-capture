@@ -13,7 +13,7 @@ import type { Clock } from '../ports/out/clock.js';
 import type { SessionRepository } from '../ports/out/session-repository.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
-import { pruneAndListSessions } from '../shared/prune-and-list-sessions.js';
+import { listSessions, pruneEndedSessions } from '../shared/sessions.js';
 
 export interface SessionServiceDeps {
   sessions: SessionRepository;
@@ -46,7 +46,7 @@ export class SessionService implements ManageSessions {
 
   list(): SessionList {
     return {
-      sessions: pruneAndListSessions(this.deps.sessions, this.deps.repository),
+      sessions: listSessions(this.deps.sessions, this.deps.repository),
       currentId: this.deps.sessions.current()?.id ?? null,
     };
   }
@@ -56,5 +56,7 @@ export class SessionService implements ManageSessions {
     if (!ended) return;
     const session = summarize(ended, this.deps.repository.sessionStats(ended.id));
     this.deps.events.publish({ type: 'session', session });
+    // A session that ended without entries in the buffer is no longer listed.
+    pruneEndedSessions(this.deps.sessions, this.deps.repository);
   }
 }

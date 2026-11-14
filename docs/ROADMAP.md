@@ -63,7 +63,8 @@ GitHub issues. This file only tracks milestones.
 
 - [ ] Bridge serves the built UI ([static files](architecture.md#serving-the-ui))
 - [ ] ESLint hexagon rules for `packages/ui` (components must not call `fetch`)
-- [ ] Layout, status bar and status panel (polls `GET /status`)
+- [ ] Layout, status bar and status panel (polls `GET /status`, or an SSE `status` event instead
+      of polling)
 - [ ] Context pane: sessions (grouped by run, follow current, new / end session)
 - [ ] Live log per session (follow, filter, markers, export, wipe)
 - [ ] Actions panel: keys, presets, click, delayed send (needs M4)
