@@ -115,6 +115,7 @@ describe('SpeechLog', () => {
         run: null,
         startedAt: at(1),
         endedAt: null,
+        startSeq: 0,
         firstSeq: null,
         lastSeq: null,
         entries: 0,
@@ -122,7 +123,8 @@ describe('SpeechLog', () => {
       log.append(draft('a1'));
       const { ended, started } = log.startSession({ name: 'b', run: 'r', startedAt: at(2) });
       expect(ended).toMatchObject({ id: 1, endedAt: at(2), firstSeq: 1, lastSeq: 1, entries: 1 });
-      expect(started).toMatchObject({ id: 2, run: 'r', endedAt: null });
+      expect(started).toMatchObject({ id: 2, run: 'r', endedAt: null, startSeq: 1 });
+      expect(log.page(started.startSeq, 100, started.id).entries).toEqual([]);
       expect(log.currentSession()?.id).toBe(2);
       expect(log.sessions().map((s) => s.id)).toEqual([2, 1]);
     });

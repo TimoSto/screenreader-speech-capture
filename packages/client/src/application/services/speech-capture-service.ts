@@ -82,16 +82,9 @@ export class SpeechCaptureService implements SpeechCapture {
 
   async startSession(name: string, options: StartSessionOptions = {}): Promise<Session> {
     await this.compatible();
-    const before = await this.endSeq();
     const session = await this.deps.api.startSession({ name, run: options.run });
-    // Speech may arrive between the two requests: the cursor goes to the last entry before the
-    // session's first one, so nothing of the session is skipped and nothing older is read.
-    let start = before;
-    for (const entry of await this.fetchSince(before)) {
-      if (entry.sessionId === session.id) break;
-      start = entry.seq;
-    }
-    this.#cursor = start;
+    // Everything after `startSeq` belongs to the session (or a later one).
+    this.#cursor = session.startSeq;
     return session;
   }
 

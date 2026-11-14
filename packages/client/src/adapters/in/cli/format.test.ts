@@ -31,6 +31,7 @@ function session(overrides: Partial<Session> = {}): Session {
     run: null,
     startedAt: '2026-01-01T00:00:00.000Z',
     endedAt: null,
+    startSeq: 0,
     firstSeq: null,
     lastSeq: null,
     entries: 0,

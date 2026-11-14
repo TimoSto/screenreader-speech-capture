@@ -9,6 +9,8 @@ export interface Session {
   startedAt: string;
   /** ISO 8601, UTC. `null` while the session is current. */
   endedAt: string | null;
+  /** The last `seq` before the session started: `since: startSeq` reads it from its start. */
+  startSeq: number;
   /** First and last entry still in the buffer, `null` if none. */
   firstSeq: number | null;
   lastSeq: number | null;

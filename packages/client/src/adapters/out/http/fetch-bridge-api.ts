@@ -231,6 +231,7 @@ const toSession = (dto: SessionDto): Session => ({
   run: dto.run,
   startedAt: dto.startedAt,
   endedAt: dto.endedAt,
+  startSeq: dto.startSeq,
   firstSeq: dto.firstSeq,
   lastSeq: dto.lastSeq,
   entries: dto.entries,

@@ -22,6 +22,7 @@ const session = (endedAt: Date | null): SessionSummary => ({
   run: null,
   startedAt: new Date(0),
   endedAt,
+  startSeq: 0,
   firstSeq: null,
   lastSeq: null,
   entries: 0,

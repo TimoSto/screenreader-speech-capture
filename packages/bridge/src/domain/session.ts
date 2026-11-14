@@ -13,6 +13,11 @@ export interface Session {
   readonly startedAt: Date;
   /** `null` while the session is current. */
   readonly endedAt: Date | null;
+  /**
+   * The last `seq` given out before the session started: a read with `since: startSeq` starts at
+   * its first entry.
+   */
+  readonly startSeq: number;
 }
 
 /** A session before the speech log has given it an `id`. */

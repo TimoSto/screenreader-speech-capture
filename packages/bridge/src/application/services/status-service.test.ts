@@ -95,6 +95,7 @@ describe('StatusService', () => {
         run: 'r',
         startedAt,
         endedAt: null,
+        startSeq: 1,
         firstSeq: null,
         lastSeq: null,
         entries: 0,
