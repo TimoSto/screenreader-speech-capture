@@ -155,8 +155,14 @@ export interface SpeechCapture {
    * connection, without losing or repeating entries. Does not move the cursor.
    */
   onSpeech(listener: (entry: SpeechEntry) => void, options?: OnSpeechOptions): () => void;
-  /** The cursor: the `seq` of the last entry consumed. */
+  /**
+   * The cursor: the `seq` of the last entry consumed. Waits and `record` only move it forward, so
+   * calls running at the same time can't move it back (docs/client.md#the-cursor).
+   */
   cursor(): number;
-  /** Sets the cursor, for example to a marker's `seq`. */
+  /**
+   * Sets the cursor, for example to a marker's `seq`. Wins over waits and recordings that were
+   * already running: they don't move it when they finish.
+   */
   setCursor(seq: number): void;
 }

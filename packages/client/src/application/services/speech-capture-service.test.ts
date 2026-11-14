@@ -60,6 +60,63 @@ describe('cursor', () => {
   });
 });
 
+describe('cursor with concurrent calls', () => {
+  it('only moves forward: concurrent waits leave it at the furthest match', async () => {
+    const { api, sr } = setup();
+    api.speak('a', 'b');
+    // The wait for `b` (seq 2) finishes first, the one for `a` (seq 1) last.
+    await Promise.all([sr.waitForOutput('b'), sr.waitForOutput('a')]);
+    expect(sr.cursor()).toBe(2);
+  });
+
+  it('keeps an explicit setCursor over a wait that was already running', async () => {
+    const { api, clock, sr } = setup();
+    api.speak('a');
+    await sr.waitForOutput('a');
+    clock.at(300, () => api.speak('x'));
+    const pending = sr.waitForOutput('x', { timeout: 1000 });
+    sr.setCursor(0);
+    await pending;
+    expect(sr.cursor()).toBe(0);
+  });
+
+  it('keeps the session start over a wait that was already running', async () => {
+    const { api, clock, sr } = setup();
+    clock.at(300, () => api.speak('x'));
+    const pending = sr.waitForOutput('x', { timeout: 1000 });
+    const session = await sr.startSession('next');
+    await pending;
+    expect(sr.cursor()).toBe(session.startSeq);
+  });
+
+  it('keeps a clear over a recording that was already running', async () => {
+    const { api, sr } = setup();
+    await sr.record(async () => {
+      await sr.clear();
+      api.speak('after the clear');
+    });
+    expect(sr.cursor()).toBe(0);
+  });
+
+  it('reads from where the cursor was when the call started', async () => {
+    const { api, sr } = setup();
+    api.speak('a', 'b');
+    await sr.waitForOutput('a');
+    const read = sr.getSpeech();
+    sr.setCursor(0);
+    expect(texts(await read)).toEqual(['b']);
+  });
+
+  it('moves again with a call started after the explicit move', async () => {
+    const { api, sr } = setup();
+    api.speak('a', 'b');
+    await sr.waitForOutput('b');
+    sr.setCursor(0);
+    await sr.waitForOutput('a');
+    expect(sr.cursor()).toBe(1);
+  });
+});
+
 describe('getSpeech', () => {
   it('pages through hasMore, hides markers unless asked, and applies limit', async () => {
     const { api, sr } = setup();
