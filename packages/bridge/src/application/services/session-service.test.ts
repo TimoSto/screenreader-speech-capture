@@ -148,6 +148,29 @@ describe('SpeechService with sessions', () => {
     expect(() => speech.watch(null, () => {}, { session: 7 })).toThrow(notFound);
   });
 
+  it("keeps a paced replay to the session's entries, but passes session events", async () => {
+    const { speech, sessions, say } = setup();
+    say('outside');
+    sessions.start({ name: 'a' });
+    say('a1');
+    say('a2');
+    const seen: string[] = [];
+    let resume!: () => void;
+    let paces = 0;
+    const pace = () =>
+      ++paces === 1 ? new Promise<void>((resolve) => (resume = resolve)) : undefined;
+    speech.watch(0, (event) => seen.push(event.type === 'entry' ? event.entry.text : event.type), {
+      pace,
+      session: 'current',
+    });
+    sessions.start({ name: 'b' });
+    say('b1');
+    resume();
+    await vi.advanceTimersByTimeAsync(0);
+    say('b2');
+    expect(seen).toEqual(['a1', 'session', 'session', 'a2']);
+  });
+
   it('clear wipes the ended sessions and keeps the current one, empty', () => {
     const { speech, sessions, say } = setup();
     sessions.start({ name: 'a' });

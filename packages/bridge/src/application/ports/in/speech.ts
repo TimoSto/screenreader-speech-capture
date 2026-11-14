@@ -32,6 +32,14 @@ export interface WatchOptions {
    * `session` events always come). `current` is resolved when the watch starts.
    */
   session?: SessionFilter | undefined;
+  /**
+   * Called after each replayed entry. A promise pauses the replay until it resolves, so a long
+   * replay can follow the reader's speed and let other work run (the SSE stream). Without it, the
+   * replay runs in one synchronous block.
+   */
+  pace?: (() => Promise<void> | undefined) | undefined;
+  /** A listener that throws after the replay paused ends the watch, and the error lands here. */
+  onError?: ((error: unknown) => void) | undefined;
 }
 
 /** The speech buffer's use cases as the HTTP API uses them: read, watch, clear and mark. */
@@ -47,6 +55,11 @@ export interface SpeechUseCases {
    * `Last-Event-ID`), with nothing missed or repeated in between. If some of them were already
    * dropped, a `truncated` event comes first. Throws `NOT_FOUND` for an unknown session, before
    * calling `listener`.
+   *
+   * With `pace`, the replay may go on after `watch` returns. It reads the buffer until it has
+   * caught up, then follows the new events, still with nothing missed or repeated. `clear` and
+   * `session` events that happen meanwhile come between the replayed entries, and a `truncated`
+   * event comes again if entries were dropped while the replay was paused.
    */
   watch(since: number | null, listener: WatchListener, options?: WatchOptions): () => void;
   /** Wipes the buffer and the ended sessions. `seq` keeps counting. */

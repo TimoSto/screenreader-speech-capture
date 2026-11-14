@@ -174,10 +174,12 @@ paths:
         the live ones, with nothing missed or repeated in between. `seq` keeps rising across
         bridge restarts, so this also works after a restart. If some of the missed entries
         were already dropped because the buffer was full, a `truncated` event with `data: {}`
-        comes before them.
+        comes before them. The replay follows the client's reading speed. If entries are dropped
+        while it runs, another `truncated` event comes at that point, and a `clear` or `session`
+        event that happens meanwhile comes between the replayed entries.
 
-        A client that stops reading is disconnected once about 1 MiB is waiting for it. It
-        reconnects with `Last-Event-ID`.
+        A client that stops reading live events is disconnected once about 1 MiB is waiting for
+        it. It reconnects with `Last-Event-ID`.
 
         ```
         id: 42
