@@ -5,6 +5,7 @@ import type { AddMarker } from '../ports/in/add-marker.js';
 import type { ClearSpeech } from '../ports/in/clear-speech.js';
 import { LIST_LIMIT, type ListOptions, type QuerySpeech } from '../ports/in/query-speech.js';
 import type { CapturedSpeech, RecordSpeech } from '../ports/in/record-speech.js';
+import type { ResizeBuffer } from '../ports/in/resize-buffer.js';
 import type { WatchListener, WatchOptions, WatchSpeech } from '../ports/in/watch-speech.js';
 import type { Clock } from '../ports/out/clock.js';
 import type { SessionRepository } from '../ports/out/session-repository.js';
@@ -30,7 +31,7 @@ export const MAX_MARKER_LENGTH = 1000;
  * (docs/speech-capture.md#from-line-to-speech-entry).
  */
 export class SpeechService
-  implements RecordSpeech, QuerySpeech, ClearSpeech, AddMarker, WatchSpeech
+  implements RecordSpeech, QuerySpeech, ClearSpeech, AddMarker, WatchSpeech, ResizeBuffer
 {
   constructor(private readonly deps: SpeechServiceDeps) {}
 
@@ -72,6 +73,12 @@ export class SpeechService
     this.deps.repository.clear();
     this.deps.sessions.removeEnded(() => false);
     this.deps.events.publish({ type: 'clear' });
+  }
+
+  setMaxEntries(maxEntries: number): void {
+    this.deps.repository.setMaxEntries(maxEntries);
+    // A smaller buffer can drop the last entries of ended sessions.
+    pruneEndedSessions(this.deps.sessions, this.deps.repository);
   }
 
   addMarker(label: string): SpeechEntry {

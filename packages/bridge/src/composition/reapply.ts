@@ -1,11 +1,9 @@
 import type { HttpServer } from '../adapters/in/http/http-server.js';
 import type { TcpListener } from '../adapters/in/tcp/tcp-listener.js';
 import { toConfigError } from '../adapters/shared/net/listen.js';
-import type { MemorySpeechRepository } from '../adapters/out/memory/memory-speech-repository.js';
 import type { Logger } from '../application/ports/out/logger.js';
-import type { SessionRepository } from '../application/ports/out/session-repository.js';
+import type { ResizeBuffer } from '../application/ports/in/resize-buffer.js';
 import type { ConfigService } from '../application/services/config-service.js';
-import { pruneEndedSessions } from '../application/shared/sessions.js';
 import { changedSections } from '../domain/config/index.js';
 import type { Logging } from './logging.js';
 import type { ChildService } from './services.js';
@@ -25,15 +23,14 @@ export function registerReapply(
   parts: {
     tcp: TcpListener;
     http: HttpServer;
-    repository: MemorySpeechRepository;
-    sessions: SessionRepository;
+    buffer: ResizeBuffer;
     logging: Logging;
     services: readonly ChildService[];
     logger: Logger;
     ports: Ports;
   },
 ): void {
-  const { tcp, http, repository, sessions, logging, services, logger, ports } = parts;
+  const { tcp, http, buffer, logging, services, logger, ports } = parts;
 
   config.onChange(async (next, previous) => {
     if (!changedSections(previous, next).includes('tcp')) return;
@@ -51,11 +48,7 @@ export function registerReapply(
       throw toConfigError('http', error);
     }
   });
-  config.onChange((next) => {
-    repository.setMaxEntries(next.buffer.maxEntries);
-    // A smaller buffer can drop the last entries of ended sessions.
-    pruneEndedSessions(sessions, repository);
-  });
+  config.onChange((next) => buffer.setMaxEntries(next.buffer.maxEntries));
   config.onChange((next, previous) => logging.apply(next, previous));
 
   // Last, because they never fail: the steps before them are not undone because of them.
