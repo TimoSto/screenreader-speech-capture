@@ -5,7 +5,8 @@ import type { SpeechEvent } from '../../domain/speech-event.js';
 import { SpeechLog } from '../../domain/speech-log.js';
 import type { WatchEvent } from '../ports/in/speech.js';
 import { LIST_LIMIT } from '../ports/in/speech.js';
-import { REPLAY_PAGE, SpeechService } from './speech-service.js';
+import { REPLAY_PAGE } from '../shared/follow-log.js';
+import { SpeechService } from './speech-service.js';
 
 function setup(maxEntries = 100) {
   const events = new InProcessEventBus();

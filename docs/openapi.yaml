@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: screenreader-speech-capture bridge API
-  version: '1.10'
+  version: '1.11'
   summary: Capture what a screen reader says and read it over HTTP.
   description: |
     REST + Server-Sent Events API of the bridge. `info.version` is the API version that
@@ -22,7 +22,8 @@ info:
     value), `input` in the config and the status, and the `INPUT_DISABLED` error code (they come
     back with native input, M4). 1.9 added `startSeq` to `Session`. 1.10 added
     `client` to `Session`, the `X-SR-Speech-Client` request header and `replaced` in the
-    `POST /sessions` answer.
+    `POST /sessions` answer. 1.11 added `omitted` to the timeout answer of `GET /speech/wait`,
+    which now holds the last 1000 entries seen instead of all of them.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -125,7 +126,9 @@ paths:
         - $ref: '#/components/parameters/Session'
       responses:
         '200':
-          description: The matching entry, or every entry seen after `since` on timeout.
+          description: >-
+            The matching entry, or on timeout the last 1000 entries seen after `since` and how many
+            earlier ones were left out.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WaitResult' }
@@ -154,6 +157,7 @@ paths:
                         source: tcp
                         voice: ssc5000
                         connectionId: 3
+                    omitted: 0
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '404': { $ref: '#/components/responses/SessionNotFound' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
@@ -808,10 +812,16 @@ components:
             matched: { const: true }
             entry: { $ref: '#/components/schemas/SpeechEntry' }
         - type: object
-          required: [matched, entries]
+          required: [matched, entries, omitted]
           properties:
             matched: { const: false }
             entries:
               type: array
-              description: Every entry seen after `since`, oldest first.
+              description: The last 1000 entries seen after `since`, oldest first.
+              maxItems: 1000
               items: { $ref: '#/components/schemas/SpeechEntry' }
+            omitted:
+              type: integer
+              minimum: 0
+              description: >-
+                How many entries seen before those were left out. Added in API 1.11.

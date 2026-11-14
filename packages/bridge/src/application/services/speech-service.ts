@@ -13,6 +13,7 @@ import {
 } from '../ports/in/speech.js';
 import type { Clock } from '../ports/out/clock.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
+import { followLog } from '../shared/follow-log.js';
 import { intOption } from '../shared/int-option.js';
 
 export interface SpeechServiceDeps {
@@ -22,9 +23,6 @@ export interface SpeechServiceDeps {
 }
 
 export const MAX_MARKER_LENGTH = 1000;
-
-/** Entries a replay reads from the log at a time (`watch` with `since`). */
-export const REPLAY_PAGE = 500;
 
 /**
  * Recording, reading, clearing and marking speech: every entry gets its `seq` and `sessionId`
@@ -54,67 +52,8 @@ export class SpeechService implements RecordSpeech, SpeechUseCases, ResizeBuffer
   }
 
   watch(since: number | null, listener: WatchListener, options: WatchOptions = {}): () => void {
-    const { log, events } = this.deps;
-    const { pace, onError } = options;
-    const sessionId = log.resolveFilter(options.session);
-    // While replaying, new entries are skipped here: the replay reads them from the log. It
-    // switches to the live events in the same synchronous block as its last read, and the log
-    // publishes each entry synchronously as it adds it, so nothing is missed or sent twice.
-    let replaying = since !== null;
-    let stopped = false;
-    const unsubscribe = events.subscribe((event) => {
-      if (event.type !== 'entry') return listener(event);
-      if (replaying) return;
-      if (sessionId === undefined || event.entry.sessionId === sessionId) listener(event);
-    });
-    const stop = () => {
-      stopped = true;
-      unsubscribe();
-    };
-
-    if (since === null) return stop;
-    let last = since;
-    /** Replays from `last` until `pace` pauses it (its promise) or it has caught up. */
-    const step = (): Promise<void> | undefined => {
-      for (;;) {
-        const { entries, truncated, hasMore } = log.page(last, REPLAY_PAGE, sessionId);
-        if (truncated) listener({ type: 'truncated' });
-        for (const entry of entries) {
-          listener({ type: 'entry', entry });
-          last = entry.seq;
-          const paused = pace?.();
-          if (paused) return paused;
-        }
-        if (!hasMore) {
-          replaying = false;
-          return undefined;
-        }
-      }
-    };
-    const resume = async (paused: Promise<void>) => {
-      for (let next: Promise<void> | undefined = paused; next;) {
-        await next;
-        if (stopped) return;
-        // Reads again from `last`: the log may have changed meanwhile.
-        next = step();
-      }
-    };
-
-    let paused: Promise<void> | undefined;
-    try {
-      // Until the first pause, an error belongs to the caller of `watch`.
-      paused = step();
-    } catch (error) {
-      stop();
-      throw error;
-    }
-    if (paused) {
-      resume(paused).catch((error: unknown) => {
-        stop();
-        onError?.(error);
-      });
-    }
-    return stop;
+    const sessionId = this.deps.log.resolveFilter(options.session);
+    return followLog(this.deps, { since, sessionId }, listener, options);
   }
 
   /** Wipes the buffer and the ended sessions. The current session stays current. */

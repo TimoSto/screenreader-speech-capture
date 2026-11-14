@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { SessionSummary } from '../../../../domain/session.js';
 import type { SpeechEntry } from '../../../../domain/speech-entry.js';
 import { sseFrame } from './sse-frames.js';
@@ -54,5 +54,18 @@ describe('sseFrame', () => {
 
   it.each(['clear', 'truncated'] as const)('sends %s with empty data and no id', (type) => {
     expect(sseFrame({ type })).toBe(`event: ${type}\ndata: {}\n\n`);
+  });
+
+  it('serializes each entry once, however many streams send it', () => {
+    const fresh: SpeechEntry = { ...entry, seq: 8 };
+    const stringify = vi.spyOn(JSON, 'stringify');
+    const first = sseFrame({ type: 'entry', entry: fresh });
+    const again = sseFrame({ type: 'entry', entry: fresh });
+    expect(again).toBe(first);
+    expect(stringify).toHaveBeenCalledOnce();
+    // Another entry with the same seq is another object: built anew.
+    sseFrame({ type: 'entry', entry: { ...fresh, text: 'Cancel button' } });
+    expect(stringify).toHaveBeenCalledTimes(2);
+    stringify.mockRestore();
   });
 });

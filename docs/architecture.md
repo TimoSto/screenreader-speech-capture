@@ -74,7 +74,8 @@ packages/bridge/src/
                      stop, reachability), BridgeLifecycle (ready, shutdown order)
     ports/out/       driven ports: SpeechEventBus, ConfigStore, ProcessSupervisor, InputInjector, Logger, Clock
     services/        use-case implementations (only depend on domain + ports)
-    shared/          helpers several services use: option checks
+    shared/          helpers several services use: option checks, followLog (buffer replay
+                     then live events, paced, no gap: watch and wait)
   adapters/
     in/tcp/          socket listener + wire-format parsers → RecordSpeech;
                      reports its listener and connections → TrackCapture

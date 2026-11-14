@@ -1,19 +1,28 @@
 import { AppError } from '../../domain/errors.js';
+import type { SpeechEntry } from '../../domain/speech-entry.js';
+import type { SpeechLog } from '../../domain/speech-log.js';
 import { createSpeechMatcher } from '../../domain/text-match.js';
 import type { Shutdown } from '../ports/in/lifecycle.js';
 import {
+  WAIT_SEEN_LIMIT,
   WAIT_TIMEOUT_MS,
   type WaitForSpeech,
   type WaitOptions,
   type WaitResult,
 } from '../ports/in/wait-for-speech.js';
-import type { SpeechLog } from '../../domain/speech-log.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
+import { followLog, type FollowOptions } from '../shared/follow-log.js';
 import { intOption } from '../shared/int-option.js';
 
 export interface WaitForSpeechDeps {
   log: Pick<SpeechLog, 'page' | 'resolveFilter'>;
   events: SpeechEventBus;
+  /**
+   * A new `pace` for each wait's look through the buffer (see `FollowOptions`), so a long buffer
+   * lets speech capture and other requests run in between. Without it, the look is one
+   * synchronous block.
+   */
+  pace?: (() => FollowOptions['pace']) | undefined;
 }
 
 function abortReason(signal: AbortSignal): Error {
@@ -23,9 +32,33 @@ function abortReason(signal: AbortSignal): Error {
 
 const unavailable = () => new AppError('SERVICE_UNAVAILABLE', 'The bridge is shutting down');
 
+/** The last {@link WAIT_SEEN_LIMIT} entries pushed, and how many came before them. */
+class LastSeen {
+  #entries: SpeechEntry[] = [];
+  #dropped = 0;
+
+  push(entry: SpeechEntry): void {
+    this.#entries.push(entry);
+    // Trimmed in batches, so each push stays O(1) on average.
+    if (this.#entries.length >= 2 * WAIT_SEEN_LIMIT) this.#trim();
+  }
+
+  result(): { seen: SpeechEntry[]; omitted: number } {
+    this.#trim();
+    return { seen: this.#entries, omitted: this.#dropped };
+  }
+
+  #trim(): void {
+    const over = this.#entries.length - WAIT_SEEN_LIMIT;
+    if (over <= 0) return;
+    this.#entries.splice(0, over);
+    this.#dropped += over;
+  }
+}
+
 /**
- * Long-poll for a speech entry (`GET /api/v1/speech/wait`): looks in the buffer first, then
- * waits for new entries on the event bus.
+ * Long-poll for a speech entry (`GET /api/v1/speech/wait`): looks through the buffer after
+ * `since`, then follows the new entries, with nothing missed or seen twice in between.
  */
 export class WaitForSpeechService implements WaitForSpeech, Shutdown {
   private readonly pending = new Set<(error: Error) => void>();
@@ -33,8 +66,6 @@ export class WaitForSpeechService implements WaitForSpeech, Shutdown {
 
   constructor(private readonly deps: WaitForSpeechDeps) {}
 
-  // No `await` before the subscription: the buffer check and the subscription run in one
-  // synchronous block, so no entry slips through in between.
   async wait(options: WaitOptions): Promise<WaitResult> {
     if (this.closed) throw unavailable();
     const { signal } = options;
@@ -52,13 +83,13 @@ export class WaitForSpeechService implements WaitForSpeech, Shutdown {
     const sessionId = this.deps.log.resolveFilter(options.session);
     if (signal?.aborted) throw abortReason(signal);
 
-    const seen = [...this.deps.log.page(since, undefined, sessionId).entries];
-    const found = seen.find(matches);
-    if (found) return { status: 'matched', entry: found };
-
     return new Promise<WaitResult>((resolve, reject) => {
+      const seen = new LastSeen();
+      let done = false;
+      let stop: (() => void) | undefined;
       const finish = () => {
-        unsubscribe();
+        done = true;
+        stop?.();
         clearTimeout(timer);
         signal?.removeEventListener('abort', onAbort);
         this.pending.delete(fail);
@@ -68,21 +99,33 @@ export class WaitForSpeechService implements WaitForSpeech, Shutdown {
         reject(error);
       };
       const onAbort = () => fail(abortReason(signal!));
-
-      const unsubscribe = this.deps.events.subscribe((event) => {
-        if (event.type !== 'entry' || event.entry.seq <= since) return;
-        if (sessionId !== undefined && event.entry.sessionId !== sessionId) return;
-        seen.push(event.entry);
-        if (!matches(event.entry)) return;
-        finish();
-        resolve({ status: 'matched', entry: event.entry });
-      });
       const timer = setTimeout(() => {
         finish();
-        resolve({ status: 'timeout', seen });
+        resolve({ status: 'timeout', ...seen.result() });
       }, timeoutMs);
       signal?.addEventListener('abort', onAbort, { once: true });
       this.pending.add(fail);
+
+      const failed = (error: unknown) =>
+        fail(error instanceof Error ? error : new Error(String(error)));
+      try {
+        // A match in the buffer can come before `followLog` returns: `done` covers that.
+        stop = followLog(
+          this.deps,
+          { since, sessionId },
+          (event) => {
+            if (done || event.type !== 'entry') return;
+            seen.push(event.entry);
+            if (!matches(event.entry)) return;
+            finish();
+            resolve({ status: 'matched', entry: event.entry });
+          },
+          { pace: this.deps.pace?.(), onError: failed },
+        );
+        if (done) stop();
+      } catch (error) {
+        failed(error);
+      }
     });
   }
 

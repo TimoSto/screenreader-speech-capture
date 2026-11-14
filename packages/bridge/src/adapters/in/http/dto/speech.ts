@@ -34,5 +34,5 @@ export function toSpeechListDto(page: SpeechPage): SpeechListDto {
 export function toWaitResultDto(result: WaitResult): WaitResultDto {
   return result.status === 'matched'
     ? { matched: true, entry: toSpeechEntryDto(result.entry) }
-    : { matched: false, entries: result.seen.map(toSpeechEntryDto) };
+    : { matched: false, entries: result.seen.map(toSpeechEntryDto), omitted: result.omitted };
 }

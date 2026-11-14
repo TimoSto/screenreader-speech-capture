@@ -205,6 +205,16 @@ describe('HTTP API', () => {
     ]);
   });
 
+  it('answers a timeout with at most the last 1000 entries seen, and how many were left out', async () => {
+    const bridge = await start({ buffer: { maxEntries: 5000 } });
+    const seqs = Array.from({ length: 1005 }, (_, i) => bridge.speech.addMarker(`m${i}`).seq);
+    const response = await fetch(api(bridge, '/speech/wait?contains=never&timeoutMs=50'));
+    const result = await json<WaitResultDto>(response);
+    if (result.matched) throw new Error('expected no match');
+    expect(result.omitted).toBe(5);
+    expect(result.entries.map((e) => e.seq)).toEqual(seqs.slice(5));
+  });
+
   it('drops a wait quietly when the client disconnects', async () => {
     const lines: string[] = [];
     const bridge = await start(
