@@ -3,15 +3,29 @@ import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import { builtinModules } from 'node:module';
+
+// The architecture rules (see docs/implementation/architecture.md, dependency rule).
+
+const SHARED = '@screenreader-speech-capture/shared';
 
 /**
- * Imports the inner hexagon layers must not use (see docs/implementation/architecture.md,
- * dependency rule).
+ * Inner layers (domain, application) may import only relative files and shared's root entry: no
+ * Node built-ins (with or without the `node:` prefix), no npm package, no `platform-paths`.
  */
-const nodeBuiltins = {
-  // `platform-paths` is shared's Node-only entry (it reads the environment and the OS).
-  group: ['node:*', '@screenreader-speech-capture/shared/platform-paths'],
-  message: 'The domain and application layers do no I/O. Put this in an adapter.',
+const onlyRelativeAndShared = {
+  regex: `^(?!\\.{1,2}/|${SHARED}$)`,
+  message:
+    'The domain and application layers do no I/O and use no packages except shared. Put this in an adapter.',
+};
+/** Shared stays browser-safe (the UI imports it): no Node built-ins, with or without `node:`. */
+const builtins = {
+  group: ['node:*', ...builtinModules.flatMap((name) => [name, `${name}/*`])],
+  message: 'shared is browser-safe. Node-only code belongs in platform-paths or openapi.',
+};
+const nodeOnlySharedFiles = {
+  regex: '(^|/)(platform-paths|openapi)(/|\\.js$|$)',
+  message: 'platform-paths and openapi are Node-only. Keep them out of the browser-safe files.',
 };
 const adapters = {
   group: ['**/adapters/**'],
@@ -25,6 +39,11 @@ const application = {
 const services = {
   group: ['**/application/services/**', '**/application/shared/**'],
   message: 'Adapters talk to the application through ports, not the services or their helpers.',
+};
+// Ports are relative-imported from inside application, so the globs above don't see `../services/`.
+const portsToServices = {
+  regex: '(^|/)(services|shared)/',
+  message: 'Ports are the contract of the services. They must not import the services or helpers.',
 };
 const compositionRoot = {
   group: ['**/main.js', '**/composition/**'],
@@ -40,11 +59,31 @@ const inAdapters = {
   regex: '(^|/)(\\.\\./in|adapters/in)/',
   message: 'Driven adapters must not import driving adapters. Wire them in the composition root.',
 };
+/** The bridge and the client are separate packages that only meet through shared (the HTTP API). */
+const otherPackage = {
+  bridge: {
+    group: [
+      '**/packages/client/**',
+      'screenreader-speech-capture-client',
+      'screenreader-speech-capture-client/*',
+    ],
+    message: 'The bridge must not import the client. They share only the contract in shared.',
+  },
+  client: {
+    group: [
+      '**/packages/bridge/**',
+      'screenreader-speech-capture',
+      'screenreader-speech-capture/*',
+    ],
+    message: 'The client must not import the bridge. They share only the contract in shared.',
+  },
+};
 
 /**
  * Ambient I/O and time the inner layers must not reach for: they get them through ports (the
  * `Clock` port for time and timers), so tests can replace them.
  */
+/** @type {Record<string, [string, ...unknown[]]>} */
 const innerLayerGlobals = {
   'no-restricted-globals': [
     'error',
@@ -59,14 +98,24 @@ const innerLayerGlobals = {
       name,
       message: 'Use the Clock port (sleep) instead of the timer globals.',
     })),
-    ...['process', 'fetch', 'performance'].map((name) => ({
+    ...['process', 'fetch', 'performance', 'console'].map((name) => ({
       name,
-      message: 'The domain and application layers do no I/O. Put this behind a port.',
+      message: 'The domain and application layers do no I/O. Put this behind a port (Logger).',
     })),
+    {
+      name: 'globalThis',
+      message:
+        'globalThis reaches the banned globals (timers, process, fetch, ...) by the back door.',
+    },
   ],
   'no-restricted-properties': [
     'error',
     { object: 'Date', property: 'now', message: 'Use the Clock port (now) for the current time.' },
+    {
+      object: 'AbortSignal',
+      property: 'timeout',
+      message: 'Use the Clock port (sleep) for deadlines.',
+    },
   ],
   'no-restricted-syntax': [
     'error',
@@ -74,52 +123,69 @@ const innerLayerGlobals = {
       selector: "NewExpression[callee.name='Date'][arguments.length=0]",
       message: 'Use the Clock port (now) for the current time.',
     },
+    {
+      selector: "CallExpression[callee.name='Date']",
+      message: 'Use the Clock port (now) for the current time.',
+    },
+  ],
+};
+/** Browser-safe code: no Node-only globals. */
+/** @type {Record<string, [string, ...unknown[]]>} */
+const sharedGlobals = {
+  'no-restricted-globals': [
+    'error',
+    ...['process', 'Buffer', '__dirname', '__filename'].map((name) => ({
+      name,
+      message: 'shared is browser-safe. Node-only code belongs in platform-paths or openapi.',
+    })),
   ],
 };
 
-/** Both hexagons (bridge and client) follow the same layout and rules. */
-const hexagon = (layer) => `packages/{bridge,client}/src/${layer}/**/*.ts`;
+/**
+ * `no-restricted-imports` of a later block replaces an earlier one, so every block states its
+ * whole pattern list, including the other-package rule, one block per package.
+ */
+/** One block per package, so each gets its own other-package pattern. */
+/**
+ * @param {string} layer
+ * @param {object[]} patterns
+ * @param {Record<string, unknown>} [extra]
+ * @returns {import('eslint').Linter.Config[]}
+ */
+const perPackage = (layer, patterns, extra = {}) =>
+  ['bridge', 'client'].map((pkg) => ({
+    files: [`packages/${pkg}/src/${layer}/**/*.ts`],
+    // Tests may wire real (in-memory) adapters; the rules are about production code.
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [...patterns, otherPackage[pkg]] }],
+      ...extra,
+    },
+  }));
 
-export default tseslint.config(
-  { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**'] },
-  js.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
-  {
-    languageOptions: {
-      globals: globals.node,
-      parserOptions: {
-        projectService: {
-          allowDefaultProject: ['eslint.config.js', 'packages/*/test/fixtures/*.mjs'],
-        },
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
-    rules: {
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/consistent-type-imports': 'error',
-    },
-  },
-  {
-    files: [hexagon('domain')],
-    // Tests may wire real (in-memory) adapters; the rule is about production code.
+/** @type {import('eslint').Linter.Config[]} */
+const architecture = [
+  // Files outside the layers (main.ts, composition/, bin/): only the other-package rule.
+  ...['bridge', 'client'].map((pkg) => ({
+    files: [`packages/${pkg}/src/**/*.ts`],
     ignores: ['**/*.test.ts'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        { patterns: [nodeBuiltins, adapters, application, compositionRoot] },
-      ],
-      ...innerLayerGlobals,
-    },
-  },
-  {
-    files: [hexagon('application')],
-    // Tests may wire real (in-memory) adapters; the rule is about production code.
-    ignores: ['**/*.test.ts'],
-    rules: {
-      'no-restricted-imports': ['error', { patterns: [nodeBuiltins, adapters, compositionRoot] }],
-      ...innerLayerGlobals,
-    },
-  },
+    rules: { 'no-restricted-imports': ['error', { patterns: [otherPackage[pkg]] }] },
+  })),
+  ...perPackage(
+    'domain',
+    [onlyRelativeAndShared, adapters, application, compositionRoot],
+    innerLayerGlobals,
+  ),
+  ...perPackage(
+    'application',
+    [onlyRelativeAndShared, adapters, compositionRoot],
+    innerLayerGlobals,
+  ),
+  ...perPackage(
+    'application/ports',
+    [onlyRelativeAndShared, adapters, compositionRoot, portsToServices],
+    innerLayerGlobals,
+  ),
   {
     // The public API goes index.ts → main.ts → adapters, so main.ts stays the one composition root.
     files: ['packages/client/src/index.ts'],
@@ -132,36 +198,56 @@ export default tseslint.config(
               group: ['**/adapters/**'],
               message: 'Export adapters through main.ts (the composition root).',
             },
+            otherPackage.client,
           ],
         },
       ],
     },
   },
+  ...perPackage('adapters/in', [services, compositionRoot, outAdapters]),
+  ...perPackage('adapters/out', [services, compositionRoot, inAdapters]),
+  // Helpers both sides may use (listen, reachable URLs). They import no other adapter.
+  ...perPackage('adapters/shared', [services, compositionRoot, inAdapters, outAdapters]),
   {
-    files: [hexagon('adapters/in')],
-    ignores: ['**/*.test.ts'],
+    // shared is consumed by the UI too, so it stays free of Node built-ins. Its Node-only entries
+    // (platform-paths, the OpenAPI generator) are the exception.
+    files: ['packages/shared/src/**/*.ts'],
+    ignores: [
+      '**/*.test.ts',
+      'packages/shared/src/platform-paths.ts',
+      'packages/shared/src/openapi/**',
+    ],
     rules: {
-      'no-restricted-imports': ['error', { patterns: [services, compositionRoot, outAdapters] }],
+      'no-restricted-imports': ['error', { patterns: [builtins, nodeOnlySharedFiles] }],
+      ...sharedGlobals,
     },
   },
+];
+
+export default tseslint.config(
+  { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**'] },
+  js.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
   {
-    files: [hexagon('adapters/out')],
-    ignores: ['**/*.test.ts'],
+    languageOptions: {
+      globals: globals.node,
+      parserOptions: {
+        projectService: {
+          allowDefaultProject: [
+            'eslint.config.js',
+            'eslint.architecture.js',
+            'packages/*/test/fixtures/*.mjs',
+          ],
+        },
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     rules: {
-      'no-restricted-imports': ['error', { patterns: [services, compositionRoot, inAdapters] }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/consistent-type-imports': 'error',
     },
   },
-  {
-    // Helpers both sides may use (listen, reachable URLs). They import no other adapter.
-    files: [hexagon('adapters/shared')],
-    ignores: ['**/*.test.ts'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        { patterns: [services, compositionRoot, inAdapters, outAdapters] },
-      ],
-    },
-  },
+  ...architecture,
   {
     files: ['**/*.test.ts'],
     rules: {

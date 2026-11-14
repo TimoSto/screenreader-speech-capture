@@ -111,13 +111,16 @@ packages/bridge/src/
 Planned, not in the code yet: `KeyChord`, `SendNativeInput`, `InputInjector` and `out/robotjs/`
 ([M4](../ROADMAP.md#m4-native-input-)), and serving the built UI ([M5](../ROADMAP.md#m5-web-ui-)).
 
-**Dependency rule:** `adapters → application → domain`. The domain imports nothing, the application
-imports only the domain and its own ports, and the adapters implement or call the ports. Only the
+**Dependency rule:** `adapters → application → domain`. The domain imports only `shared`, the application
+imports only the domain, `shared` and its own ports, and the adapters implement or call the ports. Only the
 composition root (`main.ts` + `composition/` in the bridge, `main.ts` in the client) knows the
 concrete adapters. Adapters don't import the concrete services, the composition root or
 each other (`in` ↔ `out`); the executables in `bin/` sit outside the adapters and call `main.ts`. ESLint (`no-restricted-imports` in `eslint.config.js`) enforces all of this. In the domain and the
-application it also forbids the timer globals, `Date.now()` / `new Date()`, `process`, `fetch`
-and `performance`: time and timers come through the `Clock` port, so tests can replace them.
+application only relative imports and `shared` are allowed (no Node built-in with or without the `node:` prefix,
+no npm package); it also forbids the timer globals, `Date.now()` / `new Date()` / `Date()`,
+`AbortSignal.timeout`, `process`, `fetch`, `performance`, `console` and `globalThis`: time and timers come through
+the `Clock` port, so tests can replace them. Ports don't import services, and the bridge and the client don't
+import each other. `shared` stays browser-safe (no Node built-ins) except `platform-paths` and `openapi/`.
 
 **Extending:**
 
