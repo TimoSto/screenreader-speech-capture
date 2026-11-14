@@ -153,7 +153,8 @@ stop();
 - It doesn't move the [cursor](#the-cursor): waits work the same with or without a feed.
 - A lost connection is reconnected by itself (after 250 ms, doubling up to 5 s), and the bridge
   replays what was missed, so nothing is lost or repeated, also after a bridge restart: the feed goes
-  on from the new bridge's first entry. If no data, not even the bridge's
+  on from the new bridge's first entry. This also holds when the connection drops before the first
+  entry: the bridge's `position` event gives the feed its first cursor. If no data, not even the bridge's
   15 s ping, arrives for 45 s, the connection counts as lost.
 - `onError(error, { retrying })`: `retrying: true` for a lost connection or an
   exception thrown by a callback (the feed goes on); `retrying: false` when the feed has stopped for good

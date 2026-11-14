@@ -54,7 +54,7 @@ export class SpeechService implements RecordSpeech, SpeechUseCases, ResizeBuffer
 
   watch(since: number | null, listener: WatchListener, options: WatchOptions = {}): () => void {
     const sessionId = this.deps.log.resolveFilter(options.session);
-    return followLog(this.deps, { since, sessionId }, listener, options);
+    return followLog(this.deps, { since, sessionId, staleSince: 'replay' }, listener, options);
   }
 
   /** Wipes the buffer and the ended sessions. The current session stays current. */

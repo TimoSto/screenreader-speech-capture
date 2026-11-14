@@ -213,7 +213,7 @@ sequenceDiagram
 
     T->>C: waitForOutput("Submit")
     C->>B: GET /api/v1/status
-    B-->>C: 200 bridge.apiVersion "1.11"
+    B-->>C: 200 bridge.apiVersion "1.12"
     alt same major version
         C->>B: GET /api/v1/speech?since=…
         Note over C: later calls skip the check

@@ -21,9 +21,11 @@ export interface ListOptions {
 
 /**
  * What a watcher gets: the speech events, plus `truncated` before a replay when entries after
- * `since` were already dropped because the buffer was full.
+ * `since` were already dropped because the buffer was full (or `since` is newer than anything the
+ * bridge recorded), and `position` first when there is no `since`: the `seq` of the newest entry
+ * recorded so far, from where a reconnect can pick up. Every entry that follows has a higher `seq`.
  */
-export type WatchEvent = SpeechEvent | { type: 'truncated' };
+export type WatchEvent = SpeechEvent | { type: 'truncated' } | { type: 'position'; seq: number };
 
 export type WatchListener = (event: WatchEvent) => void;
 
@@ -54,8 +56,10 @@ export interface SpeechUseCases {
    * Calls `listener` with every new entry and clear, until the returned function is called.
    * With `since`, it first gets the buffered entries with `seq > since` (an SSE reconnect with
    * `Last-Event-ID`), with nothing missed or repeated in between. If some of them were already
-   * dropped, a `truncated` event comes first. Throws `NOT_FOUND` for an unknown session, before
-   * calling `listener`.
+   * dropped, a `truncated` event comes first. A `since` above every `seq` the bridge has handed out
+   * (a cursor from another run, after the clock went back) is a gap too: `truncated`, then the
+   * whole buffer. Without `since`, the first event is `position`. Throws `NOT_FOUND` for an
+   * unknown session, before calling `listener`.
    *
    * With `pace`, the replay may go on after `watch` returns. It reads the buffer until it has
    * caught up, then follows the new events, still with nothing missed or repeated. `clear` and

@@ -13,6 +13,13 @@ export interface SpeechPage {
 }
 
 /**
+ * What one connection to the live feed delivers: the feed events, plus `position` first on a
+ * connection without `lastEventId` (API 1.12): the `seq` of the newest entry the bridge had
+ * recorded, from where a reconnect picks up if no entry came before the connection dropped.
+ */
+export type StreamEvent = SpeechFeedEvent | { type: 'position'; seq: number };
+
+/**
  * The bridge's HTTP API (driven port). Rejects with `BridgeUnreachableError` or
  * `BridgeHttpError` (domain/errors.ts).
  */
@@ -30,7 +37,8 @@ export interface BridgeApi {
   listSessions(): Promise<SessionList>;
   /**
    * One connection to the live feed (`GET /api/v1/speech/stream`). With `lastEventId` the bridge
-   * first replays the buffered entries with `seq > lastEventId`. With `session` (API 1.3), only
+   * first replays the buffered entries with `seq > lastEventId` (all of them, after a
+   * `truncated`, if `lastEventId` is above every `seq` the bridge handed out). With `session` (API 1.3), only
    * that session's entries. The iterable ends or throws when the connection drops; `signal`
    * closes it.
    */
@@ -38,5 +46,5 @@ export interface BridgeApi {
     lastEventId: number | null;
     session?: number | undefined;
     signal: AbortSignal;
-  }): AsyncIterable<SpeechFeedEvent>;
+  }): AsyncIterable<StreamEvent>;
 }

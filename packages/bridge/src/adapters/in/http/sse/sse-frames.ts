@@ -26,6 +26,9 @@ export function sseFrame(event: WatchEvent): string {
         const data = JSON.stringify(toSpeechEntryDto(event.entry));
         return `id: ${event.entry.seq}\nevent: entry\ndata: ${data}\n\n`;
       });
+    // The stream's starting cursor: `Last-Event-ID` is set before any entry came.
+    case 'position':
+      return `id: ${event.seq}\nevent: position\ndata: {}\n\n`;
     // No `id:`, so `Last-Event-ID` stays the seq of the last entry.
     case 'session':
       return cached(

@@ -1,4 +1,8 @@
-import type { BridgeApi, SpeechPage } from '../src/application/ports/out/bridge-api.js';
+import type {
+  BridgeApi,
+  SpeechPage,
+  StreamEvent,
+} from '../src/application/ports/out/bridge-api.js';
 import type { Clock } from '../src/application/ports/out/clock.js';
 import type { BridgeStatus } from '../src/domain/bridge-status.js';
 import type { SpeechFeedEvent } from '../src/domain/feed-event.js';
@@ -45,14 +49,14 @@ export class FakeClock implements Clock {
 
 /** One open live feed of {@link FakeBridgeApi}. */
 class FakeStream {
-  readonly queue: SpeechFeedEvent[] = [];
+  readonly queue: StreamEvent[] = [];
   ended: { error: Error | undefined } | undefined;
   wake: (() => void) | undefined;
 
   /** With `session`, only that session's entries (`?session=` of the real stream). */
   constructor(private readonly session?: number) {}
 
-  push(event: SpeechFeedEvent): void {
+  push(event: StreamEvent): void {
     if (this.ended) return; // the connection is gone
     const other = this.session !== undefined && event.type === 'entry';
     if (other && event.entry.sessionId !== this.session) return;
@@ -181,7 +185,7 @@ export class FakeBridgeApi implements BridgeApi {
     lastEventId: number | null;
     session?: number | undefined;
     signal: AbortSignal;
-  }): AsyncGenerator<SpeechFeedEvent> {
+  }): AsyncGenerator<StreamEvent> {
     const { lastEventId, session, signal } = options;
     this.calls.push(`stream ${lastEventId}${session === undefined ? '' : ` session=${session}`}`);
     await this.fail();
@@ -189,12 +193,16 @@ export class FakeBridgeApi implements BridgeApi {
       throw new BridgeHttpError(404, 'NOT_FOUND', 'No such session');
     }
     const stream = new FakeStream(session);
-    if (lastEventId !== null && lastEventId < this.droppedUpToSeq) {
+    // Like the bridge: a cursor above every seq handed out is a gap, replayed from the start.
+    const stale = lastEventId !== null && lastEventId > this.seq;
+    const since = stale ? 0 : lastEventId;
+    if (lastEventId === null) stream.push({ type: 'position', seq: this.seq });
+    if (stale || (since !== null && since < this.droppedUpToSeq)) {
       stream.push({ type: 'truncated' });
     }
-    if (lastEventId !== null) {
+    if (since !== null) {
       for (const entry of this.entries) {
-        if (entry.seq > lastEventId) stream.push({ type: 'entry', entry });
+        if (entry.seq > since) stream.push({ type: 'entry', entry });
       }
     }
     this.streams.add(stream);

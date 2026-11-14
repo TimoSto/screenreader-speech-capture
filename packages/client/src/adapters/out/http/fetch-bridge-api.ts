@@ -20,7 +20,11 @@ import {
   type StartSessionRequestDto,
   type StatusDto,
 } from '@screenreader-speech-capture/shared';
-import type { BridgeApi, SpeechPage } from '../../../application/ports/out/bridge-api.js';
+import type {
+  BridgeApi,
+  SpeechPage,
+  StreamEvent,
+} from '../../../application/ports/out/bridge-api.js';
 import { checkApiVersion } from '../../../domain/api-version.js';
 import {
   BridgeHttpError,
@@ -28,10 +32,9 @@ import {
   INVALID_RESPONSE,
 } from '../../../domain/errors.js';
 import type { BridgeStatus, ServiceStatus } from '../../../domain/bridge-status.js';
-import type { SpeechFeedEvent } from '../../../domain/feed-event.js';
 import type { Session, SessionList, SessionRef, StartedSession } from '../../../domain/session.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
-import { parseSse } from './sse-parser.js';
+import { parseSse, type SseMessage } from './sse-parser.js';
 
 /** A request that gets no answer in this time fails as unreachable (the bridge answers at once). */
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -119,7 +122,7 @@ export class FetchBridgeApi implements BridgeApi {
     lastEventId: number | null;
     session?: number | undefined;
     signal: AbortSignal;
-  }): AsyncGenerator<SpeechFeedEvent> {
+  }): AsyncGenerator<StreamEvent> {
     const { lastEventId, session, signal } = options;
     // Aborted by the caller, or by the watchdog when the bridge stays silent.
     const controller = new AbortController();
@@ -150,7 +153,7 @@ export class FetchBridgeApi implements BridgeApi {
         }
       }
       for await (const message of parseSse(watched())) {
-        const event = toFeedEvent(message.event, message.data);
+        const event = toStreamEvent(message);
         if (event) yield event;
       }
     } catch (error) {
@@ -246,12 +249,24 @@ async function toHttpError(response: Response): Promise<BridgeHttpError> {
 }
 
 /** The feed event for one SSE message, `undefined` for events this client doesn't know. */
-function toFeedEvent(event: string, data: string): SpeechFeedEvent | undefined {
+function toStreamEvent({ event, data, id }: SseMessage): StreamEvent | undefined {
   switch (event) {
     case 'entry':
       return { type: 'entry', entry: toEntry(parseEvent(SpeechEntrySchema, data, event)) };
     case 'session':
       return { type: 'session', session: toSession(parseEvent(SessionSchema, data, event)) };
+    case 'position': {
+      // The `seq` is the event's `id`, so a plain `EventSource` follows it too.
+      const seq = id !== undefined && /^\d+$/.test(id) ? Number(id) : NaN;
+      if (!Number.isSafeInteger(seq)) {
+        throw new BridgeHttpError(
+          200,
+          INVALID_RESPONSE,
+          `the live feed's position event has no valid id (${JSON.stringify(id)})`,
+        );
+      }
+      return { type: 'position', seq };
+    }
     case 'clear':
     case 'truncated':
       return { type: event };

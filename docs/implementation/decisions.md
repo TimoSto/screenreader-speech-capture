@@ -88,6 +88,23 @@ could make a cursor higher than every new `seq` (the log then drops those entrie
 delivered). That is accepted, not handled: persisting the last `seq` would not help after a
 restore, because the state folder rolls back with the VM.
 
+## A stream announces where it starts
+
+A live feed opened without `Last-Event-ID` (`onSpeech`, `tail`) used to have no cursor until its
+first entry arrived. A connection that dropped before then reconnected without `Last-Event-ID`,
+and the bridge, asked for new entries only, replayed nothing: what was said in the gap was lost,
+and neither side noticed. Now the bridge's first frame on such a stream is a `position` event
+whose `id` is the highest `seq` handed out (`SpeechLog.headSeq`, which also counts dropped and
+cleared entries; the buffer's `lastSeq` is `null` when it is empty). The client keeps it like the
+`seq` of an entry and reconnects with it. The bridge, not the client, supplies the number: it is the
+only one that knows it, it needs no extra request, and every SSE client benefits, `curl` and
+`EventSource` included.
+
+The same check closes a hole in the `seq` rule above: a `Last-Event-ID` higher than anything the
+bridge handed out (from a run whose clock was ahead) is a gap, not a position to wait for, so the
+bridge sends `truncated` and the whole buffer instead of dropping every new entry as already
+delivered. `GET /speech/wait` doesn't do that: its `since` keeps its meaning of "after this `seq`".
+
 ## Bridge and client are released together
 
 The client only checks the bridge's **major** API version. It used to also require a minimum minor
