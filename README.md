@@ -19,7 +19,7 @@ flowchart LR
         SR["JAWS / NVDA"]
         Voice["text-to-socket-engine<br/>(SAPI 5 voice)"]
         Bridge["bridge (this project)<br/>HTTP API + UI :5151"]
-        Input["native input<br/>(@jitsi/robotjs)"]
+        Input["native input<br/>(#64;jitsi/robotjs)"]
         PWS["Playwright server :3000"]
         MCP["Playwright MCP :8931"]
         Browser["Browser<br/>(Chrome, Edge, ...)"]
