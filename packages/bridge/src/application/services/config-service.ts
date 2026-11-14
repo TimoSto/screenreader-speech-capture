@@ -65,7 +65,7 @@ export class ConfigService implements ManageConfig {
     const changed = changedFields(previous, next);
     const saved = configFields(this.file);
     const fileChanged = [...configFields(changes)].some(
-      ([field, value]) => saved.get(field) !== value,
+      ([field, value]) => JSON.stringify(saved.get(field)) !== JSON.stringify(value),
     );
     if (changed.length === 0 && !fileChanged) return previous;
 

@@ -8,6 +8,7 @@ import type { WaitForSpeech } from '../../../application/ports/in/wait-for-speec
 import type { Logger } from '../../../application/ports/out/logger.js';
 import type { Config } from '../../../domain/config/index.js';
 import { AppError } from '../../../domain/errors.js';
+import { checkAccess } from './access.js';
 import { listen } from '../../shared/net/listen.js';
 import { describeListener } from '../../shared/net/reachable-urls.js';
 import { sendError } from './errors.js';
@@ -32,6 +33,8 @@ export interface HttpServerDeps {
   instanceId: string;
   /** Interval of the SSE `: ping` comment. Default 15 s. */
   pingMs?: number;
+  /** This machine's names, accepted as `Host` like `localhost`. Default: none. */
+  hostnames?: readonly string[];
 }
 
 /** How long `stop()` waits for open requests before it closes their connections. */
@@ -45,7 +48,10 @@ const SSE_MAX_BUFFERED_BYTES = 1024 * 1024;
  */
 export class HttpServer {
   private server: http.Server | null = null;
+  /** The settings as bound: `port` is the actual port (never 0). */
   private settings: HttpSettings | null = null;
+  /** The settings as asked for, so a change of `allowedHosts` alone doesn't rebind port 0. */
+  private requested: HttpSettings | null = null;
   /** Servers replaced by `restart()` that are still finishing their open requests. */
   private readonly retiring = new Set<Promise<void>>();
   private readonly router = new Router(API_PREFIX);
@@ -76,11 +82,20 @@ export class HttpServer {
    * A new port is bound before the old server stops, so a port that is in use leaves everything
    * as it was. The same port on another host can't be bound while the old server holds it: then
    * the old server stops listening first, and starts again if the new address fails.
+   *
+   * With the same host and port, only `allowedHosts` changed: it applies to the next request,
+   * without a new server.
    */
   async restart(settings: HttpSettings): Promise<number> {
     const old = this.server;
     const previous = this.settings;
     if (!old || !previous) return this.start(settings);
+
+    if (settings.host === this.requested?.host && settings.port === this.requested.port) {
+      this.requested = settings;
+      this.settings = { ...settings, port: previous.port };
+      return previous.port;
+    }
 
     if (settings.port === 0 || settings.port !== previous.port) {
       const port = await this.bind(settings, old);
@@ -103,6 +118,7 @@ export class HttpServer {
     const server = this.server;
     this.server = null;
     this.settings = null;
+    this.requested = null;
     if (server) this.retire(server);
     await Promise.all(this.retiring);
     if (server) this.deps.logger.info('stopped listening');
@@ -136,6 +152,7 @@ export class HttpServer {
     }
     this.server = server;
     this.settings = { ...settings, port };
+    this.requested = settings;
     // On 0.0.0.0, name the addresses clients can actually use (docs/operations.md#line-format).
     this.deps.logger.info(`listening on ${describeListener('http', settings.host, port)}`);
     return port;
@@ -164,6 +181,10 @@ export class HttpServer {
     try {
       const url = parseUrl(req.url);
       path = url.pathname;
+      checkAccess(req, {
+        allowedHosts: this.settings?.allowedHosts ?? [],
+        ownHostnames: this.deps.hostnames ?? [],
+      });
       await this.router.find(method, url.pathname)({ req, res, url });
     } catch (error) {
       sendError(res, error, this.deps.logger);

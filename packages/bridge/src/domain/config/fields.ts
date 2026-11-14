@@ -35,9 +35,12 @@ export function changedFields(
   b: Config,
 ): { field: ConfigField; from: unknown; to: unknown }[] {
   const before = configFields(a);
-  return [...configFields(b)]
-    .filter(([field, to]) => before.get(field) !== to)
-    .map(([field, to]) => ({ field, from: before.get(field), to }));
+  return (
+    [...configFields(b)]
+      // JSON, so an unchanged list (`http.allowedHosts`) doesn't count as changed.
+      .filter(([field, to]) => JSON.stringify(before.get(field)) !== JSON.stringify(to))
+      .map(([field, to]) => ({ field, from: before.get(field), to }))
+  );
 }
 
 /** The settings that `overrides` (flags, environment) sets although the config file has them. */

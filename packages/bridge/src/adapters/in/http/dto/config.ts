@@ -13,7 +13,7 @@ export function toConfigDto({ tcp, http, playwright, mcp, input, buffer, log }: 
       encoding: tcp.encoding,
       maxLineBytes: tcp.maxLineBytes,
     },
-    http: { host: http.host, port: http.port },
+    http: { host: http.host, port: http.port, allowedHosts: [...http.allowedHosts] },
     playwright: { enabled: playwright.enabled, port: playwright.port, version: playwright.version },
     mcp: { enabled: mcp.enabled, port: mcp.port },
     input: { enabled: input.enabled },

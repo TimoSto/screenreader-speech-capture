@@ -26,6 +26,15 @@ export const nullableVersion: Check = (value) =>
     ? undefined
     : 'must be an exact version like 1.56.1, or null';
 
+/** Host names without port or scheme, or `*`. */
+export const hostList: Check = (value) =>
+  Array.isArray(value) &&
+  value.every(
+    (item) => typeof item === 'string' && /^(\*|[a-z0-9]([a-z0-9.-]*[a-z0-9])?)$/i.test(item),
+  )
+    ? undefined
+    : 'must be a list of host names (without port or scheme), or ["*"]';
+
 export const oneOf =
   (values: readonly string[]): Check =>
   (value) =>

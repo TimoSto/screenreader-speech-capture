@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: screenreader-speech-capture bridge API
-  version: '1.4'
+  version: '1.5'
   summary: Capture what a screen reader says and read it over HTTP.
   description: |
     REST + Server-Sent Events API of the bridge. `info.version` is the API version that
@@ -14,10 +14,15 @@ info:
     Changes: 1.1 added `playwright` to `GET /status`, 1.2 added `mcp`, 1.3 added sessions
     (`/sessions`, `sessionId` on entries, the `session` filter and SSE event, `session` in the
     status), 1.4 added the bridge run (`instanceId` and `startedAt` in the status, `instanceId`
-    in `SpeechList`, the SSE `bridge` event).
+    in `SpeechList`, the SSE `bridge` event), 1.5 added `http.allowedHosts` to the config and the
+    `FORBIDDEN` error.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
+
+    Every endpoint answers `403 FORBIDDEN` (`Forbidden`) when the `Host` header names a host the
+    bridge doesn't answer to, or a `POST` / `PUT` / `DELETE` carries a foreign `Origin`
+    (`docs/security.md#host-and-origin`).
   license:
     name: UNLICENSED
 servers:
@@ -367,6 +372,18 @@ components:
               code: INVALID_REQUEST
               message: 'limit: must be an integer from 1 to 10000'
               details: { field: limit }
+    Forbidden:
+      description: Foreign `Host` header or `Origin` (DNS rebinding and cross-site protection).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorBody' }
+          example:
+            error:
+              code: FORBIDDEN
+              message: >-
+                Host "rebind.example" is not allowed. Use the bridge's IP address, or add the name
+                to http.allowedHosts (--allowed-hosts)
+              details: { host: rebind.example }
     ServiceUnavailable:
       description: The bridge is shutting down.
       content:
@@ -579,10 +596,11 @@ components:
             maxLineBytes: { type: integer, minimum: 1024, maximum: 16777216 }
         http:
           type: object
-          required: [host, port]
+          required: [host, port, allowedHosts]
           properties:
             host: { type: string }
             port: { type: integer, minimum: 0, maximum: 65535 }
+            allowedHosts: { $ref: '#/components/schemas/AllowedHosts' }
         playwright: { $ref: '#/components/schemas/ServiceConfig' }
         mcp: { $ref: '#/components/schemas/McpConfig' }
         input:
@@ -629,6 +647,7 @@ components:
           properties:
             host: { type: string }
             port: { type: integer, minimum: 0, maximum: 65535 }
+            allowedHosts: { $ref: '#/components/schemas/AllowedHosts' }
         playwright: { $ref: '#/components/schemas/ServiceConfigPatch' }
         mcp: { $ref: '#/components/schemas/McpConfigPatch' }
         input:
@@ -713,16 +732,23 @@ components:
         enabled: { type: boolean }
         port: { type: integer, minimum: 0, maximum: 65535 }
 
+    AllowedHosts:
+      type: array
+      description: |
+        Host names the API answers to besides IP addresses, `localhost` and the machine's name.
+        Without port or scheme. `["*"]` accepts any name. Added in API 1.5.
+      items: { type: string, pattern: '^(\*|[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?)$' }
+
     ErrorCode:
       type: string
       description: Stable, machine-readable. New codes may be added in minor versions.
-      enum: [INVALID_REQUEST, NOT_FOUND, INPUT_DISABLED, SERVICE_UNAVAILABLE, INTERNAL]
+      enum: [INVALID_REQUEST, NOT_FOUND, FORBIDDEN, INPUT_DISABLED, SERVICE_UNAVAILABLE, INTERNAL]
 
     ErrorBody:
       type: object
       description: |
-        Body of every error response. HTTP status per code: `INVALID_REQUEST` 400, `NOT_FOUND`
-        404 (also for unknown endpoints), `INPUT_DISABLED` 409, `SERVICE_UNAVAILABLE` 503,
+        Body of every error response. HTTP status per code: `INVALID_REQUEST` 400, `FORBIDDEN`
+        403, `NOT_FOUND` 404 (also for unknown endpoints), `INPUT_DISABLED` 409, `SERVICE_UNAVAILABLE` 503,
         `INTERNAL` 500.
       required: [error]
       properties:

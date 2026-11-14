@@ -71,7 +71,7 @@ same number may now mean something else. The [client](client.md) checks this for
 {
   "bridge": {
     "version": "0.3.0",
-    "apiVersion": "1.4",
+    "apiVersion": "1.5",
     "state": "ready",
     "instanceId": "3f0c9a52-6b1e-4d8f-9c37-0e2a5b7d1f44", // random, new on every start
     "startedAt": "2026-11-07T14:00:58.000Z"
@@ -124,6 +124,7 @@ Every error response has the same body:
 | HTTP status | `code` | When |
 |---|---|---|
 | `400` | `INVALID_REQUEST` | Bad query or body (unknown key name, invalid regex, invalid config value). `details.field` names the field. |
+| `403` | `FORBIDDEN` | The `Host` header names a host the bridge doesn't answer to, or a `POST` / `PUT` / `DELETE` comes from another page's `Origin` ([Host and origin](security.md#host-and-origin)). Since API 1.5. |
 | `404` | `NOT_FOUND` | Unknown endpoint. |
 | `409` | `INPUT_DISABLED` | Native input endpoint called, but input is off (`--no-input`, or not on Windows). |
 | `503` | `SERVICE_UNAVAILABLE` | The bridge is shutting down (for example a pending `wait`). |

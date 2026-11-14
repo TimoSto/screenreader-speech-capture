@@ -4,7 +4,12 @@
  * those codes. `adapters/in/http/errors.test.ts` checks it at type level.
  */
 export type ErrorCode =
-  'INVALID_REQUEST' | 'NOT_FOUND' | 'INPUT_DISABLED' | 'SERVICE_UNAVAILABLE' | 'INTERNAL';
+  | 'INVALID_REQUEST'
+  | 'NOT_FOUND'
+  | 'FORBIDDEN'
+  | 'INPUT_DISABLED'
+  | 'SERVICE_UNAVAILABLE'
+  | 'INTERNAL';
 
 /** An expected error with a stable code, for example a bad request. */
 export class AppError extends Error {

@@ -35,7 +35,8 @@ export function mergeConfig(base: Config, patch: unknown): Config {
       if (value === undefined) continue;
       const problem = check(value);
       if (problem !== undefined) throw invalidField(field, problem);
-      result[section]![key] = value;
+      // Copied, so a later change to the caller's array can't change the config.
+      result[section]![key] = Array.isArray(value) ? [...(value as unknown[])] : value;
     }
   }
 

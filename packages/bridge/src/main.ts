@@ -1,6 +1,7 @@
 // Composition root, with the helpers in composition/: the only place that knows the concrete
 // adapters (docs/architecture.md).
 import { randomUUID } from 'node:crypto';
+import { hostname } from 'node:os';
 import { API_VERSION } from '@screenreader-speech-capture/shared';
 import { HttpServer } from './adapters/in/http/http-server.js';
 import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
@@ -155,6 +156,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     sessions,
     logger: log.for('http-api'),
     instanceId: instance.id,
+    hostnames: [hostname()],
     ...(options.ssePingMs === undefined ? {} : { pingMs: options.ssePingMs }),
   });
 

@@ -11,7 +11,15 @@ export interface Config {
     readonly encoding: string;
     readonly maxLineBytes: number;
   };
-  readonly http: { readonly host: string; readonly port: number };
+  readonly http: {
+    readonly host: string;
+    readonly port: number;
+    /**
+     * Host names the API answers to besides IP addresses, `localhost` and the machine's own name
+     * (DNS rebinding protection, docs/security.md). `*` accepts any name.
+     */
+    readonly allowedHosts: readonly string[];
+  };
   readonly playwright: {
     readonly enabled: boolean;
     readonly port: number;

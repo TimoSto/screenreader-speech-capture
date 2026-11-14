@@ -14,6 +14,8 @@ describe('parseCli', () => {
         '127.0.0.1',
         '--http-port',
         '5152',
+        '--allowed-hosts',
+        'a.example, b.example,',
         '--playwright-port',
         '3001',
         '--playwright-version',
@@ -35,7 +37,7 @@ describe('parseCli', () => {
     );
     expect(options.overrides).toEqual({
       tcp: { host: '127.0.0.2', port: 4450, encoding: 'utf-8' },
-      http: { host: '127.0.0.1', port: 5152 },
+      http: { host: '127.0.0.1', port: 5152, allowedHosts: ['a.example', 'b.example'] },
       playwright: { port: 3001, version: '1.56.1', enabled: false },
       mcp: { port: 8932, enabled: false },
       input: { enabled: false },
@@ -50,13 +52,14 @@ describe('parseCli', () => {
     const options = parseCli(['--tcp-port', '4451'], {
       SR_SPEECH_TCP_PORT: '4450',
       SR_SPEECH_HTTP_PORT: '5152',
+      SR_SPEECH_ALLOWED_HOSTS: '*',
       SR_SPEECH_NO_MCP: '1',
       SR_SPEECH_CONSOLE_SPEECH: 'true',
       SR_SPEECH_CONFIG: '/etc/sr.json',
     });
     expect(options.overrides).toEqual({
       tcp: { port: 4451 },
-      http: { port: 5152 },
+      http: { port: 5152, allowedHosts: ['*'] },
       mcp: { enabled: false },
       log: { consoleSpeech: true },
     });
