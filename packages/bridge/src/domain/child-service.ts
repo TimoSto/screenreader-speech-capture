@@ -1,4 +1,53 @@
 // Child services the bridge supervises (docs/operations.md#child-service-crashes).
+import type { Config } from './config/index.js';
+
+/** The child services, by the config section each follows. */
+export type ServiceName = 'playwright' | 'mcp';
+
+export const SERVICE_NAMES: readonly ServiceName[] = ['playwright', 'mcp'];
+
+/** How the services are named in log lines and errors. */
+export const SERVICE_TITLES: Readonly<Record<ServiceName, string>> = {
+  playwright: 'Playwright server',
+  mcp: 'Playwright MCP',
+};
+
+/**
+ * Where the child services listen: loopback only. Clients reach them through the bridge's HTTP
+ * port, which checks Host and Origin for them like for the API
+ * (docs/decisions.md#the-bridge-is-the-single-way-in).
+ */
+export const CHILD_HOST = '127.0.0.1';
+
+/** Where and which version a child service runs. `version: null` = the bundled default. */
+export interface ServiceSettings {
+  readonly host: string;
+  readonly port: number;
+  readonly version: string | null;
+}
+
+/** A service's settings from the config: the Playwright server in the configured version, MCP in the bundled one. */
+export function serviceSettings(name: ServiceName, config: Config): ServiceSettings {
+  if (name === 'playwright') {
+    const { port, version } = config.playwright;
+    return { host: CHILD_HOST, port, version };
+  }
+  return { host: CHILD_HOST, port: config.mcp.port, version: null };
+}
+
+/** Where a client's request to a service goes: its port while it runs, otherwise why not. */
+export type Reachability = { readonly port: number } | { readonly unavailable: string };
+
+export function reachability(
+  name: ServiceName,
+  status: Pick<ServiceStatus, 'state' | 'port'>,
+  enabled: boolean,
+): Reachability {
+  if (status.state === 'running') return { port: status.port };
+  const title = SERVICE_TITLES[name];
+  if (!enabled) return { unavailable: `${title} is disabled` };
+  return { unavailable: `${title} is not running (state: ${status.state})` };
+}
 
 export type ServiceState = 'stopped' | 'starting' | 'running' | 'crashed' | 'failed';
 

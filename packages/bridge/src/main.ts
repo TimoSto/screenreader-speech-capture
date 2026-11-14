@@ -11,18 +11,21 @@ import { defaultConfigFile } from './adapters/out/platform/paths.js';
 import type { ManageSessions } from './application/ports/in/manage-sessions.js';
 import type { SpeechUseCases } from './application/ports/in/speech.js';
 import type { Logger } from './application/ports/out/logger.js';
+import { BridgeLifecycleService } from './application/services/bridge-lifecycle-service.js';
 import { CaptureService } from './application/services/capture-service.js';
+import { ChildServicesService } from './application/services/child-services-service.js';
 import { ConfigService } from './application/services/config-service.js';
 import { SessionService } from './application/services/session-service.js';
 import { SpeechService } from './application/services/speech-service.js';
 import { StatusService } from './application/services/status-service.js';
 import { TranscriptService } from './application/services/transcript-service.js';
 import { WaitForSpeechService } from './application/services/wait-for-speech-service.js';
-import { runLifecycle, startListeners } from './composition/lifecycle.js';
+import { startListeners } from './composition/lifecycle.js';
 import { loadConfig } from './composition/load-config.js';
 import { createLogging } from './composition/logging.js';
 import { registerReapply } from './composition/reapply.js';
-import { createServices } from './composition/services.js';
+import { proxyRoutes } from './composition/proxies.js';
+import { createSupervisors } from './composition/services.js';
 import type { TestSeams } from './composition/test-seams.js';
 import { CaptureState } from './domain/capture.js';
 import { configFields, overriddenFields, type ConfigField } from './domain/config/index.js';
@@ -116,7 +119,12 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     file: savedFile,
     pinned: new Map([...configFields(overrides).keys()].map((field) => [field, sourceOf(field)])),
   });
-  const services = createServices(config, () => configService.get(), seams, log);
+  const supervisors = createSupervisors(config, seams, log);
+  const childServices = new ChildServicesService({
+    supervisors,
+    config: () => configService.get(),
+    logger: bridgeLogger,
+  });
 
   const captureState = new CaptureState();
   const tcp = new TcpListener(
@@ -127,8 +135,8 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   const status = new StatusService({
     capture: captureState,
     log: speechLog,
-    playwright: services.playwright,
-    mcp: services.mcp,
+    playwright: supervisors.playwright,
+    mcp: supervisors.mcp,
     config: () => configService.get(),
     version,
     apiVersion: API_VERSION,
@@ -142,7 +150,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     sessions,
     logger: log.for('http-api'),
     hostnames: [hostname()],
-    proxies: services.proxies,
+    proxies: proxyRoutes(childServices),
     ...(seams.ssePingMs === undefined ? {} : { pingMs: seams.ssePingMs }),
   });
 
@@ -151,17 +159,16 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     http,
     buffer: speech,
     log,
-    services: services.all,
-    logger: bridgeLogger,
+    services: childServices,
   });
-  const lifecycle = runLifecycle({
-    config,
-    status,
+  const lifecycle = new BridgeLifecycleService({
+    state: status,
     waits,
+    startServices: () => childServices.startEnabled(),
+    stopOrder: [http, tcp, { stop: () => childServices.stopAll() }],
     logger: bridgeLogger,
-    services: services.all,
-    stopOrder: [http, tcp, services.playwright, services.mcp],
   });
+  lifecycle.start();
 
   return {
     tcpPort: ports.tcp,
