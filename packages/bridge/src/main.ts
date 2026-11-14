@@ -164,8 +164,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   registerReapply(configService, {
     tcp,
     http,
-    repository,
-    sessions: sessionRepository,
+    buffer: speech,
     logging,
     services: services.all,
     logger: bridgeLogger,

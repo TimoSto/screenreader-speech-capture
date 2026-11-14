@@ -11,6 +11,11 @@ export interface SpeechRepository {
    * some of them were dropped.
    */
   list(since: number, limit?: number, sessionId?: number | null): SpeechPage;
+  /**
+   * Changes the cap. A smaller one drops the oldest entries at once, and they count as truncated
+   * like any other dropped entry.
+   */
+  setMaxEntries(maxEntries: number): void;
   /** Removes all entries. `seq` keeps counting. */
   clear(): void;
   stats(): BufferStats;

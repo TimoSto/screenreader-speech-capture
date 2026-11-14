@@ -185,4 +185,15 @@ describe('pruning ended sessions', () => {
     say('b2'); // pushes a1 out
     expect(sessionRepository.list().map((s) => s.name)).toEqual(['b']);
   });
+
+  it('forgets an ended session whose last entry a smaller buffer drops', () => {
+    const { speech, sessions, say, sessionRepository } = setup(10);
+    sessions.start({ name: 'a' });
+    say('a1');
+    sessions.start({ name: 'b' });
+    say('b1');
+    speech.setMaxEntries(1);
+    expect(speech.list().entries.map((e) => e.text)).toEqual(['b1']);
+    expect(sessionRepository.list().map((s) => s.name)).toEqual(['b']);
+  });
 });

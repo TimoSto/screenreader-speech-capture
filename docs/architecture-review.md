@@ -12,17 +12,10 @@ decisions go to [decisions.md](decisions.md) and this file can be deleted.
 |---|---|---|
 | 1 | ~~No Host / Origin check on the API~~ | Done: #94 |
 | 2 | ~~No session filter for entries outside sessions~~ | Done: #95 |
-| 3 | ~~Reading the status prunes the repositories~~ | Done: prune on write |
-| 4 | `setMaxEntries` is not on the repository port | Low |
+| 3 | ~~Reading the status prunes the repositories~~ | Done: #96 |
+| 4 | ~~`setMaxEntries` is not on the repository port~~ | Done: on the port |
 | 5 | Test seams in the public `BridgeOptions` | Low |
 | 6 | `HttpServer.retire()` closes streams of the new server | Low |
-
-## 4. `setMaxEntries` is not on the repository port
-
-**What:** `composition/reapply.ts` takes the concrete `MemorySpeechRepository` for
-`setMaxEntries`. A SQLite repository (Later) would need the same method.
-
-**Proposal:** move `setMaxEntries` (or a `BufferCapacity` port) into the `SpeechRepository` port.
 
 ## 5. Test seams in the public `BridgeOptions`
 
