@@ -37,8 +37,8 @@ export interface WaitOptions {
   /** Ignore case and extra whitespace (strings and regular expressions). */
   normalize?: boolean | undefined;
   /**
-   * Only entries of this session: its `id`, or `'current'` (the session current when the request
-   * arrives). Default: all entries.
+   * Only entries of this session: its `id`, or `'current'` (the session current when the wait
+   * starts; it stays that one even if another session starts meanwhile). Default: all entries.
    */
   session?: SessionRef | undefined;
 }

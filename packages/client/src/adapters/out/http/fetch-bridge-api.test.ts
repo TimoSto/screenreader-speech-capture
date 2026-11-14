@@ -266,6 +266,23 @@ describe('FetchBridgeApi.streamSpeech', () => {
     });
   });
 
+  it('limits the stream to a session', async () => {
+    let url: string | undefined;
+    const fetch = ((u: string, init: RequestInit) => {
+      url = u;
+      return sse(['event: bridge\ndata: {"instanceId":"run-1"}\n\n'], init.signal);
+    }) as unknown as typeof globalThis.fetch;
+    const controller = new AbortController();
+    const stream = api(fetch).streamSpeech({
+      lastEventId: null,
+      session: 3,
+      signal: controller.signal,
+    });
+    await stream.next();
+    controller.abort();
+    expect(url).toMatch(/\/api\/v1\/speech\/stream\?session=3$/);
+  });
+
   it('ends quietly when the caller aborts', async () => {
     const fetch = ((_url: string, init: RequestInit) =>
       sse([], init.signal)) as unknown as typeof globalThis.fetch;

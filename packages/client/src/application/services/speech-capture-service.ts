@@ -24,20 +24,22 @@ import type {
 import type { BridgeApi } from '../ports/out/bridge-api.js';
 import type { Clock } from '../ports/out/clock.js';
 import { startLiveFeed } from './live-feed.js';
+import { speechEvents } from './speech-events.js';
 
 export interface SpeechCaptureServiceDeps {
   api: BridgeApi;
   clock: Clock;
   /** The HTTP API version this client was built for (`API_VERSION` from the shared contract). */
   apiVersion: string;
-  /** How often waits ask the bridge for new entries. Default 50 ms. */
-  pollMs?: number;
 }
 
 /** Largest `limit` the bridge accepts for `GET /api/v1/speech`. */
 const MAX_PAGE = 10_000;
 
 const DEFAULTS = { timeout: 5000, quietFor: 500, silenceTimeout: 10_000, readyTimeout: 120_000 };
+
+/** How often `waitForReady` asks for the status. */
+const READY_POLL_MS = 500;
 
 export class SpeechCaptureService implements SpeechCapture {
   #cursor = 0;
@@ -139,7 +141,7 @@ export class SpeechCaptureService implements SpeechCapture {
       if (left <= 0) {
         throw new BridgeNotReadyError(`The bridge was not ready within ${timeout} ms: ${last}`);
       }
-      await clock.sleep(Math.min(this.pollMs * 10, left));
+      await clock.sleep(Math.min(READY_POLL_MS, left));
     }
   }
 
@@ -184,29 +186,24 @@ export class SpeechCaptureService implements SpeechCapture {
     await this.compatible();
     const start = clock.now();
     const end = await this.endSeq();
-    let from = end.seq;
     // Speech may have arrived just before the call, so silence is counted from the call.
     let lastSpeech = start;
     const seen: SpeechEntry[] = [];
-    for (;;) {
-      const entries = await this.fetchSince(from, undefined, end.instanceId);
-      if (entries.length > 0) from = entries.at(-1)!.seq;
-      const speech = entries.filter(isSpeech);
-      const now = clock.now();
-      if (speech.length > 0) {
-        seen.push(...speech);
-        lastSpeech = now;
-      }
-      const quiet = now - lastSpeech;
-      if (quiet >= quietFor) return;
-      if (now - start >= timeout) {
-        throw new SpeechTimeoutError(
-          `Speech did not pause for ${quietFor} ms within ${timeout} ms`,
-          seen,
-        );
-      }
-      await clock.sleep(Math.min(this.pollMs, quietFor - quiet, start + timeout - now));
-    }
+    const left = () => Math.min(lastSpeech + quietFor, start + timeout) - clock.now();
+    await this.follow({ since: end.seq, expected: end.instanceId }, left(), (entry, timer) => {
+      if (!isSpeech(entry)) return undefined;
+      seen.push(entry);
+      lastSpeech = clock.now();
+      timer.set(left());
+      return undefined;
+    });
+    // The timer ran out at the earlier of the two; timers may fire a little early, so don't
+    // compare with `now()`.
+    if (lastSpeech + quietFor <= start + timeout) return;
+    throw new SpeechTimeoutError(
+      `Speech did not pause for ${quietFor} ms within ${timeout} ms`,
+      seen,
+    );
   }
 
   async record<T>(fn: () => T | Promise<T>, options: SilenceOptions = {}): Promise<Recording<T>> {
@@ -230,10 +227,6 @@ export class SpeechCaptureService implements SpeechCapture {
       listener,
       options,
     );
-  }
-
-  private get pollMs(): number {
-    return this.deps.pollMs ?? 50;
   }
 
   /** Checks the API version once. A failed check is repeated on the next call. */
@@ -295,8 +288,21 @@ export class SpeechCaptureService implements SpeechCapture {
   }
 
   /**
-   * Polls for entries after the cursor (or `options.since`) until `step` returns a result.
-   * Rejects with {@link SpeechTimeoutError} (and the speech seen) after `options.timeout`.
+   * The session id a wait is limited to: `'current'` becomes the session current now, and stays
+   * that one for the whole wait, even if another session starts meanwhile.
+   */
+  private async resolveSession(ref: SessionRef | undefined): Promise<number | undefined> {
+    if (ref !== 'current') return ref;
+    const { current } = (await this.deps.api.status()).session;
+    // The answer the bridge gives a read with `session=current`.
+    if (!current) throw new BridgeHttpError(404, 'NOT_FOUND', 'No session is current');
+    return current.id;
+  }
+
+  /**
+   * Searches the entries after the cursor (or `options.since`) until `step` returns a result:
+   * first the buffer, then the live feed. Rejects with {@link SpeechTimeoutError} (and the speech
+   * seen) after `options.timeout`.
    */
   private async search<T>(
     options: WaitOptions,
@@ -306,21 +312,83 @@ export class SpeechCaptureService implements SpeechCapture {
     const { clock } = this.deps;
     const timeout = options.timeout ?? DEFAULTS.timeout;
     const deadline = clock.now() + timeout;
+    const since = options.since ?? this.#cursor;
+    const session = await this.resolveSession(options.session);
     const seen: SpeechEntry[] = [];
-    let from = options.since ?? this.#cursor;
-    for (;;) {
-      const entries = await this.fetchSince(from, options.session);
-      if (entries.length > 0) from = entries.at(-1)!.seq;
+    const consume = (entries: SpeechEntry[]) => {
       seen.push(...entries.filter(isSpeech));
-      const result = step(entries);
-      if (result !== undefined) return result;
-      const left = deadline - clock.now();
-      if (left <= 0) {
-        const message = typeof failure === 'string' ? failure : failure();
-        throw new SpeechTimeoutError(`${message} within ${timeout} ms`, seen);
-      }
-      await clock.sleep(Math.min(this.pollMs, left));
+      return step(entries);
+    };
+    // Speech that is already there is found without opening the live feed.
+    const buffered = await this.fetchSince(since, session);
+    let result = consume(buffered);
+    const left = deadline - clock.now();
+    if (result === undefined && left > 0) {
+      const from = buffered.at(-1)?.seq ?? since;
+      result = await this.follow({ since: from, session }, left, (entry) => consume([entry]));
     }
+    if (result !== undefined) return result;
+    const message = typeof failure === 'string' ? failure : failure();
+    throw new SpeechTimeoutError(`${message} within ${timeout} ms`, seen);
+  }
+
+  /**
+   * Reads the live feed from `since` and hands each entry to `onEntry` until it returns a result,
+   * or the timer (first set to `ms`, `onEntry` may set it again) runs out: then `undefined`.
+   * `expected` is the bridge run `since` came from (default: the cursor's); another one rejects
+   * with {@link BridgeRestartedError}, as reads do.
+   */
+  private async follow<T>(
+    from: { since: number; session?: number | undefined; expected?: string },
+    ms: number,
+    onEntry: (entry: SpeechEntry, timer: Timer) => T | undefined,
+  ): Promise<T | undefined> {
+    const { api, clock } = this.deps;
+    const feed = new AbortController();
+    const timer = new Timer(clock, () => feed.abort());
+    timer.set(ms);
+    try {
+      const events = speechEvents(
+        { api, clock, ensureCompatible: () => this.compatible() },
+        { since: from.since, session: from.session, signal: feed.signal },
+      );
+      for await (const event of events) {
+        if (event.type === 'bridge' || event.type === 'restarted') {
+          this.checkInstance(event.instanceId, from.expected);
+        } else if (event.type === 'entry') {
+          const result = onEntry(event.entry, timer);
+          if (result !== undefined) return result;
+        }
+      }
+      return undefined; // the timer ran out
+    } finally {
+      timer.stop();
+      feed.abort();
+    }
+  }
+}
+
+/** A timeout that can be set again: the last {@link set} wins. */
+class Timer {
+  #controller: AbortController | undefined;
+
+  constructor(
+    private readonly clock: Clock,
+    private readonly onTimeout: () => void,
+  ) {}
+
+  /** Calls `onTimeout` in `ms` (now if `ms <= 0`), unless set again or stopped before. */
+  set(ms: number): void {
+    this.stop();
+    const controller = new AbortController();
+    this.#controller = controller;
+    this.clock.sleep(Math.max(0, ms), controller.signal).then(this.onTimeout, () => {
+      // stopped or set again
+    });
+  }
+
+  stop(): void {
+    this.#controller?.abort();
   }
 }
 
