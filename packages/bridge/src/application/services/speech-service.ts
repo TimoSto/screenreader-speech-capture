@@ -13,7 +13,6 @@ import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
 import { intOption } from '../shared/int-option.js';
 import { resolveSessionFilter } from '../shared/session-filter.js';
-import { pruneEndedSessions } from '../shared/sessions.js';
 
 export interface SpeechServiceDeps {
   repository: SpeechRepository;
@@ -77,8 +76,6 @@ export class SpeechService
 
   setMaxEntries(maxEntries: number): void {
     this.deps.repository.setMaxEntries(maxEntries);
-    // A smaller buffer can drop the last entries of ended sessions.
-    pruneEndedSessions(this.deps.sessions, this.deps.repository);
   }
 
   addMarker(label: string): SpeechEntry {
@@ -96,9 +93,6 @@ export class SpeechService
       receivedAt: this.deps.clock.now(),
       sessionId: this.deps.sessions.current()?.id ?? null,
     });
-    // A full buffer drops its oldest entry on every add, which can empty an ended session.
-    const { size, maxEntries } = this.deps.repository.stats();
-    if (size >= maxEntries) pruneEndedSessions(this.deps.sessions, this.deps.repository);
     this.deps.events.publish({ type: 'entry', entry: stored });
     return stored;
   }

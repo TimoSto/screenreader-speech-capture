@@ -24,16 +24,9 @@ export interface SessionStats {
   lastSeq: number | null;
   /** Entries of the session still in the buffer. */
   entries: number;
-  /** Highest `seq` of the session dropped because the buffer was full, `0` if none. */
-  droppedUpToSeq: number;
 }
 
-export const EMPTY_SESSION_STATS: SessionStats = {
-  firstSeq: null,
-  lastSeq: null,
-  entries: 0,
-  droppedUpToSeq: 0,
-};
+export const EMPTY_SESSION_STATS: SessionStats = { firstSeq: null, lastSeq: null, entries: 0 };
 
 /** A session with what the buffer still holds of it, as listed and in the status. */
 export interface SessionSummary extends Session {

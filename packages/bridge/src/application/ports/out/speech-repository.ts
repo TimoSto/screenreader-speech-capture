@@ -19,8 +19,6 @@ export interface SpeechRepository {
   /** Removes all entries. `seq` keeps counting. */
   clear(): void;
   stats(): BufferStats;
-  /** What the buffer still holds of one session (empty stats for an unknown one). */
-  sessionStats(sessionId: number): SessionStats;
-  /** Drops the stats of a session that is no longer listed, so they don't pile up. */
-  forgetSession(sessionId: number): void;
+  /** What the buffer holds of each session that has entries in it, from one pass over it. */
+  sessionStats(): ReadonlyMap<number, SessionStats>;
 }

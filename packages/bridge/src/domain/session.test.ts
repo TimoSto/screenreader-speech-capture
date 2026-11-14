@@ -18,9 +18,12 @@ const session = (endedAt: Date | null): Session => ({
 
 describe('summarize', () => {
   it('adds what the buffer holds of the session', () => {
-    expect(
-      summarize(session(null), { firstSeq: 2, lastSeq: 5, entries: 4, droppedUpToSeq: 1 }),
-    ).toEqual({ ...session(null), firstSeq: 2, lastSeq: 5, entries: 4 });
+    expect(summarize(session(null), { firstSeq: 2, lastSeq: 5, entries: 4 })).toEqual({
+      ...session(null),
+      firstSeq: 2,
+      lastSeq: 5,
+      entries: 4,
+    });
   });
 });
 
