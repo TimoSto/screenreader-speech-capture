@@ -7,8 +7,12 @@
   "engines": {
     "node": ">=20"
   },
+  "types": "./dist/index.d.mts",
   "exports": {
-    ".": "./dist/index.mjs"
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    }
   },
   "bin": {
     "screenreader-speech-capture-client": "./dist/cli.mjs"
@@ -21,8 +25,10 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@arethetypeswrong/core": "0.18.5",
     "@screenreader-speech-capture/shared": "workspace:*",
     "@valibot/to-json-schema": "1.8.0",
+    "publint": "0.3.25",
     "tsdown": "0.23.7",
     "valibot": "1.5.0"
   },

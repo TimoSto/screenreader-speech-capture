@@ -7,7 +7,9 @@ Flows: [HTTP](flows/http.md), [live feed and waits](flows/sse.md), [truncation](
 `screenreader-speech-capture-client` is a small npm package for **test code and agents**. It talks
 to the bridge's HTTP API and contains:
 
-- a **TypeScript library** (`SpeechCaptureClient`) for Playwright or any other Node test runner,
+- a **TypeScript library** (`SpeechCaptureClient`) for Playwright or any other Node test runner.
+  It ships its own type declarations; they refer to Node's types (`NodeJS.ProcessEnv`), so your
+  project needs `@types/node`,
 - a **Playwright fixture** (`/playwright` subpath export) *(planned, [M3](../ROADMAP.md#m3-playwright--mcp-))*,
 - a **CLI** (`screenreader-speech-capture-client`) with the same functions, for AI agents and shell scripts,
 - an **agent skill** (see [Agent skill](agents.md#agent-skill)) *(planned, [M6](../ROADMAP.md#m6-agents-))*.
