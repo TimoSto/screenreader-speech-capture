@@ -1,7 +1,8 @@
 /** One recorded speech entry or marker (docs/http-api.md#data-model). */
 export interface SpeechEntry {
   /**
-   * Increasing sequence number, the entry's ID: survives a clear, restarts at 1 with the bridge.
+   * Increasing sequence number, the entry's ID: survives a clear and keeps rising across bridge
+   * restarts.
    * The client's cursor and every `since` are seq values (docs/client.md#the-cursor).
    */
   seq: number;

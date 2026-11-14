@@ -239,7 +239,8 @@ The CLI command has the same name as the package, `screenreader-speech-capture-c
 `npx screenreader-speech-capture-client` works even where nothing is installed.
 
 Every command takes `--url` (overrides the [stored bridge URL](#bridge-url)) and `--json` for
-machine-readable output. A CLI call has no memory between invocations, so there is no
+machine-readable output. The `--json` shape of every command is published as JSON Schema in
+[`cli-output.schema.json`](cli-output.schema.json) (`$defs` by command, as typed). A CLI call has no memory between invocations, so there is no
 cursor. Instead, `speech`, `text` and `wait` read the **current
 [session](speech-capture.md#sessions)** (everything since `session start`) by default, or the whole
 buffer when no session is current. `--session <id>` picks another one, `--all` ignores sessions.
