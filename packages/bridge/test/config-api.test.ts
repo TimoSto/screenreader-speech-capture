@@ -167,8 +167,7 @@ describe('config file at startup', () => {
   it('refuses to start with an invalid setting in the file, naming the file and the setting', async () => {
     const start = startBridge({
       version: '0.0.0-test',
-      sinks: [],
-      configStore: new MemoryConfigStore({ tcp: { port: 'x' } }),
+      testSeams: { sinks: [], configStore: new MemoryConfigStore({ tcp: { port: 'x' } }) },
     });
     await expect(start).rejects.toThrow(ConfigError);
     await expect(start).rejects.toThrow(
@@ -179,8 +178,7 @@ describe('config file at startup', () => {
   it('names the flag or variable of an invalid override', async () => {
     const start = startBridge({
       version: '0.0.0-test',
-      sinks: [],
-      configStore: new MemoryConfigStore(),
+      testSeams: { sinks: [], configStore: new MemoryConfigStore() },
       overrides: { tcp: { port: 70000 } },
       overrideSources: new Map([['tcp.port', '--tcp-port']]),
     });

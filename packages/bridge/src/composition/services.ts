@@ -2,12 +2,12 @@ import type { BridgeLog } from '../adapters/out/log/bridge-log.js';
 import { playwrightMcp } from '../adapters/out/mcp/playwright-mcp.js';
 import { defaultPlaywrightDir } from '../adapters/out/platform/paths.js';
 import { playwrightServer } from '../adapters/out/playwright/playwright-server.js';
-import type { Prepare } from '../adapters/out/process/types.js';
 import type {
   ProcessSupervisor,
   ServiceSettings,
 } from '../application/ports/out/process-supervisor.js';
 import type { Config } from '../domain/config/index.js';
+import type { TestSeams } from './test-seams.js';
 
 /** The Playwright server listens on the same interface as the HTTP API (`--host`). */
 const playwrightSettings = (config: Config): ServiceSettings => ({
@@ -30,14 +30,7 @@ export interface ChildService {
   readonly settingsOf: (config: Config) => ServiceSettings;
 }
 
-export interface ServiceOptions {
-  /** Where Playwright versions are installed. Default: `defaultPlaywrightDir()`. */
-  playwrightDir?: string | undefined;
-  /** Replaces the Playwright install and `run-server` command (tests). */
-  playwrightLaunch?: Prepare | undefined;
-  /** Replaces the MCP Chromium install and command (tests). */
-  mcpLaunch?: Prepare | undefined;
-}
+export type ServiceOptions = Pick<TestSeams, 'playwrightDir' | 'playwrightLaunch' | 'mcpLaunch'>;
 
 /** The supervised child services, not started yet. */
 export function createServices(config: Config, options: ServiceOptions, log: BridgeLog) {

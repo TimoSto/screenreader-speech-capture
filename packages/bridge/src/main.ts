@@ -7,17 +7,13 @@ import { HttpServer } from './adapters/in/http/http-server.js';
 import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { FsConfigStore } from './adapters/out/fs-config/fs-config-store.js';
-import type { LogSink } from './adapters/out/log/bridge-log.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
 import { MemorySessionRepository } from './adapters/out/memory/memory-session-repository.js';
 import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';
 import { defaultConfigFile } from './adapters/out/platform/paths.js';
-import type { Prepare } from './adapters/out/process/types.js';
 import type { ManageSessions } from './application/ports/in/manage-sessions.js';
 import type { SpeechUseCases } from './application/ports/in/speech-use-cases.js';
 import type { CaptureStatusSource } from './application/ports/out/capture-status.js';
-import type { Clock } from './application/ports/out/clock.js';
-import type { ConfigStore } from './application/ports/out/config-store.js';
 import type { Logger } from './application/ports/out/logger.js';
 import { ConfigService } from './application/services/config-service.js';
 import { SessionService } from './application/services/session-service.js';
@@ -30,6 +26,7 @@ import { loadConfig } from './composition/load-config.js';
 import { createLogging } from './composition/logging.js';
 import { registerReapply } from './composition/reapply.js';
 import { createServices } from './composition/services.js';
+import type { TestSeams } from './composition/test-seams.js';
 import type { BridgeInstance } from './domain/bridge-instance.js';
 import { configFields, overriddenFields, type ConfigField } from './domain/config/index.js';
 
@@ -41,25 +38,10 @@ export interface BridgeOptions {
   overrides?: unknown;
   /** What sets each override, for example `--tcp-port` or `SR_SPEECH_TCP_PORT`. */
   overrideSources?: ReadonlyMap<ConfigField, string>;
-  /** The config file. Default: `configFile`, or the default location. Tests pass their own. */
-  configStore?: ConfigStore;
+  /** The config file. Default: the default location. */
   configFile?: string;
-  /**
-   * Where the bridge log goes. Defaults to the console and `config.log.file` (`null`: the default
-   * log file). Tests pass their own sinks.
-   */
-  sinks?: LogSink[];
-  clock?: Clock;
-  /** Id of this bridge run (`bridge.instanceId`). Default: a random UUID. Tests pin it. */
-  instanceId?: string;
-  /** Interval of the SSE `: ping` comment. Default 15 s. */
-  ssePingMs?: number;
-  /** Where Playwright versions are installed. Default: `defaultPlaywrightDir()`. */
-  playwrightDir?: string;
-  /** Replaces the Playwright install and `run-server` command (tests). */
-  playwrightLaunch?: Prepare;
-  /** Replaces the MCP Chromium install and command (tests). */
-  mcpLaunch?: Prepare;
+  /** Replacements for tests. Production code leaves it out. */
+  testSeams?: TestSeams;
 }
 
 export interface Bridge {
@@ -86,7 +68,8 @@ const show = (value: unknown) => JSON.stringify(value);
  */
 export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   const { version } = options;
-  const store = options.configStore ?? new FsConfigStore(options.configFile ?? defaultConfigFile());
+  const seams = options.testSeams ?? {};
+  const store = seams.configStore ?? new FsConfigStore(options.configFile ?? defaultConfigFile());
   const sourceOf = (field: ConfigField) =>
     options.overrideSources?.get(field) ?? 'a flag or environment variable';
   const {
@@ -98,7 +81,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   const logging = createLogging(config, {
     version,
     configLocation: store.location,
-    sinks: options.sinks,
+    sinks: seams.sinks,
   });
   const { log } = logging;
   const bridgeLogger = log.for('bridge');
@@ -109,9 +92,9 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     );
   }
 
-  const clock = options.clock ?? new SystemClock();
+  const clock = seams.clock ?? new SystemClock();
   const instance: BridgeInstance = {
-    id: options.instanceId ?? randomUUID(),
+    id: seams.instanceId ?? randomUUID(),
     startedAt: clock.now(),
   };
   const repository = new MemorySpeechRepository(config.buffer.maxEntries);
@@ -134,7 +117,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     file: savedFile,
     pinned: new Map([...configFields(overrides).keys()].map((field) => [field, sourceOf(field)])),
   });
-  const services = createServices(config, options, log);
+  const services = createServices(config, seams, log);
 
   const tcp = new TcpListener(speech, clock, log.for('speech-capture'));
   const status = new StatusService({
@@ -157,7 +140,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     logger: log.for('http-api'),
     instanceId: instance.id,
     hostnames: [hostname()],
-    ...(options.ssePingMs === undefined ? {} : { pingMs: options.ssePingMs }),
+    ...(seams.ssePingMs === undefined ? {} : { pingMs: seams.ssePingMs }),
   });
 
   const ports = await startListeners(tcp, http, config, bridgeLogger);
