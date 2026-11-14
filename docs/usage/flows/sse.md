@@ -8,11 +8,13 @@ client side in [Test client → Live feed](../client.md#live-feed).
 
 1. [Subscribe to the live feed](#subscribe-to-the-live-feed)
 2. [Reconnect without losing an entry](#reconnect-without-losing-an-entry)
-3. [Reconnect across a bridge restart](#reconnect-across-a-bridge-restart)
-4. [Session and clear events](#session-and-clear-events)
-5. [A slow reader is disconnected](#a-slow-reader-is-disconnected)
-6. [How the client waits](#how-the-client-waits)
-7. [Wait for silence and record](#wait-for-silence-and-record)
+3. [Reconnect before the first entry](#reconnect-before-the-first-entry)
+4. [Reconnect across a bridge restart](#reconnect-across-a-bridge-restart)
+5. [A cursor from another run](#a-cursor-from-another-run)
+6. [Session and clear events](#session-and-clear-events)
+7. [A slow reader is disconnected](#a-slow-reader-is-disconnected)
+8. [How the client waits](#how-the-client-waits)
+9. [Wait for silence and record](#wait-for-silence-and-record)
 
 ## Subscribe to the live feed
 
@@ -27,6 +29,7 @@ sequenceDiagram
 
     C->>B: GET /api/v1/speech/stream
     B-->>C: 200 text/event-stream (stays open)
+    B-->>C: id: 40, event: position (the newest seq so far)
     SR->>B: "Submit, button" (TCP :4449)
     B-->>C: id: 41, event: entry, data: {"seq":41, "text":"Submit, button", ...}
     Note over B,C: ": ping" every 15 s keeps the connection open,<br/>"event: clear" follows a clear
@@ -60,6 +63,33 @@ sequenceDiagram
     B-->>C: event: entry seq 44 (live)
 ```
 
+## Reconnect before the first entry
+
+A stream opened without `Last-Event-ID` starts with a `position` event: its `id` is the highest
+`seq` the bridge has handed out. The client keeps it like the `seq` of an entry, so a connection
+that drops before the first entry still reconnects with a `Last-Event-ID`. Without it, whatever
+was said in the gap would be lost. Rules: [HTTP API](../http-api.md#endpoints) (`GET /speech/stream`).
+
+```mermaid
+sequenceDiagram
+    participant SR as NVDA / JAWS<br/>+ socket voice
+    participant B as Bridge :5151
+    participant C as Client<br/>(onSpeech / tail)
+
+    C->>B: GET /api/v1/speech/stream
+    B-->>C: id: 41, event: position
+    Note over C: lastEventId = 41, no entry yet
+    Note over C: connection lost
+    SR->>B: "Name, edit" → seq 42
+    SR->>B: "Email, edit" → seq 43
+    C->>B: GET /api/v1/speech/stream<br/>Last-Event-ID: 41
+    B-->>C: event: entry seq 42 (replay from the buffer)
+    B-->>C: event: entry seq 43 (replay)
+    SR->>B: "Submit, button" → seq 44
+    B-->>C: event: entry seq 44 (live)
+    Note over C,B: without the position event the client would reconnect<br/>with no Last-Event-ID and lose seq 42 and 43
+```
+
 ## Reconnect across a bridge restart
 
 `seq` keeps rising across restarts: the first entry of a run gets the run's start time in
@@ -80,6 +110,27 @@ sequenceDiagram
     C->>B: GET /api/v1/speech/stream<br/>Last-Event-ID: 1794641987742
     B-->>C: event: entry seq 1794642100000
     Note over C: the feed goes on from the new run's first entry
+```
+
+## A cursor from another run
+
+A `Last-Event-ID` above every `seq` the bridge has handed out comes from another run, for example
+after the clock went back before the restart. Filtering by it would silence the stream, so the
+bridge treats it as a gap: `truncated`, then the whole buffer. Rules:
+[HTTP API](../http-api.md#endpoints) (`GET /speech/stream`).
+
+```mermaid
+sequenceDiagram
+    participant SR as NVDA / JAWS<br/>+ socket voice
+    participant B as Bridge :5151
+    participant C as Client
+
+    Note over B: new run, newest seq 900
+    C->>B: GET /api/v1/speech/stream<br/>Last-Event-ID: 1500
+    B-->>C: event: truncated
+    B-->>C: event: entry seq 890..900 (the whole buffer)
+    SR->>B: "Submit, button" → seq 901
+    B-->>C: event: entry seq 901 (live)
 ```
 
 ## Session and clear events

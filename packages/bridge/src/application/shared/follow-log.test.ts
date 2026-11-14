@@ -17,7 +17,12 @@ const buses: [string, () => SpeechEventBus & { flush(): void }][] = [
   ['a bus that delivers late', () => new DeferredEventBus()],
 ];
 
-const show = (event: WatchEvent) => (event.type === 'entry' ? event.entry.text : event.type);
+const show = (event: WatchEvent) =>
+  event.type === 'entry'
+    ? event.entry.text
+    : event.type === 'position'
+      ? `position ${event.seq}`
+      : event.type;
 
 describe.each(buses)('followLog on %s', (_, createBus) => {
   function setup() {
@@ -32,7 +37,14 @@ describe.each(buses)('followLog on %s', (_, createBus) => {
       since: number | null,
       options: Parameters<typeof followLog>[3] = {},
       sessionId?: number | null,
-    ) => followLog({ log, events }, { since, sessionId }, (e) => seen.push(show(e)), options);
+      staleSince?: 'wait' | 'replay',
+    ) =>
+      followLog(
+        { log, events },
+        { since, sessionId, ...(staleSince ? { staleSince } : {}) },
+        (e) => seen.push(show(e)),
+        options,
+      );
     return { log, events, speech, say, seen, follow };
   }
 
@@ -82,13 +94,59 @@ describe.each(buses)('followLog on %s', (_, createBus) => {
     expect(seen).toEqual(['one', 'two']);
   });
 
-  it('only follows new entries without since', () => {
+  it('starts with the position, then only follows new entries, without since', () => {
     const { say, seen, follow, events } = setup();
     say('old');
     follow(null);
     say('new');
     events.flush();
-    expect(seen).toEqual(['new']);
+    expect(seen).toEqual(['position 1', 'new']);
+  });
+
+  it('gives the position of a log without entries, and after a clear', () => {
+    const { log, say, seen, follow, speech, events } = setup();
+    follow(null);
+    say('a', 'b');
+    speech.clear();
+    events.flush();
+    follow(null);
+    expect(log.headSeq).toBe(2);
+    expect(seen).toEqual(['position 0', 'a', 'b', 'clear', 'position 2']);
+  });
+
+  it('replays the whole buffer after a truncated for a since above every seq, if asked to', () => {
+    const { say, seen, follow, events } = setup();
+    say('one', 'two');
+    follow(500, {}, undefined, 'replay');
+    say('three');
+    events.flush();
+    expect(seen).toEqual(['truncated', 'one', 'two', 'three']);
+  });
+
+  it('says truncated once for a stale since when the replay was truncated too', () => {
+    const { log, say, seen, follow } = setup();
+    log.resize(2);
+    say('one', 'two', 'three');
+    follow(500, {}, undefined, 'replay');
+    expect(seen).toEqual(['truncated', 'two', 'three']);
+  });
+
+  it('keeps waiting for entries above a since above every seq, unless asked to replay', () => {
+    const { say, seen, follow, events } = setup();
+    say('one', 'two');
+    follow(500);
+    say('three');
+    events.flush();
+    expect(seen).toEqual([]);
+  });
+
+  it('treats a since equal to the newest seq as caught up, not stale', () => {
+    const { say, seen, follow, events } = setup();
+    say('one', 'two');
+    follow(2, {}, undefined, 'replay');
+    say('three');
+    events.flush();
+    expect(seen).toEqual(['three']);
   });
 
   it("follows one session's entries live, and passes clear and session events", () => {

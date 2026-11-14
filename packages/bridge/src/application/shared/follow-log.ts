@@ -17,14 +17,28 @@ export interface FollowOptions {
 }
 
 /**
- * Hands `listener` the log's entries after `since` (none for `null`), then the new events, with
- * nothing missed or repeated in between (`SpeechUseCases.watch`, the wait). With `sessionId`, only
- * that session's entries (`null`: those outside sessions); `clear` and `session` events always
- * come. Returns a function that stops it; calling it again does nothing.
+ * Hands `listener` the log's entries after `since`, then the new events, with nothing missed or
+ * repeated in between (`SpeechUseCases.watch`, the wait). With `sessionId`, only that session's
+ * entries (`null`: those outside sessions); `clear` and `session` events always come. Returns a
+ * function that stops it; calling it again does nothing.
+ *
+ * Without `since` (`null`) no entry is replayed; the first event is `position`, the log's
+ * `headSeq`, so a stream that drops before its first entry still has a cursor to reconnect with.
+ * With `staleSince: 'replay'`, a `since` above `headSeq` (a cursor from another run) is a gap,
+ * not a position to wait for: `truncated`, then the whole buffer. Without it, such a `since`
+ * waits for entries above it (what the wait means by `since`).
  */
 export function followLog(
-  deps: { log: Pick<SpeechLog, 'page'>; events: SpeechEventBus },
-  { since, sessionId }: { since: number | null; sessionId: number | null | undefined },
+  deps: { log: Pick<SpeechLog, 'page' | 'headSeq'>; events: SpeechEventBus },
+  {
+    since: requested,
+    sessionId,
+    staleSince = 'wait',
+  }: {
+    since: number | null;
+    sessionId: number | null | undefined;
+    staleSince?: 'wait' | 'replay';
+  },
   listener: WatchListener,
   { pace, onError }: FollowOptions = {},
 ): () => void {
@@ -34,6 +48,8 @@ export function followLog(
   // entries are skipped: the replay reads them from the log, in order. After it, the cursor drops
   // an entry the replay already read but the bus delivers late. That holds for any bus that
   // delivers in publish order, at once or later (the `SpeechEventBus` contract).
+  let stale = staleSince === 'replay' && requested !== null && requested > log.headSeq;
+  const since = stale ? 0 : requested;
   const cursor = new SeqCursor(since ?? Number.NEGATIVE_INFINITY);
   let replaying = since !== null;
   let stopped = false;
@@ -47,12 +63,16 @@ export function followLog(
     unsubscribe();
   };
 
-  if (since === null) return stop;
+  if (since === null) {
+    listener({ type: 'position', seq: log.headSeq });
+    return stop;
+  }
   /** Replays from the cursor until `pace` pauses it (its promise) or it has caught up. */
   const step = (): Promise<void> | undefined => {
     for (;;) {
       const { entries, truncated, hasMore } = log.page(cursor.position, REPLAY_PAGE, sessionId);
-      if (truncated) listener({ type: 'truncated' });
+      if (truncated || stale) listener({ type: 'truncated' });
+      stale = false;
       for (const entry of entries) {
         if (!cursor.advance(entry)) continue;
         listener({ type: 'entry', entry });

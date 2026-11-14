@@ -47,7 +47,8 @@ class Backoff {
 /**
  * The live feed (`GET /api/v1/speech/stream`) as one sequence of events across connections: the
  * code path behind both `onSpeech` and the waits. Reconnects with `Last-Event-ID` and backoff, so
- * no entry is lost or repeated, also across a bridge restart (`seq` keeps rising). Ends when
+ * no entry is lost or repeated, also across a bridge restart (`seq` keeps rising) and when the
+ * connection drops before the first entry (the bridge's `position` event is the cursor then). Ends when
  * `signal` aborts; throws errors a reconnect can't fix (an incompatible bridge, an HTTP `4xx`, an
  * invalid bridge URL).
  */
@@ -58,7 +59,10 @@ export async function* speechEvents(
   const { api, clock, ensureCompatible } = deps;
   const { session, signal } = options;
   const backoff = new Backoff();
-  /** The `seq` of the last entry seen: a reconnect asks the bridge for what came after it. */
+  /**
+   * The `seq` of the last entry seen, or the stream's `position` before the first one: a
+   * reconnect asks the bridge for what came after it.
+   */
   let lastEventId = options.since;
 
   while (!signal.aborted) {
@@ -75,6 +79,10 @@ export async function* speechEvents(
       for await (const event of events) {
         if (signal.aborted) return;
         backoff.reset();
+        if (event.type === 'position') {
+          lastEventId = event.seq;
+          continue;
+        }
         if (event.type === 'entry') lastEventId = event.entry.seq;
         yield event;
       }

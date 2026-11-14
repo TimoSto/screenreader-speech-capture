@@ -253,9 +253,11 @@ describe('HTTP API', () => {
     stream.close();
 
     const frames = stream.text.split('\n\n').filter((frame) => frame !== '');
-    expect(frames[0]).toMatch(/^id: 1\nevent: entry\ndata: \{"seq":1,"kind":"speech","text":"one"/);
-    expect(frames[1]).toMatch(/^id: 2\nevent: entry\n/);
-    expect(frames[2]).toBe('event: clear\ndata: {}');
+    // A stream without Last-Event-ID starts with the seq before its first entry.
+    expect(frames[0]).toBe('id: 0\nevent: position\ndata: {}');
+    expect(frames[1]).toMatch(/^id: 1\nevent: entry\ndata: \{"seq":1,"kind":"speech","text":"one"/);
+    expect(frames[2]).toMatch(/^id: 2\nevent: entry\n/);
+    expect(frames[3]).toBe('event: clear\ndata: {}');
 
     await send(bridge.tcpPort, 'three\r\nfour\r\n');
     await eventually(
@@ -271,6 +273,48 @@ describe('HTTP API', () => {
     expect(resumed.text).not.toContain('"three"');
     // The bridge event comes first, before the replay.
     expect(resumed.text).toMatch(/^id: 4\nevent: entry\n/);
+  });
+
+  it('replays everything after a truncated for a Last-Event-ID above every seq', async () => {
+    const bridge = await start();
+    await send(bridge.tcpPort, 'one\r\ntwo\r\n');
+    await eventually(
+      () => bridge.speech.list().entries.length,
+      (count) => count === 2,
+    );
+    const resumed = await openStream(bridge, { 'last-event-id': '999999' });
+    await eventually(
+      () => resumed.text,
+      (text) => text.includes('"two"'),
+    );
+    resumed.close();
+    const frames = resumed.text.split('\n\n').filter((frame) => frame !== '');
+    expect(frames[0]).toBe('event: truncated\ndata: {}');
+    expect(frames.slice(1).map((frame) => frame.split('\n')[0])).toEqual(['id: 1', 'id: 2']);
+  });
+
+  it('reconnects from the position when the stream dropped before its first entry', async () => {
+    const bridge = await start();
+    const first = await openStream(bridge);
+    await eventually(
+      () => first.text,
+      (text) => text.includes('event: position'),
+    );
+    const position = /^id: (\d+)\nevent: position/.exec(first.text)![1]!;
+    first.close();
+    // Spoken while no stream was open.
+    await send(bridge.tcpPort, 'gap\r\n');
+    await eventually(
+      () => bridge.speech.list().entries.length,
+      (count) => count === 1,
+    );
+    const resumed = await openStream(bridge, { 'last-event-id': position });
+    await eventually(
+      () => resumed.text,
+      (text) => text.includes('"gap"'),
+    );
+    resumed.close();
+    expect(resumed.text).toMatch(/^id: 1\nevent: entry\n/);
   });
 
   it('sends a truncated event before the replay when missed entries were dropped', async () => {

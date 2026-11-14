@@ -41,6 +41,16 @@ describe('SpeechLog', () => {
       expect(log.page(999).entries.map((e) => e.text)).toEqual(['a']);
     });
 
+    it('reports the newest seq handed out, also for a log without entries and after a clear', () => {
+      const log = new SpeechLog(2, 1_000);
+      expect(log.headSeq).toBe(999);
+      fill(log, 3);
+      expect(log.headSeq).toBe(1_002);
+      log.clear();
+      expect(log.stats().lastSeq).toBeNull();
+      expect(log.headSeq).toBe(1_002);
+    });
+
     it('reports hasMore while entries after the page remain', () => {
       const log = new SpeechLog(10);
       fill(log, 3);

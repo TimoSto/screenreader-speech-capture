@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: screenreader-speech-capture bridge API
-  version: '1.11'
+  version: '1.12'
   summary: Capture what a screen reader says and read it over HTTP.
   description: |
     REST + Server-Sent Events API of the bridge. `info.version` is the API version that
@@ -23,7 +23,8 @@ info:
     back with native input, M4). 1.9 added `startSeq` to `Session`. 1.10 added
     `client` to `Session`, the `X-SR-Speech-Client` request header and `replaced` in the
     `POST /sessions` answer. 1.11 added `omitted` to the timeout answer of `GET /speech/wait`,
-    which now holds the last 1000 entries seen instead of all of them.
+    which now holds the last 1000 entries seen instead of all of them. 1.12 added the `position`
+    event of `GET /speech/stream` and the replay of a `Last-Event-ID` above every `seq`.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -174,11 +175,20 @@ paths:
         that session's `entry` events are sent; `clear` and `session` events always are. A
         `: ping` comment every 15 s keeps the connection open.
 
+        A stream opened without `Last-Event-ID` starts with a `position` event (`data: {}`, since
+        API 1.12), whose `id` is the highest `seq` handed out so far (the one before the first entry's, if
+        there is none yet; it counts entries dropped or cleared). A client that
+        remembers it reconnects with it as `Last-Event-ID`, so what was said before its first
+        entry is replayed too. Every entry that follows has a higher `seq`. Clients that don't
+        know the event ignore it.
+
         A reconnect with `Last-Event-ID` first gets the buffered entries after that `seq`, then
         the live ones, with nothing missed or repeated in between. `seq` keeps rising across
         bridge restarts, so this also works after a restart. If some of the missed entries
         were already dropped because the buffer was full, a `truncated` event with `data: {}`
-        comes before them. The replay follows the client's reading speed. If entries are dropped
+        comes before them. The same goes for a `Last-Event-ID` above every `seq` the bridge has
+        handed out (a cursor from another run, after the clock went back): `truncated`, then the
+        whole buffer (since API 1.12). The replay follows the client's reading speed. If entries are dropped
         while it runs, another `truncated` event comes at that point, and a `clear` or `session`
         event that happens meanwhile comes between the replayed entries.
 
@@ -186,6 +196,10 @@ paths:
         it. It reconnects with `Last-Event-ID`.
 
         ```
+        id: 41
+        event: position
+        data: {}
+
         id: 42
         event: entry
         data: {"seq":42,"kind":"speech","text":"Submit, button",...}
@@ -694,7 +708,7 @@ components:
               type: string
               description: '`<major>.<minor>` of this API.'
               examples:
-                - '1.11'
+                - '1.12'
             state:
               enum:
                 - starting

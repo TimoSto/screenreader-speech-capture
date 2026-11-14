@@ -1,6 +1,6 @@
 import type { SessionDto, SpeechEntryDto, StatusDto } from '@screenreader-speech-capture/shared';
 import { describe, expect, it } from 'vitest';
-import type { SpeechFeedEvent } from '../../../domain/feed-event.js';
+import type { StreamEvent } from '../../../application/ports/out/bridge-api.js';
 import {
   BridgeHttpError,
   BridgeUnreachableError,
@@ -311,7 +311,7 @@ describe('FetchBridgeApi.streamSpeech', () => {
       );
     }) as unknown as typeof globalThis.fetch;
     const controller = new AbortController();
-    const events: SpeechFeedEvent[] = [];
+    const events: StreamEvent[] = [];
     for await (const event of api(fetch).streamSpeech({
       lastEventId: 7,
       signal: controller.signal,
@@ -324,6 +324,26 @@ describe('FetchBridgeApi.streamSpeech', () => {
     expect(request?.headers).toMatchObject({
       accept: 'text/event-stream',
       'last-event-id': '7',
+    });
+  });
+
+  it('reads the position from the event id, and does not take one without a valid id', async () => {
+    const fetch = ((_url: string, init: RequestInit) =>
+      sse(
+        ['id: 41\nevent: position\ndata: {}\n\n', 'event: position\ndata: {}\n\n'],
+        init.signal,
+      )) as unknown as typeof globalThis.fetch;
+    const events = api(fetch).streamSpeech({
+      lastEventId: null,
+      signal: new AbortController().signal,
+    });
+    await expect(events.next()).resolves.toEqual({
+      done: false,
+      value: { type: 'position', seq: 41 },
+    });
+    await expect(events.next()).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+      message: expect.stringContaining('position event') as string,
     });
   });
 

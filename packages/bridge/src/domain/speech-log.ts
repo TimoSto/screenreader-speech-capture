@@ -57,6 +57,14 @@ export class SpeechLog {
     this.#nextSeq = firstSeq;
   }
 
+  /**
+   * The highest `seq` handed out so far (`firstSeq - 1` before the first entry). Unlike the
+   * buffer's `lastSeq` it counts entries that were dropped or cleared, so it is never `null`.
+   */
+  get headSeq(): number {
+    return this.#nextSeq - 1;
+  }
+
   /** Stores an entry in the current session (if any) and returns it with its `seq`. */
   append(draft: SpeechDraft): SpeechEntry {
     const entry: SpeechEntry = { ...draft, seq: this.#nextSeq++, sessionId: this.#currentId };
@@ -117,7 +125,7 @@ export class SpeechLog {
       ...session,
       id: ++this.#lastSessionId,
       endedAt: null,
-      startSeq: this.#nextSeq - 1,
+      startSeq: this.headSeq,
     };
     this.#sessions.set(started.id, started);
     this.#currentId = started.id;

@@ -16,7 +16,7 @@ import { followLog, type FollowOptions } from '../shared/follow-log.js';
 import { intOption } from '../shared/int-option.js';
 
 export interface WaitForSpeechDeps {
-  log: Pick<SpeechLog, 'page' | 'resolveFilter'>;
+  log: Pick<SpeechLog, 'page' | 'headSeq' | 'resolveFilter'>;
   events: SpeechEventBus;
   /** Times the wait out. */
   clock: Pick<Clock, 'sleep'>;

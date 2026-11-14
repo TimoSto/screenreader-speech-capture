@@ -56,6 +56,10 @@ describe('sseFrame', () => {
     expect(sseFrame({ type })).toBe(`event: ${type}\ndata: {}\n\n`);
   });
 
+  it('sends position with its seq as the event id', () => {
+    expect(sseFrame({ type: 'position', seq: 41 })).toBe('id: 41\nevent: position\ndata: {}\n\n');
+  });
+
   it('serializes each entry once, however many streams send it', () => {
     const fresh: SpeechEntry = { ...entry, seq: 8 };
     const stringify = vi.spyOn(JSON, 'stringify');
