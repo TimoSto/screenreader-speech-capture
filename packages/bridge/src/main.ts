@@ -102,7 +102,12 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   }).start();
   const speech = new SpeechService({ log: speechLog, events, clock });
   const waits = new WaitForSpeechService({ log: speechLog, events });
-  const sessions = new SessionService({ log: speechLog, events, clock });
+  const sessions = new SessionService({
+    log: speechLog,
+    events,
+    clock,
+    logger: log.for('bridge'),
+  });
   const configService = new ConfigService({
     store,
     logger: configLogger,

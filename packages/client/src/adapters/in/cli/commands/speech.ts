@@ -49,7 +49,7 @@ const SESSION_LIST: HelpLine = {
 export const session: Command = {
   options: ['run'],
   help: [SESSION_START, SESSION_END, SESSION_LIST],
-  async run(args, { values, speech, out }) {
+  async run(args, { values, speech, out, io }) {
     const [action, ...rest] = args;
     if (action !== 'start' && values.run !== undefined) {
       throw new UsageError('--run only goes with "session start".');
@@ -60,6 +60,13 @@ export const session: Command = {
         if (name.trim() === '') throw new UsageError('The session name must not be empty.');
         if (values.run?.trim() === '') throw new UsageError('--run must not be empty.');
         const started = await speech().startSession(name, { run: values.run });
+        const { replaced } = started;
+        if (replaced) {
+          io.stderr(
+            `Warning: this ended session ${replaced.id} "${replaced.name}" of another client ` +
+              `(${replaced.client ?? 'unknown'}).\n`,
+          );
+        }
         out(started, String(started.id));
         return EXIT.ok;
       }

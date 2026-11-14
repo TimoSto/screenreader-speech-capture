@@ -10,6 +10,8 @@ export interface Session {
   readonly name: string;
   /** Optional label that groups sessions, for example one per test run. */
   readonly run: string | null;
+  /** Who started it (the `X-SR-Speech-Client` header), `null` if not sent. */
+  readonly client: string | null;
   readonly startedAt: Date;
   /** `null` while the session is current. */
   readonly endedAt: Date | null;
@@ -21,7 +23,7 @@ export interface Session {
 }
 
 /** A session before the speech log has given it an `id`. */
-export type NewSession = Pick<Session, 'name' | 'run' | 'startedAt'>;
+export type NewSession = Pick<Session, 'name' | 'run' | 'client' | 'startedAt'>;
 
 /** What the buffer still holds of one session. */
 export interface SessionStats {
@@ -58,7 +60,7 @@ export function summarize(session: Session, stats: SessionStats): SessionSummary
 }
 
 /** `name` (required) or `run` (optional), trimmed. `INVALID_REQUEST` if empty or too long. */
-export function sessionLabel(field: 'name' | 'run', value: string): string {
+export function sessionLabel(field: 'name' | 'run' | 'client', value: string): string {
   const text = value.trim();
   if (text === '') throw invalidField(field, 'must not be empty');
   if (text.length > MAX_SESSION_NAME_LENGTH) {

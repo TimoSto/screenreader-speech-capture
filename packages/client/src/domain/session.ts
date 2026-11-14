@@ -5,6 +5,8 @@ export interface Session {
   name: string;
   /** Optional label that groups sessions (for example one test run), `null` if not set. */
   run: string | null;
+  /** The client that started it (its `clientName`), `null` if unknown. */
+  client: string | null;
   /** ISO 8601, UTC, on the bridge's clock. */
   startedAt: string;
   /** ISO 8601, UTC. `null` while the session is current. */
@@ -16,6 +18,15 @@ export interface Session {
   lastSeq: number | null;
   /** Entries of this session still in the buffer. */
   entries: number;
+}
+
+/** A session just started, with the session of another client it replaced, if any. */
+export interface StartedSession extends Session {
+  /**
+   * The session this start ended, if another client had started it: two clients (for example
+   * two test workers) are sharing one screen reader. `null` otherwise.
+   */
+  replaced: Session | null;
 }
 
 /** A session `id`, or `'current'`: the session that is current when the request arrives. */

@@ -100,3 +100,14 @@ bridge keeps its speech in memory by design, so the repository ports only hid th
 domain. The log also keeps an index per session and drops the oldest entry in O(1), so
 `/status`, the session list and reads after a `seq` don't scan the whole buffer (up to a million
 entries).
+
+## Sessions warn instead of locking
+
+One screen reader means one current session, so two clients (two Playwright workers, or a person
+starting a session from the CLI during a run) would mix up each other's speech. The bridge
+doesn't lock a session to its client: a test run that crashes without ending its session would
+leave it locked, and every later start would need a forced takeover. Instead clients name
+themselves (`X-SR-Speech-Client`), and the bridge warns when one ends or replaces another one's
+session, and returns the replaced session from `POST /sessions`. A lease that expires could
+come later if parallel workers become a real use case.
+

@@ -78,7 +78,7 @@ describe('StatusService', () => {
   it('reports the current session and how many are listed', () => {
     const { status, log } = setup({ listener: null, connections: [] });
     const startedAt = new Date('2026-11-12T09:00:00.000Z');
-    log.startSession({ name: 'a', run: null, startedAt });
+    log.startSession({ name: 'a', run: null, client: null, startedAt });
     log.append({
       kind: 'marker',
       text: 'm',
@@ -87,12 +87,13 @@ describe('StatusService', () => {
       voice: null,
       connectionId: null,
     });
-    log.startSession({ name: 'b', run: 'r', startedAt });
+    log.startSession({ name: 'b', run: 'r', client: null, startedAt });
     expect(status.status().session).toEqual({
       current: {
         id: 2,
         name: 'b',
         run: 'r',
+        client: null,
         startedAt,
         endedAt: null,
         startSeq: 1,

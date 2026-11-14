@@ -2,7 +2,7 @@ import type { BridgeApi, SpeechPage } from '../src/application/ports/out/bridge-
 import type { Clock } from '../src/application/ports/out/clock.js';
 import type { BridgeStatus } from '../src/domain/bridge-status.js';
 import type { SpeechFeedEvent } from '../src/domain/feed-event.js';
-import type { Session, SessionList, SessionRef } from '../src/domain/session.js';
+import type { Session, SessionList, SessionRef, StartedSession } from '../src/domain/session.js';
 import type { SpeechEntry } from '../src/domain/speech-entry.js';
 import { BridgeHttpError } from '../src/domain/errors.js';
 
@@ -70,6 +70,8 @@ class FakeStream {
 export class FakeBridgeApi implements BridgeApi {
   entries: SpeechEntry[] = [];
   private seq = 0;
+  /** The client name this fake bridge sees on requests (`X-SR-Speech-Client`). */
+  clientName: string | null = null;
   /** Every session started, oldest first (the fake never forgets one). */
   readonly allSessions: Session[] = [];
   private current: Session | undefined;
@@ -129,15 +131,17 @@ export class FakeBridgeApi implements BridgeApi {
     return this.fail() ?? Promise.resolve(this.add('marker', label));
   }
 
-  startSession(request: { name: string; run?: string | undefined }): Promise<Session> {
+  startSession(request: { name: string; run?: string | undefined }): Promise<StartedSession> {
     this.calls.push(`start ${request.name}`);
     const failure = this.fail();
     if (failure) return failure;
+    const previous = this.current;
     this.endCurrent();
     const session: Session = {
       id: this.allSessions.length + 1,
       name: request.name,
       run: request.run ?? null,
+      client: this.clientName,
       startedAt: new Date(0).toISOString(),
       endedAt: null,
       startSeq: this.seq,
@@ -148,7 +152,8 @@ export class FakeBridgeApi implements BridgeApi {
     this.allSessions.push(session);
     this.current = session;
     this.emit({ type: 'session', session: { ...session } });
-    return Promise.resolve({ ...session });
+    const replaced = previous && previous.client !== session.client ? { ...previous } : null;
+    return Promise.resolve({ ...session, replaced });
   }
 
   endSession(): Promise<void> {

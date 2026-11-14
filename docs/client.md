@@ -63,6 +63,8 @@ import { SpeechCaptureClient } from 'screenreader-speech-capture-client';
 
 const sr = new SpeechCaptureClient(); // URL from SR_SPEECH_URL or the config file, see Bridge URL
 const vm = new SpeechCaptureClient({ baseUrl: 'http://my-test-vm:5151' }); // or pass it explicitly
+// `clientName` (default `<host> pid <process id>`) names this client to the bridge, which warns
+// when one client ends or replaces another one's session (http-api.md#clients).
 ```
 
 The client reads the config file once, on its first request, and only if no explicit URL or
@@ -99,7 +101,7 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 |---|---|---|
 | `getSpeech({ since?, limit?, includeMarkers?, session? })` | `SpeechEntry[]` | Recorded speech entries, oldest first. `since` defaults to the cursor, `includeMarkers` to `false`. `session` (an `id` or `'current'`) returns only that session's entries; without it, all entries. |
 | `getText({ since?, separator?, session? })` | `string` | All speech since `since` (default: the cursor), joined into one string (`separator` default `'\n'`). Handy for snapshot assertions. |
-| `startSession(name, { run? })` | `Session` | Start a [session](speech-capture.md#sessions) (the previous one ends) and move the cursor to its start. `run` groups sessions, for example of one test run. |
+| `startSession(name, { run? })` | `Session` + `replaced` | Start a [session](speech-capture.md#sessions) (the previous one ends) and move the cursor to its start. `run` groups sessions, for example of one test run. `replaced` is the session of another client it ended (`null` if none): a sign that two clients share the screen reader. The CLI prints a warning for it. |
 | `endSession()` | `void` | End the current session. Speech after this belongs to no session. |
 | `sessions()` | `{ sessions, currentId }` | The sessions still in the buffer plus the current one, newest first. |
 | `clear()` | `void` | Wipe the whole buffer (all sessions) and reset the cursor. For manual use. |

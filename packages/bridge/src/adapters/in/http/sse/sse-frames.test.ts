@@ -18,6 +18,7 @@ const session: SessionSummary = {
   id: 2,
   name: 'login',
   run: null,
+  client: null,
   startedAt: new Date('2026-01-02T03:04:05.000Z'),
   endedAt: null,
   startSeq: 0,

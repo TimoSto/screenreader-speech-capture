@@ -6,7 +6,7 @@ import {
   SpeechTimeoutError,
 } from '../../domain/errors.js';
 import type { BridgeStatus } from '../../domain/bridge-status.js';
-import type { Session, SessionList, SessionRef } from '../../domain/session.js';
+import type { SessionList, SessionRef, StartedSession } from '../../domain/session.js';
 import { isSpeech, type SpeechEntry } from '../../domain/speech-entry.js';
 import { advanceSequence, toMatcher, type SpeechMatch } from '../../domain/text-match.js';
 import type {
@@ -80,7 +80,7 @@ export class SpeechCaptureService implements SpeechCapture {
     this.#cursor = 0;
   }
 
-  async startSession(name: string, options: StartSessionOptions = {}): Promise<Session> {
+  async startSession(name: string, options: StartSessionOptions = {}): Promise<StartedSession> {
     await this.compatible();
     const session = await this.deps.api.startSession({ name, run: options.run });
     // Everything after `startSeq` belongs to the session (or a later one).

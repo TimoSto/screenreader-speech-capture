@@ -1,5 +1,5 @@
 import type { BridgeStatus } from '../../../domain/bridge-status.js';
-import type { Session, SessionList, SessionRef } from '../../../domain/session.js';
+import type { Session, SessionList, SessionRef, StartedSession } from '../../../domain/session.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import type { SpeechMatch } from '../../../domain/text-match.js';
 
@@ -106,9 +106,10 @@ export interface SpeechCapture {
   /**
    * Starts a session (docs/speech-capture.md#sessions): it becomes current and the previous one
    * ends. Moves the cursor to the session's start, so the next reads and waits only see its
-   * speech.
+   * speech. `replaced` is the session of another client it ended, if any: a sign that two
+   * clients share the screen reader.
    */
-  startSession(name: string, options?: StartSessionOptions): Promise<Session>;
+  startSession(name: string, options?: StartSessionOptions): Promise<StartedSession>;
   /** Ends the current session. Speech after this belongs to no session. */
   endSession(): Promise<void>;
   /** The sessions still in the buffer plus the current one, newest first. */

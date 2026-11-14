@@ -20,6 +20,7 @@ const session = (endedAt: Date | null): SessionSummary => ({
   id: 3,
   name: 'checkout',
   run: null,
+  client: null,
   startedAt: new Date(0),
   endedAt,
   startSeq: 0,

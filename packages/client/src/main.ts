@@ -1,4 +1,5 @@
 // Composition root: the only place that knows the concrete adapters (docs/architecture.md).
+import { hostname } from 'node:os';
 import { API_VERSION } from '@screenreader-speech-capture/shared';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { FsClientConfigStore } from './adapters/out/fs-config/fs-client-config-store.js';
@@ -20,7 +21,7 @@ import { ClientConfigService } from './application/services/client-config-servic
 import { SpeechCaptureService } from './application/services/speech-capture-service.js';
 import { URL_ENV } from './domain/bridge-url.js';
 import type { BridgeStatus } from './domain/bridge-status.js';
-import type { Session, SessionList } from './domain/session.js';
+import type { SessionList, StartedSession } from './domain/session.js';
 import type { SpeechEntry } from './domain/speech-entry.js';
 import type { SpeechMatch } from './domain/text-match.js';
 
@@ -46,6 +47,11 @@ export interface SpeechCaptureClientOptions {
   baseUrl?: string | undefined;
   /** Where `SR_SPEECH_URL` and `SR_SPEECH_CLIENT_CONFIG` are read. Default `process.env`. */
   env?: NodeJS.ProcessEnv;
+  /**
+   * Names this client to the bridge, which warns when one client ends or replaces another one's
+   * session (two clients sharing one screen reader). Default: `<host> pid <process id>`.
+   */
+  clientName?: string | undefined;
 }
 
 /**
@@ -63,6 +69,7 @@ export class SpeechCaptureClient implements SpeechCapture {
     this.#service = new SpeechCaptureService({
       api: new FetchBridgeApi({
         baseUrl: async () => (await config.get('url', { url: options.baseUrl })).value,
+        clientName: options.clientName ?? `${hostname()} pid ${process.pid}`,
       }),
       clock: new SystemClock(),
       apiVersion: API_VERSION,
@@ -81,7 +88,7 @@ export class SpeechCaptureClient implements SpeechCapture {
     return this.#service.clear();
   }
 
-  startSession(name: string, options?: StartSessionOptions): Promise<Session> {
+  startSession(name: string, options?: StartSessionOptions): Promise<StartedSession> {
     return this.#service.startSession(name, options);
   }
 

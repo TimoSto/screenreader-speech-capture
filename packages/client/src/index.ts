@@ -40,7 +40,7 @@ export {
 } from './domain/errors.js';
 export type { BridgeState, BridgeStatus, ServiceStatus } from './domain/bridge-status.js';
 export type { SpeechFeedEvent } from './domain/feed-event.js';
-export type { Session, SessionList, SessionRef } from './domain/session.js';
+export type { Session, SessionList, SessionRef, StartedSession } from './domain/session.js';
 export type { SpeechEntry } from './domain/speech-entry.js';
 export { normalizeText } from '@screenreader-speech-capture/shared';
 export type { SpeechMatch } from './domain/text-match.js';

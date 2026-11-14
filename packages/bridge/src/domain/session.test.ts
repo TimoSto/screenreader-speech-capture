@@ -5,6 +5,7 @@ const session = (endedAt: Date | null): Session => ({
   id: 1,
   name: 'a',
   run: null,
+  client: null,
   startedAt: new Date(0),
   endedAt,
   startSeq: 0,

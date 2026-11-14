@@ -1,11 +1,15 @@
 #!/usr/bin/env node
+import { hostname } from 'node:os';
 import packageJson from '../../package.json' with { type: 'json' };
 import { createClientConfig, SpeechCaptureClient } from '../main.js';
 import { runCli } from '../adapters/in/cli/run.js';
 
 process.exitCode = await runCli(process.argv.slice(2), {
   config: createClientConfig(process.env),
-  speech: (url) => new SpeechCaptureClient({ baseUrl: url, env: process.env }),
+  // One name for every CLI call on this host: `session start` and `session end` are separate
+  // processes of the same user.
+  speech: (url) =>
+    new SpeechCaptureClient({ baseUrl: url, env: process.env, clientName: `${hostname()} cli` }),
   stdout: (text) => process.stdout.write(text),
   stderr: (text) => process.stderr.write(text),
   version: packageJson.version,
