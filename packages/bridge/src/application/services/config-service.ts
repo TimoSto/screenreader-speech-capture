@@ -86,12 +86,19 @@ export class ConfigService implements ManageConfig {
       this.file = file;
     }
 
-    const changed = changedFields(previous, next);
-    // The listeners only apply settings that can't fail (docs/configuration.md#changing-settings).
-    if (changed.length > 0) {
-      for (const listener of this.listeners) await listener(next, previous);
-    }
+    // In use from here on, like the saved file: a listener that fails can't leave the bridge
+    // reporting the old settings while the file and the other listeners have the new ones.
     this.active = next;
+    const changed = changedFields(previous, next);
+    if (changed.length > 0) {
+      for (const listener of this.listeners) {
+        try {
+          await listener(next, previous);
+        } catch (error) {
+          this.deps.logger.error(`applying the change failed: ${String(error)}`);
+        }
+      }
+    }
 
     const running = configFields(previous);
     const later: { field: ConfigField; to: unknown }[] = [];

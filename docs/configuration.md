@@ -48,7 +48,9 @@ curl -X PUT $VM/api/v1/config -H 'content-type: application/json' -d '{"buffer":
   `details.field`.
 - The patch is saved to the config file, then applied to the running bridge. The file keeps its
   own settings plus the patch, never values from flags or environment variables. If the file
-  can't be written, nothing changes.
+  can't be written, nothing changes. Once it is saved, the new settings are in use (`GET`
+  shows them); if a part of the bridge fails to apply them, for example a child service that
+  doesn't stop, that is logged under `[config]` or `[bridge]` and shows in `GET /status`.
 - **Restart-only settings** (`tcp.*`, `http.host`, `http.port`, `log.file`, `log.consoleSpeech`)
   are saved but take effect on the **next start** of the bridge. The answer, like `GET`, lists
   the ones saved with a value other than the one in use in `restartRequired`

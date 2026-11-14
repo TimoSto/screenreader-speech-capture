@@ -22,7 +22,8 @@ export interface ManageConfig extends ReadConfig {
   /**
    * Validates and saves a partial configuration, then applies what can change while running,
    * one update at a time. Rejects with `INVALID_REQUEST` naming the field, or with the error of
-   * the config file; then nothing changed.
+   * the config file; then nothing changed. Once saved, the update is in use: a change listener
+   * that fails is logged, and the others still run.
    */
   update(patch: unknown): Promise<ConfigUpdate>;
   /** Called on each update that changes the configuration in use, in the order of registration. */

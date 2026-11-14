@@ -109,6 +109,29 @@ describe('ConfigService', () => {
     expect(logger.lines).toEqual([]);
   });
 
+  it('keeps the update in use and runs the other listeners when one fails', async () => {
+    const { config, store, logger } = setup();
+    const seen: number[] = [];
+    config.onChange(() => Promise.reject(new Error('stop failed')));
+    config.onChange((next) => void seen.push(next.mcp.port));
+
+    const result = await config.update({ mcp: { port: 1 } });
+
+    expect(result.config.mcp.port).toBe(1);
+    expect(config.get().mcp.port).toBe(1);
+    expect(store.saved).toEqual({ mcp: { port: 1 } });
+    expect(seen).toEqual([1]);
+    expect(logger.lines).toContain('error applying the change failed: Error: stop failed');
+  });
+
+  it('shows the new settings to listeners that read them', async () => {
+    const { config } = setup();
+    let read: number | undefined;
+    config.onChange(() => void (read = config.get().mcp.port));
+    await config.update({ mcp: { port: 1 } });
+    expect(read).toBe(1);
+  });
+
   it('runs one update at a time, each starting from the one before', async () => {
     const { config } = setup();
     const order: string[] = [];
