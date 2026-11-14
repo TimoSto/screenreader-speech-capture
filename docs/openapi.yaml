@@ -418,410 +418,789 @@ components:
           schema: { $ref: '#/components/schemas/ErrorBody' }
 
   schemas:
+    # BEGIN GENERATED from packages/shared (pnpm openapi). Do not edit by hand.
     SpeechEntry:
       type: object
-      description: One recorded speech line or a marker.
-      required: [seq, kind, text, receivedAt, source, voice, connectionId, sessionId]
       properties:
         seq:
           type: integer
           minimum: 1
-          description: |
-            Increasing sequence number. Survives clear and keeps rising across restarts: the
-            first entry of a bridge run gets the run's start time in milliseconds.
-        kind: { type: string, enum: [speech, marker] }
-        text: { type: string }
+          description: "Increasing sequence number. Survives clear and keeps rising across restarts: the first entry of a bridge run gets the run's start time in milliseconds."
+        kind:
+          enum:
+            - speech
+            - marker
+          type: string
+        text:
+          type: string
         receivedAt:
           type: string
           format: date-time
           description: When the bridge received the line (UTC).
         source:
+          enum:
+            - tcp
+            - api
           type: string
-          enum: [tcp, api]
           description: '`tcp` for speech, `api` for markers.'
         voice:
-          type: [string, 'null']
+          anyOf:
+            - type: string
+            - type: 'null'
           description: Header (`voice=<id>`) of the sending voice, `null` if not set or for markers.
         connectionId:
-          type: [integer, 'null']
+          anyOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
           description: TCP connection that delivered it, `null` for markers.
         sessionId:
-          type: [integer, 'null']
+          anyOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
           description: The session that was current, `null` outside any session. Added in API 1.3.
-      example:
-        seq: 42
-        kind: speech
-        text: Submit, button
-        receivedAt: '2026-11-07T14:03:12.345Z'
-        source: tcp
-        voice: ssc5000
-        connectionId: 3
-        sessionId: 7
-
+      required:
+        - seq
+        - kind
+        - text
+        - receivedAt
+        - source
+        - voice
+        - connectionId
+      description: One recorded speech line or a marker.
+      examples:
+        - seq: 42
+          kind: speech
+          text: Submit, button
+          receivedAt: '2026-11-07T14:03:12.345Z'
+          source: tcp
+          voice: ssc5000
+          connectionId: 3
+          sessionId: 7
     SpeechList:
       type: object
-      required: [entries, truncated, hasMore]
       properties:
         entries:
           type: array
-          items: { $ref: '#/components/schemas/SpeechEntry' }
+          items:
+            $ref: '#/components/schemas/SpeechEntry'
         truncated:
           type: boolean
           description: '`true` when entries after `since` were dropped because the buffer was full.'
         hasMore:
           type: boolean
           description: "`true` when more entries follow: ask again with the last entry's `seq` as `since`."
-
+      required:
+        - entries
+        - truncated
+        - hasMore
+      description: '`GET /speech`: a page of entries after `since`, oldest first.'
     MarkerRequest:
       type: object
-      required: [label]
       properties:
         label:
           type: string
+          maxLength: 1000
           description: Marker text. Trimmed, must not be empty, at most 1000 characters.
-          example: step 3
-
+          examples:
+            - step 3
+      required:
+        - label
     Session:
       type: object
-      description: A session (docs/speech-capture.md#sessions). Added in API 1.3.
-      required: [id, name, run, client, startedAt, endedAt, startSeq, firstSeq, lastSeq, entries]
       properties:
-        id: { type: integer, minimum: 1, description: Increasing, restarts at 1 with the bridge. }
-        name: { type: string }
-        run: { type: [string, 'null'], description: Optional label that groups sessions. }
+        id:
+          type: integer
+          minimum: 1
+          description: Increasing, restarts at 1 with the bridge.
+        name:
+          type: string
+        run:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Optional label that groups sessions.
         client:
-          type: [string, 'null']
-          description: >-
-            Who started it: the `X-SR-Speech-Client` header, `null` if it wasn't sent. Added in
-            API 1.10.
-        startedAt: { type: string, format: date-time }
-        endedAt:
-          type: [string, 'null']
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: "Who started it: the `X-SR-Speech-Client` header, `null` if it wasn't sent. Added in API 1.10."
+        startedAt:
+          type: string
           format: date-time
+        endedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
           description: '`null` while the session is current.'
         startSeq:
           type: integer
-          description: >-
-            The last `seq` given out before the session started: `since=startSeq` reads the
-            session from its start. Added in API 1.9.
+          minimum: 0
+          description: 'The last `seq` given out before the session started: `since=startSeq` reads the session from its start. Added in API 1.9.'
         firstSeq:
-          type: [integer, 'null']
+          anyOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
           description: First entry still in the buffer, `null` if none.
         lastSeq:
-          type: [integer, 'null']
+          anyOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
           description: Last entry still in the buffer, `null` if none.
-        entries: { type: integer, description: Entries of this session still in the buffer. }
-      example:
-        id: 7
-        name: form › submit button is announced
-        run: nightly-42
-        client: ci-runner pid 4242
-        startedAt: '2026-11-12T09:31:04.120Z'
-        endedAt: null
-        startSeq: 339
-        firstSeq: 340
-        lastSeq: 342
-        entries: 3
-
+        entries:
+          type: integer
+          minimum: 0
+          description: Entries of this session still in the buffer.
+      required:
+        - id
+        - name
+        - run
+        - client
+        - startedAt
+        - endedAt
+        - startSeq
+        - firstSeq
+        - lastSeq
+        - entries
+      description: A session (docs/speech-capture.md#sessions). Added in API 1.3.
+      examples:
+        - id: 7
+          name: form › submit button is announced
+          run: nightly-42
+          client: ci-runner pid 4242
+          startedAt: '2026-11-12T09:31:04.120Z'
+          endedAt: null
+          startSeq: 339
+          firstSeq: 340
+          lastSeq: 342
+          entries: 3
     StartSessionResponse:
-      description: >-
-        The new session, plus `replaced`: the session this start ended if another client had
-        started it, `null` otherwise. Added in API 1.10.
-      allOf:
-        - $ref: '#/components/schemas/Session'
-        - type: object
-          required: [replaced]
-          properties:
-            replaced:
-              oneOf:
-                - $ref: '#/components/schemas/Session'
-                - type: 'null'
-
+      type: object
+      properties:
+        id:
+          type: integer
+          minimum: 1
+          description: Increasing, restarts at 1 with the bridge.
+        name:
+          type: string
+        run:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Optional label that groups sessions.
+        client:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: "Who started it: the `X-SR-Speech-Client` header, `null` if it wasn't sent. Added in API 1.10."
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          description: '`null` while the session is current.'
+        startSeq:
+          type: integer
+          minimum: 0
+          description: 'The last `seq` given out before the session started: `since=startSeq` reads the session from its start. Added in API 1.9.'
+        firstSeq:
+          anyOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
+          description: First entry still in the buffer, `null` if none.
+        lastSeq:
+          anyOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
+          description: Last entry still in the buffer, `null` if none.
+        entries:
+          type: integer
+          minimum: 0
+          description: Entries of this session still in the buffer.
+        replaced:
+          anyOf:
+            - $ref: '#/components/schemas/Session'
+            - type: 'null'
+          description: The session this start ended if another client had started it, `null` otherwise. Added in API 1.10.
+      required:
+        - id
+        - name
+        - run
+        - client
+        - startedAt
+        - endedAt
+        - startSeq
+        - firstSeq
+        - lastSeq
+        - entries
+        - replaced
+      description: '`POST /sessions`: the new session, plus `replaced`.'
     SessionList:
       type: object
-      required: [sessions, currentId]
       properties:
         sessions:
           type: array
-          items: { $ref: '#/components/schemas/Session' }
-        currentId: { type: [integer, 'null'] }
-
+          items:
+            $ref: '#/components/schemas/Session'
+        currentId:
+          anyOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
+      required:
+        - sessions
+        - currentId
+      description: '`GET /sessions`: the current session and the ended ones with entries in the buffer, newest first.'
     StartSessionRequest:
       type: object
-      required: [name]
       properties:
         name:
           type: string
+          maxLength: 1000
           description: For example the test title. Trimmed, must not be empty, at most 1000 characters.
-          example: checkout test
+          examples:
+            - checkout test
         run:
-          type: [string, 'null']
-          description: Optional label that groups sessions, for example one per test run. Same limits as `name`.
-          example: nightly-42
-
+          anyOf:
+            - type: string
+              maxLength: 1000
+              description: Optional label that groups sessions, for example one per test run. Trimmed, must not be empty, at most 1000 characters.
+            - type: 'null'
+          examples:
+            - nightly-42
+      required:
+        - name
     Status:
       type: object
-      required: [bridge, tcp, buffer, playwright, mcp, session]
       properties:
         bridge:
           type: object
-          required: [version, apiVersion, state, startedAt]
           properties:
-            version: { type: string, description: Package version of the bridge., example: 0.3.0 }
+            version:
+              type: string
+              description: Package version of the bridge.
+              examples:
+                - 0.3.0
             apiVersion:
-              { type: string, description: '`<major>.<minor>` of this API.', example: '1.0' }
-            state: { type: string, enum: [starting, ready, stopping] }
+              type: string
+              description: '`<major>.<minor>` of this API.'
+              examples:
+                - '1.11'
+            state:
+              enum:
+                - starting
+                - ready
+                - stopping
+              type: string
             startedAt:
               type: string
               format: date-time
-              description: When this bridge run started.
+              description: When this bridge run started. Added in API 1.4.
+          required:
+            - version
+            - apiVersion
+            - state
+            - startedAt
         tcp:
           type: object
-          required: [listening, host, port, encoding, connections]
           properties:
-            listening: { type: boolean }
-            host: { type: string }
-            port: { type: integer }
-            encoding: { type: string, description: Code page used to decode the socket voice. }
+            listening:
+              type: boolean
+            host:
+              type: string
+            port:
+              type: integer
+              minimum: 0
+            encoding:
+              type: string
+              description: Code page used to decode the socket voice.
             connections:
               type: array
-              description: Open connections, oldest first.
               items:
                 type: object
-                required: [id, voice, connectedAt]
                 properties:
-                  id: { type: integer }
-                  voice: { type: [string, 'null'] }
-                  connectedAt: { type: string, format: date-time }
+                  id:
+                    type: integer
+                    minimum: 1
+                  voice:
+                    anyOf:
+                      - type: string
+                      - type: 'null'
+                  connectedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - voice
+                  - connectedAt
+              description: Open connections, oldest first.
+          required:
+            - listening
+            - host
+            - port
+            - encoding
+            - connections
         buffer:
           type: object
-          required: [size, maxEntries, firstSeq, lastSeq]
           properties:
-            size: { type: integer }
-            maxEntries: { type: integer }
-            firstSeq: { type: [integer, 'null'] }
-            lastSeq: { type: [integer, 'null'] }
+            size:
+              type: integer
+              minimum: 0
+            maxEntries:
+              type: integer
+              minimum: 1
+            firstSeq:
+              anyOf:
+                - type: integer
+                  minimum: 1
+                - type: 'null'
+            lastSeq:
+              anyOf:
+                - type: integer
+                  minimum: 1
+                - type: 'null'
+          required:
+            - size
+            - maxEntries
+            - firstSeq
+            - lastSeq
         playwright:
-          description: Added in API 1.1.
-          allOf: [{ $ref: '#/components/schemas/ServiceStatus' }]
+          $ref: '#/components/schemas/ServiceStatus'
         mcp:
-          description: Added in API 1.2.
-          allOf: [{ $ref: '#/components/schemas/ServiceStatus' }]
+          $ref: '#/components/schemas/ServiceStatus'
         session:
           type: object
-          description: Added in API 1.3.
-          required: [current, count]
           properties:
             current:
-              oneOf:
-                - { $ref: '#/components/schemas/Session' }
-                - { type: 'null' }
-            count: { type: integer, description: Number of sessions `GET /sessions` lists. }
-
+              anyOf:
+                - $ref: '#/components/schemas/Session'
+                - type: 'null'
+            count:
+              type: integer
+              minimum: 0
+              description: Number of sessions `GET /sessions` lists.
+          required:
+            - current
+            - count
+          description: Added in API 1.3.
+      required:
+        - bridge
+        - tcp
+        - buffer
+        - playwright
+        - mcp
+        - session
+      description: '`GET /status`. `playwright` since API 1.1, `mcp` since 1.2, `session` since 1.3.'
     Config:
       type: object
-      description: The bridge configuration (docs/configuration.md).
-      required: [tcp, http, playwright, mcp, buffer, log]
       properties:
         tcp:
           type: object
-          required: [host, port, encoding, maxLineBytes]
           properties:
-            host: { type: string }
-            port: { type: integer, minimum: 0, maximum: 65535 }
+            host:
+              type: string
+            port:
+              type: integer
+              minimum: 0
+              maximum: 65535
             encoding:
-              { type: string, description: TextDecoder label of the socket voice's code page. }
-            maxLineBytes: { type: integer, minimum: 1024, maximum: 16777216 }
+              type: string
+              description: TextDecoder label of the socket voice's code page.
+            maxLineBytes:
+              type: integer
+              minimum: 1024
+              maximum: 16777216
+          required:
+            - host
+            - port
+            - encoding
+            - maxLineBytes
         http:
           type: object
-          required: [host, port, allowedHosts]
           properties:
-            host: { type: string }
-            port: { type: integer, minimum: 0, maximum: 65535 }
-            allowedHosts: { $ref: '#/components/schemas/AllowedHosts' }
-        playwright: { $ref: '#/components/schemas/ServiceConfig' }
-        mcp: { $ref: '#/components/schemas/McpConfig' }
+            host:
+              type: string
+            port:
+              type: integer
+              minimum: 0
+              maximum: 65535
+            allowedHosts:
+              $ref: '#/components/schemas/AllowedHosts'
+          required:
+            - host
+            - port
+            - allowedHosts
+        playwright:
+          $ref: '#/components/schemas/ServiceConfig'
+        mcp:
+          $ref: '#/components/schemas/McpConfig'
         buffer:
           type: object
-          required: [maxEntries]
           properties:
-            maxEntries: { type: integer, minimum: 1, maximum: 1000000 }
+            maxEntries:
+              type: integer
+              minimum: 1
+              maximum: 1000000
+          required:
+            - maxEntries
         log:
           type: object
-          required: [level, file, consoleSpeech]
           properties:
-            level: { type: string, enum: [error, warn, info, debug] }
+            level:
+              enum:
+                - error
+                - warn
+                - info
+                - debug
+              type: string
             file:
-              type: [string, 'null']
+              anyOf:
+                - type: string
+                - type: 'null'
               description: Bridge log file, `null` = default path.
             consoleSpeech:
               type: boolean
               description: Also write the speech text to the console.
-
+          required:
+            - level
+            - file
+            - consoleSpeech
+      required:
+        - tcp
+        - http
+        - playwright
+        - mcp
+        - buffer
+        - log
+      description: The bridge configuration (docs/configuration.md).
     ConfigResponse:
-      description: |
-        `Config` as in use, plus the restart-only settings saved with another value, which take
-        effect on the next start. Since API 1.6.
-      allOf:
-        - { $ref: '#/components/schemas/Config' }
-        - type: object
-          required: [restartRequired]
-          properties:
-            restartRequired:
-              type: array
-              items: { type: string }
-              example: [tcp.port]
-
-    ConfigPatch:
       type: object
-      description: |
-        Any subset of `Config` (`PUT /config`). Settings left out keep their value; unknown ones
-        are rejected. Ranges as in `Config`.
-      additionalProperties: false
       properties:
         tcp:
           type: object
-          additionalProperties: false
           properties:
-            host: { type: string }
-            port: { type: integer, minimum: 0, maximum: 65535 }
-            encoding: { type: string }
-            maxLineBytes: { type: integer, minimum: 1024, maximum: 16777216 }
+            host:
+              type: string
+            port:
+              type: integer
+              minimum: 0
+              maximum: 65535
+            encoding:
+              type: string
+              description: TextDecoder label of the socket voice's code page.
+            maxLineBytes:
+              type: integer
+              minimum: 1024
+              maximum: 16777216
+          required:
+            - host
+            - port
+            - encoding
+            - maxLineBytes
         http:
           type: object
-          additionalProperties: false
           properties:
-            host: { type: string }
-            port: { type: integer, minimum: 0, maximum: 65535 }
-            allowedHosts: { $ref: '#/components/schemas/AllowedHosts' }
-        playwright: { $ref: '#/components/schemas/ServiceConfigPatch' }
-        mcp: { $ref: '#/components/schemas/McpConfigPatch' }
+            host:
+              type: string
+            port:
+              type: integer
+              minimum: 0
+              maximum: 65535
+            allowedHosts:
+              $ref: '#/components/schemas/AllowedHosts'
+          required:
+            - host
+            - port
+            - allowedHosts
+        playwright:
+          $ref: '#/components/schemas/ServiceConfig'
+        mcp:
+          $ref: '#/components/schemas/McpConfig'
         buffer:
           type: object
-          additionalProperties: false
           properties:
-            maxEntries: { type: integer, minimum: 1, maximum: 1000000 }
+            maxEntries:
+              type: integer
+              minimum: 1
+              maximum: 1000000
+          required:
+            - maxEntries
         log:
           type: object
-          additionalProperties: false
           properties:
-            level: { type: string, enum: [error, warn, info, debug] }
-            file: { type: [string, 'null'] }
-            consoleSpeech: { type: boolean }
-
+            level:
+              enum:
+                - error
+                - warn
+                - info
+                - debug
+              type: string
+            file:
+              anyOf:
+                - type: string
+                - type: 'null'
+              description: Bridge log file, `null` = default path.
+            consoleSpeech:
+              type: boolean
+              description: Also write the speech text to the console.
+          required:
+            - level
+            - file
+            - consoleSpeech
+        restartRequired:
+          type: array
+          items:
+            type: string
+          examples:
+            - - tcp.port
+      required:
+        - tcp
+        - http
+        - playwright
+        - mcp
+        - buffer
+        - log
+        - restartRequired
+      description: '`Config` as in use, plus the restart-only settings saved with another value, which take effect on the next start. Since API 1.6.'
+    ConfigPatch:
+      type: object
+      properties:
+        tcp:
+          type: object
+          properties:
+            host:
+              type: string
+            port:
+              type: integer
+              minimum: 0
+              maximum: 65535
+            encoding:
+              type: string
+              description: TextDecoder label of the socket voice's code page.
+            maxLineBytes:
+              type: integer
+              minimum: 1024
+              maximum: 16777216
+          required: []
+          additionalProperties: false
+        http:
+          type: object
+          properties:
+            host:
+              type: string
+            port:
+              type: integer
+              minimum: 0
+              maximum: 65535
+            allowedHosts:
+              $ref: '#/components/schemas/AllowedHosts'
+          required: []
+          additionalProperties: false
+        playwright:
+          $ref: '#/components/schemas/ServiceConfigPatch'
+        mcp:
+          $ref: '#/components/schemas/McpConfigPatch'
+        buffer:
+          type: object
+          properties:
+            maxEntries:
+              type: integer
+              minimum: 1
+              maximum: 1000000
+          required: []
+          additionalProperties: false
+        log:
+          type: object
+          properties:
+            level:
+              enum:
+                - error
+                - warn
+                - info
+                - debug
+              type: string
+            file:
+              anyOf:
+                - type: string
+                - type: 'null'
+              description: Bridge log file, `null` = default path.
+            consoleSpeech:
+              type: boolean
+              description: Also write the speech text to the console.
+          required: []
+          additionalProperties: false
+      required: []
+      additionalProperties: false
+      description: Any subset of `Config` (`PUT /config`). Settings left out keep their value; unknown ones are rejected. Ranges as in `Config`.
     ServiceStatus:
       type: object
-      description: A child service (docs/operations.md#child-service-crashes).
-      required: [state, version, port, restarts, exitCode]
       properties:
         state:
+          enum:
+            - stopped
+            - starting
+            - running
+            - crashed
+            - failed
           type: string
-          enum: [stopped, starting, running, crashed, failed]
-          description: |
-            `starting` includes the install. `crashed`: it exited and restarts after a delay.
-            `failed`: 5 crashes in a row; restart the bridge (or change the service's settings).
+          description: "`starting` includes the install. `crashed`: it exited and restarts after a delay. `failed`: 5 crashes in a row; restart the bridge (or change the service's settings)."
         version:
-          {
-            type: string,
-            description: The version that runs (configured or bundled).,
-            example: 1.65.0,
-          }
-        port: { type: integer }
+          type: string
+          description: The version that runs (configured or bundled).
+          examples:
+            - 1.65.0
+        port:
+          type: integer
+          minimum: 0
         restarts:
-          {
-            type: integer,
-            description: Restarts after crashes since the service was last started (bridge start or config change).,
-          }
+          type: integer
+          minimum: 0
+          description: Restarts after crashes since the service was last started (bridge start or config change).
         exitCode:
-          type: [integer, 'null']
+          anyOf:
+            - type: integer
+            - type: 'null'
           description: Exit code of the last unexpected exit. `null` if none, or killed by a signal.
-
+      required:
+        - state
+        - version
+        - port
+        - restarts
+        - exitCode
+      description: A child service (docs/operations.md#child-service-crashes).
     ServiceConfigPatch:
       type: object
-      additionalProperties: false
       properties:
-        enabled: { type: boolean }
-        port: { type: integer, minimum: 0, maximum: 65535 }
+        enabled:
+          type: boolean
+        port:
+          type: integer
+          minimum: 0
+          maximum: 65535
         version:
-          type: [string, 'null']
-          description: |
-            `null` = bundled. Otherwise an exact version (`1.65.0`, pattern
-            `^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$`).
-
+          anyOf:
+            - type: string
+              pattern: ^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$
+            - type: 'null'
+          description: '`null` = bundled version. Otherwise an exact version like `1.65.0`.'
+      required: []
+      additionalProperties: false
     ServiceConfig:
       type: object
-      required: [enabled, port, version]
       properties:
-        enabled: { type: boolean }
-        port: { type: integer, minimum: 0, maximum: 65535 }
+        enabled:
+          type: boolean
+        port:
+          type: integer
+          minimum: 0
+          maximum: 65535
         version:
-          type: [string, 'null']
+          anyOf:
+            - type: string
+              pattern: ^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$
+            - type: 'null'
           description: '`null` = bundled version. Otherwise an exact version like `1.65.0`.'
-
+      required:
+        - enabled
+        - port
+        - version
     McpConfigPatch:
       type: object
-      additionalProperties: false
       properties:
-        enabled: { type: boolean }
-        port: { type: integer, minimum: 0, maximum: 65535 }
-
+        enabled:
+          type: boolean
+        port:
+          type: integer
+          minimum: 0
+          maximum: 65535
+      required: []
+      additionalProperties: false
     McpConfig:
       type: object
-      description: No `version`, the bridge runs its bundled `@playwright/mcp`.
-      required: [enabled, port]
       properties:
-        enabled: { type: boolean }
-        port: { type: integer, minimum: 0, maximum: 65535 }
-
+        enabled:
+          type: boolean
+        port:
+          type: integer
+          minimum: 0
+          maximum: 65535
+      required:
+        - enabled
+        - port
+      description: 'No `version`: the bridge runs its bundled `@playwright/mcp`.'
     AllowedHosts:
       type: array
-      description: |
-        Host names the API answers to besides IP addresses, `localhost` and the machine's name.
-        Without port or scheme. `["*"]` accepts any name. Added in API 1.5.
-      items: { type: string, pattern: '^(\*|[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?)$' }
-
+      items:
+        type: string
+        pattern: ^(\*|[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?)$
+      description: Host names the API answers to besides IP addresses, `localhost` and the machine's name. Without port or scheme. `["*"]` accepts any name. Added in API 1.5.
     ErrorCode:
+      enum:
+        - INVALID_REQUEST
+        - NOT_FOUND
+        - FORBIDDEN
+        - SERVICE_UNAVAILABLE
+        - INTERNAL
       type: string
       description: Stable, machine-readable. New codes may be added in minor versions.
-      enum: [INVALID_REQUEST, NOT_FOUND, FORBIDDEN, SERVICE_UNAVAILABLE, INTERNAL]
-
     ErrorBody:
       type: object
-      description: |
-        Body of every error response. HTTP status per code: `INVALID_REQUEST` 400, `FORBIDDEN`
-        403, `NOT_FOUND` 404 (also for unknown endpoints), `SERVICE_UNAVAILABLE` 503,
-        `INTERNAL` 500.
-      required: [error]
       properties:
         error:
           type: object
-          required: [code, message]
           properties:
-            code: { $ref: '#/components/schemas/ErrorCode' }
-            message: { type: string }
+            code:
+              $ref: '#/components/schemas/ErrorCode'
+            message:
+              type: string
             details:
               type: object
-              additionalProperties: true
-
+              propertyNames:
+                type: string
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+      description: 'Body of every error response. HTTP status per code: `INVALID_REQUEST` 400, `FORBIDDEN` 403, `NOT_FOUND` 404 (also for unknown endpoints), `SERVICE_UNAVAILABLE` 503, `INTERNAL` 500.'
     WaitResult:
-      description: The answer of `GET /speech/wait`. `matched` tells a match from a timeout.
       oneOf:
         - type: object
-          required: [matched, entry]
           properties:
-            matched: { const: true }
-            entry: { $ref: '#/components/schemas/SpeechEntry' }
+            matched:
+              const: true
+            entry:
+              $ref: '#/components/schemas/SpeechEntry'
+          required:
+            - matched
+            - entry
         - type: object
-          required: [matched, entries, omitted]
           properties:
-            matched: { const: false }
+            matched:
+              const: false
             entries:
               type: array
-              description: The last 1000 entries seen after `since`, oldest first.
+              items:
+                $ref: '#/components/schemas/SpeechEntry'
               maxItems: 1000
-              items: { $ref: '#/components/schemas/SpeechEntry' }
+              description: The last 1000 entries seen after `since`, oldest first.
             omitted:
               type: integer
               minimum: 0
-              description: >-
-                How many entries seen before those were left out. Added in API 1.11.
+              description: How many entries seen before those were left out. Added in API 1.11.
+          required:
+            - matched
+            - entries
+            - omitted
+      description: The answer of `GET /speech/wait`. `matched` tells a match from a timeout.
+    # END GENERATED

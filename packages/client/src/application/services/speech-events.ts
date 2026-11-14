@@ -2,6 +2,7 @@ import {
   BridgeHttpError,
   ClientConfigError,
   IncompatibleBridgeError,
+  INVALID_RESPONSE,
 } from '../../domain/errors.js';
 import type { SpeechFeedEvent } from '../../domain/feed-event.js';
 import type { BridgeApi } from '../ports/out/bridge-api.js';
@@ -100,6 +101,7 @@ function isFatal(error: unknown): boolean {
   return (
     error instanceof IncompatibleBridgeError ||
     error instanceof ClientConfigError ||
-    (error instanceof BridgeHttpError && error.status >= 400 && error.status < 500)
+    (error instanceof BridgeHttpError &&
+      ((error.status >= 400 && error.status < 500) || error.code === INVALID_RESPONSE))
   );
 }

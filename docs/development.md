@@ -7,6 +7,7 @@ pnpm install
 pnpm dev          # bridge (watch); with the UI (M5) also the SvelteKit dev server
 pnpm test         # unit + integration tests
 pnpm build        # compiles the bridge and the client (and, from M5, the UI into the bridge)
+pnpm openapi      # regenerates the schemas in docs/openapi.yaml from packages/shared
 ```
 
 You don't need Windows or a screen reader for most of the work. A fake speech sender stands in for the

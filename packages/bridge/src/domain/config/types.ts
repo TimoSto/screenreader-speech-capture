@@ -1,5 +1,5 @@
-export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
-export const LOG_LEVELS: readonly LogLevel[] = ['error', 'warn', 'info', 'debug'];
+export { LOG_LEVELS, type LogLevel } from '@screenreader-speech-capture/shared';
+import type { LogLevel } from '@screenreader-speech-capture/shared';
 
 /** The bridge configuration. Documented in docs/configuration.md. */
 export interface Config {

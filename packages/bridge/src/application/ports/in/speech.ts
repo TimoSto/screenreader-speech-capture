@@ -1,10 +1,11 @@
+import { API_LIMITS } from '@screenreader-speech-capture/shared';
 import type { SessionFilter } from '../../../domain/session.js';
 import type { SpeechPage } from '../../../domain/speech-buffer.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import type { SpeechEvent } from '../../../domain/speech-event.js';
 
 /** Page size of `list`: the default and the most a caller may ask for. */
-export const LIST_LIMIT = { default: 1000, max: 10_000 } as const;
+export const LIST_LIMIT = API_LIMITS.list;
 
 export interface ListOptions {
   /** Only entries with `seq > since`. Default `0`. */

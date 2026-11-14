@@ -1,3 +1,4 @@
+import { API_LIMITS } from '@screenreader-speech-capture/shared';
 import { invalidField } from './errors.js';
 
 /**
@@ -48,7 +49,7 @@ export interface SessionSummary extends Session {
  */
 export type SessionFilter = number | 'current' | 'none';
 
-export const MAX_SESSION_NAME_LENGTH = 1000;
+export const MAX_SESSION_NAME_LENGTH = API_LIMITS.sessionLabelLength;
 
 export function summarize(session: Session, stats: SessionStats): SessionSummary {
   return {

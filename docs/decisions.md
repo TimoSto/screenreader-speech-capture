@@ -142,3 +142,23 @@ The paths are fixed, not secret. The loopback ports stay reachable from inside t
 in the VM's browser could still open a WebSocket to `127.0.0.1:3000` directly. A random path
 would hide that port only as long as nothing reveals it; the token is the real answer, and until
 then the bridge only claims to protect what goes through it.
+
+## The API contract is valibot schemas
+
+The DTOs in `packages/shared` are [valibot](https://valibot.dev) schemas, and their TS types are
+inferred from them. Before, the contract lived in three hand-synced places: the TS types, the
+schemas in `docs/openapi.yaml` and the prose in `docs/http-api.md`. Nothing checked them, and they
+drifted (a `seq` comment from API 1.6, limits copied into the client).
+
+Now one definition gives:
+
+- the types bridge and client compile against;
+- `components.schemas` of `docs/openapi.yaml`, generated with `pnpm openapi` and checked by a test;
+- the client's check of every answer (`checkDto`). A body that doesn't match fails at the boundary
+  with the field that is wrong (`INVALID_RESPONSE`), not somewhere inside the client. Unknown
+  fields pass and are dropped, because minor versions may add them.
+
+valibot because it is small and tree-shakes: it is bundled into bridge and client with `shared`,
+so users install nothing extra. The bridge keeps its own request checks (`request.ts`, the config
+checks): they give the field-specific `INVALID_REQUEST` messages the API documents. They use the
+same limits and patterns from `shared`.

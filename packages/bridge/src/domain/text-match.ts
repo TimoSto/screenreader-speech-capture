@@ -1,4 +1,4 @@
-import { createTextTest } from '@screenreader-speech-capture/shared';
+import { API_LIMITS, createTextTest } from '@screenreader-speech-capture/shared';
 import { AppError, invalidField } from './errors.js';
 import type { SpeechEntry } from './speech-entry.js';
 
@@ -14,7 +14,7 @@ export interface TextMatchOptions {
 export type SpeechMatcher = (entry: SpeechEntry) => boolean;
 
 /** Longest `regex` a wait accepts. */
-export const MAX_REGEX_LENGTH = 500;
+export const MAX_REGEX_LENGTH = API_LIMITS.wait.regexLength;
 
 /**
  * Builds a matcher for `wait`. Exactly one of `contains` and `regex` is required.

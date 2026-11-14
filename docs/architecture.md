@@ -222,8 +222,9 @@ for hashed assets, correct content types and path-traversal safety. The build co
 `packages/bridge/dist/ui`, resolved relative to `import.meta.url` at runtime and listed in the
 package's `files`.
 
-`packages/shared` holds only the **API contract** (DTOs). Each hexagon owns its own domain model and
-maps to and from the DTOs in its HTTP adapter. The one piece of behaviour in it is the `normalize`
+`packages/shared` holds only the **API contract**: the DTOs as valibot schemas, the protocol limits
+and a check function ([decisions](decisions.md#the-api-contract-is-valibot-schemas)). Each hexagon
+owns its own domain model and maps to and from the DTOs in its HTTP adapter. The one piece of behaviour in it is the `normalize`
 text rule (`text-match.ts`): it is part of the contract, so the bridge's `GET /speech/wait` and the
 client's waits use the same copy.
 

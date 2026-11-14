@@ -15,6 +15,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r run typecheck",
+    "openapi": "tsx packages/shared/src/openapi/write.ts && prettier --write docs/openapi.yaml",
     "fake-speech": "tsx tools/fake-speech/src/fake-speech.ts",
     "release:check-title": "tsx tools/release/src/bin/check-pr-title.ts",
     "release:determine-version": "tsx tools/release/src/bin/determine-version.ts"

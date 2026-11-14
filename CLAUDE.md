@@ -82,14 +82,21 @@ Relative imports use `.js` extensions (ESM), and type-only imports must use `imp
 
 ### Shared contract
 
-`packages/shared` holds only the HTTP API DTOs (exported from `src/index.ts`, consumed as TS
-source), plus one contract rule: `text-match.ts` (`normalizeText`, `createTextTest`), used by both
+`packages/shared` holds only the HTTP API contract (exported from `src/index.ts`, consumed as TS
+source): the DTOs as **valibot schemas** (`XSchema`, with `XDto = InferOutput<…>`), the protocol
+limits and patterns (`limits.ts`: `API_LIMITS`, `CONFIG_LIMITS`), and `checkDto` (`validate.ts`),
+which the client uses to check every answer. Plus one contract rule: `text-match.ts` (`normalizeText`, `createTextTest`), used by both
 the bridge's wait and the client's waits. A second, Node-only entry
 (`@screenreader-speech-capture/shared/platform-paths`, kept out of `index.ts` so the UI can import
 the DTOs) holds `appDir`, the per-user config/state/cache folders, so the bridge's `config.json` and
 the client's `client.json` agree. It is private and bundled into published packages by tsdown — never published on its own.
 Each hexagon owns its own domain model and maps to/from DTOs in its HTTP adapter
-(`adapters/in/http/dto/`, one file per resource). The OpenAPI spec lives at `docs/openapi.yaml`.
+(`adapters/in/http/dto/`, one file per resource; `dto/contract.test.ts` checks their output
+against the schemas). The OpenAPI spec lives at `docs/openapi.yaml`: its `components.schemas` are
+**generated** from the schemas (`pnpm openapi`, list in `shared/src/schemas.ts`), the rest is
+hand-written. `shared/src/openapi/openapi.test.ts` fails when the file drifts from the schemas
+or from `API_VERSION`. valibot is bundled into bridge and client with `shared` (`deps.onlyBundle`
+in each `tsdown.config.ts`).
 
 ### Config
 
@@ -115,7 +122,8 @@ except the restart-only settings (`RESTART_FIELDS` in
 
 Each fact has one home in `docs/`; other docs link to it in one line. The README only introduces the
 project and links into `docs/`. Update `docs/ROADMAP.md` checkboxes when a milestone item lands, and
-keep `docs/http-api.md` / `docs/openapi.yaml` in sync with HTTP changes.
+keep `docs/http-api.md` / `docs/openapi.yaml` in sync with HTTP changes (change a schema in
+`packages/shared`, then run `pnpm openapi`; paths and prose in the YAML are edited by hand).
 
 Docs may describe features that don't exist yet. Mark them so a reader who lands on a page can tell:
 a page that is entirely design gets a `> **Planned (Mx), not implemented yet.**` note under its

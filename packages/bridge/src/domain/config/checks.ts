@@ -1,3 +1,4 @@
+import { CONFIG_LIMITS, HOST_NAME_PATTERN } from '@screenreader-speech-capture/shared';
 import { isExactVersion } from '../version.js';
 
 /** Checks one value and returns an error message, or `undefined` if it is valid. */
@@ -10,7 +11,7 @@ export const integer =
       ? undefined
       : `must be an integer from ${min} to ${max}`;
 
-export const port = integer(0, 65535);
+export const port = integer(CONFIG_LIMITS.port.min, CONFIG_LIMITS.port.max);
 
 export const boolean: Check = (value) =>
   typeof value === 'boolean' ? undefined : 'must be true or false';
@@ -29,9 +30,7 @@ export const nullableVersion: Check = (value) =>
 /** Host names without port or scheme, or `*`. */
 export const hostList: Check = (value) =>
   Array.isArray(value) &&
-  value.every(
-    (item) => typeof item === 'string' && /^(\*|[a-z0-9]([a-z0-9.-]*[a-z0-9])?)$/i.test(item),
-  )
+  value.every((item) => typeof item === 'string' && HOST_NAME_PATTERN.test(item))
     ? undefined
     : 'must be a list of host names (without port or scheme), or ["*"]';
 

@@ -1,21 +1,32 @@
 import {
+  AnyErrorBodySchema,
   API_PREFIX,
   API_VERSION,
+  ApiVersionSchema,
+  checkDto,
   CLIENT_HEADER,
-  type ErrorBodyDto,
+  SessionListSchema,
+  SessionSchema,
+  SpeechEntrySchema,
+  SpeechListSchema,
+  StartSessionResponseSchema,
+  StatusSchema,
+  type DtoOf,
+  type DtoSchema,
   type MarkerRequestDto,
   type ServiceStatusDto,
   type SessionDto,
-  type SessionListDto,
   type SpeechEntryDto,
   type StartSessionRequestDto,
-  type StartSessionResponseDto,
-  type SpeechListDto,
   type StatusDto,
 } from '@screenreader-speech-capture/shared';
 import type { BridgeApi, SpeechPage } from '../../../application/ports/out/bridge-api.js';
 import { checkApiVersion } from '../../../domain/api-version.js';
-import { BridgeHttpError, BridgeUnreachableError } from '../../../domain/errors.js';
+import {
+  BridgeHttpError,
+  BridgeUnreachableError,
+  INVALID_RESPONSE,
+} from '../../../domain/errors.js';
 import type { BridgeStatus, ServiceStatus } from '../../../domain/bridge-status.js';
 import type { SpeechFeedEvent } from '../../../domain/feed-event.js';
 import type { Session, SessionList, SessionRef, StartedSession } from '../../../domain/session.js';
@@ -53,10 +64,12 @@ export class FetchBridgeApi implements BridgeApi {
   constructor(private readonly options: FetchBridgeApiOptions) {}
 
   async status(): Promise<BridgeStatus> {
-    const dto = await this.json<StatusDto>('GET', '/status');
-    // Checked before mapping: another major version may answer in another shape.
-    checkApiVersion(dto.bridge.apiVersion, API_VERSION);
-    return toStatus(dto);
+    const response = await this.request('GET', '/status');
+    const body: unknown = await response.json();
+    // Checked before the rest: another major version may answer in another shape.
+    const version = checkDto(ApiVersionSchema, body);
+    if (version.ok) checkApiVersion(version.value.bridge.apiVersion, API_VERSION);
+    return toStatus(parseBody(StatusSchema, body, response.status, 'GET /status'));
   }
 
   async listSpeech(query: {
@@ -67,7 +80,7 @@ export class FetchBridgeApi implements BridgeApi {
     const params = new URLSearchParams({ since: String(query.since) });
     if (query.limit !== undefined) params.set('limit', String(query.limit));
     if (query.session !== undefined) params.set('session', String(query.session));
-    const page = await this.json<SpeechListDto>('GET', `/speech?${params.toString()}`);
+    const page = await this.json(SpeechListSchema, 'GET', `/speech?${params.toString()}`);
     return {
       entries: page.entries.map(toEntry),
       truncated: page.truncated,
@@ -81,7 +94,7 @@ export class FetchBridgeApi implements BridgeApi {
 
   async mark(label: string): Promise<SpeechEntry> {
     const body: MarkerRequestDto = { label };
-    return toEntry(await this.json<SpeechEntryDto>('POST', '/markers', { body }));
+    return toEntry(await this.json(SpeechEntrySchema, 'POST', '/markers', { body }));
   }
 
   async startSession(request: { name: string; run?: string | undefined }): Promise<StartedSession> {
@@ -89,7 +102,7 @@ export class FetchBridgeApi implements BridgeApi {
       name: request.name,
       ...(request.run === undefined ? {} : { run: request.run }),
     };
-    const started = await this.json<StartSessionResponseDto>('POST', '/sessions', { body });
+    const started = await this.json(StartSessionResponseSchema, 'POST', '/sessions', { body });
     return { ...toSession(started), replaced: started.replaced && toSession(started.replaced) };
   }
 
@@ -98,7 +111,7 @@ export class FetchBridgeApi implements BridgeApi {
   }
 
   async listSessions(): Promise<SessionList> {
-    const list = await this.json<SessionListDto>('GET', '/sessions');
+    const list = await this.json(SessionListSchema, 'GET', '/sessions');
     return { sessions: list.sessions.map(toSession), currentId: list.currentId };
   }
 
@@ -153,8 +166,16 @@ export class FetchBridgeApi implements BridgeApi {
     }
   }
 
-  private async json<T>(method: string, path: string, options?: RequestOptions): Promise<T> {
-    return (await (await this.request(method, path, options)).json()) as T;
+  /** The answer's JSON body, checked against `schema` (`INVALID_RESPONSE` if it doesn't match). */
+  private async json<S extends DtoSchema>(
+    schema: S,
+    method: string,
+    path: string,
+    options?: RequestOptions,
+  ): Promise<DtoOf<S>> {
+    const response = await this.request(method, path, options);
+    const body: unknown = await response.json();
+    return parseBody(schema, body, response.status, `${method} ${path.split('?')[0]}`);
   }
 
   private async request(
@@ -194,23 +215,43 @@ export class FetchBridgeApi implements BridgeApi {
   }
 }
 
+/**
+ * `body` checked against the contract. A body that doesn't match fails here, at the boundary,
+ * with what was wrong, instead of somewhere inside the client.
+ */
+function parseBody<S extends DtoSchema>(
+  schema: S,
+  body: unknown,
+  status: number,
+  what: string,
+): DtoOf<S> {
+  const checked = checkDto(schema, body);
+  if (checked.ok) return checked.value;
+  throw new BridgeHttpError(
+    status,
+    INVALID_RESPONSE,
+    `The bridge answered ${what} with an unexpected body: ${checked.field}: ${checked.message}`,
+  );
+}
+
 async function toHttpError(response: Response): Promise<BridgeHttpError> {
-  try {
-    const { error } = (await response.json()) as ErrorBodyDto;
-    return new BridgeHttpError(response.status, error.code, error.message, error.details);
-  } catch {
+  const body: unknown = await response.json().catch(() => undefined);
+  const parsed = checkDto(AnyErrorBodySchema, body);
+  if (!parsed.ok) {
     // Not the bridge's error format, for example a proxy in between.
     return new BridgeHttpError(response.status, 'HTTP_ERROR', response.statusText);
   }
+  const { error } = parsed.value;
+  return new BridgeHttpError(response.status, error.code, error.message, error.details);
 }
 
 /** The feed event for one SSE message, `undefined` for events this client doesn't know. */
 function toFeedEvent(event: string, data: string): SpeechFeedEvent | undefined {
   switch (event) {
     case 'entry':
-      return { type: 'entry', entry: toEntry(JSON.parse(data) as SpeechEntryDto) };
+      return { type: 'entry', entry: toEntry(parseEvent(SpeechEntrySchema, data, event)) };
     case 'session':
-      return { type: 'session', session: toSession(JSON.parse(data) as SessionDto) };
+      return { type: 'session', session: toSession(parseEvent(SessionSchema, data, event)) };
     case 'clear':
     case 'truncated':
       return { type: event };
@@ -218,6 +259,17 @@ function toFeedEvent(event: string, data: string): SpeechFeedEvent | undefined {
       // New event types may come in minor API versions.
       return undefined;
   }
+}
+
+/** The data of an SSE event, checked against the contract like a response body. */
+function parseEvent<S extends DtoSchema>(schema: S, data: string, event: string) {
+  let body: unknown;
+  try {
+    body = JSON.parse(data);
+  } catch {
+    body = data;
+  }
+  return parseBody(schema, body, 200, `the live feed's ${event} event`);
 }
 
 const toEntry = (dto: SpeechEntryDto): SpeechEntry => ({
