@@ -6,7 +6,8 @@ import tseslint from 'typescript-eslint';
 
 /** Imports the inner hexagon layers must not use (see docs/architecture.md, dependency rule). */
 const nodeBuiltins = {
-  group: ['node:*'],
+  // `platform-paths` is shared's Node-only entry (it reads the environment and the OS).
+  group: ['node:*', '@screenreader-speech-capture/shared/platform-paths'],
   message: 'The domain and application layers do no I/O. Put this in an adapter.',
 };
 const adapters = {
@@ -24,7 +25,8 @@ const services = {
 };
 const compositionRoot = {
   group: ['**/main.js', '**/composition/**'],
-  message: 'Adapters must not import the composition root. Entry points live in src/bin/.',
+  message:
+    'Only the entry points in src/bin/ import the composition root; it wires the other layers, not the other way round.',
 };
 // Relative imports between adapters look like `../../out/...`, so match them with a regex.
 const outAdapters = {
@@ -34,6 +36,42 @@ const outAdapters = {
 const inAdapters = {
   regex: '(^|/)(\\.\\./in|adapters/in)/',
   message: 'Driven adapters must not import driving adapters. Wire them in the composition root.',
+};
+
+/**
+ * Ambient I/O and time the inner layers must not reach for: they get them through ports (the
+ * `Clock` port for time and timers), so tests can replace them.
+ */
+const innerLayerGlobals = {
+  'no-restricted-globals': [
+    'error',
+    ...[
+      'setTimeout',
+      'setInterval',
+      'setImmediate',
+      'clearTimeout',
+      'clearInterval',
+      'clearImmediate',
+    ].map((name) => ({
+      name,
+      message: 'Use the Clock port (sleep) instead of the timer globals.',
+    })),
+    ...['process', 'fetch', 'performance'].map((name) => ({
+      name,
+      message: 'The domain and application layers do no I/O. Put this behind a port.',
+    })),
+  ],
+  'no-restricted-properties': [
+    'error',
+    { object: 'Date', property: 'now', message: 'Use the Clock port (now) for the current time.' },
+  ],
+  'no-restricted-syntax': [
+    'error',
+    {
+      selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+      message: 'Use the Clock port (now) for the current time.',
+    },
+  ],
 };
 
 /** Both hexagons (bridge and client) follow the same layout and rules. */
@@ -63,7 +101,11 @@ export default tseslint.config(
     // Tests may wire real (in-memory) adapters; the rule is about production code.
     ignores: ['**/*.test.ts'],
     rules: {
-      'no-restricted-imports': ['error', { patterns: [nodeBuiltins, adapters, application] }],
+      'no-restricted-imports': [
+        'error',
+        { patterns: [nodeBuiltins, adapters, application, compositionRoot] },
+      ],
+      ...innerLayerGlobals,
     },
   },
   {
@@ -71,7 +113,8 @@ export default tseslint.config(
     // Tests may wire real (in-memory) adapters; the rule is about production code.
     ignores: ['**/*.test.ts'],
     rules: {
-      'no-restricted-imports': ['error', { patterns: [nodeBuiltins, adapters] }],
+      'no-restricted-imports': ['error', { patterns: [nodeBuiltins, adapters, compositionRoot] }],
+      ...innerLayerGlobals,
     },
   },
   {

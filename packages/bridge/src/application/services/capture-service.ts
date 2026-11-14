@@ -4,7 +4,7 @@ import type { Clock } from '../ports/out/clock.js';
 
 export interface CaptureServiceDeps {
   state: CaptureState;
-  clock: Clock;
+  clock: Pick<Clock, 'now'>;
 }
 
 /** Keeps the capture state the status reports, from what the capture adapters tell it. */

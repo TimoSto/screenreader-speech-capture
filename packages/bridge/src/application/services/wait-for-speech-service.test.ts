@@ -12,7 +12,7 @@ function setup(maxEntries = 100, pace?: () => FollowOptions['pace']) {
   const log = new SpeechLog(maxEntries);
   const events = new InProcessEventBus();
   const speech = new SpeechService({ log, events, clock: new SystemClock() });
-  const waits = new WaitForSpeechService({ log, events, pace });
+  const waits = new WaitForSpeechService({ log, events, clock: new SystemClock(), pace });
   const say = (text: string) => speech.record({ text, voice: null, connectionId: 1 });
   const startSession = (name: string) => {
     log.startSession({ name, run: null, client: null, startedAt: new Date() });

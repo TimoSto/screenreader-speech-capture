@@ -10,6 +10,7 @@ import {
   type WaitOptions,
   type WaitResult,
 } from '../ports/in/wait-for-speech.js';
+import type { Clock } from '../ports/out/clock.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 import { followLog, type FollowOptions } from '../shared/follow-log.js';
 import { intOption } from '../shared/int-option.js';
@@ -17,6 +18,8 @@ import { intOption } from '../shared/int-option.js';
 export interface WaitForSpeechDeps {
   log: Pick<SpeechLog, 'page' | 'resolveFilter'>;
   events: SpeechEventBus;
+  /** Times the wait out. */
+  clock: Pick<Clock, 'sleep'>;
   /**
    * A new `pace` for each wait's look through the buffer (see `FollowOptions`), so a long buffer
    * lets speech capture and other requests run in between. Without it, the look is one
@@ -90,7 +93,7 @@ export class WaitForSpeechService implements WaitForSpeech, Shutdown {
       const finish = () => {
         done = true;
         stop?.();
-        clearTimeout(timer);
+        timer.abort();
         signal?.removeEventListener('abort', onAbort);
         this.pending.delete(fail);
       };
@@ -99,10 +102,17 @@ export class WaitForSpeechService implements WaitForSpeech, Shutdown {
         reject(error);
       };
       const onAbort = () => fail(abortReason(signal!));
-      const timer = setTimeout(() => {
-        finish();
-        resolve({ status: 'timeout', ...seen.result() });
-      }, timeoutMs);
+      const timer = new AbortController();
+      this.deps.clock.sleep(timeoutMs, timer.signal).then(
+        () => {
+          if (done) return;
+          finish();
+          resolve({ status: 'timeout', ...seen.result() });
+        },
+        () => {
+          // Ended before the time ran out (a match, an abort, the shutdown).
+        },
+      );
       signal?.addEventListener('abort', onAbort, { once: true });
       this.pending.add(fail);
 

@@ -113,7 +113,9 @@ Planned, not in the code yet: `KeyChord`, `SendNativeInput`, `InputInjector` and
 imports only the domain and its own ports, and the adapters implement or call the ports. Only the
 composition root (`main.ts` + `composition/` in the bridge, `main.ts` in the client) knows the
 concrete adapters. Adapters don't import the concrete services, the composition root or
-each other (`in` ↔ `out`); the executables in `bin/` sit outside the adapters and call `main.ts`. ESLint (`no-restricted-imports` in `eslint.config.js`) enforces all of this.
+each other (`in` ↔ `out`); the executables in `bin/` sit outside the adapters and call `main.ts`. ESLint (`no-restricted-imports` in `eslint.config.js`) enforces all of this. In the domain and the
+application it also forbids the timer globals, `Date.now()` / `new Date()`, `process`, `fetch`
+and `performance`: time and timers come through the `Clock` port, so tests can replace them.
 
 **Extending:**
 

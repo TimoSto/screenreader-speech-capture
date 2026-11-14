@@ -10,6 +10,7 @@ import {
 } from '../src/domain/config/index.js';
 import type { TestSeams } from '../src/composition/test-seams.js';
 import type { Clock } from '../src/application/ports/out/clock.js';
+import { SystemClock } from '../src/adapters/out/clock/system-clock.js';
 import { startBridge, type Bridge } from '../src/main.js';
 import { MemoryConfigStore } from './fakes.js';
 
@@ -47,6 +48,7 @@ export function epochClock(): Clock {
       offset ??= now - 1;
       return new Date(now - offset);
     },
+    sleep: (ms, signal) => new SystemClock().sleep(ms, signal),
   };
 }
 

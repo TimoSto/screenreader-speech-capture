@@ -162,3 +162,14 @@ valibot because it is small and tree-shakes: it is bundled into bridge and clien
 so users install nothing extra. The bridge keeps its own request checks (`request.ts`, the config
 checks): they give the field-specific `INVALID_REQUEST` messages the API documents. They use the
 same limits and patterns from `shared`.
+
+## The socket voice stays the only capture source
+
+The application's status has a `tcp` section (listener address, `encoding`, connections), and
+`StatusService` falls back to `config.tcp` before the listener has started. The architecture
+review suggested a source-neutral `capture: { sources: [...] }` model, so another capture source
+(for example an NVDA add-on) would only be a new driving adapter.
+
+It stays as it is: the SAPI socket voice is and will remain the only capture source, because it
+works the same for JAWS and NVDA without touching either. A source-neutral model would add an
+abstraction with one implementation. If a second source ever comes, that change starts here.

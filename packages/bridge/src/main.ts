@@ -109,6 +109,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   const waits = new WaitForSpeechService({
     log: speechLog,
     events,
+    clock,
     // A long buffer lets speech capture run in between (docs/http-api.md, `/speech/wait`).
     pace: () => yieldEvery(256),
   });
