@@ -5,6 +5,11 @@ export default defineConfig({
   format: 'esm',
   platform: 'node',
   target: 'node20',
+  // Type declarations for the library entry (`exports.types`); `shared` is inlined like in the JS.
+  dts: { tsc: { eager: true } },
+  // Fail the build when the package would be broken for consumers (missing types, bad exports).
+  publint: { level: 'error' },
+  attw: { profile: 'esm-only', level: 'error' },
   // `shared` is private and never published: bundle it into the client.
   // `valibot` comes in with `shared` (the API contract's schemas), so users don't install it.
   // Anything else that would end up in the bundle fails the build.
