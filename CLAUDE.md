@@ -72,11 +72,12 @@ follow the SSE stream; they and `onSpeech` (`services/live-feed.ts`) share
 driving adapter, and `main.ts` also exporting the pre-wired public API (`index.ts`
 re-exports it).
 
-`no-restricted-imports` in `eslint.config.js` (blocks built with `hexagon(layer)`, for both
-packages) enforces: domain/application must not import `node:*`, shared's Node-only
-`platform-paths`, adapters or the composition root; adapters must not import concrete services;
-`in` adapters must not import `out` adapters and vice versa. Domain/application also may not use
-the timer globals, `Date.now()` / `new Date()`, `process`, `fetch` or `performance`
+`no-restricted-imports` in `eslint.config.js` (blocks built per layer and package) enforces: domain/application may import only relative files and `shared` (no Node
+built-ins, bare or `node:*`, no npm packages), and not the adapters or the composition root; ports must not
+import services; adapters must not import concrete services; `in` adapters must not import `out` adapters
+and vice versa; bridge and client must not import each other; `shared` (except `platform-paths` and `openapi/`)
+stays free of Node built-ins. Domain/application also may not use the timer globals, `Date.now()` /
+`new Date()` / `Date()`, `AbortSignal.timeout`, `process`, `fetch`, `performance`, `console` or `globalThis`
 (`innerLayerGlobals`): time and timers come through the `Clock` port. Test files (`*.test.ts`)
 are exempt. When adding a feature, add a port and
 wire it in the composition root (`main.ts` + `composition/`) rather than reaching across layers.
