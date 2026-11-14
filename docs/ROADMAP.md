@@ -43,16 +43,26 @@ GitHub issues. This file only tracks milestones.
 - [x] Client + CLI sessions: `startSession` / `endSession` / `sessions`, `onSession`, CLI
       `session start|end|list`, CLI reads scoped to the current session
 - [ ] Playwright fixture (`connectOptions`, `headless: false`, one session per test instead of
-      clearing, transcript attachment)
+      clearing, transcript attachment) as the client's `./playwright` subpath export
+      (`@playwright/test` an optional peer dependency, external in the bundle)
 
 ### M4 Native input ⬜
 
-- [ ] `POST /api/v1/set-focus`, `POST /api/v1/input/keys` on `@jitsi/robotjs`
+- [ ] `POST /api/v1/set-focus`, `POST /api/v1/input/keys` on `@jitsi/robotjs`, as an optional
+      dependency with a disabled fallback, so Linux CI and `pnpm dev` keep working
+      ([input injector](architecture.md#native-input-in-the-bridge))
+- [ ] Status `input: { enabled, reason }` (today `enabled` only reflects the config)
 - [ ] Key-name parsing incl. `Insert` / `CapsLock` as held modifiers
-- [ ] Client `setFocus(page)` (coordinate calculation), `click`, `pressKeys`. CLI `focus`, `press`
+- [ ] Client `NativeInput` in-port in screen coordinates
+      ([client ports](architecture.md#native-input-in-the-client)), `setFocus(page)` (coordinate
+      calculation), `click`, `pressKeys`. CLI `focus`, `press`
+- [ ] Client input functions check the bridge API themselves (`requireApiVersion`), instead of
+      raising `MIN_BRIDGE_API` for the whole client
 
 ### M5 Web UI ⬜
 
+- [ ] Bridge serves the built UI ([static files](architecture.md#serving-the-ui))
+- [ ] ESLint hexagon rules for `packages/ui` (components must not call `fetch`)
 - [ ] Layout, status bar and status panel (polls `GET /status`)
 - [ ] Context pane: sessions (grouped by run, follow current, new / end session)
 - [ ] Live log per session (follow, filter, markers, export, wipe)
@@ -87,6 +97,8 @@ own SAPI 5 voice written in Rust.
 - [ ] German voice (language `407`) next to the English one (`409`), so screen readers set to
       German offer it
 - [ ] Register / unregister and add / remove voice commands (administrator prompt)
+- [ ] If the bridge supervises a voice helper: child services as a keyed map instead of one field
+      per service (`ChildService.section`, `StatusServiceDeps`, status DTO)
 - [ ] Windows CI build of both DLLs, shipped with the bridge; update
       [vm-setup.md](vm-setup.md#socket-voice-setup)
 
@@ -100,6 +112,8 @@ own SAPI 5 voice written in Rust.
 ## Open questions
 
 - **License:** which one (MIT would match `text-to-socket-engine`)?
+- **Delayed send:** does the UI's delayed send live in the UI, or in the API (`delayMs` on
+  `/input/keys`, so a person can switch to the browser window first, also from the CLI)?
 - **Screen reader key:** do `Insert` and `CapsLock` work as held modifiers through robotjs, so NVDA
   and JAWS see `Insert+T`? Check on a real VM early in M4.
 - **Default versions:** `DEFAULT_PLAYWRIGHT_VERSION` (1.65.0) and the `@playwright/mcp`

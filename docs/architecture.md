@@ -117,6 +117,23 @@ each other (`in` ↔ `out`); the executables in `bin/` sit outside the adapters 
 - A different input method (for example direct `SendInput` through FFI, or the hypervisor's
   keyboard API) is a new `InputInjector`.
 
+### Native input in the bridge
+
+*(planned, [M4](ROADMAP.md#m4-native-input-))*
+
+The bridge is bundled into one `cli.mjs`, and CI and development run on Linux, so robotjs must not
+be required to build or start it:
+
+- The `InputInjector` out-port has two adapters: `RobotjsInputInjector` and a
+  `DisabledInputInjector` that throws `INPUT_DISABLED` with a reason ("not on Windows",
+  `--no-input`, "robotjs failed to load: …").
+- `@jitsi/robotjs` is an **optional dependency**, external in `tsdown.config.ts`, loaded with a
+  dynamic `import()` in the composition root. If loading fails, the bridge starts with the disabled
+  injector and logs why. The status reports the same reason (`input: { enabled, reason }`).
+- Key-name parsing (`KeyChord`) lives in the domain and knows no robotjs names. The adapter maps
+  them, so another `InputInjector` can replace it.
+- Input is serialized in one queue, so a click and a key chord from two requests can't interleave.
+
 ## Client: hexagonal
 
 The client uses the bridge's layout and the same ESLint rules (see the dependency rule above). The
@@ -150,6 +167,23 @@ for the speech client: the public `SpeechCaptureClient` class lives in `main.ts`
 `new SpeechCaptureClient()` just works. It wraps the service (a private `#service` field) instead
 of extending it, so the service's internals never become public types.
 
+### Native input in the client
+
+*(planned, [M4](ROADMAP.md#m4-native-input-))*
+
+Native input gets its own in-port, `NativeInput` (`click(point)`, `pressKeys(keys)`,
+`setFocus(point)`), instead of growing `SpeechCapture`: it has a different availability (Windows
+only, `INPUT_DISABLED`), and users' fakes of `SpeechCapture` shouldn't grow with it. The port works
+in **screen coordinates** and has no Playwright types, so `@playwright/test` never becomes a type
+dependency of the core.
+
+The fixture (the `./playwright` subpath, a driving adapter) reads the window geometry from the
+`Page` (see [Native input](native-input.md)) and calls `NativeInput`. A pure domain function
+`clickPoint(geometry, target?)` does the math, so it is unit-tested without a browser. The fixture
+can still expose one `speech` object composed from both ports. To avoid a hand-written forwarding
+method per function in `main.ts`, generate the delegation (a small `delegate()` helper or a
+`Proxy`) or expose the services through a factory.
+
 ## UI: SvelteKit, hexagonal-lite
 
 *(planned, [M5](ROADMAP.md#m5-web-ui-))*
@@ -166,7 +200,17 @@ packages/ui/src/
 ```
 
 Components never call `fetch` directly. They go through the ports, so the UI can be developed and
-tested against fake adapters without a running bridge.
+tested against fake adapters without a running bridge. `eslint.config.js` gets hexagon rules for
+`packages/ui` that enforce this.
+
+### Serving the UI
+
+The API `Router` (`adapters/in/http/router.ts`) only matches exact `METHOD path` keys under
+`/api/v1` and stays as it is. A separate `StaticAssets` handler in `adapters/in/http/` serves
+everything else: the built SvelteKit app with an SPA fallback to `index.html`, long cache headers
+for hashed assets, correct content types and path-traversal safety. The build copies the UI to
+`packages/bridge/dist/ui`, resolved relative to `import.meta.url` at runtime and listed in the
+package's `files`.
 
 `packages/shared` holds only the **API contract** (DTOs). Each hexagon owns its own domain model and
 maps to and from the DTOs in its HTTP adapter. The one piece of behaviour in it is the `normalize`
