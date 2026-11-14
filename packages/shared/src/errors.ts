@@ -2,6 +2,7 @@
 export const ERROR_CODES = [
   'INVALID_REQUEST',
   'NOT_FOUND',
+  'FORBIDDEN',
   'INPUT_DISABLED',
   'SERVICE_UNAVAILABLE',
   'INTERNAL',
@@ -13,6 +14,7 @@ export type ErrorCode = (typeof ERROR_CODES)[number];
 export const ERROR_STATUS: Record<ErrorCode, number> = {
   INVALID_REQUEST: 400,
   NOT_FOUND: 404,
+  FORBIDDEN: 403,
   INPUT_DISABLED: 409,
   SERVICE_UNAVAILABLE: 503,
   INTERNAL: 500,

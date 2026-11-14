@@ -23,6 +23,18 @@ describe('changedFields', () => {
   });
 });
 
+describe('changedFields with lists', () => {
+  it('compares lists by value', () => {
+    const a = mergeConfig(DEFAULT_CONFIG, { http: { allowedHosts: ['a'] } });
+    const same = mergeConfig(DEFAULT_CONFIG, { http: { allowedHosts: ['a'] } });
+    const other = mergeConfig(DEFAULT_CONFIG, { http: { allowedHosts: ['a', 'b'] } });
+    expect(changedFields(a, same)).toEqual([]);
+    expect(changedFields(a, other)).toEqual([
+      { field: 'http.allowedHosts', from: ['a'], to: ['a', 'b'] },
+    ]);
+  });
+});
+
 describe('overriddenFields', () => {
   it('lists the settings that both the file and the overrides set', () => {
     expect(

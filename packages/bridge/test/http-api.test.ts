@@ -145,7 +145,7 @@ describe('HTTP API', () => {
     // Answered from the declared length, before any of the body is read.
     const tooLarge = await rawStatusLine(
       bridge.httpPort,
-      'POST /api/v1/markers HTTP/1.1\r\nHost: x\r\ncontent-type: application/json\r\n' +
+      'POST /api/v1/markers HTTP/1.1\r\nHost: 127.0.0.1\r\ncontent-type: application/json\r\n' +
         `content-length: ${1024 * 1024 + 1}\r\n\r\n`,
     );
     expect(tooLarge).toBe('HTTP/1.1 400 Bad Request');
@@ -370,6 +370,41 @@ describe('HTTP API', () => {
     expect(config).toEqual(
       JSON.parse(JSON.stringify(testConfig({ buffer: { maxEntries: 42 } }))) as unknown,
     );
+  });
+
+  it('refuses foreign host names and origins, and takes new allowedHosts without a restart', async () => {
+    const bridge = await start();
+    const port = bridge.httpPort;
+    const status = (host: string) =>
+      rawStatusLine(port, `GET /api/v1/status HTTP/1.1\r\nHost: ${host}\r\n\r\n`);
+
+    expect(await status(`127.0.0.1:${port}`)).toBe('HTTP/1.1 200 OK');
+    expect(await status(`rebind.example:${port}`)).toBe('HTTP/1.1 403 Forbidden');
+    // A form post from a page: no JSON body, so only the Origin check stops it.
+    expect(
+      await rawStatusLine(
+        port,
+        `POST /api/v1/sessions/end HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\n` +
+          'Origin: http://rebind.example\r\ncontent-length: 0\r\n\r\n',
+      ),
+    ).toBe('HTTP/1.1 403 Forbidden');
+
+    const stream = await openStream(bridge);
+    const put = await fetch(api(bridge, '/config'), {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ http: { allowedHosts: ['rebind.example'] } }),
+    });
+    expect(put.status).toBe(200);
+    expect(await status(`rebind.example:${port}`)).toBe('HTTP/1.1 200 OK');
+    // Same server: the stream opened before the change still gets speech.
+    await send(bridge.tcpPort, 'after the change\r\n');
+    const text = await eventually(
+      () => stream.text,
+      (t) => t.includes('after the change'),
+    );
+    expect(text).toContain('after the change');
+    stream.close();
   });
 
   it('answers unknown endpoints and methods with 404 NOT_FOUND', async () => {

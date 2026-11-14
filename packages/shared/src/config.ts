@@ -10,7 +10,12 @@ export interface ConfigDto {
     encoding: string;
     maxLineBytes: number;
   };
-  http: { host: string; port: number };
+  http: {
+    host: string;
+    port: number;
+    /** Host names accepted besides IPs, `localhost` and the machine's name. Added in API 1.5. */
+    allowedHosts: string[];
+  };
   playwright: { enabled: boolean; port: number; version: string | null };
   /** No version: the bridge runs the `@playwright/mcp` it depends on. */
   mcp: { enabled: boolean; port: number };

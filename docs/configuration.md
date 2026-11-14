@@ -21,7 +21,7 @@ Precedence: **CLI flags > environment variables > config file > defaults**.
 ```jsonc
 {
   "tcp":        { "host": "127.0.0.1", "port": 4449, "format": "text-to-socket", "encoding": "windows-1252", "maxLineBytes": 65536 },
-  "http":       { "host": "0.0.0.0",   "port": 5151 },
+  "http":       { "host": "0.0.0.0",   "port": 5151, "allowedHosts": [] },  // more host names, see Security
   "playwright": { "enabled": true, "port": 3000, "version": null },  // exact version, null = bundled
   "mcp":        { "enabled": true, "port": 8931 },                   // version: the bundled one
   "input":      { "enabled": true },
@@ -33,7 +33,9 @@ Precedence: **CLI flags > environment variables > config file > defaults**.
 `tcp.format` selects the parser for the incoming wire format. `text-to-socket` (the default) reads
 CRLF-terminated lines, with an optional header line, as described in [Wire format](speech-capture.md#wire-format).
 `tcp.encoding` is the code page used to decode them (default `windows-1252`).
-`log` is explained in [Operations](operations.md#logging).
+`log` is explained in [Operations](operations.md#logging). `http.allowedHosts` lists host names
+the API answers to besides IP addresses, `localhost` and the machine's name, see
+[Host and origin](security.md#host-and-origin).
 
 ## Changing settings
 
@@ -59,7 +61,7 @@ What each section does when it changes:
 | Section | Effect |
 |---|---|
 | `tcp` | The TCP listener restarts on the new settings, which closes the open connections. The voice reconnects on its next `Speak`. If the new port can't be used, the listener stays on the old one. |
-| `http` | The API and UI move to the new address. A new port is bound before the old one closes, so a port in use leaves everything as it was. The answer to the `PUT` still comes from the old address; open SSE streams are closed (clients reconnect). |
+| `http` | The API and UI move to the new address. A new port is bound before the old one closes, so a port in use leaves everything as it was. The answer to the `PUT` still comes from the old address; open SSE streams are closed (clients reconnect). A change of `allowedHosts` alone applies to the next request, without moving the API. |
 | `buffer` | `maxEntries` applies at once. A smaller value drops the oldest entries (they count as `truncated`). |
 | `log` | The level applies at once. A new `file` or `consoleSpeech` switches the log output. |
 | `playwright` | The Playwright server restarts with the new port or version (a new version is installed first). The `PUT` answers at once; `status` shows the service as `starting` until it runs. `enabled: false` stops it. A change of `http.host` restarts it too, because it listens on the same interface. |
@@ -75,6 +77,7 @@ What each section does when it changes:
 | `--tcp-encoding <enc>` | `windows-1252` | Character encoding of the incoming text: the VM's ANSI code page (see [Wire format](speech-capture.md#wire-format)). |
 | `--host <addr>` | `0.0.0.0` | Interface for HTTP, Playwright server and MCP (these are reached remotely). |
 | `--http-port <n>` | `5151` | HTTP API (and the web UI, [M5](ROADMAP.md#m5-web-ui-)). |
+| `--allowed-hosts <names>` | | More host names the API answers to, comma-separated (`bridge.lab.example,vm42`), `*` for any ([Host and origin](security.md#host-and-origin)). |
 | `--playwright-port <n>` | `3000` | Playwright server (WebSocket). |
 | `--playwright-version <v>` | *(bundled)* | Playwright version of the server, exact (`1.65.0`). Must match the clients (see [Version](playwright-mcp.md#version)). |
 | `--mcp-port <n>` | `8931` | Playwright MCP (HTTP). |

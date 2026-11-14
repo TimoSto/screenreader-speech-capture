@@ -9,8 +9,8 @@ interface Setting {
   flag: string;
   /** The setting it changes. `undefined` for `--config`, which only selects the file. */
   field?: ConfigField;
-  /** `on` / `off`: a switch that sets the setting to `true` / `false`. */
-  kind: 'string' | 'integer' | 'on' | 'off';
+  /** `on` / `off`: a switch that sets the setting to `true` / `false`. `list`: comma-separated. */
+  kind: 'string' | 'integer' | 'list' | 'on' | 'off';
   arg?: string;
   description: string;
 }
@@ -50,6 +50,13 @@ const SETTINGS: readonly Setting[] = [
     kind: 'integer',
     arg: '<n>',
     description: 'HTTP API and web UI (default 5151)',
+  },
+  {
+    flag: 'allowed-hosts',
+    field: 'http.allowedHosts',
+    kind: 'list',
+    arg: '<names>',
+    description: 'More host names for the API, comma-separated (* for any)',
   },
   {
     flag: 'playwright-port',
@@ -135,6 +142,11 @@ function read(setting: Setting, raw: string | boolean, source: string): unknown 
   switch (setting.kind) {
     case 'string':
       return raw;
+    case 'list':
+      return raw
+        .split(',')
+        .map((part) => part.trim())
+        .filter((part) => part !== '');
     case 'integer':
       if (!/^\d+$/.test(raw)) throw new UsageError(`${source}: must be a whole number`);
       return Number(raw);

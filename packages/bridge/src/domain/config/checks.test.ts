@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   boolean,
   encoding,
+  hostList,
   integer,
   nonEmptyString,
   nullableString,
@@ -50,6 +51,13 @@ describe('config checks', () => {
     const check = oneOf(['a', 'b']);
     expect(check('a')).toBe(ok);
     expect(check('c')).toBe('must be one of a, b');
+  });
+
+  it('hostList: host names without port or scheme, or *', () => {
+    expect([[], ['bridge.lab.example', 'WIN-VM'], ['*']].map(hostList)).toEqual([ok, ok, ok]);
+    expect([['a:5151'], ['http://a'], [''], ['a b'], 'a', [1], null].map(hostList)).toEqual(
+      Array(7).fill('must be a list of host names (without port or scheme), or ["*"]'),
+    );
   });
 
   it('encoding: a label TextDecoder knows', () => {
