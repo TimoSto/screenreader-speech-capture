@@ -165,6 +165,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     tcp,
     http,
     repository,
+    sessions: sessionRepository,
     logging,
     services: services.all,
     logger: bridgeLogger,

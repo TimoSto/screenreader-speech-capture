@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { MemorySessionRepository } from '../../adapters/out/memory/memory-session-repository.js';
 import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
-import { pruneAndListSessions } from './prune-and-list-sessions.js';
+import { listSessions, pruneEndedSessions } from './sessions.js';
 
 const at = (minute: number) => new Date(Date.UTC(2026, 10, 12, 9, minute));
 
@@ -27,30 +27,57 @@ function setup() {
   return { sessions, repository, say, a, b };
 }
 
-describe('pruneAndListSessions', () => {
+describe('listSessions', () => {
   it('lists the sessions newest first with what the buffer holds of them', () => {
     const { sessions, repository } = setup();
     expect(
-      pruneAndListSessions(sessions, repository).map(({ name, entries }) => ({ name, entries })),
+      listSessions(sessions, repository).map(({ name, entries }) => ({ name, entries })),
     ).toEqual([
       { name: 'b', entries: 1 },
       { name: 'a', entries: 1 },
     ]);
   });
 
-  it('removes an ended session from both repositories once its entries were dropped', () => {
+  it('hides an ended session whose entries were dropped, without removing it', () => {
     const { sessions, repository, say, a, b } = setup();
     say('b2', b.id); // pushes a1 out of the buffer
     const forget = vi.spyOn(repository, 'forgetSession');
+    const remove = vi.spyOn(sessions, 'removeEnded');
 
-    expect(pruneAndListSessions(sessions, repository).map((s) => s.id)).toEqual([b.id]);
-    expect(sessions.get(a.id)).toBeUndefined();
-    expect(forget).toHaveBeenCalledExactlyOnceWith(a.id);
+    expect(listSessions(sessions, repository).map((s) => s.id)).toEqual([b.id]);
+    expect(sessions.get(a.id)).toBeDefined();
+    expect(forget).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
   });
 
   it('keeps the current session even when the buffer holds none of its entries', () => {
     const { sessions, repository } = setup();
     repository.clear();
-    expect(pruneAndListSessions(sessions, repository).map((s) => s.name)).toEqual(['b']);
+    expect(listSessions(sessions, repository).map((s) => s.name)).toEqual(['b']);
+  });
+});
+
+describe('pruneEndedSessions', () => {
+  it('removes an ended session from both repositories once its entries were dropped', () => {
+    const { sessions, repository, say, a, b } = setup();
+    say('b2', b.id); // pushes a1 out of the buffer
+    const forget = vi.spyOn(repository, 'forgetSession');
+
+    pruneEndedSessions(sessions, repository);
+    expect(sessions.get(a.id)).toBeUndefined();
+    expect(sessions.get(b.id)).toBeDefined();
+    expect(forget).toHaveBeenCalledExactlyOnceWith(a.id);
+  });
+
+  it('keeps ended sessions with entries and the current one, even when it has none', () => {
+    const { sessions, repository, a, b } = setup();
+    pruneEndedSessions(sessions, repository);
+    expect(sessions.list().map((s) => s.id)).toEqual([b.id, a.id]);
+
+    repository.clear();
+    sessions.endCurrent(at(2));
+    sessions.create({ name: 'c', run: null, startedAt: at(2) });
+    pruneEndedSessions(sessions, repository);
+    expect(sessions.list().map((s) => s.name)).toEqual(['c']);
   });
 });

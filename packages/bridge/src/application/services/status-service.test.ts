@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { MemorySessionRepository } from '../../adapters/out/memory/memory-session-repository.js';
 import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
 import { DEFAULT_CONFIG } from '../../domain/config/index.js';
@@ -109,5 +109,18 @@ describe('StatusService', () => {
       },
       count: 2,
     });
+  });
+
+  it('reads the sessions without changing the repositories', () => {
+    const { status, repository, sessions } = setup({ listener: null, connections: [] });
+    const at = new Date('2026-11-12T09:00:00.000Z');
+    sessions.create({ name: 'a', run: null, startedAt: at });
+    sessions.endCurrent(at);
+    const remove = vi.spyOn(sessions, 'removeEnded');
+    const forget = vi.spyOn(repository, 'forgetSession');
+    expect(status.status().session.count).toBe(0);
+    expect(remove).not.toHaveBeenCalled();
+    expect(forget).not.toHaveBeenCalled();
+    expect(sessions.list()).toHaveLength(1);
   });
 });

@@ -72,7 +72,7 @@ packages/bridge/src/
                      ConfigStore, ProcessSupervisor, InputInjector, Logger, Clock
     services/        use-case implementations (only depend on domain + ports)
     shared/          helpers several services use: option checks, session filter,
-                     session listing (prunes ended sessions)
+                     session listing, pruning of ended sessions (on writes that drop entries)
   adapters/
     in/tcp/          socket listener + wire-format parsers → RecordSpeech;
                      tracks its connections (CaptureStatusSource)
