@@ -106,9 +106,9 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `sessions()` | `{ sessions, currentId }` | The sessions still in the buffer plus the current one, newest first. |
 | `clear()` | `void` | Wipe the whole buffer (all sessions) and reset the cursor. For manual use. |
 | `waitForOutput(match, { timeout?, since?, normalize?, session? })` | `SpeechEntry` | Wait until a speech entry after the cursor (or `since`) matches, then move the cursor past it. `match` is a `string` (substring), a `RegExp` or a predicate `(u) => boolean`. `normalize: true` ignores case and extra whitespace. `session` (an `id` or `'current'`) only matches that session's entries; `'current'` is the session current when the wait starts, even if another one starts meanwhile. Markers never match. Waits read the buffer, then follow the [live feed](#live-feed): no polling. Throws `SpeechTimeoutError` (with the speech seen so far in `entries`) on timeout. Default `timeout`: 5000 ms. |
-| `waitForSequence(matches[], { timeout?, since?, normalize?, session? })` | `SpeechEntry[]` | Wait until the matches occur in this order (other entries may come in between). Moves the cursor past the last match. |
+| `waitForSequence(matches[], { timeout?, since?, normalize?, session? })` | `SpeechEntry[]` | Wait until the matches occur in this order (other entries may come in between). Moves the cursor past the last match. Throws `SpeechTimeoutError` like `waitForOutput`. |
 | `waitForSilence({ quietFor?, timeout? })` | `void` | Wait until nothing new has been spoken for `quietFor` ms (default 500), counted from the call. Throws `SpeechTimeoutError` if speech goes on until `timeout` (default 10000 ms). Useful before asserting on "everything that was said". |
-| `record(fn, { quietFor?, timeout? })` | `{ result, entries }` | Run `fn` and return everything spoken while it ran (waits for silence at the end, then moves the cursor to the end). |
+| `record(fn, { quietFor?, timeout? })` | `{ result, entries, truncated }` | Run `fn` and return everything spoken while it ran (waits for silence at the end, then moves the cursor to the end). `truncated: true`: some of it was dropped because the bridge's buffer was full, so `entries` is incomplete (raise `buffer.maxEntries`). |
 | `mark(label)` | `SpeechEntry` | Insert a marker. Its `seq` can be used as `since`. |
 | `setFocus(page, { target? })` | `void` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Make the page's browser window the OS foreground window with a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
 | `click({ x, y })` | `void` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Native click at screen coordinates (`POST /api/v1/set-focus`). |
@@ -171,7 +171,7 @@ stop();
 
 | Error | When |
 |---|---|
-| `SpeechTimeoutError` | A wait ended without a match. `entries` holds the speech seen while waiting. |
+| `SpeechTimeoutError` | A wait ended without a match. `entries` holds the speech seen while waiting. `truncated: true` if speech the wait should have looked at was dropped because the bridge's buffer was full: the match may have been among it. The message then says so and suggests raising `buffer.maxEntries`. |
 | `BridgeNotReadyError` | `waitForReady` timed out. |
 | `BridgeUnreachableError` | No connection to the bridge (wrong URL, bridge not running, network). |
 | `BridgeHttpError` | The bridge answered with an [error](http-api.md#errors): `status`, `code`, `details`. |
@@ -277,8 +277,9 @@ seq 340-342`), or `{ sessions, currentId }` with `--json`. Without a current ses
 `wait` read the whole buffer.
 
 With `--json`, `wait` prints `{ "matched": true, "entry": {...} }`, or on timeout
-`{ "matched": false, "entries": [...] }` with the speech seen (the same shapes as
-[`GET /speech/wait`](http-api.md#endpoints)). `mark` prints the marker's `seq`, or the whole entry
+`{ "matched": false, "entries": [...], "truncated": false }` with the speech seen, and
+`truncated: true` if some of it was dropped because the bridge's buffer was full (the shapes
+follow [`GET /speech/wait`](http-api.md#endpoints), which reports `omitted` instead). `mark` prints the marker's `seq`, or the whole entry
 with `--json`.
 
 `tail` prints each entry as it arrives (`#12 Submit, button`, markers included) until Ctrl+C or

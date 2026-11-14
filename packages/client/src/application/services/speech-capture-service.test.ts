@@ -6,6 +6,7 @@ import {
   BridgeUnreachableError,
   IncompatibleBridgeError,
   SpeechTimeoutError,
+  TRUNCATED_HINT,
 } from '../../domain/errors.js';
 import { SpeechCaptureService } from './speech-capture-service.js';
 
@@ -213,6 +214,78 @@ describe('record', () => {
     expect(result).toBe(42);
     expect(texts(entries)).toEqual(['during', 'right after']);
     expect(sr.cursor()).toBe(3);
+  });
+});
+
+describe('speech dropped from the bridge buffer', () => {
+  /** The error a wait rejected with. */
+  const failure = (promise: Promise<unknown>) =>
+    promise.then(
+      () => {
+        throw new Error('expected a timeout');
+      },
+      (error: unknown) => error as SpeechTimeoutError,
+    );
+
+  it('says so when a wait times out after reading a truncated buffer', async () => {
+    const { api, sr } = setup();
+    api.speak('one', 'two', 'three');
+    api.dropOldest(2);
+    const error = await failure(sr.waitForOutput('never', { since: 0, timeout: 100 }));
+    expect(error).toBeInstanceOf(SpeechTimeoutError);
+    expect(error.truncated).toBe(true);
+    expect(error.message).toBe(`No speech matched "never" within 100 ms; ${TRUNCATED_HINT}`);
+    expect(texts(error.entries)).toEqual(['three']);
+  });
+
+  it('keeps the plain message when nothing was dropped', async () => {
+    const { api, sr } = setup();
+    api.speak('one');
+    const error = await failure(sr.waitForOutput('never', { timeout: 100 }));
+    expect(error.truncated).toBe(false);
+    expect(error.message).toBe('No speech matched "never" within 100 ms');
+  });
+
+  it('says so for a sequence too', async () => {
+    const { api, sr } = setup();
+    api.speak('one', 'two');
+    api.dropOldest(1);
+    const error = await failure(sr.waitForSequence(['one', 'two'], { since: 0, timeout: 100 }));
+    expect(error.truncated).toBe(true);
+  });
+
+  it('notices entries dropped while the live feed reconnected', async () => {
+    const { api, clock, sr } = setup();
+    clock.at(100, () => api.speak('one'));
+    clock.at(200, () => {
+      api.dropStreams(new Error('network'));
+      api.speak('two', 'three');
+      api.dropOldest(2);
+    });
+    const error = await failure(sr.waitForOutput('never', { timeout: 1000 }));
+    expect(error.truncated).toBe(true);
+    expect(texts(error.entries)).toEqual(['one', 'three']);
+  });
+
+  it('still finds a match that survived', async () => {
+    const { api, sr } = setup();
+    api.speak('one', 'Submit, button');
+    api.dropOldest(1);
+    await expect(sr.waitForOutput('Submit', { since: 0 })).resolves.toMatchObject({ seq: 2 });
+  });
+
+  it('marks a recording whose speech was dropped before it was read', async () => {
+    const { api, sr } = setup();
+    api.speak('before');
+    const recording = await sr.record(() => {
+      api.speak('first', 'second');
+      api.dropOldest(2);
+    });
+    expect(recording.truncated).toBe(true);
+    expect(texts(recording.entries)).toEqual(['second']);
+
+    const clean = await sr.record(() => api.speak('third'));
+    expect(clean.truncated).toBe(false);
   });
 });
 

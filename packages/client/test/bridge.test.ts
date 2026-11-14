@@ -16,8 +16,8 @@ import { createClientConfig, SpeechCaptureClient } from '../src/main.js';
 /** No config file and no SR_SPEECH_URL from the developer's machine. */
 const env = { SR_SPEECH_CLIENT_CONFIG: '/nonexistent/client.json' };
 
-async function bridge() {
-  const b = await start();
+async function bridge(patch: object = {}) {
+  const b = await start(patch);
   const url = `http://127.0.0.1:${b.httpPort}`;
   return {
     url,
@@ -61,6 +61,22 @@ describe('library', () => {
     expect(sr.cursor()).toBe(1);
     await expect(sr.waitForOutput('Submit', { timeout: 200 })).rejects.toThrow(SpeechTimeoutError);
     expect(await sr.getText()).toBe('Name, edit, blank');
+  });
+
+  it("says when a wait's speech was dropped from the bridge's full buffer", async () => {
+    const { say, client } = await bridge({ buffer: { maxEntries: 3 } });
+    const sr = client();
+    await say('one', 'two', 'three', 'four', 'five');
+    await sr.waitForOutput('five');
+    const error = await sr.waitForOutput('never', { since: 0, timeout: 100 }).then(
+      () => {
+        throw new Error('expected a timeout');
+      },
+      (e: unknown) => e as SpeechTimeoutError,
+    );
+    expect(error).toBeInstanceOf(SpeechTimeoutError);
+    expect(error.truncated).toBe(true);
+    expect(error.entries.map((e) => e.text)).toEqual(['three', 'four', 'five']);
   });
 
   it('waits on the live feed and keeps the session that was current when it started', async () => {

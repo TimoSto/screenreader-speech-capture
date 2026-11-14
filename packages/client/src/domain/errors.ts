@@ -1,16 +1,25 @@
 import type { SpeechEntry } from './speech-entry.js';
 
-/** A wait ended without a match. `entries` holds the speech seen while waiting, oldest first. */
+/**
+ * A wait ended without a match. `entries` holds the speech seen while waiting, oldest first.
+ * `truncated`: some of the speech it should have looked at was dropped because the bridge's
+ * buffer was full, so the match may have been among it.
+ */
 export class SpeechTimeoutError extends Error {
   override name = 'SpeechTimeoutError';
 
   constructor(
     message: string,
     readonly entries: SpeechEntry[],
+    readonly truncated = false,
   ) {
-    super(message);
+    super(truncated ? `${message}; ${TRUNCATED_HINT}` : message);
   }
 }
+
+/** Why a wait or recording may have missed speech, and what to do about it. */
+export const TRUNCATED_HINT =
+  "some speech was dropped because the bridge's buffer was full (raise buffer.maxEntries)";
 
 /** `waitForReady` timed out: the bridge was not reachable or not `ready` in time. */
 export class BridgeNotReadyError extends Error {

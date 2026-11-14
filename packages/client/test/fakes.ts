@@ -70,6 +70,8 @@ class FakeStream {
 export class FakeBridgeApi implements BridgeApi {
   entries: SpeechEntry[] = [];
   private seq = 0;
+  /** Highest `seq` dropped as if the buffer were full, since the last clear. */
+  private droppedUpToSeq = 0;
   /** The client name this fake bridge sees on requests (`X-SR-Speech-Client`). */
   clientName: string | null = null;
   /** Every session started, oldest first (the fake never forgets one). */
@@ -112,7 +114,7 @@ export class FakeBridgeApi implements BridgeApi {
     const size = Math.min(query.limit ?? 1000, this.pageSize);
     return Promise.resolve({
       entries: after.slice(0, size),
-      truncated: false,
+      truncated: query.since < this.droppedUpToSeq,
       hasMore: after.length > size,
     });
   }
@@ -122,6 +124,7 @@ export class FakeBridgeApi implements BridgeApi {
     const failure = this.fail();
     if (failure) return failure;
     this.entries = [];
+    this.droppedUpToSeq = 0;
     this.emit({ type: 'clear' });
     return Promise.resolve();
   }
@@ -186,6 +189,9 @@ export class FakeBridgeApi implements BridgeApi {
       throw new BridgeHttpError(404, 'NOT_FOUND', 'No such session');
     }
     const stream = new FakeStream(session);
+    if (lastEventId !== null && lastEventId < this.droppedUpToSeq) {
+      stream.push({ type: 'truncated' });
+    }
     if (lastEventId !== null) {
       for (const entry of this.entries) {
         if (entry.seq > lastEventId) stream.push({ type: 'entry', entry });
@@ -224,6 +230,13 @@ export class FakeBridgeApi implements BridgeApi {
   /** Sends `event` to every open live feed. */
   emit(event: SpeechFeedEvent): void {
     for (const stream of this.streams) stream.push(event);
+  }
+
+  /** Drops the oldest `n` entries, as the bridge does when its buffer is full. */
+  dropOldest(n: number): void {
+    const dropped = this.entries.splice(0, n);
+    const last = dropped.at(-1);
+    if (last) this.droppedUpToSeq = last.seq;
   }
 
   /** Ends every open live feed after the events already sent, with `error` or normally. */

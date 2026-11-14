@@ -86,6 +86,11 @@ export interface Recording<T> {
   result: T;
   /** Speech spoken while `fn` ran and until silence, oldest first. */
   entries: SpeechEntry[];
+  /**
+   * Some of that speech was dropped because the bridge's buffer was full before it could be read:
+   * `entries` is incomplete (raise `buffer.maxEntries`).
+   */
+  truncated: boolean;
 }
 
 /**
@@ -124,12 +129,14 @@ export interface SpeechCapture {
   waitForReady(options?: ReadyOptions): Promise<BridgeStatus>;
   /**
    * Waits until a speech entry after the cursor (or `since`) matches, then moves the cursor to
-   * it. Speech that arrived before the call is found too. Rejects with `SpeechTimeoutError`.
+   * it. Speech that arrived before the call is found too. Rejects with `SpeechTimeoutError`,
+   * with `truncated` if speech it should have looked at was dropped from the bridge's full buffer.
    */
   waitForOutput(match: SpeechMatch, options?: WaitOptions): Promise<SpeechEntry>;
   /**
    * Waits until the matches occur in this order (other entries may come in between), then moves
-   * the cursor to the last match. Rejects with `SpeechTimeoutError`.
+   * the cursor to the last match. Rejects with `SpeechTimeoutError` (`truncated` as for
+   * `waitForOutput`).
    */
   waitForSequence(matches: readonly SpeechMatch[], options?: WaitOptions): Promise<SpeechEntry[]>;
   /**
