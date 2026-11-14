@@ -1,6 +1,7 @@
 import type { ManageClientConfig } from '../../../application/ports/in/manage-client-config.js';
 import type { SpeechCapture } from '../../../application/ports/in/speech-capture.js';
 import type { Option, Values } from './options.js';
+import type { CliCommand, CliOutput } from './output.js';
 
 /** Exit codes (docs/client.md#cli-for-agents). */
 export const EXIT = { ok: 0, timeout: 1, bridge: 2, usage: 3 } as const;
@@ -40,6 +41,9 @@ export interface Context {
   io: CliIo;
   /** The bridge client, created on first use (`config` never needs one). */
   speech: () => SpeechCapture;
-  /** Prints `json` with --json, `text` otherwise. */
-  out: (json: unknown, text: string) => void;
+  /**
+   * Prints `json` with --json, `text` otherwise. `json` must be what `command`'s schema
+   * (`CLI_OUTPUT` in output.ts) describes: the shapes scripts and agents rely on.
+   */
+  out: <K extends CliCommand>(command: K, json: CliOutput<K>, text: string) => void;
 }

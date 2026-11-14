@@ -215,9 +215,15 @@ importers:
       '@screenreader-speech-capture/shared':
         specifier: workspace:*
         version: link:../shared
+      '@valibot/to-json-schema':
+        specifier: 1.8.0
+        version: 1.8.0(valibot@1.5.0(typescript@6.0.3))
       tsdown:
         specifier: 0.23.7
         version: 0.23.7(tsx@4.23.15)(typescript@6.0.3)
+      valibot:
+        specifier: 1.5.0
+        version: 1.5.0(typescript@6.0.3)
 
   packages/shared:
     dependencies:

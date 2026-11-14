@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+import { expectCliOutput } from '../../../../test/cli-output.js';
 import { FakeBridgeApi, FakeClock } from '../../../../test/fakes.js';
 import type {
   ExplicitValues,
@@ -71,6 +72,7 @@ async function run(
     version: '1.2.3',
     interrupt: () => new AbortController().signal,
   });
+  expectCliOutput(args, stdout);
   return { code, stdout, stderr };
 }
 
@@ -86,6 +88,16 @@ describe('config', () => {
     expect((await run(['config', 'get', 'url', '--json'], config)).stdout).toBe(
       '{"key":"url","value":"http://vm:1","source":"config"}\n',
     );
+  });
+
+  it('unset and path print the file with --json', async () => {
+    expect(JSON.parse((await run(['config', 'unset', 'url', '--json'])).stdout)).toEqual({
+      key: 'url',
+      file: '/cfg/client.json',
+    });
+    expect(JSON.parse((await run(['config', 'path', '--json'])).stdout)).toEqual({
+      file: '/cfg/client.json',
+    });
   });
 
   it('set prints where it saved, and warns when the value is shadowed', async () => {
@@ -163,6 +175,18 @@ describe('speech commands', () => {
       bridge: { state: string };
     };
     expect(json.bridge.state).toBe('ready');
+  });
+
+  it('prints the small confirmations with --json', async () => {
+    const fake = fakeSpeech();
+    await cli(['session', 'start', 'one'], fake);
+    const outputs = [];
+    for (const args of [['session', 'end'], ['clear'], ['wait-silence', '--timeout', '1000']]) {
+      const result = await cli([...args, '--json'], fake);
+      expect(result.code).toBe(EXIT.ok);
+      outputs.push(JSON.parse(result.stdout) as unknown);
+    }
+    expect(outputs).toEqual([{ ended: true }, { cleared: true }, { silent: true }]);
   });
 
   it('status --wait-ready waits; a timeout exits 1', async () => {
@@ -399,7 +423,9 @@ describe('tail', () => {
     });
     const stop = async () => {
       controller.abort();
-      return done;
+      const code = await done;
+      expectCliOutput(['tail', ...args], output.stdout);
+      return code;
     };
     return { ...speech, output, done, stop };
   }

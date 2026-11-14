@@ -123,7 +123,11 @@ except the restart-only settings (`RESTART_FIELDS` in
 Each fact has one home in `docs/`; other docs link to it in one line. The README only introduces the
 project and links into `docs/`. Update `docs/ROADMAP.md` checkboxes when a milestone item lands, and
 keep `docs/http-api.md` / `docs/openapi.yaml` in sync with HTTP changes (change a schema in
-`packages/shared`, then run `pnpm openapi`; paths and prose in the YAML are edited by hand).
+`packages/shared`, then run `pnpm openapi`; paths and prose in the YAML are edited by hand). The
+client CLI's `--json` output is a contract too: one valibot schema per command in
+`packages/client/src/adapters/in/cli/output.ts` (`out(command, json, text)` only accepts what it
+describes), published as `docs/cli-output.schema.json` with `pnpm cli-schema`. Tests check every
+`--json` output against it (`packages/client/test/cli-output.ts`).
 
 Docs may describe features that don't exist yet. Mark them so a reader who lands on a page can tell:
 a page that is entirely design gets a `> **Planned (Mx), not implemented yet.**` note under its

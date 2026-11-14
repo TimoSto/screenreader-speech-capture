@@ -1,0 +1,734 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "screenreader-speech-capture-client --json output",
+  "description": "What each command prints with --json: `$defs` has one entry per command, named as typed (`wait`, `session start`, …), plus the parts they share (`SpeechEntry`, `Session`, …). `tail` prints one such object per line. Generated from packages/client/src/adapters/in/cli/output.ts.",
+  "$defs": {
+    "SpeechEntry": {
+      "type": "object",
+      "properties": {
+        "seq": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The entry's ID. Rises with every entry, survives a clear and keeps rising across bridge restarts. `--since` takes it."
+        },
+        "kind": {
+          "enum": ["speech", "marker"],
+          "type": "string"
+        },
+        "text": {
+          "type": "string",
+          "description": "What was spoken, or the marker's label."
+        },
+        "receivedAt": {
+          "type": "string",
+          "description": "ISO 8601, UTC, on the bridge's clock."
+        },
+        "source": {
+          "enum": ["tcp", "api"],
+          "type": "string",
+          "description": "`tcp` for speech, `api` for markers."
+        },
+        "voice": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Header (`voice=<id>`) of the sending voice, `null` if not set or for markers."
+        },
+        "connectionId": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "TCP connection that delivered it, `null` for markers."
+        },
+        "sessionId": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The session that was current when it was recorded, `null` outside any."
+        }
+      },
+      "required": [
+        "seq",
+        "kind",
+        "text",
+        "receivedAt",
+        "source",
+        "voice",
+        "connectionId",
+        "sessionId"
+      ],
+      "description": "One recorded speech entry or marker."
+    },
+    "Session": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Increasing, restarts at 1 with the bridge."
+        },
+        "name": {
+          "type": "string"
+        },
+        "run": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional label that groups sessions."
+        },
+        "client": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The client that started it, `null` if unknown."
+        },
+        "startedAt": {
+          "type": "string",
+          "description": "ISO 8601, UTC, on the bridge's clock."
+        },
+        "endedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "ISO 8601, UTC. `null` while the session is current."
+        },
+        "startSeq": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The last `seq` before the session started: `--since <startSeq>` reads it."
+        },
+        "firstSeq": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "First entry still in the buffer."
+        },
+        "lastSeq": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Last entry still in the buffer."
+        },
+        "entries": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Entries of this session still in the buffer."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "run",
+        "client",
+        "startedAt",
+        "endedAt",
+        "startSeq",
+        "firstSeq",
+        "lastSeq",
+        "entries"
+      ],
+      "description": "The speech of one test or agent task."
+    },
+    "StartedSession": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Increasing, restarts at 1 with the bridge."
+        },
+        "name": {
+          "type": "string"
+        },
+        "run": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional label that groups sessions."
+        },
+        "client": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The client that started it, `null` if unknown."
+        },
+        "startedAt": {
+          "type": "string",
+          "description": "ISO 8601, UTC, on the bridge's clock."
+        },
+        "endedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "ISO 8601, UTC. `null` while the session is current."
+        },
+        "startSeq": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The last `seq` before the session started: `--since <startSeq>` reads it."
+        },
+        "firstSeq": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "First entry still in the buffer."
+        },
+        "lastSeq": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Last entry still in the buffer."
+        },
+        "entries": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Entries of this session still in the buffer."
+        },
+        "replaced": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Session"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The session this start ended, if another client had started it (two clients share one screen reader), `null` otherwise."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "run",
+        "client",
+        "startedAt",
+        "endedAt",
+        "startSeq",
+        "firstSeq",
+        "lastSeq",
+        "entries",
+        "replaced"
+      ]
+    },
+    "SessionList": {
+      "type": "object",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Session"
+          },
+          "description": "The current session and the ended ones still in the buffer, newest first."
+        },
+        "currentId": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "`null` when no session is current."
+        }
+      },
+      "required": ["sessions", "currentId"]
+    },
+    "BridgeStatus": {
+      "type": "object",
+      "properties": {
+        "bridge": {
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "string"
+            },
+            "apiVersion": {
+              "type": "string",
+              "description": "`<major>.<minor>` of the HTTP API."
+            },
+            "state": {
+              "enum": ["starting", "ready", "stopping"],
+              "type": "string"
+            },
+            "startedAt": {
+              "type": "string",
+              "description": "ISO 8601, UTC. When this bridge run started."
+            }
+          },
+          "required": ["version", "apiVersion", "state", "startedAt"]
+        },
+        "tcp": {
+          "type": "object",
+          "properties": {
+            "listening": {
+              "type": "boolean"
+            },
+            "host": {
+              "type": "string"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "encoding": {
+              "type": "string"
+            },
+            "connections": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "voice": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "connectedAt": {
+                    "type": "string"
+                  }
+                },
+                "required": ["id", "voice", "connectedAt"]
+              }
+            }
+          },
+          "required": ["listening", "host", "port", "encoding", "connections"]
+        },
+        "buffer": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "maxEntries": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "firstSeq": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "lastSeq": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": ["size", "maxEntries", "firstSeq", "lastSeq"]
+        },
+        "playwright": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": ["stopped", "starting", "running", "crashed", "failed"],
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "restarts": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Restarts after crashes since the service was last started."
+            },
+            "exitCode": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exit code of the last unexpected exit, `null` if none or killed by a signal."
+            }
+          },
+          "required": ["state", "version", "port", "restarts", "exitCode"]
+        },
+        "mcp": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": ["stopped", "starting", "running", "crashed", "failed"],
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "restarts": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Restarts after crashes since the service was last started."
+            },
+            "exitCode": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exit code of the last unexpected exit, `null` if none or killed by a signal."
+            }
+          },
+          "required": ["state", "version", "port", "restarts", "exitCode"]
+        },
+        "session": {
+          "type": "object",
+          "properties": {
+            "current": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Session"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": ["current", "count"]
+        }
+      },
+      "required": ["bridge", "tcp", "buffer", "playwright", "mcp", "session"],
+      "description": "Bridge health, as `GET /api/v1/status` reports it."
+    },
+    "ConfigValue": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "enum": ["url"],
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "description": "The effective value."
+        },
+        "source": {
+          "enum": ["explicit", "env", "config", "default"],
+          "type": "string",
+          "description": "Where it comes from: `--url`, `SR_SPEECH_URL`, the config file, or the default."
+        }
+      },
+      "required": ["key", "value", "source"]
+    },
+    "status": {
+      "$ref": "#/$defs/BridgeStatus"
+    },
+    "session start": {
+      "$ref": "#/$defs/StartedSession"
+    },
+    "session end": {
+      "type": "object",
+      "properties": {
+        "ended": {
+          "const": true
+        }
+      },
+      "required": ["ended"]
+    },
+    "session list": {
+      "$ref": "#/$defs/SessionList"
+    },
+    "clear": {
+      "type": "object",
+      "properties": {
+        "cleared": {
+          "const": true
+        }
+      },
+      "required": ["cleared"]
+    },
+    "speech": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SpeechEntry"
+          }
+        }
+      },
+      "required": ["entries"]
+    },
+    "text": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "The speech, joined."
+        }
+      },
+      "required": ["text"]
+    },
+    "wait": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "matched": {
+              "const": true
+            },
+            "entry": {
+              "$ref": "#/$defs/SpeechEntry"
+            }
+          },
+          "required": ["matched", "entry"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "matched": {
+              "const": false
+            },
+            "entries": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/SpeechEntry"
+              },
+              "description": "The speech seen while waiting."
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "Speech the wait should have looked at was dropped because the bridge's buffer was full."
+            }
+          },
+          "required": ["matched", "entries", "truncated"]
+        }
+      ],
+      "description": "The match, or on timeout (exit code 1) the speech seen."
+    },
+    "wait-silence": {
+      "type": "object",
+      "properties": {
+        "silent": {
+          "const": true
+        }
+      },
+      "required": ["silent"]
+    },
+    "mark": {
+      "$ref": "#/$defs/SpeechEntry"
+    },
+    "tail": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "entry"
+            },
+            "entry": {
+              "$ref": "#/$defs/SpeechEntry"
+            }
+          },
+          "required": ["type", "entry"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "session"
+            },
+            "session": {
+              "$ref": "#/$defs/Session"
+            }
+          },
+          "required": ["type", "session"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "clear"
+            }
+          },
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "truncated"
+            }
+          },
+          "required": ["type"]
+        }
+      ],
+      "description": "One line per event, as it happens (NDJSON)."
+    },
+    "config set": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "enum": ["url"],
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "description": "The value as saved, normalised."
+        },
+        "shadowedBy": {
+          "const": "env",
+          "description": "Set when `SR_SPEECH_URL` hides the saved value."
+        },
+        "file": {
+          "type": "string",
+          "description": "The client config file."
+        }
+      },
+      "required": ["key", "value", "file"]
+    },
+    "config get": {
+      "$ref": "#/$defs/ConfigValue"
+    },
+    "config unset": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "enum": ["url"],
+          "type": "string"
+        },
+        "file": {
+          "type": "string",
+          "description": "The client config file."
+        }
+      },
+      "required": ["key", "file"]
+    },
+    "config list": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "The client config file."
+        },
+        "settings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConfigValue"
+          }
+        }
+      },
+      "required": ["file", "settings"]
+    },
+    "config path": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "The client config file."
+        }
+      },
+      "required": ["file"]
+    }
+  }
+}

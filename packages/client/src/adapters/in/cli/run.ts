@@ -71,7 +71,8 @@ async function dispatch(argv: readonly string[], io: CliIo): Promise<number> {
     json: values.json,
     io,
     speech: () => (client ??= io.speech(values.url)),
-    out: (json, text) => io.stdout(values.json ? `${JSON.stringify(json)}\n` : `${text}\n`),
+    out: (_command, json, text) =>
+      io.stdout(values.json ? `${JSON.stringify(json)}\n` : `${text}\n`),
   };
   return command.run(args, ctx);
 }

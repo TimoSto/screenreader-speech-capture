@@ -35,7 +35,7 @@ export const config: Command = {
       case 'set': {
         const [key, value] = expectArgs(rest, 2, 'config set <key> <value>');
         const result = await config.set(key, value);
-        out({ ...result, file }, `Saved ${result.key} = ${result.value} to ${file}`);
+        out('config set', { ...result, file }, `Saved ${result.key} = ${result.value} to ${file}`);
         if (result.shadowedBy === 'env') {
           io.stderr(`Note: ${URL_ENV} is set and takes precedence over the config file.\n`);
         }
@@ -44,19 +44,20 @@ export const config: Command = {
       case 'get': {
         const [key] = expectArgs(rest, 1, 'config get <key>');
         const result = await config.get(key, explicit);
-        out(result, `${result.value} (${SOURCE_LABEL[result.source]})`);
+        out('config get', result, `${result.value} (${SOURCE_LABEL[result.source]})`);
         return EXIT.ok;
       }
       case 'unset': {
         const [key] = expectArgs(rest, 1, 'config unset <key>');
         const result = await config.unset(key);
-        out({ ...result, file }, `Removed ${result.key} from ${file}`);
+        out('config unset', { ...result, file }, `Removed ${result.key} from ${file}`);
         return EXIT.ok;
       }
       case 'list': {
         expectArgs(rest, 0, LIST.usage);
         const entries = await config.list(explicit);
         out(
+          'config list',
           { file, settings: entries },
           [
             `# ${file}`,
@@ -67,7 +68,7 @@ export const config: Command = {
       }
       case 'path':
         expectArgs(rest, 0, PATH.usage);
-        out({ file }, file);
+        out('config path', { file }, file);
         return EXIT.ok;
       case undefined:
         throw new UsageError('Missing config action: set, get, unset, list or path.');

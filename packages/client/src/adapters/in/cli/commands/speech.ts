@@ -31,7 +31,7 @@ export const status: Command = {
     const result = values['wait-ready']
       ? await speech().waitForReady({ timeout })
       : await speech().status();
-    out(result, formatStatus(result));
+    out('status', result, formatStatus(result));
     return EXIT.ok;
   },
 };
@@ -67,18 +67,19 @@ export const session: Command = {
               `(${replaced.client ?? 'unknown'}).\n`,
           );
         }
-        out(started, String(started.id));
+        out('session start', started, String(started.id));
         return EXIT.ok;
       }
       case 'end':
         expectArgs(rest, 0, SESSION_END.usage);
         await speech().endSession();
-        out({ ended: true }, 'Session ended.');
+        out('session end', { ended: true }, 'Session ended.');
         return EXIT.ok;
       case 'list': {
         expectArgs(rest, 0, SESSION_LIST.usage);
         const list = await speech().sessions();
         out(
+          'session list',
           list,
           list.sessions.length === 0
             ? 'No sessions.'
@@ -105,7 +106,7 @@ export const clear: Command = {
   async run(args, { speech, out }) {
     expectArgs(args, 0, CLEAR.usage);
     await speech().clear();
-    out({ cleared: true }, 'Speech buffer cleared.');
+    out('clear', { cleared: true }, 'Speech buffer cleared.');
     return EXIT.ok;
   },
 };
@@ -128,7 +129,7 @@ export const speech: Command = {
       includeMarkers: values['include-markers'] ?? false,
       session: await scope(values, client),
     });
-    out({ entries }, entries.map(formatEntry).join('\n'));
+    out('speech', { entries }, entries.map(formatEntry).join('\n'));
     return EXIT.ok;
   },
 };
@@ -149,7 +150,7 @@ export const text: Command = {
       separator: values.separator,
       session: await scope(values, client),
     });
-    out({ text: joined }, joined);
+    out('text', { text: joined }, joined);
     return EXIT.ok;
   },
 };
@@ -186,14 +187,14 @@ export const wait: Command = {
     };
     try {
       const entry = await client.waitForOutput(match, options);
-      out({ matched: true, entry }, formatEntry(entry));
+      out('wait', { matched: true, entry }, formatEntry(entry));
       return EXIT.ok;
     } catch (error) {
       if (!(error instanceof SpeechTimeoutError)) throw error;
-      if (json)
-        io.stdout(
-          `${JSON.stringify({ matched: false, entries: error.entries, truncated: error.truncated })}\n`,
-        );
+      // Without --json, the timeout is only the message on stderr.
+      if (json) {
+        out('wait', { matched: false, entries: error.entries, truncated: error.truncated }, '');
+      }
       io.stderr(`${NAME}: ${error.message}.${seenText(error.entries)}\n`);
       return EXIT.timeout;
     }
@@ -214,7 +215,7 @@ export const waitSilence: Command = {
     const timeout = optionalInt(values, 'timeout', 0);
     try {
       await speech().waitForSilence({ quietFor, timeout });
-      out({ silent: true }, 'Silent.');
+      out('wait-silence', { silent: true }, 'Silent.');
       return EXIT.ok;
     } catch (error) {
       if (!(error instanceof SpeechTimeoutError)) throw error;
@@ -235,7 +236,7 @@ export const mark: Command = {
   async run(args, { speech, out }) {
     const [label] = expectArgs(args, 1, MARK.usage);
     const entry = await speech().mark(label);
-    out(entry, String(entry.seq));
+    out('mark', entry, String(entry.seq));
     return EXIT.ok;
   },
 };
@@ -266,22 +267,25 @@ export const tail: Command = {
         resolve(code);
       };
       const interrupted = () => finish(EXIT.ok);
-      const stop = client.onSpeech((entry) => out({ type: 'entry', entry }, formatEntry(entry)), {
-        since,
-        includeMarkers: true,
-        onSession: (s) => out({ type: 'session', session: s }, formatSessionEvent(s)),
-        onClear: () => out({ type: 'clear' }, '--- buffer cleared ---'),
-        onTruncated: () => {
-          if (json) out({ type: 'truncated' }, '');
-          io.stderr(
-            `${NAME}: some entries were dropped from the bridge's buffer before they could be shown.\n`,
-          );
+      const stop = client.onSpeech(
+        (entry) => out('tail', { type: 'entry', entry }, formatEntry(entry)),
+        {
+          since,
+          includeMarkers: true,
+          onSession: (s) => out('tail', { type: 'session', session: s }, formatSessionEvent(s)),
+          onClear: () => out('tail', { type: 'clear' }, '--- buffer cleared ---'),
+          onTruncated: () => {
+            if (json) out('tail', { type: 'truncated' }, '');
+            io.stderr(
+              `${NAME}: some entries were dropped from the bridge's buffer before they could be shown.\n`,
+            );
+          },
+          onError: (error, { retrying }) => {
+            io.stderr(`${NAME}: ${error.message}${retrying ? ', reconnecting' : ''}\n`);
+            if (!retrying) finish(EXIT.bridge);
+          },
         },
-        onError: (error, { retrying }) => {
-          io.stderr(`${NAME}: ${error.message}${retrying ? ', reconnecting' : ''}\n`);
-          if (!retrying) finish(EXIT.bridge);
-        },
-      });
+      );
       if (signal.aborted) finish(EXIT.ok);
       else signal.addEventListener('abort', interrupted, { once: true });
     });

@@ -5,6 +5,7 @@ import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { freePort, send, start } from '../../bridge/test/helpers.js';
 import { SystemClock } from '../../bridge/src/adapters/out/clock/system-clock.js';
 import { EXIT, runCli } from '../src/adapters/in/cli/run.js';
+import { expectCliOutput } from './cli-output.js';
 import {
   BridgeHttpError,
   BridgeUnreachableError,
@@ -38,6 +39,7 @@ async function cli(args: string[]) {
     version: '0.0.0',
     interrupt: () => new AbortController().signal,
   });
+  expectCliOutput(args, stdout);
   return { code, stdout, stderr };
 }
 
