@@ -45,8 +45,8 @@ export class SseHub {
     return send;
   }
 
-  /** Ends every open stream, for shutdown. */
-  closeAll(): void {
-    for (const res of this.streams) res.end();
+  /** Ends the open streams for which `which` is `true` (all without it), for shutdown. */
+  close(which: (res: http.ServerResponse) => boolean = () => true): void {
+    for (const res of this.streams) if (which(res)) res.end();
   }
 }
