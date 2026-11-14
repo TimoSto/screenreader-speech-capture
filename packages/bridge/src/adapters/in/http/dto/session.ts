@@ -12,6 +12,7 @@ export function toSessionDto(session: SessionSummary): SessionDto {
     run: session.run,
     startedAt: session.startedAt.toISOString(),
     endedAt: session.endedAt?.toISOString() ?? null,
+    startSeq: session.startSeq,
     firstSeq: session.firstSeq,
     lastSeq: session.lastSeq,
     entries: session.entries,

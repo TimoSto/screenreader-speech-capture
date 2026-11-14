@@ -140,6 +140,7 @@ export class FakeBridgeApi implements BridgeApi {
       run: request.run ?? null,
       startedAt: new Date(0).toISOString(),
       endedAt: null,
+      startSeq: this.seq,
       firstSeq: null,
       lastSeq: null,
       entries: 0,

@@ -229,7 +229,7 @@ describe('sessions', () => {
     expect(api.calls).toContain('list 0 session=1');
   });
 
-  it('startSession handles speech that arrives around the request', async () => {
+  it('startSession moves the cursor to the startSeq the bridge reports', async () => {
     const { api, sr } = setup();
     api.speak('old');
     const start = api.startSession.bind(api);
@@ -255,17 +255,7 @@ describe('sessions', () => {
       ['two', false],
       ['one', false],
     ]);
-    expect(api.calls).toEqual([
-      'status',
-      'status',
-      'start one',
-      'list 0',
-      'status',
-      'start two',
-      'list 0',
-      'end',
-      'sessions',
-    ]);
+    expect(api.calls).toEqual(['status', 'start one', 'start two', 'end', 'sessions']);
   });
 
   it('a wait in a session only matches that session', async () => {

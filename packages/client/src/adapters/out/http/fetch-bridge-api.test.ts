@@ -53,6 +53,7 @@ const sessionDto: SessionDto = {
   run: null,
   startedAt: '2026-11-12T09:00:00.000Z',
   endedAt: null,
+  startSeq: 0,
   firstSeq: null,
   lastSeq: null,
   entries: 0,

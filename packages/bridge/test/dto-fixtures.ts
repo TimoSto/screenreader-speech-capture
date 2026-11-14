@@ -22,6 +22,7 @@ export const session = (endedAt: Date | null = null): SessionSummary => ({
   run: 'nightly',
   startedAt: AT,
   endedAt,
+  startSeq: 2,
   firstSeq: 3,
   lastSeq: 4,
   entries: 2,

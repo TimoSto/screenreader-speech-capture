@@ -78,7 +78,8 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 `seq > cursor`.
 
 - A new client starts at `0`. `startSession(name)` starts a [session](speech-capture.md#sessions)
-  and moves the cursor to the session's start, so everything after it belongs to the session. The
+  and moves the cursor to the session's start (its `startSeq`), so everything after it belongs to
+  the session. The
   fixture *(planned, [M3](ROADMAP.md#m3-playwright--mcp-))* does this before each test. Earlier sessions stay in the buffer for the
   [web UI](web-ui.md#context-pane).
 - `clear()` wipes the whole buffer and sets the cursor back to `0`. It is meant for manual use;

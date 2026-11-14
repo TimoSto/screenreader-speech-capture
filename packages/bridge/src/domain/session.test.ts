@@ -7,6 +7,7 @@ const session = (endedAt: Date | null): Session => ({
   run: null,
   startedAt: new Date(0),
   endedAt,
+  startSeq: 0,
 });
 
 describe('summarize', () => {

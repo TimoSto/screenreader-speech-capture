@@ -137,8 +137,11 @@ describe('sessions', () => {
     const sr = client();
     await say('earlier test');
     await sr.waitForOutput('earlier');
+    const before = (await sr.status()).buffer.lastSeq;
     const session = await sr.startSession('checkout', { run: 'nightly' });
     expect(session).toMatchObject({ name: 'checkout', run: 'nightly', endedAt: null });
+    expect(session.startSeq).toBe(before);
+    expect(sr.cursor()).toBe(session.startSeq);
     await say('Submit, button');
     expect(await sr.waitForOutput('Submit')).toMatchObject({ sessionId: session.id });
     expect(await sr.getText({ since: 0, session: 'current' })).toBe('Submit, button');
