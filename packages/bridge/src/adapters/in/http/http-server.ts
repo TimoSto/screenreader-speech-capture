@@ -1,5 +1,4 @@
 import http from 'node:http';
-import type net from 'node:net';
 import { API_PREFIX } from '@screenreader-speech-capture/shared';
 import type { GetStatus } from '../../../application/ports/in/get-status.js';
 import type { ManageConfig } from '../../../application/ports/in/manage-config.js';
@@ -45,18 +44,12 @@ const CLOSE_GRACE_MS = 1000;
 const SSE_MAX_BUFFERED_BYTES = 1024 * 1024;
 
 /**
- * Driving adapter for the REST + SSE API (docs/http-api.md), on plain `node:http`.
+ * Driving adapter for the REST + SSE API (docs/http-api.md), on plain `node:http`. Its address
+ * is set at start; a new one takes effect on the next start of the bridge.
  */
 export class HttpServer {
   private server: http.Server | null = null;
-  /** The settings as bound: `port` is the actual port (never 0). */
-  private settings: HttpSettings | null = null;
-  /** The settings as asked for, so a change of `allowedHosts` alone doesn't rebind port 0. */
-  private requested: HttpSettings | null = null;
-  /** Servers replaced by `restart()` that are still finishing their open requests. */
-  private readonly retiring = new Set<Promise<void>>();
-  /** The open connections of each server, so retiring one ends only its own SSE streams. */
-  private readonly sockets = new WeakMap<http.Server, Set<net.Socket>>();
+  private allowedHosts: readonly string[] = [];
   private readonly router = new Router(API_PREFIX);
   private readonly sse: SseHub;
 
@@ -74,68 +67,9 @@ export class HttpServer {
   /** Starts listening. Resolves with the bound port (useful with port 0). */
   async start(settings: HttpSettings): Promise<number> {
     if (this.server) throw new Error('HTTP server is already running');
-    return this.bind(settings);
-  }
-
-  /**
-   * Moves the API to new settings (`PUT /api/v1/config`) and resolves with the bound port.
-   * The request that asked for it is served by the old server, so that one is not awaited: it
-   * stops accepting connections and lets its open requests finish in the background.
-   *
-   * A new port is bound before the old server stops, so a port that is in use leaves everything
-   * as it was. The same port on another host can't be bound while the old server holds it: then
-   * the old server stops listening first, and starts again if the new address fails.
-   *
-   * With the same host and port, only `allowedHosts` changed: it applies to the next request,
-   * without a new server.
-   */
-  async restart(settings: HttpSettings): Promise<number> {
-    const old = this.server;
-    const previous = this.settings;
-    if (!old || !previous) return this.start(settings);
-
-    if (settings.host === this.requested?.host && settings.port === this.requested.port) {
-      this.requested = settings;
-      this.settings = { ...settings, port: previous.port };
-      return previous.port;
-    }
-
-    if (settings.port === 0 || settings.port !== previous.port) {
-      const port = await this.bind(settings, old);
-      this.retire(old);
-      return port;
-    }
-
-    this.server = null;
-    this.retire(old);
-    try {
-      return await this.bind(settings);
-    } catch (error) {
-      await this.bind(previous);
-      throw error;
-    }
-  }
-
-  /** Stops accepting connections, ends SSE streams and waits briefly for open requests. */
-  async stop(): Promise<void> {
-    const server = this.server;
-    this.server = null;
-    this.settings = null;
-    this.requested = null;
-    if (server) this.retire(server);
-    await Promise.all(this.retiring);
-    if (server) this.deps.logger.info('stopped listening');
-  }
-
-  /** Listens on `settings` with a new server, which then replaces `replacing` (if any). */
-  private async bind(
-    settings: HttpSettings,
-    replacing: http.Server | null = null,
-  ): Promise<number> {
     const server = http.createServer((req, res) => {
-      // Once this server is stopping, a response that finishes (a 503 for a pending wait, an
-      // ended SSE stream, the answer to a PUT /config that moved the API) also ends its
-      // keep-alive connection, so the server doesn't have to force it.
+      // Once the server is stopping, a response that finishes (a 503 for a pending wait, an
+      // ended SSE stream) also ends its keep-alive connection, so it doesn't have to be forced.
       res.once('finish', () => {
         if (this.server !== server) req.socket.end();
       });
@@ -146,41 +80,35 @@ export class HttpServer {
         res.destroy();
       });
     });
-    const sockets = new Set<net.Socket>();
-    this.sockets.set(server, sockets);
-    server.on('connection', (socket) => {
-      sockets.add(socket);
-      socket.once('close', () => sockets.delete(socket));
-    });
     const port = await listen(server, settings.host, settings.port);
     server.on('error', (error) => this.deps.logger.error(`HTTP server error: ${error.message}`));
-    if (this.server !== replacing) {
-      // Started or stopped meanwhile: this server is not needed.
-      server.close();
-      throw new Error('HTTP server changed while it was being restarted');
-    }
     this.server = server;
-    this.settings = { ...settings, port };
-    this.requested = settings;
+    this.allowedHosts = settings.allowedHosts;
     // On 0.0.0.0, name the addresses clients can actually use (docs/operations.md#line-format).
     this.deps.logger.info(`listening on ${describeListener('http', settings.host, port)}`);
     return port;
   }
 
+  /** `http.allowedHosts`, for the next request (`PUT /api/v1/config`). */
+  setAllowedHosts(hosts: readonly string[]): void {
+    this.allowedHosts = hosts;
+  }
+
   /**
-   * Stops `server` from accepting connections, ends its SSE streams (clients reconnect) and
-   * closes its connections once their requests are done, forcing them after a grace period.
-   * Streams already open on a new server (`restart()`) stay open.
+   * Stops accepting connections, ends the SSE streams and waits briefly for open requests before
+   * it closes their connections.
    */
-  private retire(server: http.Server): void {
+  async stop(): Promise<void> {
+    const server = this.server;
+    if (!server) return;
+    this.server = null;
     const closed = new Promise<void>((resolve) => server.close(() => resolve()));
-    const sockets = this.sockets.get(server);
-    this.sse.close((res) => res.socket !== null && sockets?.has(res.socket) === true);
+    this.sse.close();
     server.closeIdleConnections();
     const force = setTimeout(() => server.closeAllConnections(), CLOSE_GRACE_MS);
-    const done = closed.then(() => clearTimeout(force));
-    this.retiring.add(done);
-    void done.then(() => this.retiring.delete(done));
+    await closed;
+    clearTimeout(force);
+    this.deps.logger.info('stopped listening');
   }
 
   private async handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
@@ -193,7 +121,7 @@ export class HttpServer {
       const url = parseUrl(req.url);
       path = url.pathname;
       checkAccess(req, {
-        allowedHosts: this.settings?.allowedHosts ?? [],
+        allowedHosts: this.allowedHosts,
         ownHostnames: this.deps.hostnames ?? [],
       });
       await this.router.find(method, url.pathname)({ req, res, url });

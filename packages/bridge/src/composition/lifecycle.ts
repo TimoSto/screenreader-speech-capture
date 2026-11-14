@@ -4,8 +4,13 @@ import { ListenError } from '../adapters/shared/net/listen.js';
 import type { BridgeStateControl, Shutdown } from '../application/ports/in/lifecycle.js';
 import type { Logger } from '../application/ports/out/logger.js';
 import type { Config } from '../domain/config/index.js';
-import type { Ports } from './reapply.js';
 import type { ChildService } from './services.js';
+
+/** The ports the listeners are bound to. */
+export interface Ports {
+  readonly tcp: number;
+  readonly http: number;
+}
 
 /**
  * Startup order (docs/operations.md#startup): the TCP listener first, so no speech is lost while

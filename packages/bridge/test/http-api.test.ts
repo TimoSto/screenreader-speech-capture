@@ -367,9 +367,10 @@ describe('HTTP API', () => {
   it('serves the configuration', async () => {
     const bridge = await start({ buffer: { maxEntries: 42 } });
     const config = await json<unknown>(await fetch(api(bridge, '/config')));
-    expect(config).toEqual(
-      JSON.parse(JSON.stringify(testConfig({ buffer: { maxEntries: 42 } }))) as unknown,
-    );
+    expect(config).toEqual({
+      ...(JSON.parse(JSON.stringify(testConfig({ buffer: { maxEntries: 42 } }))) as object),
+      restartRequired: [],
+    });
   });
 
   it('refuses foreign host names and origins, and takes new allowedHosts without a restart', async () => {

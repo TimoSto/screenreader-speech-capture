@@ -50,3 +50,17 @@ first). They don't poll, and they don't use `GET /speech/wait`:
 
 `GET /speech/wait` stays as a convenience for `curl` and agents without the client; it is not the
 reference behaviour for the client.
+
+## Listener addresses change on the next start
+
+`PUT /api/v1/config` saves every setting, but the listeners' addresses (`tcp.*`, `http.host`,
+`http.port`) and the log output (`log.file`, `log.consoleSpeech`) only take effect on the next
+start; the answer lists them in `restartRequired`. Everything else (buffer size, log level,
+`allowedHosts`, Playwright and MCP) still applies at once.
+
+Moving a listener while it runs meant binding the new address before closing the old one, falling
+back when that failed, undoing the steps already applied, and ending only the old server's SSE
+streams. That is a lot of code and edge cases for something that happens about once when a VM is
+set up, where restarting the bridge is just as easy. The settings that still apply live can't
+fail, so a config update needs no undo.
+

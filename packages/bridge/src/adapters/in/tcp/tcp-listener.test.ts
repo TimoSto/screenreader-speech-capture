@@ -54,51 +54,24 @@ it('refuses a second start', async () => {
   await expect(tcp.start(settings())).rejects.toThrow('already running');
 });
 
-it('moves to a new port and closes the old connections', async () => {
+it('stop() closes the open connections and reports the listener as not listening', async () => {
   const { tcp } = listener();
-  const oldPort = await tcp.start(settings());
-  const { closed } = await connect(oldPort);
-
-  const newPort = await tcp.restart(settings());
-  expect(newPort).not.toBe(oldPort);
-  await closed;
-  expect(tcp.captureStatus().listener).toMatchObject({ listening: true, port: newPort });
-  await connect(newPort);
-});
-
-it('keeps listening on the old port when the new one is in use', async () => {
-  const { tcp } = listener();
-  const oldPort = await tcp.start(settings());
-  const busy = await busyPort();
-
-  await expect(tcp.restart(settings({ port: busy }))).rejects.toBeInstanceOf(ListenError);
-  expect(tcp.captureStatus().listener).toMatchObject({ listening: true, port: oldPort });
-  await connect(oldPort);
-});
-
-it('rebinds the same port with new settings', async () => {
-  const { tcp, recorded } = listener();
   const port = await tcp.start(settings());
+  const { closed } = await connect(port);
+  await tcp.stop();
+  await closed;
+  expect(tcp.captureStatus().listener).toMatchObject({ listening: false, port });
+});
 
-  expect(await tcp.restart(settings({ port, encoding: 'windows-1252' }))).toBe(port);
+it('decodes with the configured encoding', async () => {
+  const { tcp, recorded } = listener();
+  const port = await tcp.start(settings({ encoding: 'windows-1252' }));
   const { socket } = await connect(port);
   socket.end(Buffer.from([0x4d, 0xe4, 0x72, 0x7a, 0x0d, 0x0a]));
   await expect.poll(() => recorded.map((speech) => speech.text)).toEqual(['März']);
 });
 
-it('rebinds the old settings when the same port fails on another host', async () => {
+it('rejects a port that is in use', async () => {
   const { tcp } = listener();
-  const port = await tcp.start(settings());
-
-  await expect(tcp.restart(settings({ host: '192.0.2.1', port }))).rejects.toBeInstanceOf(
-    ListenError,
-  );
-  expect(tcp.captureStatus().listener).toMatchObject({ listening: true, host: '127.0.0.1', port });
-  await connect(port);
-});
-
-it('starts when restarted while stopped', async () => {
-  const { tcp } = listener();
-  const port = await tcp.restart(settings());
-  await connect(port);
+  await expect(tcp.start(settings({ port: await busyPort() }))).rejects.toBeInstanceOf(ListenError);
 });

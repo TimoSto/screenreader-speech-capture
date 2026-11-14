@@ -37,17 +37,16 @@ describe('createLogging', () => {
     expect(message(out.lines[0]!)).toBe(`starting, version 1, config c, log level debug ${hint}`);
   });
 
-  it('apply() changes the level', () => {
+  it('setLevel() changes the level', () => {
     const out = sink();
-    const before = config();
-    const logging = createLogging(before, {
+    const log = createLogging(config(), {
       version: '1',
       configLocation: 'c',
       sinks: [out],
     });
-    const logger = logging.log.for('bridge');
+    const logger = log.for('bridge');
     logger.debug('hidden');
-    logging.apply(config({ log: { level: 'debug' } }), before);
+    log.setLevel('debug');
     logger.debug('shown');
     expect(out.lines.map(message).slice(1)).toEqual(['shown']);
   });

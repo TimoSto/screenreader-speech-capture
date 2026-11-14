@@ -1,62 +1,35 @@
 import type { HttpServer } from '../adapters/in/http/http-server.js';
-import type { TcpListener } from '../adapters/in/tcp/tcp-listener.js';
-import { toConfigError } from '../adapters/shared/net/listen.js';
 import type { Logger } from '../application/ports/out/logger.js';
 import type { ResizeBuffer } from '../application/ports/in/resize-buffer.js';
 import type { ConfigService } from '../application/services/config-service.js';
 import { changedSections } from '../domain/config/index.js';
-import type { Logging } from './logging.js';
+import type { BridgeLog } from '../adapters/out/log/bridge-log.js';
 import type { ChildService } from './services.js';
 
-/** The ports the listeners are bound to. Updated when a restart moves them. */
-export interface Ports {
-  tcp: number;
-  http: number;
-}
-
 /**
- * Live re-apply of PUT /api/v1/config (docs/configuration.md#changing-settings). Each step
- * leaves its part as it was when it fails, and ConfigService undoes the steps before it.
+ * Live re-apply of PUT /api/v1/config (docs/configuration.md#changing-settings). Only settings
+ * that can change without failing get here; the listeners' addresses and the log output wait for
+ * the next start (`RESTART_FIELDS`).
  */
 export function registerReapply(
   config: ConfigService,
   parts: {
-    tcp: TcpListener;
-    http: HttpServer;
+    http: Pick<HttpServer, 'setAllowedHosts'>;
     buffer: ResizeBuffer;
-    logging: Logging;
+    log: Pick<BridgeLog, 'setLevel'>;
     services: readonly ChildService[];
     logger: Logger;
-    ports: Ports;
   },
 ): void {
-  const { tcp, http, buffer, logging, services, logger, ports } = parts;
+  const { http, buffer, log, services, logger } = parts;
 
-  config.onChange(async (next, previous) => {
-    if (!changedSections(previous, next).includes('tcp')) return;
-    try {
-      ports.tcp = await tcp.restart(next.tcp);
-    } catch (error) {
-      throw toConfigError('tcp', error);
-    }
-  });
-  config.onChange(async (next, previous) => {
-    if (!changedSections(previous, next).includes('http')) return;
-    try {
-      ports.http = await http.restart(next.http);
-    } catch (error) {
-      throw toConfigError('http', error);
-    }
-  });
+  config.onChange((next) => http.setAllowedHosts(next.http.allowedHosts));
   config.onChange((next) => buffer.setMaxEntries(next.buffer.maxEntries));
-  config.onChange((next, previous) => logging.apply(next, previous));
+  config.onChange((next) => log.setLevel(next.log.level));
 
-  // Last, because they never fail: the steps before them are not undone because of them.
   for (const { section, supervisor, settingsOf } of services) {
     config.onChange(async (next, previous) => {
-      const changed = changedSections(previous, next);
-      const hostChanged = changed.includes('http') && next.http.host !== previous.http.host;
-      if (!changed.includes(section) && !hostChanged) return;
+      if (!changedSections(previous, next).includes(section)) return;
       supervisor.reconfigure(settingsOf(next));
       // Not awaited: an install can take minutes. `status` shows the progress.
       if (next[section].enabled) {

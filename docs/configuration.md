@@ -42,29 +42,34 @@ the API answers to besides IP addresses, `localhost` and the machine's name, see
 `PUT /api/v1/config` takes any subset of the settings, as JSON:
 
 ```sh
-curl -X PUT $VM/api/v1/config -H 'content-type: application/json' -d '{"tcp":{"port":4450}}'
+curl -X PUT $VM/api/v1/config -H 'content-type: application/json' -d '{"buffer":{"maxEntries":50000}}'
 ```
 
 - The whole patch is checked first. An invalid value changes nothing and answers `400` with
   `details.field`.
-- The change applies to the running bridge right away, then the patch is saved to the config file.
-  The file keeps its own settings plus the patch, never values from flags or environment variables.
-- If one part can't take the change (for example the new port is in use: `400`, `field:
-  "tcp.port"`), the parts that already took it are undone and nothing is saved.
-- Updates run one at a time, and every changed setting is logged under `[config]`.
-- A flag or variable still wins on the **next start**. Changing such a setting works for the
-  running bridge, and the log warns: `[config] WARN tcp.port: saved to …\config.json, but
-  --tcp-port overrides it on the next start`.
+- The patch is saved to the config file, then applied to the running bridge. The file keeps its
+  own settings plus the patch, never values from flags or environment variables. If the file
+  can't be written, nothing changes.
+- **Restart-only settings** (`tcp.*`, `http.host`, `http.port`, `log.file`, `log.consoleSpeech`)
+  are saved but take effect on the **next start** of the bridge. The answer, like `GET`, lists
+  the ones saved with a value other than the one in use in `restartRequired`
+  (`["tcp.port"]`), and shows the values in use. `restartRequired` in a request body is ignored,
+  so a `GET` answer can be sent back as it is.
+- Updates run one at a time, and every changed setting is logged under `[config]`, a restart-only
+  one as `tcp.port: 4449 → 4450 on the next start`.
+- A flag or variable still wins on the next start. The log warns: `[config] WARN tcp.port: saved
+  to …\config.json, but --tcp-port overrides it on the next start`. Such a setting is not listed
+  in `restartRequired`, since a restart wouldn't apply it either.
 
 What each section does when it changes:
 
 | Section | Effect |
 |---|---|
-| `tcp` | The TCP listener restarts on the new settings, which closes the open connections. The voice reconnects on its next `Speak`. If the new port can't be used, the listener stays on the old one. |
-| `http` | The API and UI move to the new address. A new port is bound before the old one closes, so a port in use leaves everything as it was. The answer to the `PUT` still comes from the old address; open SSE streams are closed (clients reconnect). A change of `allowedHosts` alone applies to the next request, without moving the API. |
+| `tcp` | Next start. |
+| `http` | `allowedHosts` applies to the next request. `host` and `port` on the next start. |
 | `buffer` | `maxEntries` applies at once. A smaller value drops the oldest entries (they count as `truncated`). |
-| `log` | The level applies at once. A new `file` or `consoleSpeech` switches the log output. |
-| `playwright` | The Playwright server restarts with the new port or version (a new version is installed first). The `PUT` answers at once; `status` shows the service as `starting` until it runs. `enabled: false` stops it. A change of `http.host` restarts it too, because it listens on the same interface. |
+| `log` | The level applies at once. `file` and `consoleSpeech` on the next start. |
+| `playwright` | The Playwright server restarts with the new port or version (a new version is installed first). The `PUT` answers at once; `status` shows the service as `starting` until it runs. `enabled: false` stops it. It listens on the interface of `http.host` in use. |
 | `mcp` | Like `playwright`, for Playwright MCP. It has no `version`: the bridge runs the [bundled one](playwright-mcp.md#mcp-version). |
 | `input` | Saved, and shown by `GET /config` and `status`. It takes effect once native input (M4) exists. |
 

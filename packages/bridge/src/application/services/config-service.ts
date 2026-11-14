@@ -1,14 +1,20 @@
 import {
   changedFields,
   configFields,
+  liveConfig,
   mergeConfig,
   mergePatch,
+  RESTART_FIELDS,
   validatePatch,
   type Config,
   type ConfigField,
   type ConfigPatch,
 } from '../../domain/config/index.js';
-import type { ConfigChangeListener, ManageConfig } from '../ports/in/manage-config.js';
+import type {
+  ConfigChangeListener,
+  ConfigUpdate,
+  ManageConfig,
+} from '../ports/in/manage-config.js';
 import type { ConfigStore } from '../ports/out/config-store.js';
 import type { Logger } from '../ports/out/logger.js';
 
@@ -27,14 +33,18 @@ export interface ConfigServiceDeps {
 }
 
 const show = (value: unknown) => JSON.stringify(value);
+const same = (a: unknown, b: unknown) => show(a) === show(b);
 
 /**
- * The configuration (`GET` / `PUT /api/v1/config`). An update applies to the running bridge
- * through the change listeners and is saved to the config file (docs/configuration.md).
+ * The configuration (`GET` / `PUT /api/v1/config`). An update is saved to the config file, then
+ * applied to the running bridge through the change listeners, except the restart-only settings
+ * (docs/configuration.md#changing-settings).
  */
 export class ConfigService implements ManageConfig {
   private active: Config;
   private file: ConfigPatch;
+  /** Restart-only settings saved with another value than the one in use, and that value. */
+  private readonly pending = new Map<ConfigField, unknown>();
   private readonly listeners: ConfigChangeListener[] = [];
   private queue: Promise<unknown> = Promise.resolve();
 
@@ -47,63 +57,70 @@ export class ConfigService implements ManageConfig {
     return this.active;
   }
 
+  restartRequired(): ConfigField[] {
+    return [...this.pending.keys()];
+  }
+
   onChange(listener: ConfigChangeListener): void {
     this.listeners.push(listener);
   }
 
-  update(patch: unknown): Promise<Config> {
+  update(patch: unknown): Promise<ConfigUpdate> {
     // One at a time: a second update starts from the result of the first.
     const result = this.queue.then(() => this.apply(patch));
     this.queue = result.catch(() => undefined);
     return result;
   }
 
-  private async apply(patch: unknown): Promise<Config> {
+  private async apply(patch: unknown): Promise<ConfigUpdate> {
     const changes = validatePatch(patch);
     const previous = this.active;
-    const next = mergeConfig(previous, changes);
-    const changed = changedFields(previous, next);
+    const next = liveConfig(mergeConfig(previous, changes), previous);
+
+    // Saved first: if the file can't be written, nothing has changed.
     const saved = configFields(this.file);
-    const fileChanged = [...configFields(changes)].some(
-      ([field, value]) => JSON.stringify(saved.get(field)) !== JSON.stringify(value),
-    );
-    if (changed.length === 0 && !fileChanged) return previous;
-
-    const applied: ConfigChangeListener[] = [];
-    try {
-      if (changed.length > 0) {
-        for (const listener of this.listeners) {
-          await listener(next, previous);
-          applied.push(listener);
-        }
-      }
+    const patched = configFields(changes);
+    if ([...patched].some(([field, value]) => !same(saved.get(field), value))) {
       const file = mergePatch(this.file, changes);
-      if (fileChanged) await this.deps.store.save(file);
+      await this.deps.store.save(file);
       this.file = file;
-    } catch (error) {
-      await this.undo(applied, previous, next);
-      throw error;
     }
 
+    const changed = changedFields(previous, next);
+    // The listeners only apply settings that can't fail (docs/configuration.md#changing-settings).
+    if (changed.length > 0) {
+      for (const listener of this.listeners) await listener(next, previous);
+    }
     this.active = next;
-    this.log(changes, changed);
-    return next;
-  }
 
-  private async undo(applied: ConfigChangeListener[], previous: Config, next: Config) {
-    for (const listener of applied.reverse()) {
-      try {
-        await listener(previous, next);
-      } catch (error) {
-        this.deps.logger.error(`could not undo a configuration change: ${String(error)}`);
+    const running = configFields(previous);
+    const later: { field: ConfigField; to: unknown }[] = [];
+    for (const [field, value] of patched) {
+      // A pinned setting is replaced by its flag on the next start: `log` warns about it.
+      if (!RESTART_FIELDS.has(field) || this.deps.pinned?.has(field)) continue;
+      if (same(value, running.get(field))) {
+        this.pending.delete(field);
+      } else if (!same(value, this.pending.get(field))) {
+        this.pending.set(field, value);
+        later.push({ field, to: value });
       }
     }
+    this.log(patched.keys(), changed, later, running);
+    return { config: next, restartRequired: this.restartRequired() };
   }
 
-  private log(changes: ConfigPatch, changed: ReturnType<typeof changedFields>) {
+  private log(
+    patched: Iterable<ConfigField>,
+    changed: ReturnType<typeof changedFields>,
+    later: { field: ConfigField; to: unknown }[],
+    running: Map<ConfigField, unknown>,
+  ) {
     const { logger, pinned, store } = this.deps;
     for (const { field, from, to } of changed) logger.info(`${field}: ${show(from)} → ${show(to)}`);
-    for (const field of configFields(changes).keys()) {
+    for (const { field, to } of later) {
+      logger.info(`${field}: ${show(running.get(field))} → ${show(to)} on the next start`);
+    }
+    for (const field of patched) {
       const source = pinned?.get(field);
       if (source !== undefined) {
         logger.warn(
