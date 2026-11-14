@@ -17,6 +17,26 @@ export class SpeechTimeoutError extends Error {
   }
 }
 
+/**
+ * `getSpeech` / `getText` without `allowTruncated`: some of the speech asked for was dropped
+ * because the bridge's buffer was full, so the read would be incomplete. `entries` holds what is
+ * left, oldest first.
+ */
+export class SpeechTruncatedError extends Error {
+  override name = 'SpeechTruncatedError';
+
+  constructor(
+    /** The `since` of the read. */
+    readonly since: number,
+    readonly entries: SpeechEntry[],
+  ) {
+    super(
+      `Speech after seq ${since} is incomplete: ${TRUNCATED_HINT}. ` +
+        'Pass allowTruncated: true to read what is left.',
+    );
+  }
+}
+
 /** Why a wait or recording may have missed speech, and what to do about it. */
 export const TRUNCATED_HINT =
   "some speech was dropped because the bridge's buffer was full (raise buffer.maxEntries)";

@@ -225,7 +225,23 @@ describe('speech commands', () => {
     expect((await cli(['text', '--since', '3'], fake)).stdout).toBe('two\nthree\n');
     expect(JSON.parse((await cli(['text', '--json', '--separator', ' '], fake)).stdout)).toEqual({
       text: 'one two three',
+      truncated: false,
     });
+  });
+
+  it('speech and text show what is left of dropped speech, with a warning', async () => {
+    const fake = fakeSpeech();
+    fake.api.speak('one', 'two', 'three');
+    fake.api.dropOldest(1);
+    const speech = await cli(['speech', '--all', '--json'], fake);
+    expect(speech.code).toBe(EXIT.ok);
+    const json = JSON.parse(speech.stdout) as { entries: { text: string }[]; truncated: boolean };
+    expect([json.entries.map((e) => e.text), json.truncated]).toEqual([['two', 'three'], true]);
+    expect(speech.stderr).toMatch(/some speech was dropped .*showing what is left/);
+
+    const text = await cli(['text', '--all'], fake);
+    expect([text.code, text.stdout]).toEqual([EXIT.ok, 'two\nthree\n']);
+    expect(text.stderr).toContain('raise buffer.maxEntries');
   });
 
   it('wait finds earlier speech (no cursor between calls), with --regex and --normalize', async () => {

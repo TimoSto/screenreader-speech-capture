@@ -1,4 +1,6 @@
-import { SpeechTimeoutError } from '../../../../domain/errors.js';
+import { SpeechTimeoutError, SpeechTruncatedError } from '../../../../domain/errors.js';
+import type { SpeechEntry } from '../../../../domain/speech-entry.js';
+import type { CliIo } from '../command.js';
 import { EXIT, type Command, type HelpLine } from '../command.js';
 import {
   formatEntry,
@@ -119,17 +121,18 @@ const SPEECH: HelpLine = {
 export const speech: Command = {
   options: ['since', 'limit', 'include-markers', 'session', 'all'],
   help: [SPEECH],
-  async run(args, { values, speech, out }) {
+  async run(args, { values, speech, out, io }) {
     expectArgs(args, 0, SPEECH.usage);
     const client = speech();
     // Options are checked before the bridge is asked for the current session.
-    const entries = await client.getSpeech({
+    const options = {
       since: optionalInt(values, 'since', 0) ?? 0,
       limit: optionalInt(values, 'limit', 1),
       includeMarkers: values['include-markers'] ?? false,
       session: await scope(values, client),
-    });
-    out('speech', { entries }, entries.map(formatEntry).join('\n'));
+    };
+    const read = await readAll(io, () => client.getSpeech(options));
+    out('speech', read, read.entries.map(formatEntry).join('\n'));
     return EXIT.ok;
   },
 };
@@ -142,15 +145,17 @@ const TEXT: HelpLine = {
 export const text: Command = {
   options: ['since', 'separator', 'session', 'all'],
   help: [TEXT],
-  async run(args, { values, speech, out }) {
+  async run(args, { values, speech, out, io }) {
     expectArgs(args, 0, TEXT.usage);
     const client = speech();
-    const joined = await client.getText({
+    const options = {
       since: optionalInt(values, 'since', 0) ?? 0,
-      separator: values.separator,
       session: await scope(values, client),
-    });
-    out('text', { text: joined }, joined);
+    };
+    // `getText` is `getSpeech` joined; reading the entries keeps what is left on truncation.
+    const { entries, truncated } = await readAll(io, () => client.getSpeech(options));
+    const joined = entries.map((e) => e.text).join(values.separator ?? '\n');
+    out('text', { text: joined, truncated }, joined);
     return EXIT.ok;
   },
 };
@@ -291,3 +296,24 @@ export const tail: Command = {
     });
   },
 };
+
+/**
+ * A read that shows what is left when some of the speech was dropped from the bridge's full
+ * buffer, with a warning on stderr: a person or agent reading the CLI wants the rest, and
+ * `truncated` in the --json output says it is incomplete.
+ */
+async function readAll(
+  io: CliIo,
+  read: () => Promise<SpeechEntry[]>,
+): Promise<{ entries: SpeechEntry[]; truncated: boolean }> {
+  try {
+    return { entries: await read(), truncated: false };
+  } catch (error) {
+    if (!(error instanceof SpeechTruncatedError)) throw error;
+    io.stderr(
+      `${NAME}: some speech was dropped because the bridge's buffer was full ` +
+        '(raise buffer.maxEntries); showing what is left.\n',
+    );
+    return { entries: error.entries, truncated: true };
+  }
+}

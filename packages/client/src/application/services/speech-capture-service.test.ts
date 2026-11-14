@@ -6,6 +6,7 @@ import {
   BridgeUnreachableError,
   IncompatibleBridgeError,
   SpeechTimeoutError,
+  SpeechTruncatedError,
   TRUNCATED_HINT,
 } from '../../domain/errors.js';
 import { SpeechCaptureService } from './speech-capture-service.js';
@@ -329,6 +330,35 @@ describe('speech dropped from the bridge buffer', () => {
     api.speak('one', 'Submit, button');
     api.dropOldest(1);
     await expect(sr.waitForOutput('Submit', { since: 0 })).resolves.toMatchObject({ seq: 2 });
+  });
+
+  it('makes getSpeech and getText throw, with what is left, unless allowTruncated', async () => {
+    const { api, sr } = setup();
+    api.speak('one', 'two', 'three');
+    api.dropOldest(1);
+    const error = await sr.getSpeech({ since: 0 }).then(
+      () => {
+        throw new Error('expected SpeechTruncatedError');
+      },
+      (e: unknown) => e as SpeechTruncatedError,
+    );
+    expect(error).toBeInstanceOf(SpeechTruncatedError);
+    expect(error.message).toBe(
+      `Speech after seq 0 is incomplete: ${TRUNCATED_HINT}. Pass allowTruncated: true to read what is left.`,
+    );
+    expect(texts(error.entries)).toEqual(['two', 'three']);
+    await expect(sr.getText({ since: 0 })).rejects.toBeInstanceOf(SpeechTruncatedError);
+
+    expect(texts(await sr.getSpeech({ since: 0, allowTruncated: true }))).toEqual(['two', 'three']);
+    expect(await sr.getText({ since: 0, allowTruncated: true, separator: ' ' })).toBe('two three');
+  });
+
+  it('reads normally when the speech asked for is complete', async () => {
+    const { api, sr } = setup();
+    api.speak('one', 'two', 'three');
+    api.dropOldest(1);
+    // Everything after seq 1 is still there.
+    expect(texts(await sr.getSpeech({ since: 1 }))).toEqual(['two', 'three']);
   });
 
   it('marks a recording whose speech was dropped before it was read', async () => {

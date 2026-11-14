@@ -11,6 +11,7 @@ import {
   BridgeUnreachableError,
   IncompatibleBridgeError,
   SpeechTimeoutError,
+  SpeechTruncatedError,
 } from '../src/domain/errors.js';
 import { createClientConfig, SpeechCaptureClient } from '../src/main.js';
 
@@ -63,6 +64,15 @@ describe('library', () => {
     expect(sr.cursor()).toBe(1);
     await expect(sr.waitForOutput('Submit', { timeout: 200 })).rejects.toThrow(SpeechTimeoutError);
     expect(await sr.getText()).toBe('Name, edit, blank');
+  });
+
+  it("refuses to read speech that was partly dropped from the bridge's full buffer", async () => {
+    const { say, client } = await bridge({ buffer: { maxEntries: 3 } });
+    const sr = client();
+    await say('one', 'two', 'three', 'four', 'five');
+    await sr.waitForOutput('five');
+    await expect(sr.getText({ since: 0 })).rejects.toBeInstanceOf(SpeechTruncatedError);
+    expect(await sr.getText({ since: 0, allowTruncated: true })).toBe('three\nfour\nfive');
   });
 
   it("says when a wait's speech was dropped from the bridge's full buffer", async () => {

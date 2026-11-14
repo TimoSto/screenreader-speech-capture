@@ -103,8 +103,8 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 
 | Function | Returns | Description |
 |---|---|---|
-| `getSpeech({ since?, limit?, includeMarkers?, session? })` | `SpeechEntry[]` | Recorded speech entries, oldest first. `since` defaults to the cursor, `includeMarkers` to `false`. `session` (an `id` or `'current'`) returns only that session's entries; without it, all entries. |
-| `getText({ since?, separator?, session? })` | `string` | All speech since `since` (default: the cursor), joined into one string (`separator` default `'\n'`). Handy for snapshot assertions. |
+| `getSpeech({ since?, limit?, includeMarkers?, session?, allowTruncated? })` | `SpeechEntry[]` | Recorded speech entries, oldest first. `since` defaults to the cursor, `includeMarkers` to `false`. `session` (an `id` or `'current'`) returns only that session's entries; without it, all entries. If some of them were dropped because the bridge's buffer was full, it throws `SpeechTruncatedError` (with what is left in `entries`), so an assertion never runs on a transcript with a gap; `allowTruncated: true` returns what is left instead. |
+| `getText({ since?, separator?, session?, allowTruncated? })` | `string` | All speech since `since` (default: the cursor), joined into one string (`separator` default `'\n'`). Handy for snapshot assertions. Throws `SpeechTruncatedError` like `getSpeech`. |
 | `startSession(name, { run? })` | `Session` + `replaced` | Start a [session](speech-capture.md#sessions) (the previous one ends) and move the cursor to its start. `run` groups sessions, for example of one test run. `replaced` is the session of another client it ended (`null` if none): a sign that two clients share the screen reader. The CLI prints a warning for it. |
 | `endSession()` | `void` | End the current session. Speech after this belongs to no session. |
 | `sessions()` | `{ sessions, currentId }` | The sessions still in the buffer plus the current one, newest first. |
@@ -175,6 +175,7 @@ stop();
 
 | Error | When |
 |---|---|
+| `SpeechTruncatedError` | `getSpeech` / `getText` without `allowTruncated`: some of the speech asked for was dropped because the bridge's buffer was full. `entries` holds what is left; the message suggests raising `buffer.maxEntries`. |
 | `SpeechTimeoutError` | A wait ended without a match. `entries` holds the speech seen while waiting. `truncated: true` if speech the wait should have looked at was dropped because the bridge's buffer was full: the match may have been among it. The message then says so and suggests raising `buffer.maxEntries`. |
 | `BridgeNotReadyError` | `waitForReady` timed out. |
 | `BridgeUnreachableError` | No connection to the bridge (wrong URL, bridge not running, network). |
@@ -280,6 +281,10 @@ Exit codes, so agents can branch on them without parsing output:
 prints one line per session, newest first (`#7 checkout test (run nightly-42): current, 3 entries,
 seq 340-342`), or `{ sessions, currentId }` with `--json`. Without a current session, `speech`, `text` and
 `wait` read the whole buffer.
+
+If some of the speech `speech` or `text` asks for was dropped because the bridge's buffer was full,
+they print what is left, warn on stderr and still exit `0`; with `--json` they add
+`"truncated": true`.
 
 With `--json`, `wait` prints `{ "matched": true, "entry": {...} }`, or on timeout
 `{ "matched": false, "entries": [...], "truncated": false }` with the speech seen, and

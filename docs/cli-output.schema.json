@@ -555,9 +555,13 @@
           "items": {
             "$ref": "#/$defs/SpeechEntry"
           }
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "Some of the speech was dropped because the bridge's buffer was full: this is what is left (a warning goes to stderr)."
         }
       },
-      "required": ["entries"]
+      "required": ["entries", "truncated"]
     },
     "text": {
       "type": "object",
@@ -565,9 +569,13 @@
         "text": {
           "type": "string",
           "description": "The speech, joined."
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "Some of the speech was dropped because the bridge's buffer was full: this is what is left (a warning goes to stderr)."
         }
       },
-      "required": ["text"]
+      "required": ["text", "truncated"]
     },
     "wait": {
       "oneOf": [

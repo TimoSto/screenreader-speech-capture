@@ -5,6 +5,7 @@ import {
   BridgeNotReadyError,
   BridgeUnreachableError,
   SpeechTimeoutError,
+  SpeechTruncatedError,
 } from '../../domain/errors.js';
 import type { BridgeStatus } from '../../domain/bridge-status.js';
 import type { SessionList, SessionRef, StartedSession } from '../../domain/session.js';
@@ -94,13 +95,20 @@ export class SpeechCaptureService implements SpeechCapture {
     // Read when the call starts, so a cursor move after it doesn't change this read.
     const since = options.since ?? this.#cursor;
     await this.compatible();
-    const { entries } = await this.fetchSince(since, options.session);
+    const { entries, truncated } = await this.fetchSince(since, options.session);
     const wanted = options.includeMarkers ? entries : entries.filter(isSpeech);
-    return options.limit === undefined ? wanted : wanted.slice(0, options.limit);
+    const result = options.limit === undefined ? wanted : wanted.slice(0, options.limit);
+    // A transcript with a gap is worse than none: a test would assert on the wrong speech.
+    if (truncated && !options.allowTruncated) throw new SpeechTruncatedError(since, result);
+    return result;
   }
 
   async getText(options: GetTextOptions = {}): Promise<string> {
-    const entries = await this.getSpeech({ since: options.since, session: options.session });
+    const entries = await this.getSpeech({
+      since: options.since,
+      session: options.session,
+      allowTruncated: options.allowTruncated,
+    });
     return entries.map((e) => e.text).join(options.separator ?? '\n');
   }
 
