@@ -7,9 +7,9 @@ import type { BridgeLog } from '../adapters/out/log/bridge-log.js';
 import type { ChildService } from './services.js';
 
 /**
- * Live re-apply of PUT /api/v1/config (docs/configuration.md#changing-settings). Only settings
- * that can change without failing get here; the listeners' addresses and the log output wait for
- * the next start (`RESTART_FIELDS`).
+ * Live re-apply of PUT /api/v1/config (docs/configuration.md#changing-settings). The listeners'
+ * addresses and the log output wait for the next start (`RESTART_FIELDS`). A child service that
+ * fails to restart or stop is logged here and shows in `status`; the update itself stands.
  */
 export function registerReapply(
   config: ConfigService,
@@ -37,7 +37,9 @@ export function registerReapply(
           logger.error(`${section} restart failed: ${String(error)}`);
         });
       } else {
-        await supervisor.stop();
+        await supervisor.stop().catch((error: unknown) => {
+          logger.error(`${section} stop failed: ${String(error)}`);
+        });
       }
     });
   }
