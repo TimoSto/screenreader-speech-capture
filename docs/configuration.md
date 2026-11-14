@@ -20,19 +20,18 @@ Precedence: **CLI flags > environment variables > config file > defaults**.
 
 ```jsonc
 {
-  "tcp":        { "host": "127.0.0.1", "port": 4449, "format": "text-to-socket", "encoding": "windows-1252", "maxLineBytes": 65536 },
+  "tcp":        { "host": "127.0.0.1", "port": 4449, "encoding": "windows-1252", "maxLineBytes": 65536 },
   "http":       { "host": "0.0.0.0",   "port": 5151, "allowedHosts": [] },  // more host names, see Security
   "playwright": { "enabled": true, "port": 3000, "version": null },  // exact version, null = bundled
   "mcp":        { "enabled": true, "port": 8931 },                   // version: the bundled one
-  "input":      { "enabled": true },
   "buffer":     { "maxEntries": 10000 },
   "log":        { "level": "info", "file": null, "consoleSpeech": false }  // bridge log, file null = default path
 }
 ```
 
-`tcp.format` selects the parser for the incoming wire format. `text-to-socket` (the default) reads
-CRLF-terminated lines, with an optional header line, as described in [Wire format](speech-capture.md#wire-format).
-`tcp.encoding` is the code page used to decode them (default `windows-1252`).
+The TCP listener reads CRLF-terminated lines, with an optional header line, as described in
+[Wire format](speech-capture.md#wire-format). `tcp.encoding` is the code page used to decode them
+(default `windows-1252`).
 `log` is explained in [Operations](operations.md#logging). `http.allowedHosts` lists host names
 the API answers to besides IP addresses, `localhost` and the machine's name, see
 [Host and origin](security.md#host-and-origin).
@@ -71,7 +70,6 @@ What each section does when it changes:
 | `log` | The level applies at once. `file` and `consoleSpeech` on the next start. |
 | `playwright` | The Playwright server restarts with the new port or version (a new version is installed first). The `PUT` answers at once; `status` shows the service as `starting` until it runs. `enabled: false` stops it. It listens on the interface of `http.host` in use. |
 | `mcp` | Like `playwright`, for Playwright MCP. It has no `version`: the bridge runs the [bundled one](playwright-mcp.md#mcp-version). |
-| `input` | Saved, and shown by `GET /config` and `status`. It takes effect once native input (M4) exists. |
 
 ## CLI flags
 
@@ -88,7 +86,7 @@ What each section does when it changes:
 | `--mcp-port <n>` | `8931` | Playwright MCP (HTTP). |
 | `--no-playwright` | | Don't start the Playwright server. |
 | `--no-mcp` | | Don't start Playwright MCP. |
-| `--no-input` | | Disable the native input endpoints *(planned, [M4](ROADMAP.md#m4-native-input-))*. |
+| `--no-input` | | Disable the native input endpoints. *(planned, [M4](ROADMAP.md#m4-native-input-))* |
 | `--log-level <level>` | `info` | Level of the bridge's own log: `error`, `warn`, `info`, `debug`. |
 | `--bridge-log <path>` | `%LOCALAPPDATA%\screenreader-speech-capture\logs\bridge.log` | File for the bridge's own log (see [Operations](operations.md#logging)). |
 | `--console-speech` | off | Also write the received speech to the console. Causes a feedback loop when the console is on the VM ([Operations](operations.md#speech-text-stays-off-the-console)). |

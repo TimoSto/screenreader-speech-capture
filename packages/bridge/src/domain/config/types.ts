@@ -6,7 +6,6 @@ export interface Config {
   readonly tcp: {
     readonly host: string;
     readonly port: number;
-    readonly format: 'text-to-socket';
     /** TextDecoder label of the code page the socket voice uses. */
     readonly encoding: string;
     readonly maxLineBytes: number;
@@ -30,7 +29,6 @@ export interface Config {
     readonly enabled: boolean;
     readonly port: number;
   };
-  readonly input: { readonly enabled: boolean };
   readonly buffer: { readonly maxEntries: number };
   readonly log: {
     readonly level: LogLevel;

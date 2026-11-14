@@ -78,3 +78,12 @@ lot of code in both packages for a rare event in development, where the test tha
 fails anyway. It holds as long as a run records fewer entries than it runs milliseconds, far more
 than any screen reader says. Session ids still start at 1; tests start a new session anyway.
 
+## Bridge and client are released together
+
+The client only checks the bridge's **major** API version. It used to also require a minimum minor
+version (`MIN_BRIDGE_API`) and planned per-function checks (`requireApiVersion`) for features an
+older bridge lacks. Bridge and client are installed from the same release, so those checks
+guarded a combination nobody runs, and they made every API addition a compatibility question.
+Settings and status fields of features that don't exist yet (`input.enabled`, `--no-input`,
+`tcp.format` with its single value) were removed for the same reason: they return with the feature.
+

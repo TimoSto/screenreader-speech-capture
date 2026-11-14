@@ -31,7 +31,6 @@ export interface BridgeStatus {
   buffer: { size: number; maxEntries: number; firstSeq: number | null; lastSeq: number | null };
   playwright: ServiceStatus;
   mcp: ServiceStatus;
-  input: { enabled: boolean };
   /** The current session and the number of listed sessions. */
   session: { current: Session | null; count: number };
 }

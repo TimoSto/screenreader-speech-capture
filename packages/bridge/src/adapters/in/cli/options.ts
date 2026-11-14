@@ -87,12 +87,6 @@ const SETTINGS: readonly Setting[] = [
   },
   { flag: 'no-mcp', field: 'mcp.enabled', kind: 'off', description: "Don't start Playwright MCP" },
   {
-    flag: 'no-input',
-    field: 'input.enabled',
-    kind: 'off',
-    description: 'Disable the native input endpoints',
-  },
-  {
     flag: 'log-level',
     field: 'log.level',
     kind: 'string',

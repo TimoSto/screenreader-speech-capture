@@ -30,7 +30,6 @@ const status = (current: Status['session']['current']): Status => ({
   buffer: { size: 2, maxEntries: 10, firstSeq: 3, lastSeq: 4 },
   playwright: service('running'),
   mcp: service('crashed'),
-  input: { enabled: false },
   session: { current, count: 1 },
 });
 
@@ -53,7 +52,6 @@ describe('toStatusDto', () => {
       buffer: { size: 2, maxEntries: 10, firstSeq: 3, lastSeq: 4 },
       playwright: { state: 'running', version: '1.0.0', port: 3000, restarts: 1, exitCode: 2 },
       mcp: { state: 'crashed', version: '1.0.0', port: 3000, restarts: 1, exitCode: 2 },
-      input: { enabled: false },
       session: { current: toSessionDto(session()), count: 1 },
     });
   });

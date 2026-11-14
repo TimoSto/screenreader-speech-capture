@@ -22,7 +22,6 @@ export interface Status {
   buffer: BufferStats;
   playwright: ServiceStatus;
   mcp: ServiceStatus;
-  input: { enabled: boolean };
   /** The current session, and how many sessions are listed (`GET /sessions`). */
   session: { current: SessionSummary | null; count: number };
 }

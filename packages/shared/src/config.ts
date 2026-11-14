@@ -5,7 +5,6 @@ export interface ConfigDto {
   tcp: {
     host: string;
     port: number;
-    format: 'text-to-socket';
     /** TextDecoder label of the code page the socket voice uses. */
     encoding: string;
     maxLineBytes: number;
@@ -19,7 +18,6 @@ export interface ConfigDto {
   playwright: { enabled: boolean; port: number; version: string | null };
   /** No version: the bridge runs the `@playwright/mcp` it depends on. */
   mcp: { enabled: boolean; port: number };
-  input: { enabled: boolean };
   buffer: { maxEntries: number };
   log: { level: LogLevel; file: string | null; consoleSpeech: boolean };
 }

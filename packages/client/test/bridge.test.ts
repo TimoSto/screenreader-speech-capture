@@ -128,10 +128,6 @@ describe('library', () => {
     await expect(new SpeechCaptureClient({ baseUrl: v2, env }).getSpeech()).rejects.toThrow(
       IncompatibleBridgeError,
     );
-    const v12 = await stub(200, JSON.stringify({ bridge: { apiVersion: '1.3' } }));
-    await expect(new SpeechCaptureClient({ baseUrl: v12, env }).status()).rejects.toThrow(
-      'Clients of this version need a bridge with API 1.4 or newer, this one speaks API 1.3',
-    );
   });
 });
 

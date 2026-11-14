@@ -8,7 +8,6 @@ import type { Config, ConfigField } from './types.js';
 export const RESTART_FIELDS: ReadonlySet<ConfigField> = new Set<ConfigField>([
   'tcp.host',
   'tcp.port',
-  'tcp.format',
   'tcp.encoding',
   'tcp.maxLineBytes',
   'http.host',

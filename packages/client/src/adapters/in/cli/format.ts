@@ -42,7 +42,7 @@ export function seenText(entries: SpeechEntry[]): string {
 }
 
 export function formatStatus(status: BridgeStatus): string {
-  const { bridge, tcp, buffer, input, session } = status;
+  const { bridge, tcp, buffer, session } = status;
   const connections = tcp.connections.length;
   const range =
     buffer.firstSeq === null
@@ -53,7 +53,6 @@ export function formatStatus(status: BridgeStatus): string {
     `tcp     ${tcp.host}:${tcp.port} ${tcp.listening ? 'listening' : 'not listening'}, ` +
       `${connections} voice connection${connections === 1 ? '' : 's'}, ${tcp.encoding}`,
     `buffer  ${buffer.size} of ${buffer.maxEntries} entries (${range})`,
-    `input   ${input.enabled ? 'enabled' : 'disabled'}`,
     `session ${session.current === null ? 'none current' : `#${session.current.id} ${session.current.name}`}, ` +
       `${session.count} in the buffer`,
   ].join('\n');

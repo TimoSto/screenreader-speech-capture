@@ -39,7 +39,6 @@ export interface StatusDto {
   playwright: ServiceStatusDto;
   /** Added in API 1.2. */
   mcp: ServiceStatusDto;
-  input: { enabled: boolean };
   /** The current session and the number of listed sessions. Added in API 1.3. */
   session: { current: SessionDto | null; count: number };
 }

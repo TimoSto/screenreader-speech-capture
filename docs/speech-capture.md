@@ -44,7 +44,7 @@ This is how the bridge turns the bytes from the socket voice into speech entries
 
 ## Framing and decoding
 
-Per connection, the `text-to-socket` parser (`tcp.format`):
+Per connection, the `text-to-socket` parser:
 
 1. collects the incoming **bytes** in a buffer and cuts it at `\n` (a trailing `\r` is removed).
    Bytes are split *before* decoding, so a multi-byte character (UTF-8 code page) that is split
