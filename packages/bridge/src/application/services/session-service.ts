@@ -13,7 +13,7 @@ import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 export interface SessionServiceDeps {
   log: Pick<SpeechLog, 'startSession' | 'endSession' | 'sessions' | 'currentSession'>;
   events: SpeechEventBus;
-  clock: Clock;
+  clock: Pick<Clock, 'now'>;
   logger: Logger;
 }
 

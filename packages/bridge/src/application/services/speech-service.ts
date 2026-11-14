@@ -20,7 +20,7 @@ import { intOption } from '../shared/int-option.js';
 export interface SpeechServiceDeps {
   log: SpeechLog;
   events: SpeechEventBus;
-  clock: Clock;
+  clock: Pick<Clock, 'now'>;
 }
 
 export const MAX_MARKER_LENGTH = API_LIMITS.markerLength;

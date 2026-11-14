@@ -73,8 +73,12 @@ driving adapter, and `main.ts` also exporting the pre-wired public API (`index.t
 re-exports it).
 
 `no-restricted-imports` in `eslint.config.js` (blocks built with `hexagon(layer)`, for both
-packages) enforces: domain/application must not import `node:*` or adapters; adapters must not
-import concrete services; `in` adapters must not import `out` adapters and vice versa. Test files (`*.test.ts`) are exempt. When adding a feature, add a port and
+packages) enforces: domain/application must not import `node:*`, shared's Node-only
+`platform-paths`, adapters or the composition root; adapters must not import concrete services;
+`in` adapters must not import `out` adapters and vice versa. Domain/application also may not use
+the timer globals, `Date.now()` / `new Date()`, `process`, `fetch` or `performance`
+(`innerLayerGlobals`): time and timers come through the `Clock` port. Test files (`*.test.ts`)
+are exempt. When adding a feature, add a port and
 wire it in the composition root (`main.ts` + `composition/`) rather than reaching across layers.
 
 Relative imports use `.js` extensions (ESM), and type-only imports must use `import type`
