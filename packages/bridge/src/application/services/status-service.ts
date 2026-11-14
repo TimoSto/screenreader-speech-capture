@@ -1,3 +1,4 @@
+import { SERVICE_NAMES, type ServiceName, type ServiceStatus } from '../../domain/child-service.js';
 import type { CaptureState } from '../../domain/capture.js';
 import type { Config } from '../../domain/config/index.js';
 import type { SpeechLog } from '../../domain/speech-log.js';
@@ -8,8 +9,8 @@ import type { ProcessSupervisor } from '../ports/out/process-supervisor.js';
 export interface StatusServiceDeps {
   capture: Pick<CaptureState, 'captureStatus'>;
   log: Pick<SpeechLog, 'stats' | 'sessions' | 'currentSession'>;
-  playwright: Pick<ProcessSupervisor, 'status'>;
-  mcp: Pick<ProcessSupervisor, 'status'>;
+  /** One supervisor per child service. */
+  supervisors: Readonly<Record<ServiceName, Pick<ProcessSupervisor, 'status'>>>;
   /**
    * The active configuration. A getter, not the `ReadConfig` use case: services depend on
    * out-ports and values, not on other driving ports.
@@ -37,7 +38,7 @@ export class StatusService implements GetStatus, BridgeStateControl {
   }
 
   status(): Status {
-    const { capture, log, playwright, mcp, config, version, apiVersion, startedAt } = this.deps;
+    const { capture, log, supervisors, config, version, apiVersion, startedAt } = this.deps;
     const { listener, connections } = capture.captureStatus();
     const { tcp } = config();
     const listed = log.sessions();
@@ -57,8 +58,9 @@ export class StatusService implements GetStatus, BridgeStateControl {
         connections,
       },
       buffer: log.stats(),
-      playwright: playwright.status(),
-      mcp: mcp.status(),
+      services: Object.fromEntries(
+        SERVICE_NAMES.map((name) => [name, supervisors[name].status()]),
+      ) as Record<ServiceName, ServiceStatus>,
       session: {
         current: listed.find((session) => session.id === currentId) ?? null,
         count: listed.length,

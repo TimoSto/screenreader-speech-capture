@@ -54,7 +54,6 @@ export const status = (current: Status['session']['current']): Status => ({
     connections: [{ id: 1, voice: 'eloquence', connectedAt: AT }],
   },
   buffer: { size: 2, maxEntries: 10, firstSeq: 3, lastSeq: 4 },
-  playwright: service('running'),
-  mcp: service('crashed'),
+  services: { playwright: service('running'), mcp: service('crashed') },
   session: { current, count: 1 },
 });

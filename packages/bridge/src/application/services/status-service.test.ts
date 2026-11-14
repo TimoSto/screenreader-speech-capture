@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SERVICE_NAMES } from '../../domain/child-service.js';
 import { DEFAULT_CONFIG } from '../../domain/config/index.js';
 import type { CaptureStatus } from '../../domain/capture.js';
 import { SpeechLog } from '../../domain/speech-log.js';
@@ -11,11 +12,25 @@ function setup(capture: CaptureStatus) {
   const status = new StatusService({
     capture: { captureStatus: () => capture },
     log,
-    playwright: {
-      status: () => ({ state: 'running', version: '1.65.0', port: 3000, restarts: 1, exitCode: 1 }),
-    },
-    mcp: {
-      status: () => ({ state: 'failed', version: '0.0.85', port: 8931, restarts: 4, exitCode: 2 }),
+    supervisors: {
+      playwright: {
+        status: () => ({
+          state: 'running',
+          version: '1.65.0',
+          port: 3000,
+          restarts: 1,
+          exitCode: 1,
+        }),
+      },
+      mcp: {
+        status: () => ({
+          state: 'failed',
+          version: '0.0.85',
+          port: 8931,
+          restarts: 4,
+          exitCode: 2,
+        }),
+      },
     },
     config: () => DEFAULT_CONFIG,
     version: '1.2.3',
@@ -26,6 +41,11 @@ function setup(capture: CaptureStatus) {
 }
 
 describe('StatusService', () => {
+  it('reports every child service, by name', () => {
+    const { status } = setup({ listener: null, connections: [] });
+    expect(Object.keys(status.status().services)).toEqual([...SERVICE_NAMES]);
+  });
+
   it('reports the listener, connections, buffer and versions', () => {
     const connectedAt = new Date('2026-11-07T14:00:00.000Z');
     const { status, log } = setup({
@@ -57,8 +77,10 @@ describe('StatusService', () => {
         connections: [{ id: 2, voice: 'dev', connectedAt }],
       },
       buffer: { size: 1, maxEntries: 10, firstSeq: 1, lastSeq: 1 },
-      playwright: { state: 'running', version: '1.65.0', port: 3000, restarts: 1, exitCode: 1 },
-      mcp: { state: 'failed', version: '0.0.85', port: 8931, restarts: 4, exitCode: 2 },
+      services: {
+        playwright: { state: 'running', version: '1.65.0', port: 3000, restarts: 1, exitCode: 1 },
+        mcp: { state: 'failed', version: '0.0.85', port: 8931, restarts: 4, exitCode: 2 },
+      },
       session: { current: null, count: 0 },
     });
   });
