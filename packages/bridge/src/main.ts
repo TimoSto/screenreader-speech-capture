@@ -141,8 +141,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   const status = new StatusService({
     capture: captureState,
     log: speechLog,
-    playwright: supervisors.playwright,
-    mcp: supervisors.mcp,
+    supervisors,
     config: () => configService.get(),
     version,
     apiVersion: API_VERSION,
