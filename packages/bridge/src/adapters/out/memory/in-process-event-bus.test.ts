@@ -16,6 +16,16 @@ describe('InProcessEventBus', () => {
     expect(b).toEqual([clear]);
   });
 
+  it('delivers in publish order (the SpeechEventBus contract)', () => {
+    const bus = new InProcessEventBus();
+    const seen: string[] = [];
+    bus.subscribe((e) => seen.push(e.type));
+    bus.publish(clear);
+    bus.publish({ type: 'session', session: {} as never });
+    bus.publish(clear);
+    expect(seen).toEqual(['clear', 'session', 'clear']);
+  });
+
   it('stops delivering after unsubscribe', () => {
     const bus = new InProcessEventBus();
     const seen: SpeechEvent[] = [];

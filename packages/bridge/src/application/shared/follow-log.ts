@@ -1,3 +1,4 @@
+import { SeqCursor } from '../../domain/seq-cursor.js';
 import type { SpeechLog } from '../../domain/speech-log.js';
 import type { WatchListener } from '../ports/in/speech.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
@@ -28,14 +29,17 @@ export function followLog(
   { pace, onError }: FollowOptions = {},
 ): () => void {
   const { log, events } = deps;
-  // While replaying, new entries are skipped here: the replay reads them from the log. It
-  // switches to the live events in the same synchronous block as its last read, and the log
-  // publishes each entry synchronously as it adds it, so nothing is missed or sent twice.
+  // Subscribed before the replay reads anything, so every entry is either in the log when the
+  // replay reads it, or published afterwards and delivered by the bus. While replaying, live
+  // entries are skipped: the replay reads them from the log, in order. After it, the cursor drops
+  // an entry the replay already read but the bus delivers late. That holds for any bus that
+  // delivers in publish order, at once or later (the `SpeechEventBus` contract).
+  const cursor = new SeqCursor(since ?? Number.NEGATIVE_INFINITY);
   let replaying = since !== null;
   let stopped = false;
   const unsubscribe = events.subscribe((event) => {
     if (event.type !== 'entry') return listener(event);
-    if (replaying) return;
+    if (replaying || !cursor.advance(event.entry)) return;
     if (sessionId === undefined || event.entry.sessionId === sessionId) listener(event);
   });
   const stop = () => {
@@ -44,15 +48,14 @@ export function followLog(
   };
 
   if (since === null) return stop;
-  let last = since;
-  /** Replays from `last` until `pace` pauses it (its promise) or it has caught up. */
+  /** Replays from the cursor until `pace` pauses it (its promise) or it has caught up. */
   const step = (): Promise<void> | undefined => {
     for (;;) {
-      const { entries, truncated, hasMore } = log.page(last, REPLAY_PAGE, sessionId);
+      const { entries, truncated, hasMore } = log.page(cursor.position, REPLAY_PAGE, sessionId);
       if (truncated) listener({ type: 'truncated' });
       for (const entry of entries) {
+        if (!cursor.advance(entry)) continue;
         listener({ type: 'entry', entry });
-        last = entry.seq;
         const paused = pace?.();
         if (paused) return paused;
       }
@@ -66,7 +69,7 @@ export function followLog(
     for (let next: Promise<void> | undefined = paused; next;) {
       await next;
       if (stopped) return;
-      // Reads again from `last`: the log may have changed meanwhile.
+      // Reads again from the cursor: the log may have changed meanwhile.
       next = step();
     }
   };

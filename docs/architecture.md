@@ -63,7 +63,8 @@ flowchart LR
 
 ```
 packages/bridge/src/
-  domain/            SpeechLog (the buffer and the sessions, with their rules), SpeechEntry,
+  domain/            SpeechLog (the buffer and the sessions, with their rules), SeqCursor (a
+                     follower's position: no duplicate between replay and live), SpeechEntry,
                      Session, CaptureState (listener and connections for the status), Config,
                      child services (settings from the config, reachability, crash policy),
                      KeyChord (key-name parsing + validation). Pure, no I/O.
