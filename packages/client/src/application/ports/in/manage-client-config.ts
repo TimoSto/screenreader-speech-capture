@@ -19,7 +19,7 @@ export interface SetResult {
   shadowedBy?: 'env';
 }
 
-/** Read and change the client's per-user settings (docs/client.md#bridge-url). */
+/** Read and change the client's per-user settings (docs/usage/client.md#bridge-url). */
 export interface ManageClientConfig {
   /** Where the settings are stored, for messages and `config path`. */
   readonly location: string;

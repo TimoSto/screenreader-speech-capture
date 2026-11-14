@@ -85,7 +85,7 @@ screenreader-speech-capture
    M5).
 
 In your test project (the Playwright fixture comes with M3; until then use the
-[library](docs/client.md#library)):
+[library](docs/usage/client.md#library)):
 
 ```ts
 import { test } from 'screenreader-speech-capture-client/playwright';
@@ -97,41 +97,30 @@ test('submit button is announced', async ({ page, speech }) => {
 });
 ```
 
-Details: [VM setup](docs/vm-setup.md), [Test client](docs/client.md).
+Details: [VM setup](docs/usage/vm-setup.md), [Test client](docs/usage/client.md).
 
 ## Following speech live
 
 The bridge pushes each speech entry the moment it arrives (Server-Sent Events). Watch it with
 `npx screenreader-speech-capture-client tail`, or subscribe in code with `sr.onSpeech(...)`. Details:
-[Test client → Live feed](docs/client.md#live-feed).
+[Test client → Live feed](docs/usage/client.md#live-feed).
 
 ## Documentation
 
-| Doc | What it covers |
-|---|---|
-| [VM setup](docs/vm-setup.md) | Requirements, socket voice, NVDA / JAWS setup, running the bridge on the VM |
-| [Speech capture](docs/speech-capture.md) | Wire format of the socket voice, how the bridge turns it into speech entries, the buffer |
-| [HTTP API](docs/http-api.md) | Data model, endpoints, errors, versioning |
-| [Test client](docs/client.md) | Library, cursor, Playwright fixture, CLI and exit codes |
-| [Native input](docs/native-input.md) | Real clicks and key presses: when Playwright input isn't enough (planned) |
-| [Remote Playwright & MCP](docs/playwright-mcp.md) | The Playwright server and Playwright MCP run by the bridge |
-| [Agents](docs/agents.md) | Agent loop with the CLI, agent skill (partly planned) |
-| [Web UI](docs/web-ui.md) | Live log, settings, setup page (planned) |
-| [Configuration](docs/configuration.md) | CLI flags, environment variables, config file |
-| [Operations](docs/operations.md) | Startup, shutdown, crash recovery, logging |
-| [Troubleshooting](docs/troubleshooting.md) | Common problems and fixes |
-| [Limitations](docs/limitations.md) | What this project can't do |
-| [Security](docs/security.md) | Risks of the open ports |
-| [Architecture](docs/architecture.md) | Monorepo, hexagonal bridge and client, UI structure |
-| [Decisions](docs/decisions.md) | Choices that rarely change and why (Node.js, not Go) |
-| [Development](docs/development.md) | Building, testing without Windows, CI and releases |
-| [Roadmap](docs/ROADMAP.md) | Milestones and open questions |
+The [documentation index](docs/README.md) lists everything, split into **usage** (setup, API,
+client, Playwright, agents) and **implementation** (architecture, decisions, development), each
+with sequence diagrams of the main flows. Good places to start:
+
+- [VM setup](docs/usage/vm-setup.md): socket voice, NVDA / JAWS, running the bridge
+- [Test client](docs/usage/client.md): library, Playwright fixture, CLI
+- [HTTP API](docs/usage/http-api.md) and its [flows](docs/usage/flows/http.md)
+- [Roadmap](docs/ROADMAP.md): what works today
 
 ## Security
 
 There is **no authentication**. Anyone who can reach the ports can read the speech, control the
 desktop and effectively run programs on the VM. Use it only on isolated test VMs or networks
-([details](docs/security.md)).
+([details](docs/usage/security.md)).
 
 ## License
 

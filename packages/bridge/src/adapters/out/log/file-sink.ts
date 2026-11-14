@@ -12,7 +12,7 @@ export interface FileSinkOptions {
 }
 
 /**
- * Bridge log file (docs/operations.md#logging): no colours, includes the speech channel.
+ * Bridge log file (docs/usage/operations.md#logging): no colours, includes the speech channel.
  * Writes synchronously so nothing is lost on a crash. Log volume is small.
  */
 export function fileSink(file: string, options: FileSinkOptions = {}): LogSink {

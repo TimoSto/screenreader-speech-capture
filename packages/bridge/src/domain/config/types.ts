@@ -1,7 +1,7 @@
 export { LOG_LEVELS, type LogLevel } from '@screenreader-speech-capture/shared';
 import type { LogLevel } from '@screenreader-speech-capture/shared';
 
-/** The bridge configuration. Documented in docs/configuration.md. */
+/** The bridge configuration. Documented in docs/usage/configuration.md. */
 export interface Config {
   readonly tcp: {
     readonly host: string;
@@ -15,7 +15,7 @@ export interface Config {
     readonly port: number;
     /**
      * Host names the API answers to besides IP addresses, `localhost` and the machine's own name
-     * (DNS rebinding protection, docs/security.md). `*` accepts any name.
+     * (DNS rebinding protection, docs/usage/security.md). `*` accepts any name.
      */
     readonly allowedHosts: readonly string[];
   };

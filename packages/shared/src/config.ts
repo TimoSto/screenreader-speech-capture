@@ -62,10 +62,10 @@ const configEntries = {
 
 export const ConfigSchema = v.pipe(
   v.object(configEntries),
-  v.description('The bridge configuration (docs/configuration.md).'),
+  v.description('The bridge configuration (docs/usage/configuration.md).'),
 );
 
-/** The bridge configuration (docs/configuration.md). */
+/** The bridge configuration (docs/usage/configuration.md). */
 export type ConfigDto = v.InferOutput<typeof ConfigSchema>;
 
 export const ConfigResponseSchema = v.pipe(

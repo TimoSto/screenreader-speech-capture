@@ -1,7 +1,7 @@
 import type { Config, ConfigField } from './types.js';
 
 /**
- * Settings that only take effect on the next start (docs/configuration.md#changing-settings):
+ * Settings that only take effect on the next start (docs/usage/configuration.md#changing-settings):
  * the listeners' addresses and the log output. Changing them live would mean moving open
  * connections, which a development tool doesn't need.
  */

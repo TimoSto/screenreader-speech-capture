@@ -29,7 +29,7 @@ function killGroup(pid: number, signal: NodeJS.Signals): void {
 }
 
 /**
- * Kills `child` and every process it started (docs/operations.md#shutdown). On Windows,
+ * Kills `child` and every process it started (docs/usage/operations.md#shutdown). On Windows,
  * `taskkill /T /F` (killing a process there doesn't kill its children). Elsewhere `SIGTERM`
  * to the process group, then `SIGKILL` to whatever is left. Resolves once `child` has exited.
  * `child` must have been spawned with `treeSpawnOptions`.

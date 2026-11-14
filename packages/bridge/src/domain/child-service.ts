@@ -1,4 +1,4 @@
-// Child services the bridge supervises (docs/operations.md#child-service-crashes).
+// Child services the bridge supervises (docs/usage/operations.md#child-service-crashes).
 import type { Config } from './config/index.js';
 
 /** The child services, by the config section each follows. */
@@ -15,7 +15,7 @@ export const SERVICE_TITLES: Readonly<Record<ServiceName, string>> = {
 /**
  * Where the child services listen: loopback only. Clients reach them through the bridge's HTTP
  * port, which checks Host and Origin for them like for the API
- * (docs/decisions.md#the-bridge-is-the-single-way-in).
+ * (docs/implementation/decisions.md#the-bridge-is-the-single-way-in).
  */
 export const CHILD_HOST = '127.0.0.1';
 

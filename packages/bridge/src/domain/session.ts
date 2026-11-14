@@ -2,8 +2,8 @@ import { API_LIMITS } from '@screenreader-speech-capture/shared';
 import { invalidField } from './errors.js';
 
 /**
- * Groups the speech of one test or agent task (docs/speech-capture.md#sessions). Only one session
- * is current at a time: the one without `endedAt` that was started last.
+ * Groups the speech of one test or agent task (docs/usage/speech-capture.md#sessions). Only one
+ * session is current at a time: the one without `endedAt` that was started last.
  */
 export interface Session {
   /** Increasing, restarts at 1 with the bridge. */

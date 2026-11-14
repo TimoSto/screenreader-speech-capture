@@ -2,7 +2,9 @@
 
 Real OS mouse clicks and key presses, for things Playwright input cannot do.
 
-> **Planned ([M4](ROADMAP.md#m4-native-input-)), not implemented yet.** This page describes the design.
+> **Planned ([M4](../ROADMAP.md#m4-native-input-)), not implemented yet.** This page describes the design.
+
+Flows: [Native input](flows/native-input.md).
 
 Playwright sends keys and clicks **into the browser** through its browser protocol (CDP for
 Chromium). The operating system, and so the screen reader, never sees them. This is how it plays

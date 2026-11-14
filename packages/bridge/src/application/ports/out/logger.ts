@@ -1,4 +1,4 @@
-/** The bridge log (docs/operations.md#logging). One instance per log prefix. */
+/** The bridge log (docs/usage/operations.md#logging). One instance per log prefix. */
 export interface Logger {
   error(message: string): void;
   warn(message: string): void;

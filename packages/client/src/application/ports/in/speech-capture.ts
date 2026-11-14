@@ -101,12 +101,12 @@ export interface Recording<T> {
 }
 
 /**
- * The library's functions (docs/client.md#library). The CLI and the Playwright fixture are built
- * on the same interface.
+ * The library's functions (docs/usage/client.md#library). The CLI and the Playwright fixture are
+ * built on the same interface.
  *
  * Every client keeps a **cursor**: the `seq` of the last entry it consumed, used as the default
- * `since` (docs/client.md#the-cursor). The first call checks the bridge's API version and rejects
- * with `IncompatibleBridgeError` if the major version differs.
+ * `since` (docs/usage/client.md#the-cursor). The first call checks the bridge's API version and
+ * rejects with `IncompatibleBridgeError` if the major version differs.
  */
 export interface SpeechCapture {
   /** Recorded speech after the cursor (or `since`), oldest first. */
@@ -116,10 +116,10 @@ export interface SpeechCapture {
   /** Clears the bridge's buffer (all sessions) and resets the cursor. For manual use. */
   clear(): Promise<void>;
   /**
-   * Starts a session (docs/speech-capture.md#sessions): it becomes current and the previous one
-   * ends. Moves the cursor to the session's start, so the next reads and waits only see its
-   * speech. `replaced` is the session of another client it ended, if any: a sign that two
-   * clients share the screen reader.
+   * Starts a session (docs/usage/speech-capture.md#sessions): it becomes current and the previous
+   * one ends. Moves the cursor to the session's start, so the next reads and waits only see its
+   * speech. `replaced` is the session of another client it ended, if any: a sign that two clients
+   * share the screen reader.
    */
   startSession(name: string, options?: StartSessionOptions): Promise<StartedSession>;
   /** Ends the current session. Speech after this belongs to no session. */
@@ -164,7 +164,7 @@ export interface SpeechCapture {
   onSpeech(listener: (entry: SpeechEntry) => void, options?: OnSpeechOptions): () => void;
   /**
    * The cursor: the `seq` of the last entry consumed. Waits and `record` only move it forward, so
-   * calls running at the same time can't move it back (docs/client.md#the-cursor).
+   * calls running at the same time can't move it back (docs/usage/client.md#the-cursor).
    */
   cursor(): number;
   /**

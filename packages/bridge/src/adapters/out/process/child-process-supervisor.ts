@@ -39,7 +39,7 @@ export interface ChildProcessSupervisorOptions {
 const READY_TIMEOUT_MS = 60_000;
 
 /**
- * Runs one child service (docs/operations.md#child-service-crashes): prepare, spawn, wait for
+ * Runs one child service (docs/usage/operations.md#child-service-crashes): prepare, spawn, wait for
  * its port, restart after a crash with a growing delay, give up after too many crashes in a row,
  * and kill the whole process tree on stop.
  */

@@ -8,7 +8,7 @@ import { ensurePlaywright } from './playwright-installer.js';
 
 /**
  * Playwright version of the server when `playwright.version` is `null`. Clients need the same
- * version (docs/playwright-mcp.md#playwright-server).
+ * version (docs/usage/playwright-mcp.md#playwright-server).
  */
 export const DEFAULT_PLAYWRIGHT_VERSION = '1.65.0';
 

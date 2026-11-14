@@ -2,13 +2,15 @@
 
 The npm package for test code and agents: library, Playwright fixture and CLI.
 
+Flows: [HTTP](flows/http.md), [live feed and waits](flows/sse.md), [truncation](flows/truncation.md), [agents](flows/agents.md).
+
 `screenreader-speech-capture-client` is a small npm package for **test code and agents**. It talks
 to the bridge's HTTP API and contains:
 
 - a **TypeScript library** (`SpeechCaptureClient`) for Playwright or any other Node test runner,
-- a **Playwright fixture** (`/playwright` subpath export) *(planned, [M3](ROADMAP.md#m3-playwright--mcp-))*,
+- a **Playwright fixture** (`/playwright` subpath export) *(planned, [M3](../ROADMAP.md#m3-playwright--mcp-))*,
 - a **CLI** (`screenreader-speech-capture-client`) with the same functions, for AI agents and shell scripts,
-- an **agent skill** (see [Agent skill](agents.md#agent-skill)) *(planned, [M6](ROADMAP.md#m6-agents-))*.
+- an **agent skill** (see [Agent skill](agents.md#agent-skill)) *(planned, [M6](../ROADMAP.md#m6-agents-))*.
 
 On its first call, the client checks the bridge's API version and throws `IncompatibleBridgeError`
 if the major version differs (see [Versioning](http-api.md#versioning)). The client's package
@@ -82,7 +84,7 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 - A new client starts at `0`. `startSession(name)` starts a [session](speech-capture.md#sessions)
   and moves the cursor to the session's start (its `startSeq`), so everything after it belongs to
   the session. The
-  fixture *(planned, [M3](ROADMAP.md#m3-playwright--mcp-))* does this before each test. Earlier sessions stay in the buffer for the
+  fixture *(planned, [M3](../ROADMAP.md#m3-playwright--mcp-))* does this before each test. Earlier sessions stay in the buffer for the
   [web UI](web-ui.md#context-pane).
 - `clear()` wipes the whole buffer and sets the cursor back to `0`. It is meant for manual use;
   tests and agents start a session instead.
@@ -114,13 +116,13 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `waitForSilence({ quietFor?, timeout? })` | `void` | Wait until nothing new has been spoken for `quietFor` ms (default 500), counted from the call. Throws `SpeechTimeoutError` if speech goes on until `timeout` (default 10000 ms). Useful before asserting on "everything that was said". |
 | `record(fn, { quietFor?, timeout? })` | `{ result, entries, truncated }` | Run `fn` and return everything spoken while it ran (waits for silence at the end, then moves the cursor to the end). `truncated: true`: some of it was dropped because the bridge's buffer was full, so `entries` is incomplete (raise `buffer.maxEntries`). |
 | `mark(label)` | `SpeechEntry` | Insert a marker. Its `seq` can be used as `since`. |
-| `setFocus(page, { target? })` | `void` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Make the page's browser window the OS foreground window with a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
-| `click({ x, y })` | `void` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Native click at screen coordinates (`POST /api/v1/set-focus`). |
-| `pressKeys(keys, { delayMs? })` | `void` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Native key presses, for screen reader commands (`'Insert+T'`, `['h', 'h']`). |
+| `setFocus(page, { target? })` | `void` | *(planned, [M4](../ROADMAP.md#m4-native-input-))* Make the page's browser window the OS foreground window with a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
+| `click({ x, y })` | `void` | *(planned, [M4](../ROADMAP.md#m4-native-input-))* Native click at screen coordinates (`POST /api/v1/set-focus`). |
+| `pressKeys(keys, { delayMs? })` | `void` | *(planned, [M4](../ROADMAP.md#m4-native-input-))* Native key presses, for screen reader commands (`'Insert+T'`, `['h', 'h']`). |
 | `onSpeech(cb, { since?, includeMarkers?, onSession?, onClear?, onTruncated?, onError? })` | `() => void` | Subscribe to the live feed (see [Live feed](#live-feed)). `cb` gets every new speech entry as the bridge receives it. Returns an unsubscribe function. |
 | `status()` | `BridgeStatus` | Bridge health (TCP connections, Playwright/MCP state, versions). |
 | `waitForReady({ timeout? })` | `BridgeStatus` | Wait until the bridge answers and is `ready` (default `timeout` 120000 ms). Throws `BridgeNotReadyError` on timeout. |
-| `playwrightEndpoint()` | `string` | *(planned, [M3](ROADMAP.md#m3-playwright--mcp-))* WebSocket URL of the bridge's Playwright server, for `browserType.connect()`. |
+| `playwrightEndpoint()` | `string` | *(planned, [M3](../ROADMAP.md#m3-playwright--mcp-))* WebSocket URL of the bridge's Playwright server, for `browserType.connect()`. |
 
 ### Live feed
 
@@ -128,23 +130,7 @@ The bridge pushes every entry the moment it arrives, over
 [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events)
 (SSE): one long-lived HTTP response that the bridge keeps writing to. `onSpeech` and the CLI's
 [`tail`](#cli-for-agents) wrap it, so you never parse the stream yourself, and they reconnect
-without losing an entry:
-
-```mermaid
-sequenceDiagram
-    participant SR as NVDA / JAWS<br/>+ socket voice
-    participant B as Bridge :5151
-    participant C as Client<br/>(onSpeech / tail)
-
-    C->>B: GET /api/v1/speech/stream
-    B-->>C: 200 text/event-stream (stays open)
-    SR->>B: "Submit, button" (TCP :4449)
-    B-->>C: id: 41, event: entry, data: {"seq":41, "text":"Submit, button", ...}
-    Note over B,C: ": ping" every 15 s keeps the connection open,<br/>"event: clear" follows a clear
-    Note over B,C: connection lost (network, bridge restart)
-    C->>B: GET /api/v1/speech/stream<br/>Last-Event-ID: 41
-    B-->>C: replays the entries after seq 41, then goes on live
-```
+without losing an entry ([sequence diagrams](flows/sse.md)).
 
 `onSpeech` keeps a connection to [`GET /speech/stream`](http-api.md#endpoints) (Server-Sent
 Events) open and calls `cb` for every new entry, with no polling:
@@ -185,7 +171,7 @@ stop();
 
 ## Playwright fixture
 
-*(planned, [M3](ROADMAP.md#m3-playwright--mcp-))*
+*(planned, [M3](../ROADMAP.md#m3-playwright--mcp-))*
 
 ```ts
 // tests/form.spec.ts

@@ -1,6 +1,6 @@
 #!/usr/bin/env -S npx tsx
 /**
- * Behaves like text-to-socket-engine (docs/speech-capture.md#wire-format): connects lazily on
+ * Behaves like text-to-socket-engine (docs/usage/speech-capture.md#wire-format): connects lazily on
  * the first line, sends the optional header line, then one CRLF-terminated line per "Speak"
  * call. A failed send reconnects and retries once.
  *

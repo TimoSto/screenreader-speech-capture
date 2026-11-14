@@ -1,5 +1,5 @@
 // Limits and patterns of the HTTP API, used by the bridge (to check), the client and the schemas
-// (so docs/openapi.yaml shows them).
+// (so docs/usage/openapi.yaml shows them).
 
 /** Ranges of the speech endpoints. */
 export const API_LIMITS = {

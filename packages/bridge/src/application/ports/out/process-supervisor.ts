@@ -3,7 +3,7 @@ import type { ServiceSettings, ServiceStatus } from '../../../domain/child-servi
 export type { ServiceSettings };
 
 /**
- * One supervised child service (docs/operations.md#child-service-crashes): installs it if
+ * One supervised child service (docs/usage/operations.md#child-service-crashes): installs it if
  * needed, runs it, restarts it after crashes and kills its whole process tree on stop.
  */
 export interface ProcessSupervisor {

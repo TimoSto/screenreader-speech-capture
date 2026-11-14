@@ -3,8 +3,8 @@ import type { Config } from '../../../domain/config/index.js';
 
 /**
  * The supervised child services, run as the configuration says
- * (docs/operations.md#child-service-crashes). Only the composition root drives it: at startup,
- * on a config change, at shutdown, and for the HTTP proxy's targets.
+ * (docs/usage/operations.md#child-service-crashes). Only the composition root drives it: at
+ * startup, on a config change, at shutdown, and for the HTTP proxy's targets.
  */
 export interface ChildServices {
   /** Starts the enabled ones. Resolves once each is running or has failed; never rejects. */

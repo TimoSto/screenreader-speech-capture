@@ -4,7 +4,10 @@ import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-/** Imports the inner hexagon layers must not use (see docs/architecture.md, dependency rule). */
+/**
+ * Imports the inner hexagon layers must not use (see docs/implementation/architecture.md,
+ * dependency rule).
+ */
 const nodeBuiltins = {
   // `platform-paths` is shared's Node-only entry (it reads the environment and the OS).
   group: ['node:*', '@screenreader-speech-capture/shared/platform-paths'],

@@ -27,7 +27,7 @@ export function reachableUrls(
 }
 
 /**
- * How a listener is named in the log (docs/operations.md#line-format): on a wildcard host,
+ * How a listener is named in the log (docs/usage/operations.md#line-format): on a wildcard host,
  * `0.0.0.0:5151, reachable at <urls>`; otherwise just its URL. `path` is appended to each URL.
  */
 export function describeListener(

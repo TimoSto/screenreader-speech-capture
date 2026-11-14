@@ -6,7 +6,7 @@ import { CHILD_HOST, type Reachability } from '../../../../domain/child-service.
 import { AppError } from '../../../../domain/errors.js';
 import { sendError, sendSocketError } from '../errors.js';
 
-/** A child service the bridge passes through on its HTTP port (docs/playwright-mcp.md). */
+/** A child service the bridge passes through on its HTTP port (docs/usage/playwright-mcp.md). */
 export interface ProxyRoute {
   /** For log lines and errors, for example `playwright`. */
   readonly name: string;
@@ -34,9 +34,9 @@ const HOP_BY_HOP = new Set([
 ]);
 
 /**
- * Passes requests on to the child services (docs/security.md#host-and-origin: the access check
- * runs before, in `HttpServer`). Plain requests are streamed both ways, so MCP's event streams
- * work; a WebSocket upgrade becomes a tunnel between the two sockets.
+ * Passes requests on to the child services (docs/usage/security.md#host-and-origin: the access
+ * check runs before, in `HttpServer`). Plain requests are streamed both ways, so MCP's event
+ * streams work; a WebSocket upgrade becomes a tunnel between the two sockets.
  */
 export class ServiceProxy {
   /** Open WebSocket tunnels, both sockets of each. `closeTunnels()` ends them on shutdown. */

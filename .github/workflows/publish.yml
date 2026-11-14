@@ -1,6 +1,7 @@
 name: Publish
 
-# Manual: Actions → Publish → Run workflow → pick the branch (see docs/development.md#releases).
+# Manual: Actions → Publish → Run workflow → pick the branch (see
+# docs/implementation/development.md#releases).
 # - main: stable versions from the commit titles since each package's last tag, plus git tag and
 #   draft GitHub release.
 # - other branches: previews `<next>-<branch>.<run>` of the changed packages (npm dist-tag

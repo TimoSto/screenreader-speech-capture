@@ -22,7 +22,7 @@ export interface SessionList {
   currentId: number | null;
 }
 
-/** Sessions group the speech of one test or agent task (docs/speech-capture.md#sessions). */
+/** Sessions group the speech of one test or agent task (docs/usage/speech-capture.md#sessions). */
 export interface ManageSessions {
   /**
    * Ends the current session, if any, and starts a new current one. Rejects with

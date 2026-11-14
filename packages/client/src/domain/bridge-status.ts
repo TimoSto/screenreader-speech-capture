@@ -12,7 +12,7 @@ export interface ServiceStatus {
   exitCode: number | null;
 }
 
-/** Bridge health, as `GET /api/v1/status` reports it (docs/http-api.md). */
+/** Bridge health, as `GET /api/v1/status` reports it (docs/usage/http-api.md). */
 export interface BridgeStatus {
   bridge: {
     version: string;

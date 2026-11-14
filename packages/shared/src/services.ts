@@ -1,5 +1,5 @@
 // Paths on the bridge's HTTP port that lead to the child services it runs
-// (docs/playwright-mcp.md). They are outside `API_PREFIX`: the bridge passes them through.
+// (docs/usage/playwright-mcp.md). They are outside `API_PREFIX`: the bridge passes them through.
 
 /** The Playwright server (`connectOptions.wsEndpoint`): `ws://<bridge>:5151/playwright`. */
 export const PLAYWRIGHT_PATH = '/playwright';

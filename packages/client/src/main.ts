@@ -1,4 +1,5 @@
-// Composition root: the only place that knows the concrete adapters (docs/architecture.md).
+// Composition root: the only place that knows the concrete adapters
+// (docs/implementation/architecture.md).
 import { hostname } from 'node:os';
 import { API_VERSION } from '@screenreader-speech-capture/shared';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
@@ -29,7 +30,7 @@ import type { SpeechMatch } from './domain/text-match.js';
 export { CONFIG_PATH_ENV, clientConfigFile } from './adapters/out/fs-config/paths.js';
 
 /**
- * The client's per-user settings, stored in the config file (docs/client.md#bridge-url).
+ * The client's per-user settings, stored in the config file (docs/usage/client.md#bridge-url).
  * `SR_SPEECH_URL` and `SR_SPEECH_CLIENT_CONFIG` are read from `env` once, here.
  */
 export function createClientConfig(env: NodeJS.ProcessEnv = process.env): ManageClientConfig {
@@ -42,7 +43,7 @@ export function createClientConfig(env: NodeJS.ProcessEnv = process.env): Manage
 export interface SpeechCaptureClientOptions {
   /**
    * Bridge URL, for example `http://my-test-vm:5151`. Default: `SR_SPEECH_URL`, then the client
-   * config file, then `http://localhost:5151` (docs/client.md#bridge-url).
+   * config file, then `http://localhost:5151` (docs/usage/client.md#bridge-url).
    */
   baseUrl?: string | undefined;
   /** Where `SR_SPEECH_URL` and `SR_SPEECH_CLIENT_CONFIG` are read. Default `process.env`. */
@@ -55,11 +56,11 @@ export interface SpeechCaptureClientOptions {
 }
 
 /**
- * Talks to the bridge (docs/client.md#library): `new SpeechCaptureClient()` uses the stored
+ * Talks to the bridge (docs/usage/client.md#library): `new SpeechCaptureClient()` uses the stored
  * bridge URL. The URL is resolved on the first request.
  *
  * Wraps the service instead of extending it, so the service's internals stay out of the public
- * type surface (docs/architecture.md).
+ * type surface (docs/implementation/architecture.md).
  */
 export class SpeechCaptureClient implements SpeechCapture {
   readonly #service: SpeechCapture;

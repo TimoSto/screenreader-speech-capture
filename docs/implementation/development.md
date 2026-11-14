@@ -7,8 +7,8 @@ pnpm install
 pnpm dev          # bridge (watch); with the UI (M5) also the SvelteKit dev server
 pnpm test         # unit + integration tests
 pnpm build        # compiles the bridge and the client (and, from M5, the UI into the bridge)
-pnpm openapi      # regenerates the schemas in docs/openapi.yaml from packages/shared
-pnpm cli-schema   # regenerates docs/cli-output.schema.json from the client CLI's output schemas
+pnpm openapi      # regenerates the schemas in docs/usage/openapi.yaml from packages/shared
+pnpm cli-schema   # regenerates docs/usage/cli-output.schema.json from the client CLI's output schemas
 ```
 
 You don't need Windows or a screen reader for most of the work. A fake speech sender stands in for the
@@ -21,7 +21,7 @@ printf 'voice=dev\r\nSubmit, button\r\nEdit, Name, blank\r\n' | nc 127.0.0.1 444
 ```
 
 Outside Windows (or with `--no-input`), the bridge will use a recording fake `InputInjector` that
-logs the clicks and keys it would send *(planned, [M4](ROADMAP.md#m4-native-input-))*.
+logs the clicks and keys it would send *(planned, [M4](../ROADMAP.md#m4-native-input-))*.
 
 **Writing docs:** each fact has one home. Other docs mention it in one line and link there
 (troubleshooting and limitations are such collections of links). The README only introduces the
@@ -32,10 +32,10 @@ project and links into `docs/`.
 - **Domain / application:** unit tests against in-memory fakes of the driven ports (fake clock,
   the real `SpeechLog`, fake input injector), with no sockets or processes involved.
 - **Adapters:** integration tests per adapter (real TCP socket, real HTTP server, temporary config dir).
-  The robotjs adapter *(planned, [M4](ROADMAP.md#m4-native-input-))* will be tested only on Windows.
+  The robotjs adapter *(planned, [M4](../ROADMAP.md#m4-native-input-))* will be tested only on Windows.
 - **Client:** library and CLI tested against a real bridge fed by `fake-speech`, covering
-  the cursor, timeouts and exit codes. `setFocus` coordinate maths *(planned, [M4](ROADMAP.md#m4-native-input-))* is unit-tested.
-- **UI** *(planned, [M5](ROADMAP.md#m5-web-ui-))*: component tests with fake port implementations. End-to-end tests against a bridge
+  the cursor, timeouts and exit codes. `setFocus` coordinate maths *(planned, [M4](../ROADMAP.md#m4-native-input-))* is unit-tested.
+- **UI** *(planned, [M5](../ROADMAP.md#m5-web-ui-))*: component tests with fake port implementations. End-to-end tests against a bridge
   fed by `fake-speech`.
 - **Smoke test on a real VM:** NVDA + socket voice + Chrome, checking one focus announcement and one
   native screen reader command (`Insert+T`).
@@ -45,7 +45,7 @@ project and links into `docs/`.
 - **CI** runs on every PR (`main` is protected and only changes through PRs):
   - Linux: lint, type check, unit and integration tests, UI build, client tests against a bridge
     fed by `fake-speech`,
-  - Windows runner *(planned, [M7](ROADMAP.md#m7-distribution-))*: the Windows-only adapter (robotjs input) and a
+  - Windows runner *(planned, [M7](../ROADMAP.md#m7-distribution-))*: the Windows-only adapter (robotjs input) and a
     bridge start with the Playwright server.
 - The **smoke test on a real VM** (NVDA + socket voice + Chrome) runs by hand before a release
   until there is a VM that CI can use.
@@ -54,7 +54,7 @@ project and links into `docs/`.
 ## Releases
 
 The bridge (`screenreader-speech-capture`) and the client (`screenreader-speech-capture-client`)
-are **versioned independently** (see [Versioning](http-api.md#versioning)). Their versions come
+are **versioned independently** (see [Versioning](../usage/http-api.md#versioning)). Their versions come
 from the commit titles. PRs are squash-merged, so the commit title is the **PR title**.
 
 **PR titles** follow [Conventional Commits](https://www.conventionalcommits.org/):

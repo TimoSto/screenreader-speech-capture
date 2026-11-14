@@ -38,7 +38,7 @@ const same = (a: unknown, b: unknown) => show(a) === show(b);
 /**
  * The configuration (`GET` / `PUT /api/v1/config`). An update is saved to the config file, then
  * applied to the running bridge through the change listeners, except the restart-only settings
- * (docs/configuration.md#changing-settings).
+ * (docs/usage/configuration.md#changing-settings).
  */
 export class ConfigService implements ManageConfig {
   private active: Config;

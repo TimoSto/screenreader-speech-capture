@@ -11,8 +11,8 @@ export interface Ports {
 }
 
 /**
- * Startup order (docs/operations.md#startup): the TCP listener first, so no speech is lost while
- * the rest starts, then HTTP. A failure is logged, and the TCP listener stops if HTTP fails.
+ * Startup order (docs/usage/operations.md#startup): the TCP listener first, so no speech is lost
+ * while the rest starts, then HTTP. A failure is logged, and the TCP listener stops if HTTP fails.
  */
 export async function startListeners(
   tcp: TcpListener,

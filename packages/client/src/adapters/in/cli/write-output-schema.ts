@@ -1,4 +1,4 @@
-// `pnpm cli-schema`: rewrites docs/cli-output.schema.json (Prettier formats it after).
+// `pnpm cli-schema`: rewrites docs/usage/cli-output.schema.json (Prettier formats it after).
 import { writeFileSync } from 'node:fs';
 import { cliOutputSchema, SCHEMA_FILE } from './output-schema.js';
 

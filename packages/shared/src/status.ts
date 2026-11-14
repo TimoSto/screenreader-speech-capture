@@ -35,7 +35,7 @@ export const ServiceStatusSchema = v.pipe(
       ),
     ),
   }),
-  v.description('A child service (docs/operations.md#child-service-crashes).'),
+  v.description('A child service (docs/usage/operations.md#child-service-crashes).'),
 );
 
 export type ServiceStatusDto = v.InferOutput<typeof ServiceStatusSchema>;

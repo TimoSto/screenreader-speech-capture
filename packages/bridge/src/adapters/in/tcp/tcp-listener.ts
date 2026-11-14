@@ -11,8 +11,8 @@ export type TcpSettings = Config['tcp'];
 /**
  * Driving adapter for the socket voice: a TCP server that accepts any number of connections
  * and feeds each one through its own parser into `RecordSpeech`
- * (docs/speech-capture.md#listening-and-connections). Reports its listener and connections to
- * `TrackCapture`, for the status.
+ * (docs/implementation/tcp-capture.md#listening-and-connections). Reports its listener and
+ * connections to `TrackCapture`, for the status.
  */
 export class TcpListener {
   private server: net.Server | null = null;

@@ -9,7 +9,7 @@ import { ClientConfigError } from '../../../domain/errors.js';
 import type { ClientConfigStore } from '../../../application/ports/out/client-config-store.js';
 
 /**
- * The client config file (docs/client.md#bridge-url): JSON, one per user. Keys this version
+ * The client config file (docs/usage/client.md#bridge-url): JSON, one per user. Keys this version
  * doesn't know are kept when saving.
  */
 export class FsClientConfigStore implements ClientConfigStore {

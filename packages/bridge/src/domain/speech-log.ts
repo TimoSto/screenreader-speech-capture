@@ -22,8 +22,8 @@ export interface SessionStart {
 }
 
 /**
- * The bridge's speech and sessions (docs/speech-capture.md#buffer, #sessions), the one owner of
- * their rules:
+ * The bridge's speech and sessions (docs/usage/speech-capture.md#buffer, #sessions), the one owner
+ * of their rules:
  *
  * - Every entry gets the next `seq` and the current session's id. `seq` keeps counting across
  *   clears and starts at `firstSeq` (the bridge passes its start time, so it rises across

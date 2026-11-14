@@ -18,7 +18,7 @@ function cached(key: object, build: () => string): string {
   return frame;
 }
 
-/** The SSE frame for one event (docs/http-api.md, `GET /speech/stream`). */
+/** The SSE frame for one event (docs/usage/http-api.md, `GET /speech/stream`). */
 export function sseFrame(event: WatchEvent): string {
   switch (event.type) {
     case 'entry':

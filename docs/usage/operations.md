@@ -3,6 +3,8 @@
 How the bridge starts, stops and recovers, and what it logs. For where to run it, see
 [VM setup](vm-setup.md#running-on-the-vm).
 
+Flows: [startup and shutdown](../implementation/flows/lifecycle.md), [child services](../implementation/flows/child-services.md).
+
 ## Startup
 
 The bridge starts in this order:
@@ -12,7 +14,7 @@ The bridge starts in this order:
    `2`). A setting that a flag or variable takes over from the config file is logged as a warning.
 2. **TCP listener** for the socket voice. It starts first so that no speech is lost while the rest
    is still starting. If the port is in use, the bridge exits (see
-   [Speech capture](speech-capture.md#listening-and-connections)).
+   [Speech capture](../implementation/tcp-capture.md#listening-and-connections)).
 3. **HTTP server** (API + UI).
 4. **Child services**: Playwright server and Playwright MCP, if enabled. They start in the
    background, so the API already answers meanwhile. If the configured Playwright version or a

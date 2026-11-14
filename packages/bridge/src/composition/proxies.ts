@@ -4,8 +4,8 @@ import type { ChildServices } from '../application/ports/in/child-services.js';
 import { SERVICE_TITLES } from '../domain/child-service.js';
 
 /**
- * The child services' paths on the bridge's HTTP port (docs/playwright-mcp.md): the Playwright
- * server's WebSocket at `/`, MCP's streamable HTTP at `/mcp`.
+ * The child services' paths on the bridge's HTTP port (docs/usage/playwright-mcp.md): the
+ * Playwright server's WebSocket at `/`, MCP's streamable HTTP at `/mcp`.
  */
 export function proxyRoutes(services: Pick<ChildServices, 'reachability'>): ProxyRoute[] {
   return [

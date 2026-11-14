@@ -1,4 +1,5 @@
-// `pnpm openapi`: rewrites the generated schemas in docs/openapi.yaml (Prettier formats it after).
+// `pnpm openapi`: rewrites the generated schemas in docs/usage/openapi.yaml (Prettier formats it
+// after).
 import { readFileSync, writeFileSync } from 'node:fs';
 import { OPENAPI_FILE, withGeneratedSchemas } from './generate.js';
 

@@ -1,6 +1,6 @@
-// The CLI's `--json` output, one schema per command (docs/client.md#cli-for-agents). Scripts and
-// agents parse it, so it is a contract like the HTTP API: `pnpm cli-schema` publishes it as
-// docs/cli-output.schema.json, and the commands can only print what these schemas describe.
+// The CLI's `--json` output, one schema per command (docs/usage/client.md#cli-for-agents). Scripts
+// and agents parse it, so it is a contract like the HTTP API: `pnpm cli-schema` publishes it as
+// docs/usage/cli-output.schema.json, and the commands can only print what these schemas describe.
 import * as v from 'valibot';
 import { CONFIG_KEYS } from '../../../domain/client-config.js';
 

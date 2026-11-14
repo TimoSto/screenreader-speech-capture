@@ -1,4 +1,4 @@
-// docs/cli-output.schema.json: the CLI's `--json` output as JSON Schema, generated from
+// docs/usage/cli-output.schema.json: the CLI's `--json` output as JSON Schema, generated from
 // output.ts (`pnpm cli-schema`), so scripts and agents can read the shapes without the source.
 import { toJsonSchemaDefs } from '@valibot/to-json-schema';
 import path from 'node:path';
@@ -27,7 +27,7 @@ const PARTS = {
 
 export const SCHEMA_FILE = path.resolve(
   import.meta.dirname,
-  '../../../../../../docs/cli-output.schema.json',
+  '../../../../../../docs/usage/cli-output.schema.json',
 );
 
 /** One JSON Schema document; `$defs` holds each command's output, by the command as typed. */

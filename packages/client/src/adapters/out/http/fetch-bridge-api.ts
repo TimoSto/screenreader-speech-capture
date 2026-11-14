@@ -57,7 +57,7 @@ export interface FetchBridgeApiOptions {
   fetch?: typeof fetch;
 }
 
-/** {@link BridgeApi} over `fetch` (docs/http-api.md). */
+/** {@link BridgeApi} over `fetch` (docs/usage/http-api.md). */
 export class FetchBridgeApi implements BridgeApi {
   #baseUrl: Promise<string> | undefined;
 

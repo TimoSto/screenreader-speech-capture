@@ -21,10 +21,10 @@ const describe = (session: { id: number; name: string; client: string | null }) 
   `session ${session.id} "${session.name}" (client ${session.client ?? 'unknown'})`;
 
 /**
- * Starting, ending and listing sessions (docs/speech-capture.md#sessions). Each start and end is
- * published as a `session` event. The speech log gives entries their `sessionId`. One screen
- * reader means one current session: a client that ends or replaces another client's session is
- * not refused, but warned about (docs/decisions.md#sessions-warn-instead-of-locking).
+ * Starting, ending and listing sessions (docs/usage/speech-capture.md#sessions). Each start and end
+ * is published as a `session` event. The speech log gives entries their `sessionId`. One screen
+ * reader means one current session: a client that ends or replaces another client's session is not
+ * refused, but warned about (docs/implementation/decisions.md#sessions-warn-instead-of-locking).
  */
 export class SessionService implements ManageSessions {
   constructor(private readonly deps: SessionServiceDeps) {}

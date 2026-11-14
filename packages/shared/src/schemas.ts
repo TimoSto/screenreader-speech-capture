@@ -25,7 +25,7 @@ import {
 import { ServiceStatusSchema, StatusSchema } from './status.js';
 
 /**
- * Every schema of the API by its name in `docs/openapi.yaml` (`components.schemas`), which
+ * Every schema of the API by its name in `docs/usage/openapi.yaml` (`components.schemas`), which
  * `pnpm openapi` generates from this list.
  */
 export const API_SCHEMAS: Record<string, GenericSchema> = {

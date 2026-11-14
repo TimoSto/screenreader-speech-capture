@@ -18,7 +18,7 @@ function refs(value: unknown): string[] {
   );
 }
 
-describe('docs/openapi.yaml', () => {
+describe('docs/usage/openapi.yaml', () => {
   it('has the schemas generated from packages/shared (run `pnpm openapi` after a change)', () => {
     // Compared as data: formatting (Prettier) doesn't matter.
     expect(spec.components.schemas).toEqual(JSON.parse(JSON.stringify(componentSchemas())));

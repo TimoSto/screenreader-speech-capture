@@ -3,7 +3,9 @@
 How AI agents use the bridge: the CLI, the agent skill and Playwright MCP.
 
 > **Partly planned.** The CLI loop and Playwright MCP work today. `press` needs native input
-> ([M4](ROADMAP.md#m4-native-input-)); the agent skill, `install-skill` and the subagents come with [M6](ROADMAP.md#m6-agents-).
+> ([M4](../ROADMAP.md#m4-native-input-)); the agent skill, `install-skill` and the subagents come with [M6](../ROADMAP.md#m6-agents-).
+
+Flows: [Agents](flows/agents.md).
 
 ## Agent loop
 
@@ -22,7 +24,7 @@ npx screenreader-speech-capture-client text --since "$SEQ" --json   # → judge 
 
 ## Agent skill
 
-*(planned, [M6](ROADMAP.md#m6-agents-))*
+*(planned, [M6](../ROADMAP.md#m6-agents-))*
 
 The client package ships an agent skill in the [Claude Code skill format](https://docs.claude.com/en/docs/claude-code/skills):
 
@@ -46,4 +48,4 @@ npx screenreader-speech-capture-client install-skill [--dir .claude/skills]
 ```
 
 Ready-made **subagent definitions** (for example an `a11y-screenreader-tester` that audits a page
-with the screen reader and reports what was announced) are on the [roadmap](ROADMAP.md).
+with the screen reader and reports what was announced) are on the [roadmap](../ROADMAP.md).

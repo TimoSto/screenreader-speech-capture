@@ -1,7 +1,7 @@
 import { parseArgs } from 'node:util';
 import type { ConfigField } from '../../../domain/config/index.js';
 
-// Flags and environment variables (docs/configuration.md#cli-flags). Values are only parsed
+// Flags and environment variables (docs/usage/configuration.md#cli-flags). Values are only parsed
 // here; the configuration checks their ranges and names the flag in its error.
 
 interface Setting {
@@ -219,7 +219,7 @@ export function helpText(): string {
     '',
     'Each option can also be set as an environment variable: SR_SPEECH_ plus the name in upper',
     'snake case, for example SR_SPEECH_TCP_PORT=4450 or SR_SPEECH_NO_MCP=1. Flags win over the',
-    'environment, which wins over the config file. See docs/configuration.md.',
+    'environment, which wins over the config file. See docs/usage/configuration.md.',
     '',
   ].join('\n');
 }
