@@ -7,8 +7,10 @@ import type { SpeechEntry } from '../src/domain/speech-entry.js';
 import { BridgeHttpError } from '../src/domain/errors.js';
 
 /**
- * Virtual time: `sleep` advances `now` at once and runs the actions scheduled up to then, so
- * tests can say "speech arrives at 300 ms" without waiting.
+ * Virtual time: `sleep` advances `now` and runs the actions scheduled up to then, so tests can say
+ * "speech arrives at 300 ms" without waiting. After each action it lets pending I/O (live feeds)
+ * run, and stops early, at that action's time, when `signal` aborts meanwhile: a wait that races
+ * a timer against the feed ends at the time its speech arrived.
  */
 export class FakeClock implements Clock {
   private t = 0;
@@ -19,14 +21,20 @@ export class FakeClock implements Clock {
     return this.t;
   }
 
-  sleep(ms: number, signal?: AbortSignal): Promise<void> {
-    if (signal?.aborted) return Promise.reject(signal.reason as Error);
+  async sleep(ms: number, signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted) throw signal.reason as Error;
     this.sleeps.push(ms);
-    this.t += ms;
-    const due = this.scheduled.filter((s) => s.at <= this.t);
-    this.scheduled = this.scheduled.filter((s) => s.at > this.t);
-    for (const { action } of due.sort((a, b) => a.at - b.at)) action();
-    return Promise.resolve();
+    const target = this.t + ms;
+    for (;;) {
+      const due = this.scheduled.filter((s) => s.at <= target).sort((a, b) => a.at - b.at)[0];
+      if (!due) break;
+      this.scheduled.splice(this.scheduled.indexOf(due), 1);
+      this.t = Math.max(this.t, due.at);
+      due.action();
+      await new Promise((resolve) => setImmediate(resolve));
+      if (signal?.aborted) throw signal.reason as Error;
+    }
+    this.t = Math.max(this.t, target);
   }
 
   /** Runs `action` once virtual time reaches `ms`. */
@@ -41,8 +49,13 @@ class FakeStream {
   ended: { error: Error | undefined } | undefined;
   wake: (() => void) | undefined;
 
+  /** With `session`, only that session's entries (`?session=` of the real stream). */
+  constructor(private readonly session?: number) {}
+
   push(event: SpeechFeedEvent): void {
     if (this.ended) return; // the connection is gone
+    const other = this.session !== undefined && event.type === 'entry';
+    if (other && event.entry.sessionId !== this.session) return;
     this.queue.push(event);
     this.wake?.();
   }
@@ -161,12 +174,16 @@ export class FakeBridgeApi implements BridgeApi {
 
   async *streamSpeech(options: {
     lastEventId: number | null;
+    session?: number | undefined;
     signal: AbortSignal;
   }): AsyncGenerator<SpeechFeedEvent> {
-    const { lastEventId, signal } = options;
-    this.calls.push(`stream ${lastEventId}`);
+    const { lastEventId, session, signal } = options;
+    this.calls.push(`stream ${lastEventId}${session === undefined ? '' : ` session=${session}`}`);
     await this.fail();
-    const stream = new FakeStream();
+    if (session !== undefined && !this.allSessions.some((s) => s.id === session)) {
+      throw new BridgeHttpError(404, 'NOT_FOUND', 'No such session');
+    }
+    const stream = new FakeStream(session);
     stream.push({ type: 'bridge', instanceId: this.instanceId });
     if (lastEventId !== null) {
       for (const entry of this.entries) {

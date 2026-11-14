@@ -80,12 +80,43 @@ describe('waitForOutput', () => {
     expect(await sr.waitForOutput('Submit, button')).toMatchObject({ seq: 1 });
   });
 
-  it('polls until speech arrives', async () => {
+  it('reads the buffer once, then waits on the live feed until speech arrives', async () => {
     const { api, clock, sr } = setup();
+    api.speak('Name, edit');
     clock.at(300, () => api.speak('Dialog, Settings'));
     expect(await sr.waitForOutput(/dialog/i)).toMatchObject({ text: 'Dialog, Settings' });
     expect(clock.now()).toBe(300);
-    expect(Math.max(...clock.sleeps)).toBe(50);
+    expect(api.calls).toEqual(['status', 'list 0', 'stream 1']);
+    expect(api.openStreams).toBe(0);
+  });
+
+  it('does not open the live feed for speech already there', async () => {
+    const { api, sr } = setup();
+    api.speak('Submit, button');
+    await sr.waitForOutput('Submit');
+    expect(api.calls.some((c) => c.startsWith('stream'))).toBe(false);
+  });
+
+  it('reconnects after a lost connection without losing or repeating speech', async () => {
+    const { api, clock, sr } = setup();
+    clock.at(100, () => api.speak('one'));
+    clock.at(200, () => {
+      api.dropStreams(new Error('network'));
+      api.speak('two');
+    });
+    const found = await sr
+      .waitForSequence(['one', 'two', 'three'], { timeout: 1000 })
+      .catch((e: unknown) => e);
+    expect(found).toBeInstanceOf(SpeechTimeoutError);
+    expect(texts((found as SpeechTimeoutError).entries)).toEqual(['one', 'two']);
+    expect(api.calls.filter((c) => c.startsWith('stream'))).toEqual(['stream 0', 'stream 1']);
+    expect(api.openStreams).toBe(0);
+  });
+
+  it('closes the live feed on a timeout', async () => {
+    const { api, sr } = setup();
+    await expect(sr.waitForOutput('never', { timeout: 100 })).rejects.toThrow(SpeechTimeoutError);
+    expect(api.openStreams).toBe(0);
   });
 
   it('matches strings, regexes (any flags) and predicates; normalize ignores case and spaces', async () => {
@@ -150,6 +181,13 @@ describe('waitForSilence', () => {
     clock.at(200, () => api.speak('late'));
     await sr.waitForSilence({ quietFor: 500 });
     expect(clock.now()).toBe(700);
+    expect(api.openStreams).toBe(0);
+  });
+
+  it('returns after quietFor when nothing is said', async () => {
+    const { clock, sr } = setup();
+    await sr.waitForSilence({ quietFor: 300 });
+    expect(clock.now()).toBe(300);
   });
 
   it('ignores markers and times out while speech goes on', async () => {
@@ -241,6 +279,27 @@ describe('sessions', () => {
     ).rejects.toThrow(SpeechTimeoutError);
     await expect(sr.getText({ since: 0, session: 7 })).rejects.toThrow(BridgeHttpError);
   });
+
+  it("a wait keeps the session that was current when it started ('current' is resolved once)", async () => {
+    const { api, clock, sr } = setup();
+    await sr.startSession('one');
+    clock.at(100, () => {
+      void api.startSession({ name: 'two' }).then(() => api.speak('Submit, button'));
+    });
+    await expect(sr.waitForOutput('Submit', { session: 'current', timeout: 500 })).rejects.toThrow(
+      SpeechTimeoutError,
+    );
+    expect(api.calls).toContain('stream 0 session=1');
+  });
+
+  it("a wait for 'current' without a current session rejects with NOT_FOUND", async () => {
+    const { sr } = setup();
+    const error: unknown = await sr
+      .waitForOutput('x', { session: 'current' })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(BridgeHttpError);
+    expect(error).toMatchObject({ status: 404, code: 'NOT_FOUND' });
+  });
 });
 
 describe('bridge restart', () => {
@@ -274,6 +333,28 @@ describe('bridge restart', () => {
       api.speak('later');
     });
     await expect(sr.waitForOutput('later')).rejects.toBeInstanceOf(BridgeRestartedError);
+    expect(sr.cursor()).toBe(0);
+  });
+
+  it('rejects a wait whose live feed reconnects to a restarted bridge', async () => {
+    const { api, clock, sr } = setup();
+    api.speak('a');
+    await sr.waitForOutput('a');
+    clock.at(100, () => api.speak('b'));
+    clock.at(200, () => {
+      api.restart();
+      api.speak('later');
+    });
+    await expect(sr.waitForSequence(['b', 'later'])).rejects.toBeInstanceOf(BridgeRestartedError);
+    expect(sr.cursor()).toBe(0);
+    expect(api.openStreams).toBe(0);
+  });
+
+  it('rejects waitForSilence when the bridge restarts meanwhile', async () => {
+    const { api, clock, sr } = setup();
+    api.speak('a');
+    clock.at(100, () => api.restart());
+    await expect(sr.waitForSilence()).rejects.toBeInstanceOf(BridgeRestartedError);
   });
 
   it('getSpeech, getText and record reject too', async () => {

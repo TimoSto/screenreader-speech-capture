@@ -100,9 +100,10 @@ export class FetchBridgeApi implements BridgeApi {
 
   async *streamSpeech(options: {
     lastEventId: number | null;
+    session?: number | undefined;
     signal: AbortSignal;
   }): AsyncGenerator<SpeechFeedEvent> {
-    const { lastEventId, signal } = options;
+    const { lastEventId, session, signal } = options;
     // Aborted by the caller, or by the watchdog when the bridge stays silent.
     const controller = new AbortController();
     const close = () => controller.abort(signal.reason);
@@ -114,7 +115,8 @@ export class FetchBridgeApi implements BridgeApi {
     };
     try {
       watch(REQUEST_TIMEOUT_MS, `no answer within ${REQUEST_TIMEOUT_MS} ms`);
-      const response = await this.request('GET', '/speech/stream', {
+      const query = session === undefined ? '' : `?session=${session}`;
+      const response = await this.request('GET', `/speech/stream${query}`, {
         headers: {
           accept: 'text/event-stream',
           ...(lastEventId === null ? {} : { 'last-event-id': String(lastEventId) }),

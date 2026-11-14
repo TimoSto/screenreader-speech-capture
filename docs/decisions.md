@@ -33,3 +33,20 @@ So the bridge has no locks, leases or per-client state:
   each with its own bridge ([Limitations](limitations.md#scale-and-parallelism)).
 - The Playwright server, Playwright MCP and the web UI share the same screen reader. Use one at a
   time.
+
+## Client waits read the live feed
+
+The client's waits (`waitForOutput`, `waitForSequence`, `waitForSilence`) follow the **SSE live
+feed**, the same code path as `onSpeech` (`waitForOutput` and `waitForSequence` read the buffer once
+first). They don't poll, and they don't use `GET /speech/wait`:
+
+1. **One model.** Predicates and ordered sequences can't be sent to the bridge, so matching has to
+   happen in the client anyway. With the feed, every wait matches there, on the entries the bridge
+   delivers without gap or duplicate (replay and subscription in one step).
+2. **No polling load or latency.** A wait is one request plus one open stream, not 20 requests a
+   second, and sees speech the moment the bridge has it.
+3. **`session: 'current'` is fixed when the wait starts.** The client resolves it to an id once,
+   like the bridge's own wait does. A session started while the wait runs doesn't take it over.
+
+`GET /speech/wait` stays as a convenience for `curl` and agents without the client; it is not the
+reference behaviour for the client.

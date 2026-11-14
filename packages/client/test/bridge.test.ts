@@ -63,6 +63,19 @@ describe('library', () => {
     expect(await sr.getText()).toBe('Name, edit, blank');
   });
 
+  it('waits on the live feed and keeps the session that was current when it started', async () => {
+    const { say, client } = await bridge();
+    const sr = client();
+    await sr.startSession('one');
+    const wait = sr.waitForOutput('Submit', { session: 'current', timeout: 1000 });
+    const later = sr.waitForOutput('Submit', { timeout: 1000 });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await client().startSession('two');
+    await say('Submit, button');
+    expect(await later).toMatchObject({ text: 'Submit, button', sessionId: 2 });
+    await expect(wait).rejects.toThrow(SpeechTimeoutError);
+  });
+
   it('marks, sequences, silence and record', async () => {
     const { say, client } = await bridge();
     const sr = client();

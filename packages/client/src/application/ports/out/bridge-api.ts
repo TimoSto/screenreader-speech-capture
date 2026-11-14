@@ -32,11 +32,13 @@ export interface BridgeApi {
   listSessions(): Promise<SessionList>;
   /**
    * One connection to the live feed (`GET /api/v1/speech/stream`). With `lastEventId` the bridge
-   * first replays the buffered entries with `seq > lastEventId`. The iterable ends or throws when
-   * the connection drops; `signal` closes it.
+   * first replays the buffered entries with `seq > lastEventId`. With `session` (API 1.3), only
+   * that session's entries. The iterable ends or throws when the connection drops; `signal`
+   * closes it.
    */
   streamSpeech(options: {
     lastEventId: number | null;
+    session?: number | undefined;
     signal: AbortSignal;
   }): AsyncIterable<SpeechFeedEvent>;
 }
