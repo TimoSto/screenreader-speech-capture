@@ -118,6 +118,47 @@ describe('PUT /api/v1/config', () => {
     expect(await accepts(oldPort)).toBe(false);
   });
 
+  it('ends the SSE streams of the old address when the HTTP API moves, not those of the new one', async () => {
+    const bridge = await start();
+    const stream = async () => {
+      const response = await fetch(api(bridge, '/speech/stream'));
+      const reader = response.body!.pipeThrough(new TextDecoderStream()).getReader();
+      const state = { text: '', ended: false };
+      void (async () => {
+        try {
+          for (;;) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            state.text += value;
+          }
+        } catch {
+          // reset by the server
+        }
+        state.ended = true;
+      })();
+      return { state, cancel: () => reader.cancel() };
+    };
+
+    const before = await stream();
+    await put(bridge, { http: { port: await freePort() } });
+    // Well within the 1 s after which the old server's connections are forced closed anyway.
+    await eventually(
+      () => before.state.ended,
+      (ended) => ended,
+      50,
+    );
+    expect(before.state.ended).toBe(true);
+
+    const after = await stream();
+    await send(bridge.tcpPort, 'on the new address\r\n');
+    await eventually(
+      () => after.state.text,
+      (text) => text.includes('on the new address'),
+    );
+    expect(after.state.ended).toBe(false);
+    await after.cancel();
+  });
+
   it('moves the HTTP API to another host on the same port', async () => {
     const bridge = await start();
     const port = bridge.httpPort;

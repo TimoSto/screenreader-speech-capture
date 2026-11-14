@@ -1,4 +1,5 @@
 import http from 'node:http';
+import type net from 'node:net';
 import { API_PREFIX } from '@screenreader-speech-capture/shared';
 import type { GetStatus } from '../../../application/ports/in/get-status.js';
 import type { ManageConfig } from '../../../application/ports/in/manage-config.js';
@@ -54,6 +55,8 @@ export class HttpServer {
   private requested: HttpSettings | null = null;
   /** Servers replaced by `restart()` that are still finishing their open requests. */
   private readonly retiring = new Set<Promise<void>>();
+  /** The open connections of each server, so retiring one ends only its own SSE streams. */
+  private readonly sockets = new WeakMap<http.Server, Set<net.Socket>>();
   private readonly router = new Router(API_PREFIX);
   private readonly sse: SseHub;
 
@@ -143,6 +146,12 @@ export class HttpServer {
         res.destroy();
       });
     });
+    const sockets = new Set<net.Socket>();
+    this.sockets.set(server, sockets);
+    server.on('connection', (socket) => {
+      sockets.add(socket);
+      socket.once('close', () => sockets.delete(socket));
+    });
     const port = await listen(server, settings.host, settings.port);
     server.on('error', (error) => this.deps.logger.error(`HTTP server error: ${error.message}`));
     if (this.server !== replacing) {
@@ -159,12 +168,14 @@ export class HttpServer {
   }
 
   /**
-   * Stops `server` from accepting connections, ends the SSE streams (clients reconnect) and
+   * Stops `server` from accepting connections, ends its SSE streams (clients reconnect) and
    * closes its connections once their requests are done, forcing them after a grace period.
+   * Streams already open on a new server (`restart()`) stay open.
    */
   private retire(server: http.Server): void {
     const closed = new Promise<void>((resolve) => server.close(() => resolve()));
-    this.sse.closeAll();
+    const sockets = this.sockets.get(server);
+    this.sse.close((res) => res.socket !== null && sockets?.has(res.socket) === true);
     server.closeIdleConnections();
     const force = setTimeout(() => server.closeAllConnections(), CLOSE_GRACE_MS);
     const done = closed.then(() => clearTimeout(force));
