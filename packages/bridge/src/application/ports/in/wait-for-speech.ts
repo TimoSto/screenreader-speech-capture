@@ -5,6 +5,9 @@ import type { TextMatchOptions } from '../../../domain/text-match.js';
 /** How long `wait` waits: the default and the most a caller may ask for. */
 export const WAIT_TIMEOUT_MS = { default: 5000, max: 300_000 } as const;
 
+/** How many of the entries a wait saw its timeout answer holds at most: the last ones. */
+export const WAIT_SEEN_LIMIT = 1000;
+
 export interface WaitOptions extends TextMatchOptions {
   /** Only entries with `seq > since` count, including ones already in the buffer. Default `0`. */
   since?: number | undefined;
@@ -28,10 +31,13 @@ export type WaitResult =
   | {
       status: 'timeout';
       /**
-       * Everything seen after `since`, oldest first. A clear during the wait doesn't remove
-       * entries from it: they show what the screen reader said while the wait was open.
+       * The last {@link WAIT_SEEN_LIMIT} entries seen after `since`, oldest first. A clear during
+       * the wait doesn't remove entries from it: they show what the screen reader said while the
+       * wait was open.
        */
       seen: SpeechEntry[];
+      /** How many entries seen before those were left out. */
+      omitted: number;
     };
 
 export interface WaitForSpeech {

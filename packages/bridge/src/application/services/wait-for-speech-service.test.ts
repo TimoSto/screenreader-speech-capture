@@ -3,15 +3,16 @@ import { SystemClock } from '../../adapters/out/clock/system-clock.js';
 import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bus.js';
 import type { AppError } from '../../domain/errors.js';
 import { SpeechLog } from '../../domain/speech-log.js';
-import { WAIT_TIMEOUT_MS } from '../ports/in/wait-for-speech.js';
+import { WAIT_SEEN_LIMIT, WAIT_TIMEOUT_MS } from '../ports/in/wait-for-speech.js';
+import type { FollowOptions } from '../shared/follow-log.js';
 import { SpeechService } from './speech-service.js';
 import { WaitForSpeechService } from './wait-for-speech-service.js';
 
-function setup() {
-  const log = new SpeechLog(100);
+function setup(maxEntries = 100, pace?: () => FollowOptions['pace']) {
+  const log = new SpeechLog(maxEntries);
   const events = new InProcessEventBus();
   const speech = new SpeechService({ log, events, clock: new SystemClock() });
-  const waits = new WaitForSpeechService({ log, events });
+  const waits = new WaitForSpeechService({ log, events, pace });
   const say = (text: string) => speech.record({ text, voice: null, connectionId: 1 });
   const startSession = (name: string) => {
     log.startSession({ name, run: null, client: null, startedAt: new Date() });
@@ -79,6 +80,84 @@ describe('WaitForSpeechService', () => {
     const timeout = result.value;
     if (timeout?.status !== 'timeout') throw new Error('expected a timeout');
     expect(timeout.seen.map((e) => e.text)).toEqual(['one', 'two']);
+    expect(timeout.omitted).toBe(0);
+  });
+
+  it('answers a timeout with the last entries seen, and how many came before', async () => {
+    const { waits, say } = setup(10_000);
+    const total = 2 * WAIT_SEEN_LIMIT + 5;
+    for (let i = 0; i < total; i++) say(`t${i}`);
+    const result = settle(waits.wait({ contains: 'never', since: 0, timeoutMs: 100 }));
+    say('late');
+    await vi.advanceTimersByTimeAsync(100);
+    const timeout = result.value;
+    if (timeout?.status !== 'timeout') throw new Error('expected a timeout');
+    expect(timeout.seen).toHaveLength(WAIT_SEEN_LIMIT);
+    expect(timeout.seen.at(-1)?.text).toBe('late');
+    expect(timeout.seen[0]?.text).toBe(`t${total + 1 - WAIT_SEEN_LIMIT}`);
+    expect(timeout.omitted).toBe(total + 1 - WAIT_SEEN_LIMIT);
+  });
+
+  describe('with pace', () => {
+    /** A `pace` per wait that pauses after its first replayed entry, until `resume()`. */
+    function pauser() {
+      let release: (() => void) | undefined;
+      const pace = () => {
+        let calls = 0;
+        return () =>
+          ++calls === 1 ? new Promise<void>((resolve) => (release = resolve)) : undefined;
+      };
+      const resume = async () => {
+        release?.();
+        await vi.advanceTimersByTimeAsync(0);
+      };
+      return { pace, resume };
+    }
+
+    it('finds a match after a pause, and sees entries added meanwhile once, in order', async () => {
+      const { pace, resume } = pauser();
+      const { waits, say } = setup(100, pace);
+      say('one');
+      say('two');
+      const result = settle(waits.wait({ contains: 'four', since: 0, timeoutMs: 1000 }));
+      say('three');
+      say('four');
+      expect(result.done).toBe(false);
+      await resume();
+      expect(result.value).toMatchObject({ status: 'matched', entry: { text: 'four', seq: 4 } });
+    });
+
+    it('stops looking when it times out while paused', async () => {
+      const { pace, resume } = pauser();
+      const { waits, say } = setup(100, pace);
+      say('one');
+      say('two');
+      const result = settle(waits.wait({ contains: 'two', since: 0, timeoutMs: 50 }));
+      await vi.advanceTimersByTimeAsync(50);
+      await resume();
+      const timeout = result.value;
+      if (timeout?.status !== 'timeout') throw new Error('expected a timeout');
+      expect(timeout.seen.map((e) => e.text)).toEqual(['one']);
+    });
+  });
+
+  it('unsubscribes once a buffered entry matched', async () => {
+    const { waits, say, events } = setup();
+    say('Submit');
+    let active = 0;
+    const subscribe = events.subscribe.bind(events);
+    vi.spyOn(events, 'subscribe').mockImplementation((listener) => {
+      active++;
+      const unsubscribe = subscribe(listener);
+      return () => {
+        active--;
+        unsubscribe();
+      };
+    });
+    await expect(
+      waits.wait({ contains: 'Submit', since: 0, timeoutMs: 1000 }),
+    ).resolves.toMatchObject({ status: 'matched' });
+    expect(active).toBe(0);
   });
 
   it('stops listening when aborted', async () => {

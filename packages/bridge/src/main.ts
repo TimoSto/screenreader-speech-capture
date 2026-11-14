@@ -23,6 +23,7 @@ import { WaitForSpeechService } from './application/services/wait-for-speech-ser
 import { startListeners } from './composition/lifecycle.js';
 import { loadConfig } from './composition/load-config.js';
 import { createLogging } from './composition/logging.js';
+import { yieldEvery } from './composition/pace.js';
 import { registerReapply } from './composition/reapply.js';
 import { proxyRoutes } from './composition/proxies.js';
 import { createSupervisors } from './composition/services.js';
@@ -105,7 +106,12 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     transcript: log.for('speech-capture', { channel: 'speech' }),
   }).start();
   const speech = new SpeechService({ log: speechLog, events, clock });
-  const waits = new WaitForSpeechService({ log: speechLog, events });
+  const waits = new WaitForSpeechService({
+    log: speechLog,
+    events,
+    // A long buffer lets speech capture run in between (docs/http-api.md, `/speech/wait`).
+    pace: () => yieldEvery(256),
+  });
   const sessions = new SessionService({
     log: speechLog,
     events,

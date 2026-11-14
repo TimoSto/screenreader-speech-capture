@@ -26,10 +26,12 @@ export interface SpeechListDto {
 
 /**
  * `GET /api/v1/speech/wait`, always `200`: the first matching entry, or, when none matched in
- * time, every entry seen after `since` (oldest first).
+ * time, the last 1000 entries seen after `since` (oldest first) and how many earlier ones were
+ * left out (`omitted`, since API 1.11).
  */
 export type WaitResultDto =
-  { matched: true; entry: SpeechEntryDto } | { matched: false; entries: SpeechEntryDto[] };
+  | { matched: true; entry: SpeechEntryDto }
+  | { matched: false; entries: SpeechEntryDto[]; omitted: number };
 
 /** `POST /api/v1/markers` */
 export interface MarkerRequestDto {

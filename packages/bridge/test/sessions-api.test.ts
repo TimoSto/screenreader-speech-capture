@@ -153,7 +153,7 @@ describe('Sessions API', () => {
     const result = await json<WaitResultDto>(
       await fetch(api(bridge, '/speech/wait?contains=Submit&session=current&timeoutMs=50')),
     );
-    expect(result).toEqual({ matched: false, entries: [] });
+    expect(result).toEqual({ matched: false, entries: [], omitted: 0 });
   });
 
   it('reads, waits for and streams only the speech outside sessions with session=none', async () => {

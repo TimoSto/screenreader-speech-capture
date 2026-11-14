@@ -32,9 +32,10 @@ describe('speech DTOs', () => {
       matched: true,
       entry: entryDto,
     });
-    expect(toWaitResultDto({ status: 'timeout', seen: [entry] })).toEqual({
+    expect(toWaitResultDto({ status: 'timeout', seen: [entry], omitted: 3 })).toEqual({
       matched: false,
       entries: [entryDto],
+      omitted: 3,
     });
   });
 });
