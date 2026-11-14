@@ -10,8 +10,8 @@ import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js
 import { defaultConfigFile } from './adapters/out/platform/paths.js';
 import type { ManageSessions } from './application/ports/in/manage-sessions.js';
 import type { SpeechUseCases } from './application/ports/in/speech.js';
-import type { CaptureStatusSource } from './application/ports/out/capture-status.js';
 import type { Logger } from './application/ports/out/logger.js';
+import { CaptureService } from './application/services/capture-service.js';
 import { ConfigService } from './application/services/config-service.js';
 import { SessionService } from './application/services/session-service.js';
 import { SpeechService } from './application/services/speech-service.js';
@@ -24,6 +24,7 @@ import { createLogging } from './composition/logging.js';
 import { registerReapply } from './composition/reapply.js';
 import { createServices } from './composition/services.js';
 import type { TestSeams } from './composition/test-seams.js';
+import { CaptureState } from './domain/capture.js';
 import { configFields, overriddenFields, type ConfigField } from './domain/config/index.js';
 import { SpeechLog } from './domain/speech-log.js';
 
@@ -46,7 +47,7 @@ export interface Bridge {
   readonly httpPort: number;
   readonly speech: SpeechUseCases;
   readonly sessions: ManageSessions;
-  readonly capture: CaptureStatusSource;
+  readonly capture: Pick<CaptureState, 'captureStatus'>;
   /** The `[bridge]` log, for lifecycle messages from outside (signals, crashes). */
   readonly log: Logger;
   /**
@@ -112,9 +113,14 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   });
   const services = createServices(config, seams, log);
 
-  const tcp = new TcpListener(speech, clock, log.for('speech-capture'));
+  const captureState = new CaptureState();
+  const tcp = new TcpListener(
+    speech,
+    new CaptureService({ state: captureState, clock }),
+    log.for('speech-capture'),
+  );
   const status = new StatusService({
-    capture: tcp,
+    capture: captureState,
     log: speechLog,
     playwright: services.playwright,
     mcp: services.mcp,
@@ -156,7 +162,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     httpPort: ports.http,
     speech,
     sessions,
-    capture: tcp,
+    capture: captureState,
     log: bridgeLogger,
     stop: (reason) => lifecycle.stop(reason),
   };

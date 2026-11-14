@@ -64,18 +64,18 @@ flowchart LR
 ```
 packages/bridge/src/
   domain/            SpeechLog (the buffer and the sessions, with their rules), SpeechEntry,
-                     Session, Config, KeyChord (key-name parsing + validation). Pure, no I/O.
+                     Session, CaptureState (listener and connections for the status), Config,
+                     KeyChord (key-name parsing + validation). Pure, no I/O.
   application/
-    ports/in/        driving ports (use cases): RecordSpeech, SpeechUseCases (list, watch, clear,
+    ports/in/        driving ports (use cases): RecordSpeech, TrackCapture, SpeechUseCases (list, watch, clear,
                      mark), ResizeBuffer, WaitForSpeech, ManageSessions, SendNativeInput,
                      ManageConfig, GetStatus
-    ports/out/       driven ports: SpeechEventBus, CaptureStatusSource,
-                     ConfigStore, ProcessSupervisor, InputInjector, Logger, Clock
+    ports/out/       driven ports: SpeechEventBus, ConfigStore, ProcessSupervisor, InputInjector, Logger, Clock
     services/        use-case implementations (only depend on domain + ports)
     shared/          helpers several services use: option checks
   adapters/
     in/tcp/          socket listener + wire-format parsers → RecordSpeech;
-                     tracks its connections (CaptureStatusSource)
+                     reports its listener and connections → TrackCapture
     in/http/         server, router, request/response helpers; serves the built UI
       routes/        one file per resource → driving ports
       sse/           open SSE streams (SseHub) and the frame format
@@ -116,7 +116,7 @@ each other (`in` ↔ `out`); the executables in `bin/` sit outside the adapters 
   `SpeechLog` change to, with the log staying the owner of the rules
   ([decisions](decisions.md#the-speech-log-owns-the-buffer-and-session-rules)).
 - A different screen reader capture (for example an NVDA add-on instead of SAPI) is a new
-  driving adapter calling `RecordSpeech`.
+  driving adapter calling `RecordSpeech` and `TrackCapture`.
 - A different input method (for example direct `SendInput` through FFI, or the hypervisor's
   keyboard API) is a new `InputInjector`.
 

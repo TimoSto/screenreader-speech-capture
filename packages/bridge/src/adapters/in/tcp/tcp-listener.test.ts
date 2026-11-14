@@ -2,6 +2,8 @@ import net from 'node:net';
 import { afterEach, expect, it } from 'vitest';
 import { MemoryLogger } from '../../../../test/fakes.js';
 import type { CapturedSpeech } from '../../../application/ports/in/record-speech.js';
+import { CaptureService } from '../../../application/services/capture-service.js';
+import { CaptureState } from '../../../domain/capture.js';
 import { ListenError } from '../../shared/net/listen.js';
 import { TcpListener, type TcpSettings } from './tcp-listener.js';
 
@@ -20,13 +22,14 @@ afterEach(async () => {
 
 function listener() {
   const recorded: CapturedSpeech[] = [];
+  const state = new CaptureState();
   const tcp = new TcpListener(
     { record: (speech) => void recorded.push(speech) },
-    { now: () => new Date(0) },
+    new CaptureService({ state, clock: { now: () => new Date(0) } }),
     new MemoryLogger(),
   );
   cleanup.push(() => tcp.stop());
-  return { tcp, recorded };
+  return { tcp, recorded, state };
 }
 
 /** Connects to `port`; resolves once the connection is open, `closed` once it ends. */
@@ -54,12 +57,12 @@ it('refuses a second start', async () => {
 });
 
 it('stop() closes the open connections and reports the listener as not listening', async () => {
-  const { tcp } = listener();
+  const { tcp, state } = listener();
   const port = await tcp.start(settings());
   const { closed } = await connect(port);
   await tcp.stop();
   await closed;
-  expect(tcp.captureStatus().listener).toMatchObject({ listening: false, port });
+  expect(state.captureStatus().listener).toMatchObject({ listening: false, port });
 });
 
 it('decodes with the configured encoding', async () => {
