@@ -44,7 +44,6 @@ function status(overrides: Partial<BridgeStatus> = {}): BridgeStatus {
       version: '1.4.0',
       apiVersion: '1.4',
       state: 'ready',
-      instanceId: 'run-1',
       startedAt: '2026-11-12T09:00:00.000Z',
     },
     tcp: {

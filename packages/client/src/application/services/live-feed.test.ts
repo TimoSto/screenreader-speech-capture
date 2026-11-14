@@ -3,7 +3,6 @@ import { FakeBridgeApi, FakeClock } from '../../../test/fakes.js';
 import { checkApiVersion } from '../../domain/api-version.js';
 import {
   BridgeHttpError,
-  BridgeRestartedError,
   BridgeUnreachableError,
   IncompatibleBridgeError,
 } from '../../domain/errors.js';
@@ -92,36 +91,17 @@ describe('live feed', () => {
     expect(clock.sleeps).toEqual([250]);
   });
 
-  it("reports a bridge restart and starts from the new bridge's first entry", async () => {
+  it('goes on into a restarted bridge without an error or a gap', async () => {
     const { api, deps } = setup();
     const { log, errors } = subscribe(deps);
     await vi.waitFor(() => expect(api.openStreams).toBe(1));
     api.speak('a', 'b');
     await vi.waitFor(() => expect(log).toEqual(['1 a', '2 b']));
     api.restart();
-    // Already past the old seq 2: a replay after Last-Event-ID 2 would skip x and y.
-    api.speak('x', 'y', 'z');
-    await vi.waitFor(() => expect(log).toEqual(['1 a', '2 b', '1 x', '2 y', '3 z']));
-    expect(api.calls.filter((c) => c.startsWith('stream'))).toEqual([
-      'stream null',
-      'stream 2',
-      'stream 0',
-    ]);
-    const restart = errors.find((e) => e.error instanceof BridgeRestartedError);
-    expect(restart).toMatchObject({ retrying: true });
-    expect(restart!.error).toMatchObject({ previousInstanceId: 'run-1', instanceId: 'run-2' });
-  });
-
-  it('does not report a restart on a reconnect to the same bridge', async () => {
-    const { api, deps } = setup();
-    const { log, errors } = subscribe(deps);
-    await vi.waitFor(() => expect(api.openStreams).toBe(1));
-    api.speak('a');
-    await vi.waitFor(() => expect(log).toEqual(['1 a']));
-    api.dropStreams(new Error('network'));
-    api.speak('b');
-    await vi.waitFor(() => expect(log).toEqual(['1 a', '2 b']));
-    expect(errors.some((e) => e.error instanceof BridgeRestartedError)).toBe(false);
+    api.speak('x', 'y');
+    await vi.waitFor(() => expect(log).toEqual(['1 a', '2 b', '1001 x', '1002 y']));
+    expect(api.calls.filter((c) => c.startsWith('stream'))).toEqual(['stream null', 'stream 2']);
+    expect(errors.map((e) => e.retrying)).toEqual([true]);
   });
 
   it('backs off exponentially while the bridge is unreachable', async () => {

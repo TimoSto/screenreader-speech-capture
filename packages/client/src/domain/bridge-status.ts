@@ -18,8 +18,6 @@ export interface BridgeStatus {
     version: string;
     apiVersion: string;
     state: BridgeState;
-    /** Random id of this bridge run: a new one means the bridge restarted. */
-    instanceId: string;
     /** ISO 8601, UTC. When this bridge run started. */
     startedAt: string;
   };

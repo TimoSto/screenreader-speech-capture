@@ -89,7 +89,7 @@ and readers can tell them apart.
 - Every entry recorded while a session is current gets its `sessionId`, markers included.
   Entries outside any session (before the first one, or after `POST /api/v1/sessions/end`) have
   `sessionId: null`. Reads with `session=none` return only those ([HTTP API](http-api.md#data-model)).
-- Session `id`s increase like `seq` and restart at 1 with the bridge.
+- Session `id`s increase and restart at 1 with the bridge (unlike `seq`, which keeps rising).
 - **Sessions replace clearing between tests.** The [fixture](client.md#playwright-fixture) *(planned, [M3](ROADMAP.md#m3-playwright--mcp-))*
   starts one session per test, and agents start one per task. Reads are scoped to the current session, so
   earlier sessions stay in the buffer and stay visible in the UI.

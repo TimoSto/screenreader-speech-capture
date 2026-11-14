@@ -1,6 +1,9 @@
 /** One recorded speech line (`kind: "speech"`) or a marker set through the API. */
 export interface SpeechEntry {
-  /** Increasing sequence number: survives clear, restarts at 1 with the bridge. */
+  /**
+   * Increasing sequence number. Survives clear, and keeps rising across restarts: the first one
+   * of a bridge run is its start time in ms.
+   */
   readonly seq: number;
   readonly kind: 'speech' | 'marker';
   readonly text: string;

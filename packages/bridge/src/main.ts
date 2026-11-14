@@ -1,6 +1,5 @@
 // Composition root, with the helpers in composition/: the only place that knows the concrete
 // adapters (docs/architecture.md).
-import { randomUUID } from 'node:crypto';
 import { hostname } from 'node:os';
 import { API_VERSION } from '@screenreader-speech-capture/shared';
 import { HttpServer } from './adapters/in/http/http-server.js';
@@ -27,7 +26,6 @@ import { createLogging } from './composition/logging.js';
 import { registerReapply } from './composition/reapply.js';
 import { createServices } from './composition/services.js';
 import type { TestSeams } from './composition/test-seams.js';
-import type { BridgeInstance } from './domain/bridge-instance.js';
 import { configFields, overriddenFields, type ConfigField } from './domain/config/index.js';
 
 export { ConfigError } from './composition/load-config.js';
@@ -92,11 +90,9 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   }
 
   const clock = seams.clock ?? new SystemClock();
-  const instance: BridgeInstance = {
-    id: seams.instanceId ?? randomUUID(),
-    startedAt: clock.now(),
-  };
-  const repository = new MemorySpeechRepository(config.buffer.maxEntries);
+  const startedAt = clock.now();
+  // `seq` starts at the start time, so it keeps rising across restarts (docs/http-api.md).
+  const repository = new MemorySpeechRepository(config.buffer.maxEntries, startedAt.getTime());
   const sessionRepository = new MemorySessionRepository();
   const events = new InProcessEventBus((error) =>
     bridgeLogger.error(`event listener failed: ${String(error)}`),
@@ -128,7 +124,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     config: () => configService.get(),
     version,
     apiVersion: API_VERSION,
-    instance,
+    startedAt,
   });
   const http = new HttpServer({
     speech,
@@ -137,7 +133,6 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     config: configService,
     sessions,
     logger: log.for('http-api'),
-    instanceId: instance.id,
     hostnames: [hostname()],
     ...(seams.ssePingMs === undefined ? {} : { pingMs: seams.ssePingMs }),
   });

@@ -10,8 +10,6 @@ export interface Status {
     version: string;
     apiVersion: string;
     state: BridgeState;
-    /** Random id of this bridge run: a new one means `seq` and session ids started over. */
-    instanceId: string;
     startedAt: Date;
   };
   tcp: {

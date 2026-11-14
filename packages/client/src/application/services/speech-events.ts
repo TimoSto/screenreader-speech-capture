@@ -25,18 +25,6 @@ export interface SpeechEventsOptions {
   onRetry?: ((error: Error) => void) | undefined;
 }
 
-/**
- * The bridge restarted between two connections. The next connection replays the new run from its
- * first entry, so nothing of it is lost.
- */
-export interface RestartedEvent {
-  type: 'restarted';
-  previousInstanceId: string;
-  instanceId: string;
-}
-
-export type SpeechEvent = SpeechFeedEvent | RestartedEvent;
-
 /** Reconnect delays: doubling from `MIN` up to `MAX`. */
 class Backoff {
   static readonly MIN = 250;
@@ -58,23 +46,21 @@ class Backoff {
 /**
  * The live feed (`GET /api/v1/speech/stream`) as one sequence of events across connections: the
  * code path behind both `onSpeech` and the waits. Reconnects with `Last-Event-ID` and backoff, so
- * no entry is lost or repeated; every connection starts with its `bridge` event, and a bridge
- * restart in between yields `restarted`. Ends when `signal` aborts; throws errors a reconnect
- * can't fix (an incompatible bridge, an HTTP `4xx`, an invalid bridge URL).
+ * no entry is lost or repeated, also across a bridge restart (`seq` keeps rising). Ends when
+ * `signal` aborts; throws errors a reconnect can't fix (an incompatible bridge, an HTTP `4xx`, an
+ * invalid bridge URL).
  */
 export async function* speechEvents(
   deps: SpeechEventsDeps,
   options: SpeechEventsOptions,
-): AsyncGenerator<SpeechEvent> {
+): AsyncGenerator<SpeechFeedEvent> {
   const { api, clock, ensureCompatible } = deps;
   const { session, signal } = options;
   const backoff = new Backoff();
   /** The `seq` of the last entry seen: a reconnect asks the bridge for what came after it. */
   let lastEventId = options.since;
-  /** The bridge run of the last connection, `undefined` before the first. */
-  let instanceId: string | undefined;
 
-  connect: while (!signal.aborted) {
+  while (!signal.aborted) {
     const connectedAt = clock.now();
     let lost: Error;
     try {
@@ -88,19 +74,7 @@ export async function* speechEvents(
       for await (const event of events) {
         if (signal.aborted) return;
         backoff.reset();
-        if (event.type === 'bridge') {
-          const previous = instanceId;
-          instanceId = event.instanceId;
-          if (previous !== undefined && previous !== instanceId) {
-            // The replay was for a `Last-Event-ID` of the old run: a new bridge counts `seq` from
-            // 1 again. Reconnect at once and ask for everything of the new run.
-            lastEventId = 0;
-            yield { type: 'restarted', previousInstanceId: previous, instanceId };
-            continue connect;
-          }
-        } else if (event.type === 'entry') {
-          lastEventId = event.entry.seq;
-        }
+        if (event.type === 'entry') lastEventId = event.entry.seq;
         yield event;
       }
       if (signal.aborted) return;

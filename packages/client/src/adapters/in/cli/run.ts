@@ -3,7 +3,6 @@ import type { SpeechCapture } from '../../../application/ports/in/speech-capture
 import {
   BridgeHttpError,
   BridgeNotReadyError,
-  BridgeRestartedError,
   BridgeUnreachableError,
   ClientConfigError,
   IncompatibleBridgeError,
@@ -36,7 +35,6 @@ function exitCode(error: unknown): number | undefined {
   if (
     error instanceof BridgeUnreachableError ||
     error instanceof BridgeHttpError ||
-    error instanceof BridgeRestartedError ||
     error instanceof IncompatibleBridgeError
   ) {
     return EXIT.bridge;

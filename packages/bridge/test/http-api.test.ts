@@ -9,6 +9,7 @@ import { API_VERSION } from '@screenreader-speech-capture/shared';
 import { once } from 'node:events';
 import net from 'node:net';
 import { describe, expect, it } from 'vitest';
+import { SystemClock } from '../src/adapters/out/clock/system-clock.js';
 import { bundledMcp } from '../src/adapters/out/mcp/playwright-mcp.js';
 import type { Bridge } from '../src/main.js';
 import { eventually, send, start, testConfig } from './helpers.js';
@@ -241,12 +242,10 @@ describe('HTTP API', () => {
     );
     stream.close();
 
-    const { instanceId } = (await json<StatusDto>(await fetch(api(bridge, '/status')))).bridge;
     const frames = stream.text.split('\n\n').filter((frame) => frame !== '');
-    expect(frames[0]).toBe(`event: bridge\ndata: {"instanceId":"${instanceId}"}`);
-    expect(frames[1]).toMatch(/^id: 1\nevent: entry\ndata: \{"seq":1,"kind":"speech","text":"one"/);
-    expect(frames[2]).toMatch(/^id: 2\nevent: entry\n/);
-    expect(frames[3]).toBe('event: clear\ndata: {}');
+    expect(frames[0]).toMatch(/^id: 1\nevent: entry\ndata: \{"seq":1,"kind":"speech","text":"one"/);
+    expect(frames[1]).toMatch(/^id: 2\nevent: entry\n/);
+    expect(frames[2]).toBe('event: clear\ndata: {}');
 
     await send(bridge.tcpPort, 'three\r\nfour\r\n');
     await eventually(
@@ -261,7 +260,7 @@ describe('HTTP API', () => {
     resumed.close();
     expect(resumed.text).not.toContain('"three"');
     // The bridge event comes first, before the replay.
-    expect(resumed.text).toMatch(/^event: bridge\ndata: .*\n\nid: 4\nevent: entry\n/);
+    expect(resumed.text).toMatch(/^id: 4\nevent: entry\n/);
   });
 
   it('sends a truncated event before the replay when missed entries were dropped', async () => {
@@ -278,28 +277,33 @@ describe('HTTP API', () => {
     );
     resumed.close();
     const frames = resumed.text.split('\n\n').filter((frame) => frame !== '');
-    expect(frames[0]).toMatch(/^event: bridge\n/);
-    expect(frames[1]).toBe('event: truncated\ndata: {}');
-    expect(frames.slice(2).map((frame) => frame.split('\n')[0])).toEqual(['id: 2', 'id: 3']);
+    expect(frames[0]).toBe('event: truncated\ndata: {}');
+    expect(frames.slice(1).map((frame) => frame.split('\n')[0])).toEqual(['id: 2', 'id: 3']);
   });
 
-  it('names the bridge run in the status, speech lists and streams, new for every run', async () => {
-    const bridge = await start();
-    const { bridge: run } = await json<StatusDto>(await fetch(api(bridge, '/status')));
-    expect(run.instanceId).toMatch(/^[0-9a-f-]{36}$/);
-    expect(run.startedAt).toMatch(/^\d{4}-\d\d-\d\dT.*Z$/);
-    const list = await json<SpeechListDto>(await fetch(api(bridge, '/speech')));
-    expect(list.instanceId).toBe(run.instanceId);
+  it('keeps seq rising across restarts: it starts at the start time in ms', async () => {
+    const clock = new SystemClock();
+    const first = await start({}, { clock });
+    const { bridge: run } = await json<StatusDto>(await fetch(api(first, '/status')));
+    await send(first.tcpPort, 'before\r\n');
+    const [before] = await eventually(
+      async () => (await json<SpeechListDto>(await fetch(api(first, '/speech')))).entries,
+      (entries) => entries.length === 1,
+    );
+    expect(before!.seq).toBe(Date.parse(run.startedAt));
+    await first.stop();
 
-    const other = await start();
-    const { bridge: otherRun } = await json<StatusDto>(await fetch(api(other, '/status')));
-    expect(otherRun.instanceId).not.toBe(run.instanceId);
-  });
-
-  it('uses the instance id it is given', async () => {
-    const bridge = await start({}, { instanceId: 'pinned' });
-    const list = await json<SpeechListDto>(await fetch(api(bridge, '/speech')));
-    expect(list.instanceId).toBe('pinned');
+    const second = await start({}, { clock });
+    await send(second.tcpPort, 'after\r\n');
+    // A `since` from the first run reads the second one from its start.
+    const after = await eventually(
+      async () =>
+        (await json<SpeechListDto>(await fetch(api(second, `/speech?since=${before!.seq}`))))
+          .entries,
+      (entries) => entries.length === 1,
+    );
+    expect(after.map((entry) => entry.text)).toEqual(['after']);
+    expect(after[0]!.seq).toBeGreaterThan(before!.seq);
   });
 
   it('rejects a Last-Event-ID that is not a plain seq', async () => {
@@ -338,7 +342,6 @@ describe('HTTP API', () => {
         version: '0.0.0-test',
         apiVersion: API_VERSION,
         state: 'ready',
-        instanceId: status.bridge.instanceId,
         startedAt: status.bridge.startedAt,
       },
       tcp: {

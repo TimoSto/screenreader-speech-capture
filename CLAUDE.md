@@ -66,7 +66,7 @@ details in `docs/architecture.md`). The bridge:
 The client has the same layers: `ManageClientConfig` / `ClientConfigService` / `FsClientConfigStore`,
 `SpeechCapture` / `SpeechCaptureService` / `FetchBridgeApi` (waits read `GET /speech` once, then
 follow the SSE stream; they and `onSpeech` (`services/live-feed.ts`) share
-`services/speech-events.ts`, which reconnects with `Last-Event-ID` and detects bridge restarts), the CLI as a
+`services/speech-events.ts`, which reconnects with `Last-Event-ID`; `seq` keeps rising across bridge restarts), the CLI as a
 driving adapter, and `main.ts` also exporting the pre-wired public API (`index.ts`
 re-exports it).
 

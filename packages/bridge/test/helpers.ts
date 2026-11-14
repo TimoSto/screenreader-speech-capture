@@ -9,6 +9,7 @@ import {
   type ConfigPatch,
 } from '../src/domain/config/index.js';
 import type { TestSeams } from '../src/composition/test-seams.js';
+import type { Clock } from '../src/application/ports/out/clock.js';
 import { startBridge, type Bridge } from '../src/main.js';
 import { MemoryConfigStore } from './fakes.js';
 
@@ -33,26 +34,46 @@ export function testConfig(patch: unknown = {}): Config {
 
 const bridges: Bridge[] = [];
 
+/**
+ * The system clock moved back so its first `now()` is 1 ms after the epoch. A bridge started with
+ * it counts `seq` from 1 (`seq` starts at the start time in ms), like the tests expect.
+ */
+export function epochClock(): Clock {
+  let offset: number | undefined;
+  return {
+    now: () => {
+      offset ??= Date.now() - 1;
+      return new Date(Date.now() - offset);
+    },
+  };
+}
+
 afterEach(async () => {
   await Promise.all(bridges.splice(0).map((bridge) => bridge.stop()));
 });
 
 /**
  * Starts a bridge that is stopped after the test, with `patch` as flags and `store` (default:
- * an empty one) as the config file. Silent unless `sinks` are given.
+ * an empty one) as the config file. Silent unless `sinks` are given. `seq` starts at 1 unless a
+ * `clock` is given ({@link epochClock}).
  */
 export async function start(
   patch: unknown = {},
   options: { store?: MemoryConfigStore } & Pick<
     TestSeams,
-    'sinks' | 'ssePingMs' | 'playwrightLaunch' | 'mcpLaunch' | 'instanceId'
+    'sinks' | 'ssePingMs' | 'playwrightLaunch' | 'mcpLaunch' | 'clock'
   > = {},
 ): Promise<Bridge> {
   const { store, sinks, ...rest } = options;
   const bridge = await startBridge({
     version: '0.0.0-test',
     overrides: testOverrides(patch),
-    testSeams: { configStore: store ?? new MemoryConfigStore(), sinks: sinks ?? [], ...rest },
+    testSeams: {
+      configStore: store ?? new MemoryConfigStore(),
+      sinks: sinks ?? [],
+      clock: epochClock(),
+      ...rest,
+    },
   });
   bridges.push(bridge);
   return bridge;

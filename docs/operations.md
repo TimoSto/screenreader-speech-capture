@@ -164,7 +164,7 @@ Rules:
 ## Restarting the bridge
 
 Speech entries and [sessions](speech-capture.md#sessions) live in memory, so a restart empties the
-buffer and the session list. `seq` and session ids start again at 1, and the bridge gets a new
-`instanceId` ([HTTP API](http-api.md#data-model)), so clients can tell. Clients that kept a cursor
-have to start a new session (or `clear()`) again. The socket voice reconnects by itself on its next
+buffer and the session list. `seq` keeps rising ([HTTP API](http-api.md#data-model)), so clients
+that kept a cursor or a live feed go on with the new run's speech. Session ids start again at 1:
+start a new session. The socket voice reconnects by itself on its next
 `Speak` call (it retries a failed send once), so the screen reader doesn't need to be restarted.

@@ -18,7 +18,6 @@ function server() {
     waits: unused,
     status: unused,
     config: unused,
-    instanceId: 'run-1',
     sessions: unused,
     logger,
   });

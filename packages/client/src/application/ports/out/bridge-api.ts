@@ -10,8 +10,6 @@ export interface SpeechPage {
   truncated: boolean;
   /** More entries follow: ask again with the last entry's `seq` as `since`. */
   hasMore: boolean;
-  /** The bridge run that answered (`bridge.instanceId`). */
-  instanceId: string;
 }
 
 /**

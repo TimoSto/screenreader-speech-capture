@@ -13,7 +13,7 @@ import type { NewSpeechEntry, SpeechEntry } from '../../../domain/speech-entry.j
  */
 export class MemorySpeechRepository implements SpeechRepository {
   private entries: SpeechEntry[] = [];
-  private nextSeq = 1;
+  private nextSeq: number;
   /** Highest `seq` dropped because the list was full, since the last clear. */
   private droppedUpToSeq = 0;
   /** The same for entries outside sessions (`sessionId: null`). */
@@ -21,7 +21,16 @@ export class MemorySpeechRepository implements SpeechRepository {
   /** Stats of the sessions with entries since the last clear, until they are forgotten. */
   private sessions = new Map<number, SessionStats>();
 
-  constructor(private maxEntries: number) {}
+  /**
+   * `firstSeq`: the first entry's `seq`. The bridge passes its start time in ms, so `seq` keeps
+   * rising across restarts and a `seq` from an earlier run reads the new run from its start.
+   */
+  constructor(
+    private maxEntries: number,
+    firstSeq = 1,
+  ) {
+    this.nextSeq = firstSeq;
+  }
 
   add(entry: NewSpeechEntry): SpeechEntry {
     const stored: SpeechEntry = { ...entry, seq: this.nextSeq++ };

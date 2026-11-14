@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { FakeBridgeApi, FakeClock } from '../../../test/fakes.js';
 import { BridgeHttpError } from '../../domain/errors.js';
-import { speechEvents, type SpeechEvent, type SpeechEventsOptions } from './speech-events.js';
+import type { SpeechFeedEvent } from '../../domain/feed-event.js';
+import { speechEvents, type SpeechEventsOptions } from './speech-events.js';
 
 function setup() {
   const api = new FakeBridgeApi();
@@ -25,37 +26,21 @@ function collect(
   return { log, done, stop: () => controller.abort() };
 }
 
-function show(event: SpeechEvent): string {
-  switch (event.type) {
-    case 'bridge':
-      return `bridge ${event.instanceId}`;
-    case 'restarted':
-      return `restarted ${event.previousInstanceId} -> ${event.instanceId}`;
-    case 'entry':
-      return `${event.entry.seq} ${event.entry.text}`;
-    default:
-      return event.type;
-  }
+function show(event: SpeechFeedEvent): string {
+  return event.type === 'entry' ? `${event.entry.seq} ${event.entry.text}` : event.type;
 }
 
 describe('speechEvents', () => {
-  it("yields each connection's bridge event, then entries; a restart in between", async () => {
+  it('reconnects after Last-Event-ID, also into a restarted bridge', async () => {
     const { api, deps } = setup();
     api.speak('a');
     const retries: Error[] = [];
     const { log, stop } = collect(deps, { since: 0, onRetry: (e) => retries.push(e) });
-    await vi.waitFor(() => expect(log).toEqual(['bridge run-1', '1 a']));
+    await vi.waitFor(() => expect(log).toEqual(['1 a']));
     api.restart();
     api.speak('x');
-    await vi.waitFor(() =>
-      expect(log).toEqual([
-        'bridge run-1',
-        '1 a',
-        'restarted run-1 -> run-2',
-        'bridge run-2',
-        '1 x',
-      ]),
-    );
+    await vi.waitFor(() => expect(log).toEqual(['1 a', '1001 x']));
+    expect(api.calls.filter((c) => c.startsWith('stream'))).toEqual(['stream 0', 'stream 1']);
     expect(retries).toHaveLength(1);
     stop();
   });

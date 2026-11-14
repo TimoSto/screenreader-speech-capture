@@ -30,7 +30,6 @@ export function toStatusDto({
       version: bridge.version,
       apiVersion: bridge.apiVersion,
       state: bridge.state,
-      instanceId: bridge.instanceId,
       startedAt: bridge.startedAt.toISOString(),
     },
     tcp: {
