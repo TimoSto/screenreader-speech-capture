@@ -7,16 +7,13 @@ import {
   type WaitOptions,
   type WaitResult,
 } from '../ports/in/wait-for-speech.js';
-import type { SessionRepository } from '../ports/out/session-repository.js';
+import type { SpeechLog } from '../../domain/speech-log.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
-import type { SpeechRepository } from '../ports/out/speech-repository.js';
 import { intOption } from '../shared/int-option.js';
-import { resolveSessionFilter } from '../shared/session-filter.js';
 
 export interface WaitForSpeechDeps {
-  repository: SpeechRepository;
+  log: Pick<SpeechLog, 'page' | 'resolveFilter'>;
   events: SpeechEventBus;
-  sessions: Pick<SessionRepository, 'current' | 'lastId'>;
 }
 
 function abortReason(signal: AbortSignal): Error {
@@ -52,10 +49,10 @@ export class WaitForSpeechService implements WaitForSpeech, Shutdown {
       max: WAIT_TIMEOUT_MS.max,
     });
     const matches = createSpeechMatcher(options);
-    const sessionId = resolveSessionFilter(options.session, this.deps.sessions);
+    const sessionId = this.deps.log.resolveFilter(options.session);
     if (signal?.aborted) throw abortReason(signal);
 
-    const seen = [...this.deps.repository.list(since, undefined, sessionId).entries];
+    const seen = [...this.deps.log.page(since, undefined, sessionId).entries];
     const found = seen.find(matches);
     if (found) return { status: 'matched', entry: found };
 

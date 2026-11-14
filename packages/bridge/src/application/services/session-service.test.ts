@@ -1,28 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SystemClock } from '../../adapters/out/clock/system-clock.js';
 import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bus.js';
-import { MemorySessionRepository } from '../../adapters/out/memory/memory-session-repository.js';
-import { MemorySpeechRepository } from '../../adapters/out/memory/memory-speech-repository.js';
 import type { SpeechEvent } from '../../domain/speech-event.js';
+import { SpeechLog } from '../../domain/speech-log.js';
 import { SessionService } from './session-service.js';
 import { SpeechService } from './speech-service.js';
 
 function setup(maxEntries = 100) {
-  const repository = new MemorySpeechRepository(maxEntries);
-  const sessionRepository = new MemorySessionRepository();
+  const log = new SpeechLog(maxEntries);
   const events = new InProcessEventBus();
   const clock = new SystemClock();
   const published: SpeechEvent[] = [];
   events.subscribe((event) => published.push(event));
-  const speech = new SpeechService({ repository, events, clock, sessions: sessionRepository });
-  const sessions = new SessionService({
-    sessions: sessionRepository,
-    repository,
-    events,
-    clock,
-  });
+  const speech = new SpeechService({ log, events, clock });
+  const sessions = new SessionService({ log, events, clock });
   const say = (text: string) => speech.record({ text, voice: null, connectionId: 1 });
-  return { speech, sessions, say, published, sessionRepository };
+  return { speech, sessions, say, published };
 }
 
 const notFound = expect.objectContaining({ code: 'NOT_FOUND' }) as Error;
@@ -165,30 +158,27 @@ describe('SpeechService with sessions', () => {
   });
 });
 
-describe('pruning ended sessions', () => {
+describe('forgetting ended sessions', () => {
   it('forgets a session that ends without entries, and keeps one that has some', () => {
-    const { sessions, say, sessionRepository } = setup();
+    const { sessions, say } = setup();
     sessions.start({ name: 'empty' });
     sessions.start({ name: 'spoken' });
     say('s1');
     sessions.end();
-    expect(sessionRepository.list().map((s) => s.name)).toEqual(['spoken']);
+    expect(sessions.list().sessions.map((s) => s.name)).toEqual(['spoken']);
   });
 
-  it('hides an ended session once the full buffer drops its last entry, and forgets it on the next start', () => {
-    const { sessions, say, sessionRepository } = setup(2);
+  it('forgets an ended session once the full buffer drops its last entry', () => {
+    const { sessions, say } = setup(2);
     sessions.start({ name: 'a' });
     say('a1');
     sessions.start({ name: 'b' });
     say('b1');
     say('b2'); // pushes a1 out
     expect(sessions.list().sessions.map((s) => s.name)).toEqual(['b']);
-    expect(sessionRepository.list().map((s) => s.name)).toEqual(['b', 'a']);
-    sessions.start({ name: 'c' });
-    expect(sessionRepository.list().map((s) => s.name)).toEqual(['c', 'b']);
   });
 
-  it('hides an ended session whose last entry a smaller buffer drops', () => {
+  it('forgets an ended session whose last entry a smaller buffer drops', () => {
     const { speech, sessions, say } = setup(10);
     sessions.start({ name: 'a' });
     say('a1');

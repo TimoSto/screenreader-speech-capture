@@ -7,8 +7,6 @@ import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { FsConfigStore } from './adapters/out/fs-config/fs-config-store.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
-import { MemorySessionRepository } from './adapters/out/memory/memory-session-repository.js';
-import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';
 import { defaultConfigFile } from './adapters/out/platform/paths.js';
 import type { ManageSessions } from './application/ports/in/manage-sessions.js';
 import type { SpeechUseCases } from './application/ports/in/speech.js';
@@ -27,6 +25,7 @@ import { registerReapply } from './composition/reapply.js';
 import { createServices } from './composition/services.js';
 import type { TestSeams } from './composition/test-seams.js';
 import { configFields, overriddenFields, type ConfigField } from './domain/config/index.js';
+import { SpeechLog } from './domain/speech-log.js';
 
 export { ConfigError } from './composition/load-config.js';
 
@@ -92,8 +91,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   const clock = seams.clock ?? new SystemClock();
   const startedAt = clock.now();
   // `seq` starts at the start time, so it keeps rising across restarts (docs/http-api.md).
-  const repository = new MemorySpeechRepository(config.buffer.maxEntries, startedAt.getTime());
-  const sessionRepository = new MemorySessionRepository();
+  const speechLog = new SpeechLog(config.buffer.maxEntries, startedAt.getTime());
   const events = new InProcessEventBus((error) =>
     bridgeLogger.error(`event listener failed: ${String(error)}`),
   );
@@ -102,9 +100,9 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     events,
     transcript: log.for('speech-capture', { channel: 'speech' }),
   }).start();
-  const speech = new SpeechService({ repository, events, clock, sessions: sessionRepository });
-  const waits = new WaitForSpeechService({ repository, events, sessions: sessionRepository });
-  const sessions = new SessionService({ sessions: sessionRepository, repository, events, clock });
+  const speech = new SpeechService({ log: speechLog, events, clock });
+  const waits = new WaitForSpeechService({ log: speechLog, events });
+  const sessions = new SessionService({ log: speechLog, events, clock });
   const configService = new ConfigService({
     store,
     logger: configLogger,
@@ -117,8 +115,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   const tcp = new TcpListener(speech, clock, log.for('speech-capture'));
   const status = new StatusService({
     capture: tcp,
-    repository,
-    sessions: sessionRepository,
+    log: speechLog,
     playwright: services.playwright,
     mcp: services.mcp,
     config: () => configService.get(),
