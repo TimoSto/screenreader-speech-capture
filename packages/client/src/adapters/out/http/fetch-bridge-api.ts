@@ -1,6 +1,5 @@
 import {
   API_PREFIX,
-  type BridgeEventDto,
   type ErrorBodyDto,
   type MarkerRequestDto,
   type ServiceStatusDto,
@@ -68,7 +67,6 @@ export class FetchBridgeApi implements BridgeApi {
       entries: page.entries.map(toEntry),
       truncated: page.truncated,
       hasMore: page.hasMore,
-      instanceId: page.instanceId,
     };
   }
 
@@ -201,8 +199,6 @@ async function toHttpError(response: Response): Promise<BridgeHttpError> {
 /** The feed event for one SSE message, `undefined` for events this client doesn't know. */
 function toFeedEvent(event: string, data: string): SpeechFeedEvent | undefined {
   switch (event) {
-    case 'bridge':
-      return { type: 'bridge', instanceId: (JSON.parse(data) as BridgeEventDto).instanceId };
     case 'entry':
       return { type: 'entry', entry: toEntry(JSON.parse(data) as SpeechEntryDto) };
     case 'session':
@@ -260,7 +256,6 @@ const toStatus = ({
     version: bridge.version,
     apiVersion: bridge.apiVersion,
     state: bridge.state,
-    instanceId: bridge.instanceId,
     startedAt: bridge.startedAt,
   },
   tcp: {

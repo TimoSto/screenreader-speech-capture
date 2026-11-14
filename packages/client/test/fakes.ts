@@ -74,9 +74,6 @@ export class FakeBridgeApi implements BridgeApi {
   readonly allSessions: Session[] = [];
   private current: Session | undefined;
   apiVersion = '1.4';
-  /** `bridge.instanceId`: changes with {@link restart}. */
-  instanceId = 'run-1';
-  private runs = 1;
   state: BridgeStatus['bridge']['state'] = 'ready';
   /** Page size the fake uses, whatever `limit` asks for, to test paging. */
   pageSize = Infinity;
@@ -115,7 +112,6 @@ export class FakeBridgeApi implements BridgeApi {
       entries: after.slice(0, size),
       truncated: false,
       hasMore: after.length > size,
-      instanceId: this.instanceId,
     });
   }
 
@@ -184,7 +180,6 @@ export class FakeBridgeApi implements BridgeApi {
       throw new BridgeHttpError(404, 'NOT_FOUND', 'No such session');
     }
     const stream = new FakeStream(session);
-    stream.push({ type: 'bridge', instanceId: this.instanceId });
     if (lastEventId !== null) {
       for (const entry of this.entries) {
         if (entry.seq > lastEventId) stream.push({ type: 'entry', entry });
@@ -192,6 +187,8 @@ export class FakeBridgeApi implements BridgeApi {
     }
     this.streams.add(stream);
     const close = () => stream.end();
+    // Like `fetch`, a signal that aborted before the connection ends it at once.
+    if (signal.aborted) close();
     signal.addEventListener('abort', close, { once: true });
     try {
       for (;;) {
@@ -229,12 +226,11 @@ export class FakeBridgeApi implements BridgeApi {
   }
 
   /**
-   * A new bridge run: a new `instanceId`, seq and session ids start again at 1, the buffer is
-   * empty, open feeds drop.
+   * A new bridge run: `seq` goes on from 1001 (the real bridge starts it at its start time),
+   * session ids start again at 1, the buffer is empty, open feeds drop.
    */
   restart(): void {
-    this.instanceId = `run-${++this.runs}`;
-    this.seq = 0;
+    this.seq = 1000;
     this.entries = [];
     this.allSessions.length = 0;
     this.current = undefined;
@@ -280,7 +276,6 @@ export class FakeBridgeApi implements BridgeApi {
         version: '0.0.0',
         apiVersion: this.apiVersion,
         state: this.state,
-        instanceId: this.instanceId,
         startedAt: new Date(0).toISOString(),
       },
       tcp: {

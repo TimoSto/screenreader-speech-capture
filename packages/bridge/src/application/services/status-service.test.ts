@@ -23,7 +23,7 @@ function setup(capture: CaptureStatus) {
     config: () => DEFAULT_CONFIG,
     version: '1.2.3',
     apiVersion: '1.0',
-    instance: { id: 'run-1', startedAt: STARTED_AT },
+    startedAt: STARTED_AT,
   });
   return { status, repository, sessions };
 }
@@ -51,7 +51,6 @@ describe('StatusService', () => {
         version: '1.2.3',
         apiVersion: '1.0',
         state: 'ready',
-        instanceId: 'run-1',
         startedAt: STARTED_AT,
       },
       tcp: {

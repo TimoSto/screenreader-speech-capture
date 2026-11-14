@@ -16,7 +16,8 @@ info:
     status), 1.4 added the bridge run (`instanceId` and `startedAt` in the status, `instanceId`
     in `SpeechList`, the SSE `bridge` event), 1.5 added `http.allowedHosts` to the config, the
     `FORBIDDEN` error and `session=none`, 1.6 added `restartRequired` to the `/config` answers
-    (ports, hosts and the log output no longer change while running).
+    (ports, hosts and the log output no longer change while running). 1.7 removed the bridge run
+    (`instanceId` and the SSE `bridge` event) again: `seq` now keeps rising across restarts.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -155,19 +156,15 @@ paths:
       operationId: streamSpeech
       summary: Stream new entries (Server-Sent Events)
       description: |
-        First a `bridge` event with `{"instanceId": "…"}` as `data` and no `id`, before any replay.
-        If its `instanceId` differs from the one the client saw before, the bridge restarted and a
-        `Last-Event-ID` from before refers to the old run: reconnect with `0` to get the new run's
-        entries.
-
-        Then one `entry` event per new entry, with the event `id` set to its `seq` and the entry as
+        One `entry` event per new entry, with the event `id` set to its `seq` and the entry as
         JSON `data`. After a clear, a `clear` event with `data: {}`. When a session starts or
         ends, a `session` event with the `Session` as `data` and no `id`. With `session`, only
         that session's `entry` events are sent; `clear` and `session` events always are. A
         `: ping` comment every 15 s keeps the connection open.
 
         A reconnect with `Last-Event-ID` first gets the buffered entries after that `seq`, then
-        the live ones, with nothing missed or repeated in between. If some of the missed entries
+        the live ones, with nothing missed or repeated in between. `seq` keeps rising across
+        bridge restarts, so this also works after a restart. If some of the missed entries
         were already dropped because the buffer was full, a `truncated` event with `data: {}`
         comes before them.
 
@@ -175,9 +172,6 @@ paths:
         reconnects with `Last-Event-ID`.
 
         ```
-        event: bridge
-        data: {"instanceId":"3f0c9a52-6b1e-4d8f-9c37-0e2a5b7d1f44"}
-
         id: 42
         event: entry
         data: {"seq":42,"kind":"speech","text":"Submit, button",...}
@@ -401,7 +395,9 @@ components:
         seq:
           type: integer
           minimum: 1
-          description: Increasing sequence number. Survives clear, restarts at 1 with the bridge.
+          description: |
+            Increasing sequence number. Survives clear and keeps rising across restarts: the
+            first entry of a bridge run gets the run's start time in milliseconds.
         kind: { type: string, enum: [speech, marker] }
         text: { type: string }
         receivedAt:
@@ -433,7 +429,7 @@ components:
 
     SpeechList:
       type: object
-      required: [entries, truncated, hasMore, instanceId]
+      required: [entries, truncated, hasMore]
       properties:
         entries:
           type: array
@@ -444,11 +440,6 @@ components:
         hasMore:
           type: boolean
           description: "`true` when more entries follow: ask again with the last entry's `seq` as `since`."
-        instanceId:
-          type: string
-          description: |
-            `bridge.instanceId` of the bridge that answered. If it differs from the run `since` came
-            from, the bridge restarted and those entries are gone.
 
     MarkerRequest:
       type: object
@@ -517,18 +508,12 @@ components:
       properties:
         bridge:
           type: object
-          required: [version, apiVersion, state, instanceId, startedAt]
+          required: [version, apiVersion, state, startedAt]
           properties:
             version: { type: string, description: Package version of the bridge., example: 0.3.0 }
             apiVersion:
               { type: string, description: '`<major>.<minor>` of this API.', example: '1.0' }
             state: { type: string, enum: [starting, ready, stopping] }
-            instanceId:
-              type: string
-              description: |
-                Random id of this bridge run. A new id means the bridge restarted: `seq` and session
-                ids start at 1 again.
-              example: 3f0c9a52-6b1e-4d8f-9c37-0e2a5b7d1f44
             startedAt:
               type: string
               format: date-time

@@ -62,7 +62,6 @@ const statusDto = (apiVersion = '1.4'): StatusDto => ({
     version: '1.0.0',
     apiVersion,
     state: 'ready',
-    instanceId: 'run-1',
     startedAt: '2026-11-12T09:00:00.000Z',
   },
   tcp: {
@@ -82,7 +81,7 @@ const statusDto = (apiVersion = '1.4'): StatusDto => ({
 describe('FetchBridgeApi requests', () => {
   it('lists speech with the query parameters under /api/v1', async () => {
     const { fetch, calls } = fakeFetch(() =>
-      json({ entries: [entryDto], truncated: false, hasMore: true, instanceId: 'run-1' }),
+      json({ entries: [entryDto], truncated: false, hasMore: true }),
     );
     const page = await api(fetch).listSpeech({ since: 3, limit: 10, session: 'current' });
     expect(calls[0]).toMatchObject({
@@ -93,7 +92,6 @@ describe('FetchBridgeApi requests', () => {
       entries: [entryDto],
       truncated: false,
       hasMore: true,
-      instanceId: 'run-1',
     });
   });
 
@@ -138,7 +136,6 @@ describe('FetchBridgeApi requests', () => {
       version: '1.0.0',
       apiVersion: '1.4',
       state: 'ready',
-      instanceId: 'run-1',
       startedAt: '2026-11-12T09:00:00.000Z',
     });
     expect(status.session.current).toEqual(sessionDto);
@@ -237,7 +234,6 @@ describe('FetchBridgeApi.streamSpeech', () => {
       request = init;
       return sse(
         [
-          'event: bridge\ndata: {"instanceId":"run-1"}\n\n',
           `id: 1\nevent: entry\ndata: ${JSON.stringify(entryDto)}\n\n`,
           `event: session\ndata: ${JSON.stringify(sessionDto)}\n\n`,
           'event: clear\ndata: {}\n\n',
@@ -257,9 +253,8 @@ describe('FetchBridgeApi.streamSpeech', () => {
       events.push(event);
       if (event.type === 'truncated') controller.abort();
     }
-    expect(events.map((e) => e.type)).toEqual(['bridge', 'entry', 'session', 'clear', 'truncated']);
-    expect(events[0]).toEqual({ type: 'bridge', instanceId: 'run-1' });
-    expect(events[1]).toEqual({ type: 'entry', entry: entryDto });
+    expect(events.map((e) => e.type)).toEqual(['entry', 'session', 'clear', 'truncated']);
+    expect(events[0]).toEqual({ type: 'entry', entry: entryDto });
     expect(request?.headers).toMatchObject({
       accept: 'text/event-stream',
       'last-event-id': '7',
@@ -270,7 +265,7 @@ describe('FetchBridgeApi.streamSpeech', () => {
     let url: string | undefined;
     const fetch = ((u: string, init: RequestInit) => {
       url = u;
-      return sse(['event: bridge\ndata: {"instanceId":"run-1"}\n\n'], init.signal);
+      return sse(['event: clear\ndata: {}\n\n'], init.signal);
     }) as unknown as typeof globalThis.fetch;
     const controller = new AbortController();
     const stream = api(fetch).streamSpeech({

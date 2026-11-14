@@ -64,3 +64,17 @@ streams. That is a lot of code and edge cases for something that happens about o
 set up, where restarting the bridge is just as easy. The settings that still apply live can't
 fail, so a config update needs no undo.
 
+## `seq` keeps rising across restarts
+
+The first entry of a bridge run gets the run's start time in milliseconds as its `seq`, and every
+entry after it the next number. A `seq` from an earlier run is then always lower than the new
+run's, so a client cursor, `since` or `Last-Event-ID` from before a restart simply reads the new
+run from its start.
+
+Before, `seq` started at 1 with every run, which made an old cursor point into the middle of the
+new run. Every run had a random `instanceId` (status, speech lists, an SSE `bridge` event), and the
+client compared it on every read and feed connection and threw `BridgeRestartedError`. That was a
+lot of code in both packages for a rare event in development, where the test that lost its speech
+fails anyway. It holds as long as a run records fewer entries than it runs milliseconds, far more
+than any screen reader says. Session ids still start at 1; tests start a new session anyway.
+

@@ -22,19 +22,6 @@ export interface SpeechListDto {
   truncated: boolean;
   /** `true` when there are more entries: ask again with the last entry's `seq` as `since`. */
   hasMore: boolean;
-  /**
-   * `bridge.instanceId` of the bridge that answered. If it differs from the one `since` came
-   * from, the bridge restarted and `since` refers to entries that are gone. Added in API 1.4.
-   */
-  instanceId: string;
-}
-
-/**
- * Data of the `bridge` event, the first event of every `GET /api/v1/speech/stream`, before any
- * replay. Added in API 1.4.
- */
-export interface BridgeEventDto {
-  instanceId: string;
 }
 
 /**

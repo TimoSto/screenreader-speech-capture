@@ -1,4 +1,3 @@
-import { BridgeRestartedError } from '../../domain/errors.js';
 import type { SpeechFeedEvent } from '../../domain/feed-event.js';
 import { isSpeech, type SpeechEntry } from '../../domain/speech-entry.js';
 import type { OnSpeechOptions } from '../ports/in/speech-capture.js';
@@ -41,20 +40,13 @@ class LiveFeed {
         signal,
         onRetry: (error) => this.#report(error, true),
       });
-      for await (const event of events) {
-        if (event.type === 'restarted') {
-          const { previousInstanceId, instanceId } = event;
-          this.#report(new BridgeRestartedError(previousInstanceId, instanceId), true);
-        } else if (event.type !== 'bridge') {
-          this.#dispatch(event);
-        }
-      }
+      for await (const event of events) this.#dispatch(event);
     } catch (error) {
       this.#report(error, false);
     }
   }
 
-  #dispatch(event: Exclude<SpeechFeedEvent, { type: 'bridge' }>): void {
+  #dispatch(event: SpeechFeedEvent): void {
     const { options } = this;
     switch (event.type) {
       case 'entry': {

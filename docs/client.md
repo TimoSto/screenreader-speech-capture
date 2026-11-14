@@ -88,11 +88,9 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
   what came after it.
 - `mark()` and an explicit `since` option let you control the range yourself.
 - `cursor()` returns the current value, `setCursor(seq)` sets it.
-- The cursor belongs to one bridge run. `seq` starts again at 1 when the bridge restarts, so
-  after a restart `getSpeech`, `getText`, the waits and `record` throw `BridgeRestartedError`
-  instead of silently reading the wrong range. They also move the cursor to `0` of the new
-  bridge, so the next call works again. `startSession`, `clear`, `status` and `waitForReady`
-  never throw it, so starting a new session is the way to go on.
+- The cursor survives a bridge restart: `seq` keeps rising across runs
+  ([data model](http-api.md#data-model)), so after a restart the next read or wait starts at the
+  new run's first entry. The speech of the old run is gone.
 
 ### Functions
 
@@ -159,11 +157,10 @@ stop();
   `onTruncated` when entries of a replay were already dropped from the bridge's full buffer.
 - It doesn't move the [cursor](#the-cursor): waits work the same with or without a feed.
 - A lost connection is reconnected by itself (after 250 ms, doubling up to 5 s), and the bridge
-  replays what was missed, so nothing is lost or repeated. After a bridge restart (`seq` starts at
-  1 again) the feed reports a `BridgeRestartedError` to `onError` with `retrying: true` and goes
+  replays what was missed, so nothing is lost or repeated, also after a bridge restart: the feed goes
   on from the new bridge's first entry. If no data, not even the bridge's
   15 s ping, arrives for 45 s, the connection counts as lost.
-- `onError(error, { retrying })`: `retrying: true` for a lost connection, a bridge restart or an
+- `onError(error, { retrying })`: `retrying: true` for a lost connection or an
   exception thrown by a callback (the feed goes on); `retrying: false` when the feed has stopped for good
   (`IncompatibleBridgeError`, an HTTP `4xx`, an invalid bridge URL).
 
@@ -175,7 +172,6 @@ stop();
 | `BridgeNotReadyError` | `waitForReady` timed out. |
 | `BridgeUnreachableError` | No connection to the bridge (wrong URL, bridge not running, network). |
 | `BridgeHttpError` | The bridge answered with an [error](http-api.md#errors): `status`, `code`, `details`. |
-| `BridgeRestartedError` | The bridge restarted since the cursor was set: its speech is lost. `previousInstanceId` and `instanceId` name the two bridge runs. The cursor was reset, so the next call works. CLI exit code `2`. |
 | `IncompatibleBridgeError` | The bridge has another major API version (see [Versioning](http-api.md#versioning)), or is older than API 1.4, the oldest this client supports. |
 | `ClientConfigError` | Invalid bridge URL or client config file. |
 
@@ -268,7 +264,7 @@ Exit codes, so agents can branch on them without parsing output:
 |---|---|
 | `0` | Success (for `wait`: match found) |
 | `1` | Timeout / no match (also `status --wait-ready` and `wait-silence`) |
-| `2` | Bridge not reachable, HTTP error, incompatible bridge version, or the bridge restarted |
+| `2` | Bridge not reachable, HTTP error, or incompatible bridge version |
 | `3` | Invalid usage or invalid client config |
 
 `session start` prints the new session's id (the whole session with `--json`). `session list`

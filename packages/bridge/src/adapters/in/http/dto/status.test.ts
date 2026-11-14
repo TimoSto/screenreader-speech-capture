@@ -18,7 +18,6 @@ const status = (current: Status['session']['current']): Status => ({
     version: '0.1.0',
     apiVersion: '1.4',
     state: 'ready',
-    instanceId: 'run-1',
     startedAt: AT,
   },
   tcp: {
@@ -42,7 +41,6 @@ describe('toStatusDto', () => {
         version: '0.1.0',
         apiVersion: '1.4',
         state: 'ready',
-        instanceId: 'run-1',
         startedAt: AT_ISO,
       },
       tcp: {

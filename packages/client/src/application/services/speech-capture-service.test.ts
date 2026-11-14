@@ -3,7 +3,6 @@ import { FakeBridgeApi, FakeClock } from '../../../test/fakes.js';
 import {
   BridgeHttpError,
   BridgeNotReadyError,
-  BridgeRestartedError,
   BridgeUnreachableError,
   IncompatibleBridgeError,
   SpeechTimeoutError,
@@ -312,19 +311,14 @@ describe('bridge restart', () => {
     return { api, clock, sr };
   }
 
-  it('a wait rejects, resets the cursor, and the next wait sees the new bridge from seq 1', async () => {
+  it('reads the new run from its start: seq keeps rising', async () => {
     const { api, sr } = await restarted();
-    // The new bridge is already past the old cursor: without the instance check, a wait from
-    // seq 3 would skip x, y and z.
-    api.speak('x', 'y', 'z', 'w');
-    const error: unknown = await sr.waitForOutput('x').catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(BridgeRestartedError);
-    expect(error).toMatchObject({ previousInstanceId: 'run-1', instanceId: 'run-2' });
-    expect(sr.cursor()).toBe(0);
-    expect((await sr.waitForOutput('x')).seq).toBe(1);
+    api.speak('x', 'y');
+    expect(texts(await sr.getSpeech())).toEqual(['x', 'y']);
+    expect((await sr.waitForOutput('y')).seq).toBe(1002);
   });
 
-  it('rejects a wait that is running when the bridge restarts', async () => {
+  it('a running wait follows the live feed into the new run', async () => {
     const { api, clock, sr } = setup();
     api.speak('a');
     await sr.waitForOutput('a');
@@ -332,67 +326,14 @@ describe('bridge restart', () => {
       api.restart();
       api.speak('later');
     });
-    await expect(sr.waitForOutput('later')).rejects.toBeInstanceOf(BridgeRestartedError);
-    expect(sr.cursor()).toBe(0);
+    expect(await sr.waitForOutput('later')).toMatchObject({ seq: 1001, text: 'later' });
   });
 
-  it('rejects a wait whose live feed reconnects to a restarted bridge', async () => {
-    const { api, clock, sr } = setup();
-    api.speak('a');
-    await sr.waitForOutput('a');
-    clock.at(100, () => api.speak('b'));
-    clock.at(200, () => {
-      api.restart();
-      api.speak('later');
-    });
-    await expect(sr.waitForSequence(['b', 'later'])).rejects.toBeInstanceOf(BridgeRestartedError);
-    expect(sr.cursor()).toBe(0);
-    expect(api.openStreams).toBe(0);
-  });
-
-  it('rejects waitForSilence when the bridge restarts meanwhile', async () => {
-    const { api, clock, sr } = setup();
-    api.speak('a');
-    clock.at(100, () => api.restart());
-    await expect(sr.waitForSilence()).rejects.toBeInstanceOf(BridgeRestartedError);
-  });
-
-  it('getSpeech, getText and record reject too', async () => {
+  it('record returns the speech of the new run', async () => {
     const { api, sr } = await restarted();
-    await expect(sr.getSpeech()).rejects.toBeInstanceOf(BridgeRestartedError);
-    expect(await sr.getText()).toBe('');
-
-    api.speak('x');
-    const recording = sr.record(() => {
-      api.restart();
-      api.speak('y');
-    });
-    await expect(recording).rejects.toBeInstanceOf(BridgeRestartedError);
-  });
-
-  it('startSession recovers without an error', async () => {
-    const { api, sr } = await restarted();
-    api.speak('x');
-    await sr.startSession('after restart');
-    api.speak('in session');
-    expect(texts(await sr.getSpeech())).toEqual(['in session']);
-    expect((await sr.waitForOutput('in session')).seq).toBe(2);
-  });
-
-  it('status, waitForReady, mark and sessions do not reject', async () => {
-    const { sr } = await restarted();
-    expect((await sr.status()).bridge.instanceId).toBe('run-2');
-    await sr.waitForReady();
-    await sr.mark('m');
-    await sr.sessions();
-    await sr.endSession();
-  });
-
-  it('clear() lets the next read adopt the bridge it reaches', async () => {
-    const { api, sr } = await restarted();
-    await sr.clear();
-    api.speak('x');
-    expect(texts(await sr.getSpeech())).toEqual(['x']);
+    const recording = await sr.record(() => api.speak('x'));
+    expect(texts(recording.entries)).toEqual(['x']);
+    expect(sr.cursor()).toBe(1001);
   });
 });
 

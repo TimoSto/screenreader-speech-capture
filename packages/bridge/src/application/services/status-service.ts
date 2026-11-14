@@ -1,4 +1,3 @@
-import type { BridgeInstance } from '../../domain/bridge-instance.js';
 import type { Config } from '../../domain/config/index.js';
 import type { BridgeState, GetStatus, Status } from '../ports/in/get-status.js';
 import type { BridgeStateControl } from '../ports/in/lifecycle.js';
@@ -23,8 +22,8 @@ export interface StatusServiceDeps {
   version: string;
   /** `<major>.<minor>` of the HTTP API. */
   apiVersion: string;
-  /** This bridge run (`BridgeInstance`). */
-  instance: BridgeInstance;
+  /** When this bridge run started. */
+  startedAt: Date;
 }
 
 /**
@@ -50,7 +49,7 @@ export class StatusService implements GetStatus, BridgeStateControl {
       config,
       version,
       apiVersion,
-      instance,
+      startedAt,
     } = this.deps;
     const { listener, connections } = capture.captureStatus();
     const { tcp, input } = config();
@@ -61,8 +60,7 @@ export class StatusService implements GetStatus, BridgeStateControl {
         version,
         apiVersion,
         state: this.state,
-        instanceId: instance.id,
-        startedAt: instance.startedAt,
+        startedAt,
       },
       tcp: {
         listening: listener?.listening ?? false,

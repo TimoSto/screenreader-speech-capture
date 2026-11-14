@@ -13,8 +13,6 @@ export interface TestSeams {
    */
   sinks?: LogSink[];
   clock?: Clock;
-  /** Id of this bridge run (`bridge.instanceId`). Default: a random UUID. */
-  instanceId?: string;
   /** Interval of the SSE `: ping` comment. Default 15 s. */
   ssePingMs?: number;
   /** Where Playwright versions are installed. Default: `defaultPlaywrightDir()`. */

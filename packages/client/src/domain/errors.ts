@@ -12,27 +12,6 @@ export class SpeechTimeoutError extends Error {
   }
 }
 
-/**
- * The bridge restarted since this client last read from it (its `instanceId` changed): the speech
- * and sessions recorded before are gone, and `seq` started again at 1. The client has moved its
- * cursor to the new bridge's start, so the next call works again.
- */
-export class BridgeRestartedError extends Error {
-  override name = 'BridgeRestartedError';
-
-  constructor(
-    /** `instanceId` of the bridge run the client read from before. */
-    readonly previousInstanceId: string,
-    /** `instanceId` of the bridge run now answering. */
-    readonly instanceId: string,
-  ) {
-    super(
-      'The bridge restarted: the speech recorded before is lost, and the cursor now starts at ' +
-        "the new bridge's first entry",
-    );
-  }
-}
-
 /** `waitForReady` timed out: the bridge was not reachable or not `ready` in time. */
 export class BridgeNotReadyError extends Error {
   override name = 'BridgeNotReadyError';
