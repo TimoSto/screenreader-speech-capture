@@ -10,41 +10,12 @@ decisions go to [decisions.md](decisions.md) and this file can be deleted.
 
 | # | Finding | Severity |
 |---|---|---|
-| 1 | No Host / Origin check on the API | Medium |
-| 2 | No session filter for entries outside sessions | Low |
+| 1 | ~~No Host / Origin check on the API~~ | Done: #94 |
+| 2 | ~~No session filter for entries outside sessions~~ | Done: `session=none` |
 | 3 | Reading the status prunes the repositories | Low |
 | 4 | `setMaxEntries` is not on the repository port | Low |
 | 5 | Test seams in the public `BridgeOptions` | Low |
 | 6 | `HttpServer.retire()` closes streams of the new server | Low |
-
-## 1. No Host / Origin check on the API
-
-**What:** `docs/security.md` says the API has no auth and the VM must be isolated. The HTTP server
-binds `0.0.0.0` by default (`domain/config/defaults.ts`). The only browser protection is that
-bodies must be `application/json` (`adapters/in/http/request.ts`), which only stops cross-origin
-form posts.
-
-**Why now:** the machine runs a browser that visits arbitrary pages under test. Such a page can
-use **DNS rebinding** to become same-origin with `http://<vm>:5151` and then read the speech and
-change the config, including the Playwright version that gets installed. The "isolated VM"
-assumption doesn't protect against a page that the VM itself opens. M4 (real keys and clicks) and
-M5 (a UI on the same origin) raise the stakes.
-
-**Proposal:**
-
-- Reject requests whose `Host` header is not an IP literal, `localhost`, or a name in a configured
-  `http.allowedHosts` (the same idea as Playwright MCP's `--allowed-hosts`, which the bridge
-  already passes to MCP).
-- Reject state-changing requests with an `Origin` header that isn't the bridge's own origin.
-- Keep the shared-secret token on the roadmap as is; this check is independent of it.
-
-## 2. No session filter for entries outside sessions
-
-**What:** the UI's context pane has "Outside sessions" (entries with `sessionId: null`), but
-`SessionFilter` is `number | 'current'` (`domain/session.ts`, `adapters/in/http/request.ts`).
-
-**Proposal:** add `session=none` to speech, wait and stream (additive, next API minor). Update
-`docs/http-api.md` and `docs/openapi.yaml`.
 
 ## 3. Reading the status prunes the repositories
 

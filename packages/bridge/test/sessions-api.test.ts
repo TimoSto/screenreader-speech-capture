@@ -128,6 +128,49 @@ describe('Sessions API', () => {
     expect(result).toEqual({ matched: false, entries: [] });
   });
 
+  it('reads, waits for and streams only the speech outside sessions with session=none', async () => {
+    const bridge = await start();
+    const controller = new AbortController();
+    const stream = await fetch(api(bridge, '/speech/stream?session=none'), {
+      signal: controller.signal,
+    });
+    let streamed = '';
+    const reader = stream.body!.pipeThrough(new TextDecoderStream()).getReader();
+    void (async () => {
+      try {
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) return;
+          streamed += value;
+        }
+      } catch {
+        // aborted
+      }
+    })();
+
+    await say(bridge, 'before');
+    await startSession(bridge, { name: 'a' });
+    await say(bridge, 'inside');
+    await post(bridge, '/sessions/end');
+    await say(bridge, 'after');
+
+    expect(await texts(bridge, 'session=none')).toEqual(['before', 'after']);
+    const wait = await json<WaitResultDto>(
+      await fetch(api(bridge, '/speech/wait?contains=inside&session=none&timeoutMs=50')),
+    );
+    // Times out, having seen only the entries outside sessions.
+    expect(wait.matched).toBe(false);
+    expect(!wait.matched && wait.entries.map((e) => e.text)).toEqual(['before', 'after']);
+
+    await eventually(
+      () => streamed,
+      (t) => t.includes('"text":"after"'),
+    );
+    controller.abort();
+    expect(streamed).toContain('"text":"before"');
+    expect(streamed).not.toContain('"text":"inside"');
+  });
+
   it('streams session events, and only the entries of the selected session', async () => {
     const bridge = await start();
     await startSession(bridge, { name: 'a' });

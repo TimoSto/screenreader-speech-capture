@@ -9,7 +9,10 @@ export interface ListOptions {
   since?: number | undefined;
   /** At most this many entries. Default and maximum: `LIST_LIMIT`. */
   limit?: number | undefined;
-  /** Only this session's entries. `current` is resolved when the call is made. */
+  /**
+   * Only this session's entries, `none`: only those outside sessions. `current` is resolved when
+   * the call is made.
+   */
   session?: SessionFilter | undefined;
 }
 

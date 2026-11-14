@@ -11,8 +11,8 @@ export type WatchListener = (event: WatchEvent) => void;
 
 export interface WatchOptions {
   /**
-   * Only this session's `entry` events (`clear` and `session` events always come). `current` is
-   * resolved when the watch starts.
+   * Only this session's `entry` events (`none`: only those outside sessions; `clear` and
+   * `session` events always come). `current` is resolved when the watch starts.
    */
   session?: SessionFilter | undefined;
 }

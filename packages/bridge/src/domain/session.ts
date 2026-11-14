@@ -42,8 +42,11 @@ export interface SessionSummary extends Session {
   readonly entries: number;
 }
 
-/** Which session a read is limited to: an `id`, or the session current when the request came. */
-export type SessionFilter = number | 'current';
+/**
+ * Which session a read is limited to: an `id`, the session current when the request came, or
+ * `none` for the entries recorded outside any session.
+ */
+export type SessionFilter = number | 'current' | 'none';
 
 export const MAX_SESSION_NAME_LENGTH = 1000;
 

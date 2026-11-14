@@ -133,6 +133,27 @@ describe('MemorySpeechRepository', () => {
       expect(repo.list(0, 100, 1)).toEqual({ entries: [], truncated: true, hasMore: false });
     });
 
+    it('lists the entries outside sessions with null, truncated only when one of them was dropped', () => {
+      const repo = new MemorySpeechRepository(3);
+      repo.add(inSession('a1', 1));
+      repo.add(inSession('o1', null));
+      repo.add(inSession('b1', 2));
+      repo.add(inSession('o2', null));
+      // a1 was dropped: not an outside entry.
+      expect(repo.list(0, 100, null)).toEqual({
+        entries: [expect.objectContaining({ text: 'o1' }), expect.objectContaining({ text: 'o2' })],
+        truncated: false,
+        hasMore: false,
+      });
+
+      repo.add(inSession('b2', 2));
+      expect(repo.list(0, 100, null)).toMatchObject({ truncated: true });
+      expect(repo.list(2, 100, null)).toMatchObject({ truncated: false });
+
+      repo.clear();
+      expect(repo.list(0, 100, null)).toEqual({ entries: [], truncated: false, hasMore: false });
+    });
+
     it('resets the session stats on clear and when a session is forgotten', () => {
       const repo = new MemorySpeechRepository(10);
       repo.add(inSession('a1', 1));
