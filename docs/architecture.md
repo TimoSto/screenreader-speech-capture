@@ -65,11 +65,13 @@ flowchart LR
 packages/bridge/src/
   domain/            SpeechLog (the buffer and the sessions, with their rules), SpeechEntry,
                      Session, CaptureState (listener and connections for the status), Config,
+                     child services (settings from the config, reachability, crash policy),
                      KeyChord (key-name parsing + validation). Pure, no I/O.
   application/
     ports/in/        driving ports (use cases): RecordSpeech, TrackCapture, SpeechUseCases (list, watch, clear,
                      mark), ResizeBuffer, WaitForSpeech, ManageSessions, SendNativeInput,
-                     ManageConfig, GetStatus
+                     ManageConfig, GetStatus, ChildServices (start, apply a config change,
+                     stop, reachability), BridgeLifecycle (ready, shutdown order)
     ports/out/       driven ports: SpeechEventBus, ConfigStore, ProcessSupervisor, InputInjector, Logger, Clock
     services/        use-case implementations (only depend on domain + ports)
     shared/          helpers several services use: option checks
@@ -96,8 +98,9 @@ packages/bridge/src/
     out/clock/       system clock
     out/platform/    default file locations (config, log, Playwright cache) on shared `appDir`
   main.ts            composition root: startBridge, the only place adapters are wired to ports
-  composition/       its helpers: config loading, logging, child services, live re-apply
-                     (PUT /config), startup and shutdown order
+  composition/       its helpers: config loading, logging, building the supervisors and the
+                     proxy routes, wiring the live re-apply (PUT /config), listener start order.
+                     Rules belong in the services; this only constructs and connects
   bin/cli.ts         executable: parses argv (adapters/in/cli), starts main.ts
 ```
 

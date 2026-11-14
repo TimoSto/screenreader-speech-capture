@@ -60,8 +60,10 @@ details in `docs/architecture.md`). The bridge:
   services use; adapters may not import it).
 - `adapters/in/` (tcp, http, cli, net) and `adapters/out/` (memory, fs-config, log, clock).
 - The composition root: `main.ts` (a thin `startBridge`) plus `composition/` (config loading,
-  logging, child services, live re-apply, startup/shutdown). It is the **only** place that knows
-  concrete adapters and services.
+  logging, building supervisors and proxy routes, re-apply wiring, listener start order). It is
+  the **only** place that knows concrete adapters and services, and it holds no rules: what a
+  config change does to the child services is `ChildServicesService.apply`, the start/stop state
+  machine is `BridgeLifecycleService`.
 
 The client has the same layers: `ManageClientConfig` / `ClientConfigService` / `FsClientConfigStore`,
 `SpeechCapture` / `SpeechCaptureService` / `FetchBridgeApi` (waits read `GET /speech` once, then
@@ -94,7 +96,8 @@ Each hexagon owns its own domain model and maps to/from DTOs in its HTTP adapter
 Config precedence: CLI flags / `SR_SPEECH_*` env vars (parsed in `adapters/in/cli/options.ts`) win
 over the config file (`adapters/out/fs-config`). `PUT /config` validates a patch, persists it and
 live re-applies the changed sections (see `changedSections` / `mergeConfig` in `domain/config/`
-and `composition/reapply.ts`), except the restart-only settings (`RESTART_FIELDS` in
+and `composition/reapply.ts`, which hands child-service changes to `ChildServicesService.apply`),
+except the restart-only settings (`RESTART_FIELDS` in
 `domain/config/restart.ts`: listener addresses, log output), which it reports as
 `restartRequired` until the next start.
 

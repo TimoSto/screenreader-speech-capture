@@ -1,11 +1,6 @@
-import type { ServiceStatus } from '../../../domain/child-service.js';
+import type { ServiceSettings, ServiceStatus } from '../../../domain/child-service.js';
 
-/** Where and which version a child service runs. `version: null` = the bundled default. */
-export interface ServiceSettings {
-  readonly host: string;
-  readonly port: number;
-  readonly version: string | null;
-}
+export type { ServiceSettings };
 
 /**
  * One supervised child service (docs/operations.md#child-service-crashes): installs it if

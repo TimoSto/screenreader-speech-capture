@@ -2,11 +2,9 @@ import http from 'node:http';
 import net from 'node:net';
 import type { Duplex } from 'node:stream';
 import type { Logger } from '../../../../application/ports/out/logger.js';
+import { CHILD_HOST, type Reachability } from '../../../../domain/child-service.js';
 import { AppError } from '../../../../domain/errors.js';
 import { sendError, sendSocketError } from '../errors.js';
-
-/** Where the child services listen: loopback only, the bridge is their way in. */
-export const CHILD_HOST = '127.0.0.1';
 
 /** A child service the bridge passes through on its HTTP port (docs/playwright-mcp.md). */
 export interface ProxyRoute {
@@ -19,7 +17,7 @@ export interface ProxyRoute {
   /** `ws`: clients connect with a WebSocket (the Playwright server); `http`: plain requests. */
   readonly scheme: 'ws' | 'http';
   /** The child's port on {@link CHILD_HOST} while it runs, otherwise why it can't be reached. */
-  target(): { port: number } | { unavailable: string };
+  target(): Reachability;
 }
 
 /** Headers that belong to one connection and are not passed on (RFC 9110, 7.6.1). */
