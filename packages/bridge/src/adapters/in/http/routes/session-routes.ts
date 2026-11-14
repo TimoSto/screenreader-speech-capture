@@ -1,6 +1,6 @@
 import type { ManageSessions } from '../../../../application/ports/in/manage-sessions.js';
-import { toSessionDto, toSessionListDto } from '../dto/session.js';
-import { jsonBody, nullableStringField, stringField } from '../request.js';
+import { toSessionListDto, toStartSessionResponseDto } from '../dto/session.js';
+import { clientHeader, jsonBody, nullableStringField, stringField } from '../request.js';
 import { sendJson, sendNoContent } from '../response.js';
 import type { Router } from '../router.js';
 
@@ -15,10 +15,11 @@ export function sessionRoutes(router: Router, { sessions }: SessionRoutesDeps): 
       const body = await jsonBody(req);
       const name = stringField(body, 'name');
       const run = nullableStringField(body, 'run');
-      sendJson(res, 201, toSessionDto(sessions.start({ name, run })));
+      const client = clientHeader(req);
+      sendJson(res, 201, toStartSessionResponseDto(sessions.start({ name, run, client })));
     })
-    .add('POST', '/sessions/end', ({ res }) => {
-      sessions.end();
+    .add('POST', '/sessions/end', ({ req, res }) => {
+      sessions.end(clientHeader(req));
       sendNoContent(res);
     })
     .add('GET', '/sessions', ({ res }) => sendJson(res, 200, toSessionListDto(sessions.list())));

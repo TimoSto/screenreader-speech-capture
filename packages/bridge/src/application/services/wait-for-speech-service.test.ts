@@ -14,7 +14,7 @@ function setup() {
   const waits = new WaitForSpeechService({ log, events });
   const say = (text: string) => speech.record({ text, voice: null, connectionId: 1 });
   const startSession = (name: string) => {
-    log.startSession({ name, run: null, startedAt: new Date() });
+    log.startSession({ name, run: null, client: null, startedAt: new Date() });
   };
   return { speech, waits, say, events, startSession };
 }

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryLogger } from '../../../test/fakes.js';
 import { SystemClock } from '../../adapters/out/clock/system-clock.js';
 import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bus.js';
 import type { SpeechEvent } from '../../domain/speech-event.js';
@@ -13,9 +14,10 @@ function setup(maxEntries = 100) {
   const published: SpeechEvent[] = [];
   events.subscribe((event) => published.push(event));
   const speech = new SpeechService({ log, events, clock });
-  const sessions = new SessionService({ log, events, clock });
+  const logger = new MemoryLogger();
+  const sessions = new SessionService({ log, events, clock, logger });
   const say = (text: string) => speech.record({ text, voice: null, connectionId: 1 });
-  return { speech, sessions, say, published };
+  return { speech, sessions, say, published, logger };
 }
 
 const notFound = expect.objectContaining({ code: 'NOT_FOUND' }) as Error;
@@ -29,11 +31,13 @@ afterEach(() => vi.useRealTimers());
 describe('SessionService', () => {
   it('starts a session that becomes current and publishes it', () => {
     const { sessions, published } = setup();
-    const session = sessions.start({ name: '  checkout  ', run: 'nightly' });
+    const { session, replaced } = sessions.start({ name: '  checkout  ', run: 'nightly' });
+    expect(replaced).toBeNull();
     expect(session).toEqual({
       id: 1,
       name: 'checkout',
       run: 'nightly',
+      client: null,
       startedAt: new Date('2026-11-12T09:00:00.000Z'),
       endedAt: null,
       startSeq: 0,
@@ -83,6 +87,7 @@ describe('SessionService', () => {
     [{ name: ' ' }, 'name'],
     [{ name: 'x'.repeat(1001) }, 'name'],
     [{ name: 'a', run: '' }, 'run'],
+    [{ name: 'a', client: ' ' }, 'client'],
   ])('rejects %o, naming the field', (options, field) => {
     expect(() => setup().sessions.start(options)).toThrow(
       expect.objectContaining({ code: 'INVALID_REQUEST', details: { field } }) as Error,
@@ -188,5 +193,52 @@ describe('forgetting ended sessions', () => {
     speech.setMaxEntries(1);
     expect(speech.list().entries.map((e) => e.text)).toEqual(['b1']);
     expect(sessions.list().sessions.map((s) => s.name)).toEqual(['b']);
+  });
+});
+
+describe('sessions of different clients', () => {
+  it('replaces the session of another client with a warning, and returns it', () => {
+    const { sessions, logger } = setup();
+    const first = sessions.start({ name: 'a', client: 'host pid 1' }).session;
+    const { session, replaced } = sessions.start({ name: 'b', client: 'host pid 2' });
+    expect(replaced).toMatchObject({
+      id: first.id,
+      client: 'host pid 1',
+      endedAt: expect.any(Date) as Date,
+    });
+    expect(session).toMatchObject({ name: 'b', client: 'host pid 2' });
+    expect(logger.lines).toEqual([
+      'warn session 2 "b" (client host pid 2) replaced session 1 "a" (client host pid 1)',
+    ]);
+  });
+
+  it('replaces its own session, or one of an unknown client when it is unknown too, silently', () => {
+    const { sessions, logger } = setup();
+    sessions.start({ name: 'a', client: 'me' });
+    expect(sessions.start({ name: 'b', client: 'me' }).replaced).toBeNull();
+    sessions.end('me');
+    sessions.start({ name: 'c' });
+    expect(sessions.start({ name: 'd' }).replaced).toBeNull();
+    sessions.end();
+    expect(logger.lines).toEqual([]);
+  });
+
+  it('warns when a known client replaces a session of an unknown one', () => {
+    const { sessions, logger } = setup();
+    sessions.start({ name: 'manual' });
+    expect(sessions.start({ name: 'test', client: 'me' }).replaced).toMatchObject({
+      name: 'manual',
+    });
+    expect(logger.lines).toHaveLength(1);
+  });
+
+  it('warns when a client ends the session of another one', () => {
+    const { sessions, logger } = setup();
+    sessions.start({ name: 'a', client: 'host pid 1' });
+    sessions.end('host pid 2');
+    expect(sessions.list().currentId).toBeNull();
+    expect(logger.lines).toEqual([
+      'warn client host pid 2 ended session 1 "a" (client host pid 1)',
+    ]);
   });
 });

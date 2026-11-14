@@ -8,6 +8,7 @@ describe('session DTOs', () => {
       id: 1,
       name: 'checkout',
       run: 'nightly',
+      client: null,
       startedAt: AT_ISO,
       endedAt: null,
       startSeq: 2,

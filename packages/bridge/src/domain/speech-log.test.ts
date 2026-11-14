@@ -20,7 +20,7 @@ const texts = (log: SpeechLog, since: number, limit = 100, sessionId?: number | 
   log.page(since, limit, sessionId).entries.map((e) => e.text);
 
 const start = (log: SpeechLog, name: string, ms = 0) =>
-  log.startSession({ name, run: null, startedAt: at(ms) }).started;
+  log.startSession({ name, run: null, client: null, startedAt: at(ms) }).started;
 
 const names = (log: SpeechLog) => log.sessions().map((s) => s.name);
 
@@ -113,6 +113,7 @@ describe('SpeechLog', () => {
         id: 1,
         name: 'a',
         run: null,
+        client: null,
         startedAt: at(1),
         endedAt: null,
         startSeq: 0,
@@ -121,7 +122,12 @@ describe('SpeechLog', () => {
         entries: 0,
       });
       log.append(draft('a1'));
-      const { ended, started } = log.startSession({ name: 'b', run: 'r', startedAt: at(2) });
+      const { ended, started } = log.startSession({
+        name: 'b',
+        run: 'r',
+        client: null,
+        startedAt: at(2),
+      });
       expect(ended).toMatchObject({ id: 1, endedAt: at(2), firstSeq: 1, lastSeq: 1, entries: 1 });
       expect(started).toMatchObject({ id: 2, run: 'r', endedAt: null, startSeq: 1 });
       expect(log.page(started.startSeq, 100, started.id).entries).toEqual([]);

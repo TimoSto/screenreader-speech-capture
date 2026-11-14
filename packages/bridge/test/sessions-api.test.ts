@@ -3,6 +3,7 @@ import type {
   SessionDto,
   SessionListDto,
   SpeechListDto,
+  StartSessionResponseDto,
   StatusDto,
   WaitResultDto,
 } from '@screenreader-speech-capture/shared';
@@ -16,12 +17,14 @@ async function json<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
-const post = (bridge: Bridge, path: string, body?: unknown) =>
+const post = (bridge: Bridge, path: string, body?: unknown, client?: string) =>
   fetch(api(bridge, path), {
     method: 'POST',
-    ...(body === undefined
-      ? {}
-      : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
+    headers: {
+      ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+      ...(client === undefined ? {} : { 'x-sr-speech-client': client }),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 
 const startSession = async (bridge: Bridge, body: unknown) =>
@@ -43,23 +46,47 @@ const texts = async (bridge: Bridge, query: string) =>
   );
 
 describe('Sessions API', () => {
+  it('names the client from the header and reports a session of another client it replaces', async () => {
+    const lines: string[] = [];
+    const sinks = [{ colour: false, speech: false, write: (l: string) => lines.push(l) }];
+    const bridge = await start({}, { sinks });
+
+    const first = await json<StartSessionResponseDto>(
+      await post(bridge, '/sessions', { name: 'a' }, 'worker 1'),
+    );
+    expect(first).toMatchObject({ client: 'worker 1', replaced: null });
+    const second = await json<StartSessionResponseDto>(
+      await post(bridge, '/sessions', { name: 'b' }, 'worker 2'),
+    );
+    expect(second.replaced).toMatchObject({ id: first.id, client: 'worker 1' });
+    expect((await post(bridge, '/sessions/end', undefined, 'worker 1')).status).toBe(204);
+
+    const warnings = lines.filter((line) => line.startsWith('[bridge]') && line.includes('WARN'));
+    expect(warnings).toEqual([
+      expect.stringContaining('session 2 "b" (client worker 2) replaced session 1 "a"'),
+      expect.stringContaining('client worker 1 ended session 2 "b" (client worker 2)'),
+    ]);
+  });
+
   it('starts, lists and ends sessions, and scopes reads to them', async () => {
     const bridge = await start();
     await say(bridge, 'before');
 
     const response = await post(bridge, '/sessions', { name: 'checkout', run: 'nightly-42' });
     expect(response.status).toBe(201);
-    const first = await json<SessionDto>(response);
+    const first = await json<StartSessionResponseDto>(response);
     expect(first).toEqual({
       id: 1,
       name: 'checkout',
       run: 'nightly-42',
+      client: null,
       startedAt: expect.any(String) as string,
       endedAt: null,
       startSeq: expect.any(Number) as number,
       firstSeq: null,
       lastSeq: null,
       entries: 0,
+      replaced: null,
     });
     await say(bridge, 'a1', 'a2');
 

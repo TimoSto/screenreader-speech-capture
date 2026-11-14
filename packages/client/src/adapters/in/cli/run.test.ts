@@ -239,6 +239,18 @@ describe('speech commands', () => {
     expect(busy.code).toBe(EXIT.timeout);
   });
 
+  it('session start warns when it ended the session of another client', async () => {
+    const fake = fakeSpeech();
+    fake.api.clientName = 'host pid 1';
+    expect((await run(['session', 'start', 'a'], undefined, fake.speech)).stderr).toBe('');
+    fake.api.clientName = 'host cli';
+    expect(await run(['session', 'start', 'b'], undefined, fake.speech)).toEqual({
+      code: EXIT.ok,
+      stdout: '2\n',
+      stderr: 'Warning: this ended session 1 "a" of another client (host pid 1).\n',
+    });
+  });
+
   it('session start, list and end', async () => {
     const fake = fakeSpeech();
     expect((await cli(['session', 'list'], fake)).stdout).toBe('No sessions.\n');

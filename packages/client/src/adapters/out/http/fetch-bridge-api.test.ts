@@ -51,6 +51,7 @@ const sessionDto: SessionDto = {
   id: 2,
   name: 'login',
   run: null,
+  client: null,
   startedAt: '2026-11-12T09:00:00.000Z',
   endedAt: null,
   startSeq: 0,
@@ -109,6 +110,30 @@ describe('FetchBridgeApi requests', () => {
       ['POST', { label: 'step 1' }, 'application/json'],
       ['POST', { name: 'login' }, 'application/json'],
       ['POST', { name: 'login', run: 'nightly' }, 'application/json'],
+    ]);
+  });
+
+  it('names the client on every request and maps the replaced session', async () => {
+    const other = { ...sessionDto, id: 1, client: 'other pid 7' };
+    const { fetch, calls } = fakeFetch(({ method }) =>
+      method === 'POST'
+        ? json({ ...sessionDto, client: 'me pid 1', replaced: other }, 201)
+        : json({ sessions: [], currentId: null }),
+    );
+    const bridge = new FetchBridgeApi({
+      baseUrl: () => Promise.resolve('http://vm:5151'),
+      fetch,
+      clientName: 'me pid 1',
+    });
+    expect(await bridge.startSession({ name: 'login' })).toEqual({
+      ...sessionDto,
+      client: 'me pid 1',
+      replaced: other,
+    });
+    await bridge.listSessions();
+    expect(calls.map(({ headers }) => headers['x-sr-speech-client'])).toEqual([
+      'me pid 1',
+      'me pid 1',
     ]);
   });
 

@@ -1,6 +1,6 @@
 import type { BridgeStatus } from '../../../domain/bridge-status.js';
 import type { SpeechFeedEvent } from '../../../domain/feed-event.js';
-import type { Session, SessionList, SessionRef } from '../../../domain/session.js';
+import type { SessionList, SessionRef, StartedSession } from '../../../domain/session.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 
 /** One page of `GET /api/v1/speech`. */
@@ -23,7 +23,7 @@ export interface BridgeApi {
   clear(): Promise<void>;
   mark(label: string): Promise<SpeechEntry>;
   /** `POST /api/v1/sessions` (API 1.3): the new session is current, the previous one ends. */
-  startSession(request: { name: string; run?: string | undefined }): Promise<Session>;
+  startSession(request: { name: string; run?: string | undefined }): Promise<StartedSession>;
   /** `POST /api/v1/sessions/end` (API 1.3). */
   endSession(): Promise<void>;
   /** `GET /api/v1/sessions` (API 1.3). */

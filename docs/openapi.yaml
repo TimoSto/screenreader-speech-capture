@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: screenreader-speech-capture bridge API
-  version: '1.9'
+  version: '1.10'
   summary: Capture what a screen reader says and read it over HTTP.
   description: |
     REST + Server-Sent Events API of the bridge. `info.version` is the API version that
@@ -20,7 +20,9 @@ info:
     (`instanceId` and the SSE `bridge` event) again: `seq` now keeps rising across restarts. 1.8
     removed settings and fields of features that don't exist yet: `tcp.format` (one possible
     value), `input` in the config and the status, and the `INPUT_DISABLED` error code (they come
-    back with native input, M4). 1.9 added `startSeq` to `Session`.
+    back with native input, M4). 1.9 added `startSeq` to `Session`. 1.10 added
+    `client` to `Session`, the `X-SR-Speech-Client` request header and `replaced` in the
+    `POST /sessions` answer.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -246,7 +248,11 @@ paths:
       description: |
         The new session becomes current and the previous one ends. Every entry recorded while it
         is current, markers included, gets its `sessionId`. The body must be sent as
-        `application/json`.
+        `application/json`. Starting while another client's session is current (by
+        `X-SR-Speech-Client`) is not refused: the bridge logs a warning and answers with that
+        session in `replaced`.
+      parameters:
+        - $ref: '#/components/parameters/Client'
       requestBody:
         required: true
         content:
@@ -254,10 +260,10 @@ paths:
             schema: { $ref: '#/components/schemas/StartSessionRequest' }
       responses:
         '201':
-          description: The new session.
+          description: The new session, and the session of another client it ended, if any.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Session' }
+              schema: { $ref: '#/components/schemas/StartSessionResponse' }
         '400': { $ref: '#/components/responses/InvalidRequest' }
 
   /sessions/end:
@@ -265,7 +271,11 @@ paths:
       tags: [sessions]
       operationId: endSession
       summary: End the current session
-      description: Entries after this have `sessionId` `null`. Does nothing if no session is current.
+      description: >-
+        Entries after this have `sessionId` `null`. Does nothing if no session is current. Ending
+        another client's session (by `X-SR-Speech-Client`) is logged as a warning.
+      parameters:
+        - $ref: '#/components/parameters/Client'
       responses:
         '204':
           description: Ended (or none was current).
@@ -353,6 +363,15 @@ components:
         oneOf:
           - { type: integer, minimum: 1 }
           - { type: string, enum: [current, none] }
+    Client:
+      name: X-SR-Speech-Client
+      in: header
+      required: false
+      description: >-
+        Names the client (the library sends `<host> pid <process id>`, the CLI `<host> cli`), so
+        the bridge can warn when one client ends or replaces another one's session. Trimmed, at
+        most 1000 characters. Added in API 1.10.
+      schema: { type: string, maxLength: 1000 }
 
   responses:
     SessionNotFound:
@@ -459,11 +478,16 @@ components:
     Session:
       type: object
       description: A session (docs/speech-capture.md#sessions). Added in API 1.3.
-      required: [id, name, run, startedAt, endedAt, startSeq, firstSeq, lastSeq, entries]
+      required: [id, name, run, client, startedAt, endedAt, startSeq, firstSeq, lastSeq, entries]
       properties:
         id: { type: integer, minimum: 1, description: Increasing, restarts at 1 with the bridge. }
         name: { type: string }
         run: { type: [string, 'null'], description: Optional label that groups sessions. }
+        client:
+          type: [string, 'null']
+          description: >-
+            Who started it: the `X-SR-Speech-Client` header, `null` if it wasn't sent. Added in
+            API 1.10.
         startedAt: { type: string, format: date-time }
         endedAt:
           type: [string, 'null']
@@ -485,12 +509,27 @@ components:
         id: 7
         name: form › submit button is announced
         run: nightly-42
+        client: ci-runner pid 4242
         startedAt: '2026-11-12T09:31:04.120Z'
         endedAt: null
         startSeq: 339
         firstSeq: 340
         lastSeq: 342
         entries: 3
+
+    StartSessionResponse:
+      description: >-
+        The new session, plus `replaced`: the session this start ended if another client had
+        started it, `null` otherwise. Added in API 1.10.
+      allOf:
+        - $ref: '#/components/schemas/Session'
+        - type: object
+          required: [replaced]
+          properties:
+            replaced:
+              oneOf:
+                - $ref: '#/components/schemas/Session'
+                - type: 'null'
 
     SessionList:
       type: object

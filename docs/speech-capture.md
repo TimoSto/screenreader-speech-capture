@@ -90,6 +90,9 @@ and readers can tell them apart.
   Entries outside any session (before the first one, or after `POST /api/v1/sessions/end`) have
   `sessionId: null`. Reads with `session=none` return only those ([HTTP API](http-api.md#data-model)).
 - Session `id`s increase and restart at 1 with the bridge (unlike `seq`, which keeps rising).
+- Two clients (for example two Playwright workers) can't share the screen reader: each new
+  session ends the other one's. The bridge doesn't lock sessions, but it warns when a client
+  ends or replaces another client's session ([Clients](http-api.md#clients)).
 - **Sessions replace clearing between tests.** The [fixture](client.md#playwright-fixture) *(planned, [M3](ROADMAP.md#m3-playwright--mcp-))*
   starts one session per test, and agents start one per task. Reads are scoped to the current session, so
   earlier sessions stay in the buffer and stay visible in the UI.

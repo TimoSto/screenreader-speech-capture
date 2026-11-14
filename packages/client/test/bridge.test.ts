@@ -23,7 +23,7 @@ async function bridge() {
     url,
     tcpPort: b.tcpPort,
     say: (...lines: string[]) => send(b.tcpPort, lines.map((l) => `${l}\r\n`).join('')),
-    client: () => new SpeechCaptureClient({ baseUrl: url, env }),
+    client: (clientName?: string) => new SpeechCaptureClient({ baseUrl: url, env, clientName }),
   };
 }
 
@@ -132,6 +132,17 @@ describe('library', () => {
 });
 
 describe('sessions', () => {
+  it('startSession reports the session of another client it replaced', async () => {
+    const { client } = await bridge();
+    const first = await client('worker 1').startSession('a');
+    expect(first).toMatchObject({ client: 'worker 1', replaced: null });
+    expect(await client('worker 1').startSession('b')).toMatchObject({ replaced: null });
+    const third = await client('worker 2').startSession('c');
+    expect(third.replaced).toMatchObject({ name: 'b', client: 'worker 1' });
+    const defaultName = await client().startSession('d');
+    expect(defaultName.client).toMatch(/ pid \d+$/);
+  });
+
   it('startSession scopes the cursor; entries carry the sessionId; sessions lists them', async () => {
     const { say, client } = await bridge();
     const sr = client();

@@ -28,6 +28,7 @@ format for every endpoint (see [Errors](#errors)).
   "id": 7,                               // increasing, restarts at 1 with the bridge
   "name": "form › submit button is announced",
   "run": "2026-11-12T09:30:00Z",         // optional label that groups sessions, null if not set
+  "client": "ci-runner pid 4242",        // X-SR-Speech-Client of the starter, null if not sent (since API 1.10)
   "startedAt": "2026-11-12T09:31:04.120Z",
   "endedAt": null,                       // set when the session ends, null while it is current
   "startSeq": 339,                       // last seq before the session started (since API 1.9)
@@ -60,8 +61,8 @@ with every run.
 | `GET /api/v1/speech/stream?session=<id>` | Server-Sent Events: one `entry` event per new entry (event `id` = `seq`), a `clear` event after a clear, and a `session` event (data: the `Session`) when a session starts or ends. `session` (an `id`, `current` or `none`) limits `entry` events to that session; `session` events are always sent. A reconnect with `Last-Event-ID` first gets the entries it missed from the buffer, also after a bridge restart, preceded by a `truncated` event if some of them were already dropped because the buffer was full. A `: ping` comment every 15 s keeps the connection open. A client that stops reading is disconnected once about 1 MiB is waiting for it; it reconnects with `Last-Event-ID`. |
 | `GET /api/v1/speech/wait?contains=<text>&since=<seq>&timeoutMs=<n>` | Long-poll until a speech entry with `seq > since` matches (also if it arrived before the request). `regex=<pattern>` can be used instead of `contains` (at most 500 characters, and no repeated group that repeats inside, such as `(a+)+`: it runs on every new entry, so a pattern that backtracks badly would stall the capture), `normalize=1` ignores case and extra whitespace, `session=<id>|current|none` only matches that session's entries. Markers never match. `since` defaults to `0`, `timeoutMs` to `5000` (max `300000`). Always `200`: `{ "matched": true, "entry": {...} }`, or on timeout `{ "matched": false, "entries": [...] }` with every entry seen after `since`. A timeout is an expected answer, not an error (a `408` would make browsers and proxies repeat the request). |
 | `POST /api/v1/markers` `{ "label": "step 3" }` | Insert a marker into the timeline (shown in the UI, returned in lists). Requires `content-type: application/json` (a web page can't send that cross-origin without a CORS preflight). Returns `201` with the new entry. |
-| `POST /api/v1/sessions` `{ "name": "checkout test", "run": "nightly-42" }` | Start a [session](speech-capture.md#sessions): it becomes current and the previous one ends. `name` is required, `run` optional (both trimmed, not empty, at most 1000 characters). Requires `content-type: application/json`. Returns `201` with the new `Session`; its `startSeq` is the `since` that reads it from its start. |
-| `POST /api/v1/sessions/end` | End the current session (`204`). Entries after this have `sessionId: null`. Does nothing if no session is current. |
+| `POST /api/v1/sessions` `{ "name": "checkout test", "run": "nightly-42" }` | Start a [session](speech-capture.md#sessions): it becomes current and the previous one ends. `name` is required, `run` optional (both trimmed, not empty, at most 1000 characters). Requires `content-type: application/json`. Returns `201` with the new `Session`; its `startSeq` is the `since` that reads it from its start. If another client's session was current (see [Clients](#clients)), it is not refused: the bridge logs a warning and the answer has that session in `replaced` (otherwise `null`, since API 1.10). |
+| `POST /api/v1/sessions/end` | End the current session (`204`). Entries after this have `sessionId: null`. Does nothing if no session is current. Ending another client's session is logged as a warning. |
 | `GET /api/v1/sessions` | `{ "sessions": [...], "currentId": 7 }`: the sessions that still have entries in the buffer, plus the current one, newest first. `currentId` is `null` when no session is current. |
 | `POST /api/v1/set-focus` `{ "x": 640, "y": 12, "button": "left" }` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
 | `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Native key presses: one chord, or a sequence with `delayMs` between them. |
@@ -74,7 +75,7 @@ with every run.
 {
   "bridge": {
     "version": "0.3.0",
-    "apiVersion": "1.9",
+    "apiVersion": "1.10",
     "state": "ready",
     "startedAt": "2026-11-07T14:00:58.000Z"
   },
@@ -88,9 +89,19 @@ with every run.
   "buffer": { "size": 120, "maxEntries": 10000, "firstSeq": 223, "lastSeq": 342 },
   "playwright": { "state": "running", "version": "1.65.0", "port": 3000, "restarts": 0, "exitCode": null },
   "mcp": { "state": "running", "version": "0.0.85", "port": 8931, "restarts": 0, "exitCode": null },
-  "session": { "current": { "id": 7, "name": "checkout test", "run": null, "startedAt": "2026-11-07T14:02:55.000Z", "endedAt": null, "startSeq": 339, "firstSeq": 340, "lastSeq": 342, "entries": 3 }, "count": 12 }
+  "session": { "current": { "id": 7, "name": "checkout test", "run": null, "client": null, "startedAt": "2026-11-07T14:02:55.000Z", "endedAt": null, "startSeq": 339, "firstSeq": 340, "lastSeq": 342, "entries": 3 }, "count": 12 }
 }
 ```
+
+## Clients
+
+A client may name itself with the `X-SR-Speech-Client` request header (since API 1.10; the
+library sends `<host> pid <process id>`, the CLI `<host> cli`). The bridge stores it as the
+session's `client`. One screen reader means one current session, so when a client starts or ends
+a session another client started, the bridge doesn't refuse: it logs a `[bridge]` warning and
+`POST /sessions` returns the replaced session in `replaced`. Without the header the client is
+unknown (`null`); replacing an unknown client's session as an unknown client is not warned about
+([decisions](decisions.md#sessions-warn-instead-of-locking)).
 
 ## curl examples
 

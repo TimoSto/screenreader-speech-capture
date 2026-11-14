@@ -1,4 +1,5 @@
 import type http from 'node:http';
+import { CLIENT_HEADER } from '@screenreader-speech-capture/shared';
 import { invalidField } from '../../../domain/errors.js';
 import type { SessionFilter } from '../../../domain/session.js';
 
@@ -100,6 +101,13 @@ export function nullableStringField(body: unknown, name: string): string | null 
     throw invalidField(name, 'must be a string or null');
   }
   return value;
+}
+
+/** The `X-SR-Speech-Client` header (`CLIENT_HEADER`), `null` if missing or empty. */
+export function clientHeader(req: http.IncomingMessage): string | null {
+  const raw = req.headers[CLIENT_HEADER];
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return value === undefined || value.trim() === '' ? null : value;
 }
 
 /** `Last-Event-ID` of an SSE reconnect, `null` on a first connect. */

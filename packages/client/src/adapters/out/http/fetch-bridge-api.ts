@@ -1,6 +1,7 @@
 import {
   API_PREFIX,
   API_VERSION,
+  CLIENT_HEADER,
   type ErrorBodyDto,
   type MarkerRequestDto,
   type ServiceStatusDto,
@@ -8,6 +9,7 @@ import {
   type SessionListDto,
   type SpeechEntryDto,
   type StartSessionRequestDto,
+  type StartSessionResponseDto,
   type SpeechListDto,
   type StatusDto,
 } from '@screenreader-speech-capture/shared';
@@ -16,7 +18,7 @@ import { checkApiVersion } from '../../../domain/api-version.js';
 import { BridgeHttpError, BridgeUnreachableError } from '../../../domain/errors.js';
 import type { BridgeStatus, ServiceStatus } from '../../../domain/bridge-status.js';
 import type { SpeechFeedEvent } from '../../../domain/feed-event.js';
-import type { Session, SessionList, SessionRef } from '../../../domain/session.js';
+import type { Session, SessionList, SessionRef, StartedSession } from '../../../domain/session.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import { parseSse } from './sse-parser.js';
 
@@ -39,6 +41,8 @@ interface RequestOptions {
 export interface FetchBridgeApiOptions {
   /** Resolves the bridge URL (no trailing slash). Called once, on the first request. */
   baseUrl: () => Promise<string>;
+  /** Sent as `X-SR-Speech-Client` with every request, so the bridge can tell clients apart. */
+  clientName?: string | undefined;
   fetch?: typeof fetch;
 }
 
@@ -80,12 +84,13 @@ export class FetchBridgeApi implements BridgeApi {
     return toEntry(await this.json<SpeechEntryDto>('POST', '/markers', { body }));
   }
 
-  async startSession(request: { name: string; run?: string | undefined }): Promise<Session> {
+  async startSession(request: { name: string; run?: string | undefined }): Promise<StartedSession> {
     const body: StartSessionRequestDto = {
       name: request.name,
       ...(request.run === undefined ? {} : { run: request.run }),
     };
-    return toSession(await this.json<SessionDto>('POST', '/sessions', { body }));
+    const started = await this.json<StartSessionResponseDto>('POST', '/sessions', { body });
+    return { ...toSession(started), replaced: started.replaced && toSession(started.replaced) };
   }
 
   async endSession(): Promise<void> {
@@ -159,8 +164,10 @@ export class FetchBridgeApi implements BridgeApi {
   ): Promise<Response> {
     const base = await this.base();
     const { body } = options;
+    const { clientName } = this.options;
     const headers = {
       ...options.headers,
+      ...(clientName === undefined ? {} : { [CLIENT_HEADER]: clientName }),
       ...(body === undefined ? {} : { 'content-type': 'application/json' }),
     };
     let response: Response;
@@ -229,6 +236,7 @@ const toSession = (dto: SessionDto): Session => ({
   id: dto.id,
   name: dto.name,
   run: dto.run,
+  client: dto.client,
   startedAt: dto.startedAt,
   endedAt: dto.endedAt,
   startSeq: dto.startSeq,
