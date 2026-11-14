@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: screenreader-speech-capture bridge API
-  version: '1.5'
+  version: '1.9'
   summary: Capture what a screen reader says and read it over HTTP.
   description: |
     REST + Server-Sent Events API of the bridge. `info.version` is the API version that
@@ -20,7 +20,7 @@ info:
     (`instanceId` and the SSE `bridge` event) again: `seq` now keeps rising across restarts. 1.8
     removed settings and fields of features that don't exist yet: `tcp.format` (one possible
     value), `input` in the config and the status, and the `INPUT_DISABLED` error code (they come
-    back with native input, M4).
+    back with native input, M4). 1.9 added `startSeq` to `Session`.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -456,7 +456,7 @@ components:
     Session:
       type: object
       description: A session (docs/speech-capture.md#sessions). Added in API 1.3.
-      required: [id, name, run, startedAt, endedAt, firstSeq, lastSeq, entries]
+      required: [id, name, run, startedAt, endedAt, startSeq, firstSeq, lastSeq, entries]
       properties:
         id: { type: integer, minimum: 1, description: Increasing, restarts at 1 with the bridge. }
         name: { type: string }
@@ -466,6 +466,11 @@ components:
           type: [string, 'null']
           format: date-time
           description: '`null` while the session is current.'
+        startSeq:
+          type: integer
+          description: >-
+            The last `seq` given out before the session started: `since=startSeq` reads the
+            session from its start. Added in API 1.9.
         firstSeq:
           type: [integer, 'null']
           description: First entry still in the buffer, `null` if none.
@@ -479,6 +484,7 @@ components:
         run: nightly-42
         startedAt: '2026-11-12T09:31:04.120Z'
         endedAt: null
+        startSeq: 339
         firstSeq: 340
         lastSeq: 342
         entries: 3

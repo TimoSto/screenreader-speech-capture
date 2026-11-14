@@ -10,6 +10,7 @@ describe('session DTOs', () => {
       run: 'nightly',
       startedAt: AT_ISO,
       endedAt: null,
+      startSeq: 2,
       firstSeq: 3,
       lastSeq: 4,
       entries: 2,

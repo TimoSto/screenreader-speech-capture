@@ -56,6 +56,7 @@ describe('Sessions API', () => {
       run: 'nightly-42',
       startedAt: expect.any(String) as string,
       endedAt: null,
+      startSeq: expect.any(Number) as number,
       firstSeq: null,
       lastSeq: null,
       entries: 0,

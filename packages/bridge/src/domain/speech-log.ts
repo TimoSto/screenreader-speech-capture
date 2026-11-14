@@ -113,7 +113,12 @@ export class SpeechLog {
   /** Ends the current session, if any, and starts a new current one. */
   startSession(session: NewSession): SessionStart {
     const ended = this.endSession(session.startedAt);
-    const started: Session = { ...session, id: ++this.#lastSessionId, endedAt: null };
+    const started: Session = {
+      ...session,
+      id: ++this.#lastSessionId,
+      endedAt: null,
+      startSeq: this.#nextSeq - 1,
+    };
     this.#sessions.set(started.id, started);
     this.#currentId = started.id;
     return { ended, started: summarize(started, EMPTY_SESSION_STATS) };
