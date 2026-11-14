@@ -42,8 +42,10 @@ export function epochClock(): Clock {
   let offset: number | undefined;
   return {
     now: () => {
-      offset ??= Date.now() - 1;
-      return new Date(Date.now() - offset);
+      // One reading, so the first call is exactly 1 even across a millisecond boundary.
+      const now = Date.now();
+      offset ??= now - 1;
+      return new Date(now - offset);
     },
   };
 }

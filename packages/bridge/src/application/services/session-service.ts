@@ -17,7 +17,7 @@ import { listSessions, pruneEndedSessions } from '../shared/sessions.js';
 
 export interface SessionServiceDeps {
   sessions: SessionRepository;
-  repository: Pick<SpeechRepository, 'sessionStats' | 'forgetSession'>;
+  repository: Pick<SpeechRepository, 'sessionStats'>;
   events: SpeechEventBus;
   clock: Clock;
 }
@@ -54,9 +54,10 @@ export class SessionService implements ManageSessions {
   private endCurrent(now: Date): void {
     const ended = this.deps.sessions.endCurrent(now);
     if (!ended) return;
-    const session = summarize(ended, this.deps.repository.sessionStats(ended.id));
+    const stats = this.deps.repository.sessionStats().get(ended.id) ?? EMPTY_SESSION_STATS;
+    const session = summarize(ended, stats);
     this.deps.events.publish({ type: 'session', session });
-    // A session that ended without entries in the buffer is no longer listed.
+    // Forgets the ended sessions without entries in the buffer, this one included.
     pruneEndedSessions(this.deps.sessions, this.deps.repository);
   }
 }

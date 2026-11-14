@@ -41,12 +41,10 @@ describe('listSessions', () => {
   it('hides an ended session whose entries were dropped, without removing it', () => {
     const { sessions, repository, say, a, b } = setup();
     say('b2', b.id); // pushes a1 out of the buffer
-    const forget = vi.spyOn(repository, 'forgetSession');
     const remove = vi.spyOn(sessions, 'removeEnded');
 
     expect(listSessions(sessions, repository).map((s) => s.id)).toEqual([b.id]);
     expect(sessions.get(a.id)).toBeDefined();
-    expect(forget).not.toHaveBeenCalled();
     expect(remove).not.toHaveBeenCalled();
   });
 
@@ -58,15 +56,13 @@ describe('listSessions', () => {
 });
 
 describe('pruneEndedSessions', () => {
-  it('removes an ended session from both repositories once its entries were dropped', () => {
+  it('removes an ended session once its entries were dropped', () => {
     const { sessions, repository, say, a, b } = setup();
     say('b2', b.id); // pushes a1 out of the buffer
-    const forget = vi.spyOn(repository, 'forgetSession');
 
     pruneEndedSessions(sessions, repository);
     expect(sessions.get(a.id)).toBeUndefined();
     expect(sessions.get(b.id)).toBeDefined();
-    expect(forget).toHaveBeenCalledExactlyOnceWith(a.id);
   });
 
   it('keeps ended sessions with entries and the current one, even when it has none', () => {

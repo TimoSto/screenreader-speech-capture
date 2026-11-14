@@ -111,15 +111,13 @@ describe('StatusService', () => {
   });
 
   it('reads the sessions without changing the repositories', () => {
-    const { status, repository, sessions } = setup({ listener: null, connections: [] });
+    const { status, sessions } = setup({ listener: null, connections: [] });
     const at = new Date('2026-11-12T09:00:00.000Z');
     sessions.create({ name: 'a', run: null, startedAt: at });
     sessions.endCurrent(at);
     const remove = vi.spyOn(sessions, 'removeEnded');
-    const forget = vi.spyOn(repository, 'forgetSession');
     expect(status.status().session.count).toBe(0);
     expect(remove).not.toHaveBeenCalled();
-    expect(forget).not.toHaveBeenCalled();
     expect(sessions.list()).toHaveLength(1);
   });
 });

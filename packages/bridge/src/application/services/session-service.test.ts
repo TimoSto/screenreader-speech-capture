@@ -175,25 +175,27 @@ describe('pruning ended sessions', () => {
     expect(sessionRepository.list().map((s) => s.name)).toEqual(['spoken']);
   });
 
-  it('forgets an ended session as soon as the full buffer drops its last entry', () => {
+  it('hides an ended session once the full buffer drops its last entry, and forgets it on the next start', () => {
     const { sessions, say, sessionRepository } = setup(2);
     sessions.start({ name: 'a' });
     say('a1');
     sessions.start({ name: 'b' });
     say('b1');
-    expect(sessionRepository.list().map((s) => s.name)).toEqual(['b', 'a']);
     say('b2'); // pushes a1 out
-    expect(sessionRepository.list().map((s) => s.name)).toEqual(['b']);
+    expect(sessions.list().sessions.map((s) => s.name)).toEqual(['b']);
+    expect(sessionRepository.list().map((s) => s.name)).toEqual(['b', 'a']);
+    sessions.start({ name: 'c' });
+    expect(sessionRepository.list().map((s) => s.name)).toEqual(['c', 'b']);
   });
 
-  it('forgets an ended session whose last entry a smaller buffer drops', () => {
-    const { speech, sessions, say, sessionRepository } = setup(10);
+  it('hides an ended session whose last entry a smaller buffer drops', () => {
+    const { speech, sessions, say } = setup(10);
     sessions.start({ name: 'a' });
     say('a1');
     sessions.start({ name: 'b' });
     say('b1');
     speech.setMaxEntries(1);
     expect(speech.list().entries.map((e) => e.text)).toEqual(['b1']);
-    expect(sessionRepository.list().map((s) => s.name)).toEqual(['b']);
+    expect(sessions.list().sessions.map((s) => s.name)).toEqual(['b']);
   });
 });

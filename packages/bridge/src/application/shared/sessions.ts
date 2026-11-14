@@ -1,34 +1,37 @@
-import { isListed, summarize, type Session, type SessionSummary } from '../../domain/session.js';
+import {
+  EMPTY_SESSION_STATS,
+  isListed,
+  summarize,
+  type Session,
+  type SessionSummary,
+} from '../../domain/session.js';
 import type { SessionRepository } from '../ports/out/session-repository.js';
 import type { SpeechRepository } from '../ports/out/speech-repository.js';
 
-type SessionStatsSource = Pick<SpeechRepository, 'sessionStats'>;
-
 /**
  * The sessions that are listed (the current one, and ended ones with entries in the buffer),
- * newest first, with what the buffer still holds of them. Changes nothing: ended sessions are
- * pruned by the writes that can empty them (`pruneEndedSessions`).
+ * newest first, with what the buffer still holds of them.
  */
 export function listSessions(
   sessions: Pick<SessionRepository, 'list'>,
-  repository: SessionStatsSource,
+  repository: Pick<SpeechRepository, 'sessionStats'>,
 ): SessionSummary[] {
+  const stats = repository.sessionStats();
   return sessions.list().flatMap((session) => {
-    const stats = repository.sessionStats(session.id);
-    return isListed(session, stats) ? [summarize(session, stats)] : [];
+    const own = stats.get(session.id) ?? EMPTY_SESSION_STATS;
+    return isListed(session, own) ? [summarize(session, own)] : [];
   });
 }
 
 /**
- * Removes the ended sessions whose entries were all dropped from both repositories, so neither
- * grows without bound and the session repository doesn't have to follow the buffer. Called after
- * every write that can empty a session: an entry that pushes the oldest out of the full buffer, a
- * smaller `buffer.maxEntries`, and the end of a session.
+ * Forgets the ended sessions whose entries have all left the buffer, so the session list doesn't
+ * grow without bound. Called when a session starts or ends: the list grows by one session per
+ * test, and reads already skip the unlisted ones.
  */
 export function pruneEndedSessions(
   sessions: Pick<SessionRepository, 'removeEnded'>,
-  repository: Pick<SpeechRepository, 'sessionStats' | 'forgetSession'>,
+  repository: Pick<SpeechRepository, 'sessionStats'>,
 ): void {
-  const keep = (session: Session) => isListed(session, repository.sessionStats(session.id));
-  for (const session of sessions.removeEnded(keep)) repository.forgetSession(session.id);
+  const stats = repository.sessionStats();
+  sessions.removeEnded((session: Session) => stats.has(session.id));
 }
