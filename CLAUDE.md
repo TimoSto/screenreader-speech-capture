@@ -55,7 +55,7 @@ details in `docs/architecture.md`). The bridge:
 - `domain/` — pure model (`SpeechLog`: the buffer and the sessions with their rules; speech
   entries, config, text matching, errors). No I/O, imports nothing from outer layers.
 - `application/ports/in/` (use cases), `application/ports/out/` (driven ports: event bus,
-  clock, config store, logger, capture status), `application/services/` (use-case
+  clock, config store, logger, process supervisor), `application/services/` (use-case
   implementations depending only on domain + ports), `application/shared/` (helpers several
   services use; adapters may not import it).
 - `adapters/in/` (tcp, http, cli, net) and `adapters/out/` (memory, fs-config, log, clock).

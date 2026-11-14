@@ -1,12 +1,12 @@
+import type { CaptureState } from '../../domain/capture.js';
 import type { Config } from '../../domain/config/index.js';
 import type { SpeechLog } from '../../domain/speech-log.js';
 import type { BridgeState, GetStatus, Status } from '../ports/in/get-status.js';
 import type { BridgeStateControl } from '../ports/in/lifecycle.js';
-import type { CaptureStatusSource } from '../ports/out/capture-status.js';
 import type { ProcessSupervisor } from '../ports/out/process-supervisor.js';
 
 export interface StatusServiceDeps {
-  capture: CaptureStatusSource;
+  capture: Pick<CaptureState, 'captureStatus'>;
   log: Pick<SpeechLog, 'stats' | 'sessions' | 'currentSession'>;
   playwright: Pick<ProcessSupervisor, 'status'>;
   mcp: Pick<ProcessSupervisor, 'status'>;
