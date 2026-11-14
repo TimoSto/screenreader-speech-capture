@@ -132,6 +132,10 @@ export const BridgeStatusOutput = v.pipe(
   v.description('Bridge health, as `GET /api/v1/status` reports it.'),
 );
 
+const TRUNCATED_READ =
+  "Some of the speech was dropped because the bridge's buffer was full: this is what is left " +
+  '(a warning goes to stderr).';
+
 const configKey = v.picklist(Object.keys(CONFIG_KEYS) as (keyof typeof CONFIG_KEYS)[]);
 const file = v.pipe(v.string(), v.description('The client config file.'));
 
@@ -162,8 +166,14 @@ export const CLI_OUTPUT = {
   'session end': v.object({ ended: v.literal(true) }),
   'session list': SessionListOutput,
   clear: v.object({ cleared: v.literal(true) }),
-  speech: v.object({ entries: v.array(SpeechEntryOutput) }),
-  text: v.object({ text: v.pipe(v.string(), v.description('The speech, joined.')) }),
+  speech: v.object({
+    entries: v.array(SpeechEntryOutput),
+    truncated: v.pipe(v.boolean(), v.description(TRUNCATED_READ)),
+  }),
+  text: v.object({
+    text: v.pipe(v.string(), v.description('The speech, joined.')),
+    truncated: v.pipe(v.boolean(), v.description(TRUNCATED_READ)),
+  }),
   wait: v.pipe(
     v.variant('matched', [
       v.object({ matched: v.literal(true), entry: SpeechEntryOutput }),

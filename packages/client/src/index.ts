@@ -37,6 +37,7 @@ export {
   ClientConfigError,
   IncompatibleBridgeError,
   SpeechTimeoutError,
+  SpeechTruncatedError,
 } from './domain/errors.js';
 export type { BridgeState, BridgeStatus, ServiceStatus } from './domain/bridge-status.js';
 export type { SpeechFeedEvent } from './domain/feed-event.js';

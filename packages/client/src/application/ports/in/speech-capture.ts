@@ -11,6 +11,11 @@ export interface GetSpeechOptions {
   /** Include markers. Default `false`. */
   includeMarkers?: boolean | undefined;
   /**
+   * Return what is left when some of the speech was dropped because the bridge's buffer was
+   * full. Default `false`: the read throws `SpeechTruncatedError` instead.
+   */
+  allowTruncated?: boolean | undefined;
+  /**
    * Only entries of this session: its `id`, or `'current'` (the session current when the request
    * arrives). Default: all entries.
    */
@@ -22,6 +27,8 @@ export interface GetTextOptions {
   since?: number | undefined;
   /** Between two entries. Default `'\n'`. */
   separator?: string | undefined;
+  /** As for `getSpeech`: return what is left instead of throwing `SpeechTruncatedError`. */
+  allowTruncated?: boolean | undefined;
   /**
    * Only entries of this session: its `id`, or `'current'` (the session current when the request
    * arrives). Default: all entries.
