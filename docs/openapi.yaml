@@ -15,7 +15,8 @@ info:
     (`/sessions`, `sessionId` on entries, the `session` filter and SSE event, `session` in the
     status), 1.4 added the bridge run (`instanceId` and `startedAt` in the status, `instanceId`
     in `SpeechList`, the SSE `bridge` event), 1.5 added `http.allowedHosts` to the config, the
-    `FORBIDDEN` error and `session=none`.
+    `FORBIDDEN` error and `session=none`, 1.6 added `restartRequired` to the `/config` answers
+    (ports, hosts and the log output no longer change while running).
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -286,27 +287,28 @@ paths:
       tags: [bridge]
       operationId: getConfig
       summary: The active configuration
-      description: Defaults, then the config file, then flags and environment variables.
+      description: |
+        Defaults, then the config file, then flags and environment variables, as in use. Plus the
+        restart-only settings saved for the next start (`restartRequired`).
       responses:
         '200':
           description: The configuration.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Config' }
+              schema: { $ref: '#/components/schemas/ConfigResponse' }
     put:
       tags: [bridge]
       operationId: updateConfig
-      summary: Change settings, live and in the config file
+      summary: Change settings, in the config file and live
       description: |
-        Takes any subset of the configuration. The whole patch is checked first, then applied to
-        the running bridge, then saved to the config file (only the file's own settings plus the
-        patch, never values from flags or environment variables). If a part can't take the
-        change, for example because a new port is in use, the parts that already took it are
-        undone, nothing is saved and the answer is `400` naming the setting.
+        Takes any subset of the configuration. The whole patch is checked first, then saved to the
+        config file (only the file's own settings plus the patch, never values from flags or
+        environment variables), then applied to the running bridge.
 
-        Changing `tcp.*` restarts the TCP listener. Changing `http.*` moves the API: the answer
-        still comes from the old address, and open SSE streams are closed. A flag or environment
-        variable still wins on the next start (the bridge log warns about it).
+        Restart-only settings (`tcp.*`, `http.host`, `http.port`, `log.file`,
+        `log.consoleSpeech`) are only saved: they take effect on the next start and are listed in
+        `restartRequired`. A flag or environment variable still wins on the next start (the
+        bridge log warns about it). A `restartRequired` key in the body is ignored.
 
         The body must be `application/json` (`400` with `field: content-type` otherwise).
       requestBody:
@@ -317,14 +319,13 @@ paths:
             example: { tcp: { port: 4450 }, log: { level: debug } }
       responses:
         '200':
-          description: The new configuration.
+          description: The configuration in use.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Config' }
+              schema: { $ref: '#/components/schemas/ConfigResponse' }
         '400':
           description: |
-            Invalid or unknown setting, a port that is in use (`field: tcp.port` / `http.port`), or
-            a body that is not JSON. `error.details.field` names it.
+            Invalid or unknown setting, or a body that is not JSON. `error.details.field` names it.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorBody' }
@@ -625,6 +626,20 @@ components:
             consoleSpeech:
               type: boolean
               description: Also write the speech text to the console.
+
+    ConfigResponse:
+      description: |
+        `Config` as in use, plus the restart-only settings saved with another value, which take
+        effect on the next start. Since API 1.6.
+      allOf:
+        - { $ref: '#/components/schemas/Config' }
+        - type: object
+          required: [restartRequired]
+          properties:
+            restartRequired:
+              type: array
+              items: { type: string }
+              example: [tcp.port]
 
     ConfigPatch:
       type: object

@@ -1,8 +1,12 @@
-import type { ConfigDto, ErrorBodyDto, StatusDto } from '@screenreader-speech-capture/shared';
-import net from 'node:net';
+import type {
+  ConfigDto,
+  ConfigResponseDto,
+  ErrorBodyDto,
+  StatusDto,
+} from '@screenreader-speech-capture/shared';
 import { describe, expect, it } from 'vitest';
 import { MemoryConfigStore } from './fakes.js';
-import { accepts, eventually, freePort, send, start } from './helpers.js';
+import { eventually, send, start } from './helpers.js';
 import { ConfigError, startBridge, type Bridge } from '../src/main.js';
 
 const api = (bridge: Bridge, path: string) => `http://127.0.0.1:${bridge.httpPort}/api/v1${path}`;
@@ -56,124 +60,35 @@ describe('PUT /api/v1/config', () => {
     expect(store.saved).toEqual({ buffer: { maxEntries: 5 } });
   });
 
-  it('moves the TCP listener to a new port', async () => {
-    const bridge = await start();
-    const oldPort = bridge.tcpPort;
-    const newPort = await freePort();
-
-    const response = await put(bridge, { tcp: { port: newPort } });
+  it('saves restart-only settings for the next start and reports them as restartRequired', async () => {
+    const store = new MemoryConfigStore();
+    const bridge = await start({}, { store });
+    const response = await put(bridge, { tcp: { encoding: 'utf-8' }, buffer: { maxEntries: 5 } });
     expect(response.status).toBe(200);
-    expect(bridge.tcpPort).toBe(newPort);
-    expect(await accepts(oldPort)).toBe(false);
+    const body = await json<ConfigResponseDto>(response);
+    expect(body.restartRequired).toEqual(['tcp.encoding']);
+    expect(body.tcp.encoding).toBe('windows-1252');
+    expect(body.buffer.maxEntries).toBe(5);
+    expect(store.saved).toEqual({ tcp: { encoding: 'utf-8' }, buffer: { maxEntries: 5 } });
 
-    await send(newPort, 'after the move\r\n');
+    // Still decoded with the encoding of the start.
+    await send(bridge.tcpPort, Buffer.from([0x4d, 0xe4, 0x72, 0x7a, 0x0d, 0x0a]));
     const entries = await eventually(
       () => bridge.speech.list().entries,
       (list) => list.length === 1,
     );
-    expect(entries[0]!.text).toBe('after the move');
-  });
+    expect(entries[0]!.text).toBe('März');
 
-  it('keeps the TCP listener when the new port is in use', async () => {
-    const blocker = net.createServer();
-    await new Promise<void>((resolve) => blocker.listen(0, '127.0.0.1', resolve));
-    const busy = (blocker.address() as net.AddressInfo).port;
-    try {
-      const bridge = await start();
-      const oldPort = bridge.tcpPort;
+    const current = await json<ConfigResponseDto>(await fetch(api(bridge, '/config')));
+    expect(current.restartRequired).toEqual(['tcp.encoding']);
 
-      const response = await put(bridge, { tcp: { port: busy } });
-      expect(response.status).toBe(400);
-      const { error } = await json<ErrorBodyDto>(response);
-      expect(error.details).toEqual({ field: 'tcp.port' });
-      expect(error.message).toMatch(/already in use/);
-
-      expect(bridge.tcpPort).toBe(oldPort);
-      expect((await json<ConfigDto>(await fetch(api(bridge, '/config')))).tcp.port).toBe(0);
-      await send(oldPort, 'still here\r\n');
-      await eventually(
-        () => bridge.speech.list().entries.length,
-        (length) => length === 1,
-      );
-    } finally {
-      await new Promise((resolve) => blocker.close(resolve));
-    }
-  });
-
-  it('moves the HTTP API to a new port, answering from the old one', async () => {
-    const bridge = await start();
-    const oldPort = bridge.httpPort;
-    const newPort = await freePort();
-
-    const response = await put(bridge, { http: { port: newPort } });
-    expect(response.status).toBe(200);
-    expect((await json<ConfigDto>(response)).http.port).toBe(newPort);
-
-    expect(bridge.httpPort).toBe(newPort);
-    expect((await fetch(api(bridge, '/status'))).status).toBe(200);
-    await eventually(
-      () => accepts(oldPort),
-      (open) => !open,
-    );
-    expect(await accepts(oldPort)).toBe(false);
-  });
-
-  it('ends the SSE streams of the old address when the HTTP API moves, not those of the new one', async () => {
-    const bridge = await start();
-    const stream = async () => {
-      const response = await fetch(api(bridge, '/speech/stream'));
-      const reader = response.body!.pipeThrough(new TextDecoderStream()).getReader();
-      const state = { text: '', ended: false };
-      void (async () => {
-        try {
-          for (;;) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            state.text += value;
-          }
-        } catch {
-          // reset by the server
-        }
-        state.ended = true;
-      })();
-      return { state, cancel: () => reader.cancel() };
-    };
-
-    const before = await stream();
-    await put(bridge, { http: { port: await freePort() } });
-    // Well within the 1 s after which the old server's connections are forced closed anyway.
-    await eventually(
-      () => before.state.ended,
-      (ended) => ended,
-      50,
-    );
-    expect(before.state.ended).toBe(true);
-
-    const after = await stream();
-    await send(bridge.tcpPort, 'on the new address\r\n');
-    await eventually(
-      () => after.state.text,
-      (text) => text.includes('on the new address'),
-    );
-    expect(after.state.ended).toBe(false);
-    await after.cancel();
-  });
-
-  it('moves the HTTP API to another host on the same port', async () => {
-    const bridge = await start();
-    const port = bridge.httpPort;
-    const response = await put(bridge, { http: { host: '0.0.0.0', port } });
-    expect(response.status).toBe(200);
-    expect(bridge.httpPort).toBe(port);
-    const status = await eventually(
-      () =>
-        fetch(api(bridge, '/status')).then(
-          (r) => r.status,
-          () => 0,
-        ),
-      (code) => code === 200,
-    );
-    expect(status).toBe(200);
+    // The next start takes it.
+    const next = await start({}, { store });
+    const after = await json<ConfigResponseDto>(await fetch(api(next, '/config')));
+    expect(after.tcp.encoding).toBe('utf-8');
+    expect(after.restartRequired).toEqual([]);
+    // The answer of a GET can be sent back as it is.
+    expect((await put(next, after)).status).toBe(200);
   });
 
   it('warns when a flag or env var will override the saved setting on the next start', async () => {

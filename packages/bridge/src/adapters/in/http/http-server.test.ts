@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { MemoryLogger } from '../../../../test/fakes.js';
-import { accepts, freePort } from '../../../../test/helpers.js';
+import { accepts } from '../../../../test/helpers.js';
 import { ListenError } from '../../shared/net/listen.js';
 import { HttpServer } from './http-server.js';
 
@@ -26,17 +26,25 @@ function server() {
   return { http, logger };
 }
 
-/** The status an HTTP request to `port` gets, `null` if nothing answers. */
-async function answer(port: number, host = '127.0.0.1'): Promise<number | null> {
-  try {
-    const res = await fetch(`http://${host}:${port}/api/v1/nope`, {
-      signal: AbortSignal.timeout(2000),
-    });
-    await res.body?.cancel();
-    return res.status;
-  } catch {
-    return null;
-  }
+/** The status a request to `port` with the `Host` header `host` gets, `null` if nothing answers. */
+async function answer(port: number, host: string) {
+  const http = await import('node:http');
+  return new Promise<number | null>((resolve) => {
+    const req = http.get(
+      {
+        host: '127.0.0.1',
+        port,
+        path: '/api/v1/nope',
+        timeout: 2000,
+        headers: { host },
+      },
+      (res) => {
+        res.resume();
+        resolve(res.statusCode ?? null);
+      },
+    );
+    req.on('error', () => resolve(null));
+  });
 }
 
 describe('HttpServer', () => {
@@ -57,53 +65,22 @@ describe('HttpServer', () => {
     );
   });
 
-  it('restart() before start() just starts', async () => {
-    const { http } = server();
-    const port = await http.restart({ host: '127.0.0.1', port: 0, allowedHosts: [] });
-    expect(await answer(port)).toBe(404);
-  });
-
-  it('moves to a new port: the new one answers, the old one closes', async () => {
-    const { http } = server();
-    const before = await http.start({ host: '127.0.0.1', port: 0, allowedHosts: [] });
-    const after = await http.restart({
-      host: '127.0.0.1',
-      port: await freePort(),
-      allowedHosts: [],
-    });
-    expect(after).not.toBe(before);
-    expect(await answer(after)).toBe(404);
-    expect(await accepts(before)).toBe(false);
-  });
-
-  it('keeps the old server when the new port is in use', async () => {
+  it('rejects a port that is in use', async () => {
     const { http: other } = server();
     const taken = await other.start({ host: '127.0.0.1', port: 0, allowedHosts: [] });
     const { http } = server();
-    const port = await http.start({ host: '127.0.0.1', port: 0, allowedHosts: [] });
-    const error = await http
-      .restart({ host: '127.0.0.1', port: taken, allowedHosts: [] })
-      .catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(ListenError);
-    expect(await answer(port)).toBe(404);
+    await expect(
+      http.start({ host: '127.0.0.1', port: taken, allowedHosts: [] }),
+    ).rejects.toBeInstanceOf(ListenError);
   });
 
-  it('moves the same port to another host', async () => {
+  it('setAllowedHosts() applies to the next request', async () => {
     const { http } = server();
-    const port = await http.start({ host: '127.0.0.1', port: await freePort(), allowedHosts: [] });
-    expect(await http.restart({ host: '0.0.0.0', port, allowedHosts: [] })).toBe(port);
-    expect(await answer(port)).toBe(404);
-  });
-
-  it('goes back to the old address when the same port fails on the new host', async () => {
-    const { http, logger } = server();
-    const port = await http.start({ host: '127.0.0.1', port: await freePort(), allowedHosts: [] });
-    const error = await http
-      .restart({ host: '192.0.2.1', port, allowedHosts: [] })
-      .catch((e: unknown) => e);
-    expect(error).toMatchObject({ code: 'EADDRNOTAVAIL' });
-    expect(await answer(port)).toBe(404);
-    expect(logger.lines.filter((l) => l.startsWith('info listening on'))).toHaveLength(2);
+    const port = await http.start({ host: '127.0.0.1', port: 0, allowedHosts: [] });
+    const request = () => answer(port, 'bridge.lab');
+    expect(await request()).toBe(403);
+    http.setAllowedHosts(['bridge.lab']);
+    expect(await request()).toBe(404);
   });
 
   it('stop() closes the port and can be called twice', async () => {

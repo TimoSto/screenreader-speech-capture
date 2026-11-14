@@ -114,9 +114,8 @@ Playwright version, and native input on/off.
 
 - Input is validated in the browser first, then saved with `PUT /api/v1/config`. Errors from the
   bridge are shown next to the field.
-- Changes that restart a listener (ports, hosts, TCP settings) are marked. Before saving, the UI
-  warns if the change moves the HTTP port the UI itself is running on, and then opens the new
-  address.
+- Restart-only settings (ports, hosts, TCP settings, log output) are marked: they take effect on
+  the next start of the bridge. The fields in `restartRequired` show a "restart the bridge" hint.
 - **Services:** the state and version of the Playwright server and MCP (from `status`). They are
   switched on and off with their `enabled` setting; there are no start / stop buttons.
 

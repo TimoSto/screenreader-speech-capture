@@ -78,12 +78,11 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     overrides,
   } = await loadConfig(store, options.overrides, sourceOf);
 
-  const logging = createLogging(config, {
+  const log = createLogging(config, {
     version,
     configLocation: store.location,
     sinks: seams.sinks,
   });
-  const { log } = logging;
   const bridgeLogger = log.for('bridge');
   const configLogger = log.for('config');
   for (const { field, file: saved, override } of overriddenFields(savedFile, overrides)) {
@@ -145,13 +144,11 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
 
   const ports = await startListeners(tcp, http, config, bridgeLogger);
   registerReapply(configService, {
-    tcp,
     http,
     buffer: speech,
-    logging,
+    log,
     services: services.all,
     logger: bridgeLogger,
-    ports,
   });
   const lifecycle = runLifecycle({
     config,
@@ -163,12 +160,8 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   });
 
   return {
-    get tcpPort() {
-      return ports.tcp;
-    },
-    get httpPort() {
-      return ports.http;
-    },
+    tcpPort: ports.tcp,
+    httpPort: ports.http,
     speech,
     sessions,
     capture: tcp,

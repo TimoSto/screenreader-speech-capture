@@ -1,7 +1,6 @@
 import net from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
-import { AppError } from '../../../domain/errors.js';
-import { listen, ListenError, toConfigError } from './listen.js';
+import { listen, ListenError } from './listen.js';
 
 const servers: net.Server[] = [];
 afterEach(async () => {
@@ -35,28 +34,5 @@ describe('listen', () => {
     const error = await listen(server(), '192.0.2.1', 0).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ListenError);
     expect(error).toMatchObject({ code: 'EADDRNOTAVAIL' });
-  });
-});
-
-describe('toConfigError', () => {
-  it('names the port setting for a port in use', () => {
-    const error = toConfigError('tcp', new ListenError('in use', 'EADDRINUSE'));
-    expect(error).toBeInstanceOf(AppError);
-    expect(error).toMatchObject({
-      code: 'INVALID_REQUEST',
-      message: 'tcp.port: in use',
-      details: { field: 'tcp.port' },
-    });
-  });
-
-  it('names the host setting for an address the machine does not have', () => {
-    expect(toConfigError('http', new ListenError('no', 'EADDRNOTAVAIL'))).toMatchObject({
-      details: { field: 'http.host' },
-    });
-  });
-
-  it('returns any other error as it is', () => {
-    const other = new Error('x');
-    expect(toConfigError('tcp', other)).toBe(other);
   });
 });

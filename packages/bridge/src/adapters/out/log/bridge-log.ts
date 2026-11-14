@@ -23,27 +23,14 @@ export type LogChannel = 'log' | 'speech';
 
 /** The bridge log: one level, several sinks, one `Logger` per prefix. */
 export class BridgeLog {
-  private readonly sinks: LogSink[];
-
   constructor(
     private level: LogLevel,
-    sinks: LogSink[],
+    private readonly sinks: readonly LogSink[],
     private readonly now: () => Date = () => new Date(),
-  ) {
-    this.sinks = [...sinks];
-  }
+  ) {}
 
   setLevel(level: LogLevel): void {
     this.level = level;
-  }
-
-  addSink(sink: LogSink): void {
-    this.sinks.push(sink);
-  }
-
-  removeSink(sink: LogSink): void {
-    const index = this.sinks.indexOf(sink);
-    if (index !== -1) this.sinks.splice(index, 1);
   }
 
   for(prefix: LogPrefix, options: { channel?: LogChannel } = {}): Logger {

@@ -24,6 +24,12 @@ export interface ConfigDto {
   log: { level: LogLevel; file: string | null; consoleSpeech: boolean };
 }
 
+/**
+ * Answer of `GET` and `PUT /api/v1/config`: the configuration in use, plus the restart-only
+ * settings saved with another value, which take effect on the next start. Added in API 1.6.
+ */
+export type ConfigResponseDto = ConfigDto & { restartRequired: string[] };
+
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 
 /** Body of `PUT /api/v1/config`: any subset of the configuration. */

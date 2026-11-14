@@ -63,7 +63,7 @@ same number may now mean something else. The [client](client.md) checks this for
 | `GET /api/v1/sessions` | `{ "sessions": [...], "currentId": 7 }`: the sessions that still have entries in the buffer, plus the current one, newest first. `currentId` is `null` when no session is current. |
 | `POST /api/v1/set-focus` `{ "x": 640, "y": 12, "button": "left" }` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
 | `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | *(planned, [M4](ROADMAP.md#m4-native-input-))* Native key presses: one chord, or a sequence with `delayMs` between them. |
-| `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. `PUT` takes any subset as `application/json`, applies it to the running bridge, saves it to the config file and answers with the new configuration. Changing ports restarts the affected listeners; after an `http.*` change the answer still comes from the old address. See [Changing settings](configuration.md#changing-settings). |
+| `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. `PUT` takes any subset as `application/json`, saves it to the config file, applies what can change while running and answers with the configuration in use plus `restartRequired` (since API 1.6): the restart-only settings, such as ports, saved for the next start. See [Changing settings](configuration.md#changing-settings). |
 | `GET /api/v1/status` | Bridge and API version, the bridge run (`instanceId`, `startedAt`), state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, native input available, current session. |
 
 `GET /api/v1/status` example:
@@ -72,7 +72,7 @@ same number may now mean something else. The [client](client.md) checks this for
 {
   "bridge": {
     "version": "0.3.0",
-    "apiVersion": "1.5",
+    "apiVersion": "1.6",
     "state": "ready",
     "instanceId": "3f0c9a52-6b1e-4d8f-9c37-0e2a5b7d1f44", // random, new on every start
     "startedAt": "2026-11-07T14:00:58.000Z"

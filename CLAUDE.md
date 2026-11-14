@@ -93,8 +93,10 @@ Each hexagon owns its own domain model and maps to/from DTOs in its HTTP adapter
 
 Config precedence: CLI flags / `SR_SPEECH_*` env vars (parsed in `adapters/in/cli/options.ts`) win
 over the config file (`adapters/out/fs-config`). `PUT /config` validates a patch, persists it and
-live re-applies only the changed sections (see `changedSections` / `mergeConfig` in
-`domain/config/` and `composition/reapply.ts`). Overridden fields are reported back to clients.
+live re-applies the changed sections (see `changedSections` / `mergeConfig` in `domain/config/`
+and `composition/reapply.ts`), except the restart-only settings (`RESTART_FIELDS` in
+`domain/config/restart.ts`: listener addresses, log output), which it reports as
+`restartRequired` until the next start.
 
 ### Tests
 

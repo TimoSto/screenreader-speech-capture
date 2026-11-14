@@ -23,21 +23,55 @@ function setup(
 }
 
 describe('ConfigService', () => {
-  it('applies a patch, saves only the file settings plus the patch, and logs the change', async () => {
+  it('saves only the file settings plus the patch, applies it and logs the change', async () => {
     const { config, store, logger } = setup({
       file: { log: { level: 'debug' } },
-      overrides: { tcp: { host: '0.0.0.0' } },
+      overrides: { buffer: { maxEntries: 50 } },
     });
     const seen: [number, number][] = [];
-    config.onChange((next, previous) => void seen.push([previous.tcp.port, next.tcp.port]));
+    config.onChange((next, previous) => void seen.push([previous.mcp.port, next.mcp.port]));
 
-    const next = await config.update({ tcp: { port: 4450 } });
+    const { config: next, restartRequired } = await config.update({ mcp: { port: 9000 } });
 
-    expect(next.tcp).toMatchObject({ port: 4450, host: '0.0.0.0' });
+    expect(next.mcp.port).toBe(9000);
+    expect(next.buffer.maxEntries).toBe(50);
     expect(config.get()).toBe(next);
-    expect(seen).toEqual([[4449, 4450]]);
-    expect(store.saved).toEqual({ log: { level: 'debug' }, tcp: { port: 4450 } });
-    expect(logger.lines).toEqual(['info tcp.port: 4449 → 4450']);
+    expect(restartRequired).toEqual([]);
+    expect(seen).toEqual([[8931, 9000]]);
+    expect(store.saved).toEqual({ log: { level: 'debug' }, mcp: { port: 9000 } });
+    expect(logger.lines).toEqual(['info mcp.port: 8931 → 9000']);
+  });
+
+  it('saves a restart-only setting without applying it, and reports it', async () => {
+    const { config, store, logger } = setup();
+    let called = false;
+    config.onChange(() => void (called = true));
+
+    const update = await config.update({ tcp: { port: 4450 }, http: { port: 5152 } });
+
+    expect(update.config).toBe(config.get());
+    expect(update.config.tcp.port).toBe(4449);
+    expect(update.config.http.port).toBe(5151);
+    expect(update.restartRequired).toEqual(['tcp.port', 'http.port']);
+    expect(config.restartRequired()).toEqual(['tcp.port', 'http.port']);
+    expect(called).toBe(false);
+    expect(store.saved).toEqual({ tcp: { port: 4450 }, http: { port: 5152 } });
+    expect(logger.lines).toEqual([
+      'info tcp.port: 4449 → 4450 on the next start',
+      'info http.port: 5151 → 5152 on the next start',
+    ]);
+  });
+
+  it('drops a restart-only setting from restartRequired once it is set back', async () => {
+    const { config } = setup();
+    await config.update({ tcp: { port: 4450 } });
+    expect((await config.update({ tcp: { port: 4449 } })).restartRequired).toEqual([]);
+  });
+
+  it('applies the live part of a patch that also has restart-only settings', async () => {
+    const { config } = setup();
+    const { config: next } = await config.update({ http: { port: 1, allowedHosts: ['vm'] } });
+    expect(next.http).toEqual({ host: '0.0.0.0', port: 5151, allowedHosts: ['vm'] });
   });
 
   it('rejects an invalid patch with the field and changes nothing', async () => {
@@ -54,39 +88,24 @@ describe('ConfigService', () => {
   });
 
   it('does nothing for a patch that changes nothing', async () => {
-    const { config, store } = setup({ file: { tcp: { port: 4449 } } });
+    const { config, store } = setup({ file: { buffer: { maxEntries: 10000 } } });
     let called = false;
     config.onChange(() => void (called = true));
-    expect(await config.update({ tcp: { port: 4449 } })).toBe(config.get());
+    const update = await config.update({ buffer: { maxEntries: 10000 } });
+    expect(update.config).toBe(config.get());
     expect(called).toBe(false);
     expect(store.saved).toBeUndefined();
   });
 
-  it('undoes the listeners that already applied when a later one fails', async () => {
-    const { config, store } = setup();
-    const calls: string[] = [];
-    config.onChange((next, previous) => void calls.push(`a ${previous.tcp.port}→${next.tcp.port}`));
-    config.onChange(() => {
-      throw new AppError('INVALID_REQUEST', 'tcp.port: in use', { field: 'tcp.port' });
-    });
-
-    await expect(config.update({ tcp: { port: 4450 } })).rejects.toMatchObject({
-      details: { field: 'tcp.port' },
-    });
-    expect(calls).toEqual(['a 4449→4450', 'a 4450→4449']);
-    expect(config.get().tcp.port).toBe(4449);
-    expect(store.saved).toBeUndefined();
-  });
-
-  it('undoes the change when the config file cannot be saved', async () => {
+  it('changes nothing when the config file cannot be saved', async () => {
     const { config, store, logger } = setup();
-    const ports: number[] = [];
-    config.onChange((next) => void ports.push(next.tcp.port));
+    let called = false;
+    config.onChange(() => void (called = true));
     store.failSave = true;
 
-    await expect(config.update({ tcp: { port: 4450 } })).rejects.toThrow('disk full');
-    expect(ports).toEqual([4450, 4449]);
-    expect(config.get().tcp.port).toBe(4449);
+    await expect(config.update({ buffer: { maxEntries: 5 } })).rejects.toThrow('disk full');
+    expect(called).toBe(false);
+    expect(config.get().buffer.maxEntries).toBe(10000);
     expect(logger.lines).toEqual([]);
   });
 
@@ -94,19 +113,21 @@ describe('ConfigService', () => {
     const { config } = setup();
     const order: string[] = [];
     config.onChange(async (next, previous) => {
-      order.push(`start ${previous.tcp.port}→${next.tcp.port}`);
+      order.push(`start ${previous.mcp.port}→${next.mcp.port}`);
       await new Promise((resolve) => setTimeout(resolve, 5));
-      order.push(`end ${next.tcp.port}`);
+      order.push(`end ${next.mcp.port}`);
     });
 
     const results = await Promise.all([
-      config.update({ tcp: { port: 1 } }),
+      config.update({ mcp: { port: 1 } }),
       config.update({ buffer: { maxEntries: 5 } }),
-      config.update({ tcp: { port: 2 } }),
+      config.update({ mcp: { port: 2 } }),
     ]);
 
-    expect(order).toEqual(['start 4449→1', 'end 1', 'start 1→1', 'end 1', 'start 1→2', 'end 2']);
-    expect(results.map((c: Config) => [c.tcp.port, c.buffer.maxEntries])).toEqual([
+    expect(order).toEqual(['start 8931→1', 'end 1', 'start 1→1', 'end 1', 'start 1→2', 'end 2']);
+    expect(
+      results.map(({ config: c }: { config: Config }) => [c.mcp.port, c.buffer.maxEntries]),
+    ).toEqual([
       [1, 10000],
       [1, 5],
       [2, 5],
@@ -116,33 +137,32 @@ describe('ConfigService', () => {
   it('keeps working after a failed update', async () => {
     const { config } = setup();
     await expect(config.update({ nope: {} })).rejects.toThrow(AppError);
-    expect((await config.update({ tcp: { port: 1 } })).tcp.port).toBe(1);
+    expect((await config.update({ mcp: { port: 1 } })).config.mcp.port).toBe(1);
   });
 
   it('warns when a flag or env var overrides the saved setting on the next start', async () => {
     const { config, store, logger } = setup({
-      overrides: { tcp: { port: 5000 } },
-      pinned: ['tcp.port'],
+      overrides: { mcp: { port: 5000 } },
+      pinned: ['mcp.port'],
     });
-    const next = await config.update({ tcp: { port: 4450 } });
-    expect(next.tcp.port).toBe(4450);
-    expect(store.saved).toEqual({ tcp: { port: 4450 } });
+    const { config: next } = await config.update({ mcp: { port: 4450 } });
+    expect(next.mcp.port).toBe(4450);
+    expect(store.saved).toEqual({ mcp: { port: 4450 } });
     expect(logger.lines).toEqual([
-      'info tcp.port: 5000 → 4450',
-      'warn tcp.port: saved to memory:config.json, but --tcp.port overrides it on the next start',
+      'info mcp.port: 5000 → 4450',
+      'warn mcp.port: saved to memory:config.json, but --mcp.port overrides it on the next start',
     ]);
   });
 
-  it('saves a pinned setting even when the running value stays the same', async () => {
-    const { config, store } = setup({
-      file: { tcp: { port: 4449 } },
-      overrides: { tcp: { port: 4450 } },
+  it('does not report a pinned restart-only setting as restartRequired: the flag wins', async () => {
+    const { config, store, logger } = setup({
+      overrides: { tcp: { port: 5000 } },
       pinned: ['tcp.port'],
     });
-    let called = false;
-    config.onChange(() => void (called = true));
-    await config.update({ tcp: { port: 4450 } });
-    expect(called).toBe(false);
+    expect((await config.update({ tcp: { port: 4450 } })).restartRequired).toEqual([]);
     expect(store.saved).toEqual({ tcp: { port: 4450 } });
+    expect(logger.lines).toEqual([
+      'warn tcp.port: saved to memory:config.json, but --tcp.port overrides it on the next start',
+    ]);
   });
 });

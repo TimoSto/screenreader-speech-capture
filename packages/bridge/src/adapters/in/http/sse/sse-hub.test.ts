@@ -77,16 +77,4 @@ describe('SseHub', () => {
     vi.advanceTimersByTime(500);
     expect([...a.res.written, ...b.res.written]).toEqual([]);
   });
-
-  it('ends only the streams close() selects, and keeps pinging the others', async () => {
-    const hub = new SseHub({ pingMs: 100, maxBufferedBytes: 1000 });
-    const a = open(hub);
-    const b = open(hub);
-    hub.close((res) => res === (a.res as unknown as http.ServerResponse));
-    expect([a.res.writableEnded, b.res.writableEnded]).toEqual([true, false]);
-    await Promise.resolve();
-    vi.advanceTimersByTime(150);
-    expect(a.res.written).toEqual([]);
-    expect(b.res.written).toEqual([': ping\n\n']);
-  });
 });
