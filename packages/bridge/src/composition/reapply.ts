@@ -1,6 +1,6 @@
 import type { HttpServer } from '../adapters/in/http/http-server.js';
 import type { Logger } from '../application/ports/out/logger.js';
-import type { ResizeBuffer } from '../application/ports/in/resize-buffer.js';
+import type { ResizeBuffer } from '../application/ports/in/speech.js';
 import type { ConfigService } from '../application/services/config-service.js';
 import { changedSections } from '../domain/config/index.js';
 import type { BridgeLog } from '../adapters/out/log/bridge-log.js';

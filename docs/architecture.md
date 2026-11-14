@@ -65,8 +65,8 @@ flowchart LR
 packages/bridge/src/
   domain/            SpeechEntry, Marker, Session, Config, KeyChord (key-name parsing + validation). Pure, no I/O.
   application/
-    ports/in/        driving ports (use cases): RecordSpeech, QuerySpeech,
-                     WaitForSpeech, ClearSpeech, AddMarker, ResizeBuffer, ManageSessions, SendNativeInput,
+    ports/in/        driving ports (use cases): RecordSpeech, SpeechUseCases (list, watch, clear,
+                     mark), ResizeBuffer, WaitForSpeech, ManageSessions, SendNativeInput,
                      ManageConfig, GetStatus
     ports/out/       driven ports: SpeechRepository, SpeechEventBus, CaptureStatusSource,
                      ConfigStore, ProcessSupervisor, InputInjector, Logger, Clock
