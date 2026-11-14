@@ -53,4 +53,8 @@ while the other keys are pressed.
 - Native input goes to whatever window is in the foreground. Call `setFocus` again after anything
   that could steal focus (a new window, a dialog, the MCP browser).
 
+**When input is off** (`--no-input`, not on Windows, or robotjs failed to load), both endpoints
+answer `409 INPUT_DISABLED`, and `GET /api/v1/status` reports `input: { enabled: false, reason }`
+with the same reason.
+
 People can send the same clicks and keys by hand from the [web UI](web-ui.md#actions).
