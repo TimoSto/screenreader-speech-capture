@@ -111,3 +111,17 @@ themselves (`X-SR-Speech-Client`), and the bridge warns when one ends or replace
 session, and returns the replaced session from `POST /sessions`. A lease that expires could
 come later if parallel workers become a real use case.
 
+
+## The SSE replay follows the reader
+
+A stream opened with `Last-Event-ID` replays the buffered entries in pages, pausing whenever the
+client hasn't read what was written and every few hundred entries, so speech capture and other
+requests run in between. Before, the whole replay was written in one synchronous block: up to the
+whole buffer, on the event loop that also receives the speech, and over 1 MiB it closed the
+stream, so the client reconnected and the same replay started again.
+
+Live entries that arrive during the replay aren't queued: the replay reads them from the buffer
+and switches to the live events in the same synchronous step as its last read. The buffer adds
+and publishes each entry synchronously, so nothing is missed or sent twice, and the memory a
+replay holds is one page. The price is that a `clear` or `session` event during a replay comes
+between replayed entries, and entries dropped meanwhile get a second `truncated` event.

@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import type http from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SseHub } from './sse-hub.js';
+import { SseHub, YIELD_EVERY } from './sse-hub.js';
 
 /** A response whose client reads nothing: every written byte stays buffered. */
 class StalledResponse extends EventEmitter {
@@ -9,6 +9,7 @@ class StalledResponse extends EventEmitter {
   writableLength = 0;
   destroyed = false;
   writableEnded = false;
+  writableNeedDrain = false;
   headers: Record<string, string> | undefined;
 
   writeHead(_status: number, headers: Record<string, string>) {
@@ -33,8 +34,8 @@ class StalledResponse extends EventEmitter {
 
 const open = (hub: SseHub, onClose = () => {}) => {
   const res = new StalledResponse();
-  const send = hub.open(res as unknown as http.ServerResponse, onClose);
-  return { res, send };
+  const stream = hub.open(res as unknown as http.ServerResponse, onClose);
+  return { res, stream, send: (frame: string) => stream.send(frame) };
 };
 
 beforeEach(() => {
@@ -76,5 +77,47 @@ describe('SseHub', () => {
     await Promise.resolve();
     vi.advanceTimersByTime(500);
     expect([...a.res.written, ...b.res.written]).toEqual([]);
+  });
+
+  describe('pace', () => {
+    const settled = async (promise: Promise<void> | undefined) => {
+      let done = false;
+      void promise?.then(() => (done = true));
+      await vi.advanceTimersByTimeAsync(0);
+      return done;
+    };
+
+    it('goes on at once while the client reads, and lets other work run now and then', async () => {
+      const { stream } = open(new SseHub({ pingMs: 100_000, maxBufferedBytes: 1000 }));
+      const paces = Array.from({ length: YIELD_EVERY }, () => stream.pace());
+      expect(paces.slice(0, -1).every((pace) => pace === undefined)).toBe(true);
+      expect(await settled(paces.at(-1))).toBe(true);
+    });
+
+    it('waits until the client has read what was written', async () => {
+      const { res, stream } = open(new SseHub({ pingMs: 100_000, maxBufferedBytes: 1000 }));
+      res.writableNeedDrain = true;
+      const pace = stream.pace();
+      expect(await settled(pace)).toBe(false);
+      res.writableNeedDrain = false;
+      res.emit('drain');
+      expect(await settled(pace)).toBe(true);
+    });
+
+    it('stops waiting when the stream closes, after onClose ran', async () => {
+      const onClose = vi.fn();
+      const { res, stream } = open(
+        new SseHub({ pingMs: 100_000, maxBufferedBytes: 1000 }),
+        onClose,
+      );
+      res.writableNeedDrain = true;
+      const pace = stream.pace();
+      res.destroy();
+      expect(stream.open).toBe(false);
+      await pace;
+      expect(onClose).toHaveBeenCalledOnce();
+      // Ended: every later pace waits for the close as well, instead of going on.
+      expect(stream.pace()).toBeInstanceOf(Promise);
+    });
   });
 });

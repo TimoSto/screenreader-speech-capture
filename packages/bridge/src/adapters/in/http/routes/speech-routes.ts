@@ -1,4 +1,5 @@
 import type { SpeechUseCases } from '../../../../application/ports/in/speech.js';
+import type { Logger } from '../../../../application/ports/out/logger.js';
 import type {
   WaitForSpeech,
   WaitResult,
@@ -16,17 +17,18 @@ import {
 import { sendJson, sendNoContent } from '../response.js';
 import type { Router } from '../router.js';
 import { sseFrame } from '../sse/sse-frames.js';
-import type { SseHub, SseSend } from '../sse/sse-hub.js';
+import type { SseHub, SseStream } from '../sse/sse-hub.js';
 
 export interface SpeechRoutesDeps {
   speech: SpeechUseCases;
   waits: WaitForSpeech;
   /** The open SSE streams. */
   sse: SseHub;
+  logger: Logger;
 }
 
 export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
-  const { speech, waits, sse } = deps;
+  const { speech, waits, sse, logger } = deps;
 
   router
     .add('GET', '/speech', ({ res, url }) => {
@@ -75,13 +77,27 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
       const since = lastEventId(req);
       // The stream opens on the first event at the latest: `watch` rejects an unknown session
       // before it calls the listener, so that is still answered as a JSON error.
-      let send: SseSend | undefined;
+      let opened: SseStream | undefined;
       // `close` is emitted asynchronously, so `unwatch` is set by then, even if the replay
       // already overflowed the stream.
-      const stream = () => (send ??= sse.open(res, () => unwatch()));
-      const unwatch = speech.watch(since, (event) => stream()(sseFrame(event)), {
-        session: sessionParam(url),
-      });
+      const stream = () => (opened ??= sse.open(res, () => unwatch()));
+      const unwatch = speech.watch(
+        since,
+        (event) => {
+          const target = stream();
+          if (target.open) target.send(sseFrame(event));
+        },
+        {
+          session: sessionParam(url),
+          // The replay follows the client's reading and lets speech capture run in between.
+          pace: () => stream().pace(),
+          // The client reconnects with `Last-Event-ID` and gets the rest.
+          onError: (error) => {
+            logger.error(`SSE replay failed: ${String(error)}`);
+            res.destroy();
+          },
+        },
+      );
       stream();
     });
 }

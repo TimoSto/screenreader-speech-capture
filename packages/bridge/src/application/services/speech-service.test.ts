@@ -3,8 +3,9 @@ import { InProcessEventBus } from '../../adapters/out/memory/in-process-event-bu
 import { SystemClock } from '../../adapters/out/clock/system-clock.js';
 import type { SpeechEvent } from '../../domain/speech-event.js';
 import { SpeechLog } from '../../domain/speech-log.js';
+import type { WatchEvent } from '../ports/in/speech.js';
 import { LIST_LIMIT } from '../ports/in/speech.js';
-import { SpeechService } from './speech-service.js';
+import { REPLAY_PAGE, SpeechService } from './speech-service.js';
 
 function setup(maxEntries = 100) {
   const events = new InProcessEventBus();
@@ -111,5 +112,129 @@ describe('SpeechService.watch', () => {
     speech.watch(null, (event) => event.type === 'entry' && seen.push(event.entry.seq));
     speech.record({ text: 'two', voice: null, connectionId: 1 });
     expect(seen).toEqual([2]);
+  });
+});
+
+describe('SpeechService.watch with pace', () => {
+  const say = (speech: SpeechService, ...texts: string[]) => {
+    for (const text of texts) speech.record({ text, voice: null, connectionId: 1 });
+  };
+  const show = (event: WatchEvent) => (event.type === 'entry' ? event.entry.text : event.type);
+
+  /** A `pace` that pauses after the given replayed entries (1-based), until `resume()`. */
+  function pauser(...at: number[]) {
+    let calls = 0;
+    let release: (() => void) | undefined;
+    return {
+      pace: () => {
+        calls++;
+        if (!at.includes(calls)) return undefined;
+        return new Promise<void>((resolve) => (release = resolve));
+      },
+      resume: async () => {
+        release?.();
+        release = undefined;
+        await vi.advanceTimersByTimeAsync(0);
+      },
+    };
+  }
+
+  it('replays page by page, pausing where pace says, without gap or repeat', async () => {
+    const { speech } = setup(10_000);
+    const texts = Array.from({ length: REPLAY_PAGE * 2 + 10 }, (_, i) => `t${i}`);
+    say(speech, ...texts);
+    const seen: string[] = [];
+    const { pace, resume } = pauser(3, REPLAY_PAGE + 1);
+    speech.watch(0, (event) => seen.push(show(event)), { pace });
+    expect(seen).toEqual(texts.slice(0, 3));
+    await resume();
+    expect(seen).toEqual(texts.slice(0, REPLAY_PAGE + 1));
+    await resume();
+    expect(seen).toEqual(texts);
+  });
+
+  it('delivers entries added while paused once, in order, then follows live', async () => {
+    const { speech } = setup();
+    say(speech, 'one', 'two', 'three');
+    const seen: string[] = [];
+    const { pace, resume } = pauser(1);
+    speech.watch(0, (event) => seen.push(show(event)), { pace });
+    say(speech, 'four');
+    expect(seen).toEqual(['one']);
+    await resume();
+    say(speech, 'five');
+    expect(seen).toEqual(['one', 'two', 'three', 'four', 'five']);
+  });
+
+  it('reports truncated again when entries were dropped while paused', async () => {
+    const { speech } = setup(3);
+    say(speech, 'one', 'two', 'three');
+    const seen: string[] = [];
+    const { pace, resume } = pauser(1);
+    speech.watch(0, (event) => seen.push(show(event)), { pace });
+    say(speech, 'four', 'five', 'six');
+    await resume();
+    expect(seen).toEqual(['one', 'truncated', 'four', 'five', 'six']);
+  });
+
+  it('passes a clear while paused, then replays what came after it', async () => {
+    const { speech } = setup();
+    say(speech, 'one', 'two');
+    const seen: string[] = [];
+    const { pace, resume } = pauser(1);
+    speech.watch(0, (event) => seen.push(show(event)), { pace });
+    speech.clear();
+    say(speech, 'three');
+    await resume();
+    expect(seen).toEqual(['one', 'clear', 'three']);
+  });
+
+  it('stops while paused', async () => {
+    const { speech } = setup();
+    say(speech, 'one', 'two');
+    const seen: string[] = [];
+    const { pace, resume } = pauser(1);
+    const stop = speech.watch(0, (event) => seen.push(show(event)), { pace });
+    stop();
+    say(speech, 'three');
+    await resume();
+    expect(seen).toEqual(['one']);
+  });
+
+  it('throws from watch for a listener error before the first pause', () => {
+    const { speech, published } = setup();
+    say(speech, 'one');
+    const boom = new Error('boom');
+    expect(() =>
+      speech.watch(
+        0,
+        () => {
+          throw boom;
+        },
+        { pace: () => undefined },
+      ),
+    ).toThrow(boom);
+    say(speech, 'two');
+    expect(published).toHaveLength(2);
+  });
+
+  it('hands a listener error after a pause to onError and stops', async () => {
+    const { speech } = setup();
+    say(speech, 'one', 'two');
+    const onError = vi.fn();
+    const seen: string[] = [];
+    const { pace, resume } = pauser(1);
+    speech.watch(
+      0,
+      (event) => {
+        if (show(event) === 'two') throw new Error('boom');
+        seen.push(show(event));
+      },
+      { pace, onError },
+    );
+    await resume();
+    say(speech, 'three');
+    expect(onError).toHaveBeenCalledWith(new Error('boom'));
+    expect(seen).toEqual(['one']);
   });
 });

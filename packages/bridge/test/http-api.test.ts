@@ -281,6 +281,27 @@ describe('HTTP API', () => {
     expect(frames.slice(1).map((frame) => frame.split('\n')[0])).toEqual(['id: 2', 'id: 3']);
   });
 
+  it('replays more than the stream may buffer, in order, then follows live', async () => {
+    // About 2.7 MB of frames: far over the 1 MiB a stalled stream may hold. The replay has to
+    // follow the client's reading instead of writing it all at once.
+    const bridge = await start({ buffer: { maxEntries: 5000 } });
+    const count = 3000;
+    const label = 'x'.repeat(900);
+    const seqs = Array.from({ length: count }, () => bridge.speech.addMarker(label).seq);
+    const resumed = await openStream(bridge, { 'last-event-id': '0' });
+    await send(bridge.tcpPort, 'live\r\n');
+    await eventually(
+      () => resumed.text,
+      (text) => text.includes('"live"'),
+      1000,
+    );
+    resumed.close();
+    const ids = [...resumed.text.matchAll(/^id: (\d+)$/gm)].map((match) => Number(match[1]));
+    expect(ids.slice(0, count)).toEqual(seqs);
+    expect(ids).toHaveLength(count + 1);
+    expect(ids.at(-1)).toBeGreaterThan(seqs.at(-1)!);
+  });
+
   it('keeps seq rising across restarts: it starts at the start time in ms', async () => {
     const clock = new SystemClock();
     const first = await start({}, { clock });
