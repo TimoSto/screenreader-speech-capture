@@ -120,10 +120,12 @@ requests run in between. Before, the whole replay was written in one synchronous
 whole buffer, on the event loop that also receives the speech, and over 1 MiB it closed the
 stream, so the client reconnected and the same replay started again.
 
-Live entries that arrive during the replay aren't queued: the replay reads them from the buffer
-and switches to the live events in the same synchronous step as its last read. The buffer adds
-and publishes each entry synchronously, so nothing is missed or sent twice, and the memory a
-replay holds is one page. The price is that a `clear` or `session` event during a replay comes
+Live entries that arrive during the replay aren't queued: the replay reads them from the buffer,
+then switches to the live events. The subscription comes before the first read, so every entry
+is either read by the replay or delivered live afterwards. A `seq` cursor (`SeqCursor`, `seq`
+rises strictly) drops an entry the replay already read but the bus delivers late. So nothing is
+missed or sent twice with any event bus that keeps the publish order, synchronous or not, and
+the memory a replay holds is one page. The price is that a `clear` or `session` event during a replay comes
 between replayed entries, and entries dropped meanwhile get a second `truncated` event.
 
 ## The bridge is the single way in
