@@ -20,14 +20,14 @@ flowchart LR
         Voice["text-to-socket-engine<br/>(SAPI 5 voice)"]
         Bridge["bridge (this project)<br/>HTTP API + UI :5151"]
         Input["native input<br/>(#64;jitsi/robotjs)"]
-        PWS["Playwright server :3000"]
-        MCP["Playwright MCP :8931"]
+        PWS["Playwright server<br/>(loopback)"]
+        MCP["Playwright MCP<br/>(loopback)"]
         Browser["Browser<br/>(Chrome, Edge, ...)"]
 
         SR -- "SAPI 5" --> Voice
         Voice -- "TCP :4449" --> Bridge
-        Bridge -- supervises --> PWS
-        Bridge -- supervises --> MCP
+        Bridge -- "supervises, passes through" --> PWS
+        Bridge -- "supervises, passes through" --> MCP
         Bridge --> Input
         Input -- "OS mouse / keys" --> SR
         Input -- "OS mouse / keys" --> Browser
@@ -48,8 +48,8 @@ flowchart LR
 
     Lib -- "HTTP / SSE" --> Bridge
     CLI -- "HTTP / SSE" --> Bridge
-    Lib -- "WebSocket" --> PWS
-    Agent -- "MCP over HTTP" --> MCP
+    Lib -- "WebSocket /playwright" --> Bridge
+    Agent -- "MCP over HTTP /playwright-mcp" --> Bridge
 ```
 
 > **Status: work in progress.** The [Roadmap](docs/ROADMAP.md) shows what works today and what is

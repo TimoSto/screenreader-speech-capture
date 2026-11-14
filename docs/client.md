@@ -217,7 +217,8 @@ export default defineConfig({
 
 The fixture:
 
-- sets Playwright's `connectOptions.wsEndpoint` to the bridge's Playwright server and forces
+- sets Playwright's `connectOptions.wsEndpoint` to the bridge's Playwright server
+  (`ws://<bridge>/playwright`, [Remote Playwright & MCP](playwright-mcp.md)) and forces
   `headless: false`, so `page` opens visibly in the VM's desktop session where the screen reader runs,
 - calls `setFocus(page)` after the page is created (turn off with `speechCaptureFocus: false`),
 - starts a [session](speech-capture.md#sessions) per test before it runs (`startSession`, named

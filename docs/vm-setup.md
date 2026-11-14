@@ -133,13 +133,14 @@ Don't wait for Windows to ask. The "Allow access" prompt often doesn't appear:
 - it can be turned off (`Get-NetFirewallProfile | Select-Object Name, NotifyOnListen`),
 - it appears only once per program path, so a new Node or `npx` path is blocked without a prompt.
 
-In an **administrator** PowerShell, open the ports that are reached remotely (the speech TCP port
-stays on loopback). `-Profile Any` includes the *Public* profile, which Windows usually uses for a
+In an **administrator** PowerShell, open the HTTP port, the only one reached remotely: the
+Playwright server and MCP are reached through it, and they and the speech TCP port stay on
+loopback. `-Profile Any` includes the *Public* profile, which Windows usually uses for a
 hypervisor's virtual network:
 
 ```powershell
 New-NetFirewallRule -DisplayName "screenreader-speech-capture" `
-  -Direction Inbound -Protocol TCP -LocalPort 5151,3000,8931 -Action Allow -Profile Any
+  -Direction Inbound -Protocol TCP -LocalPort 5151 -Action Allow -Profile Any
 ```
 
 If someone answered the prompt with *Cancel*, Windows created **Block** rules for `node.exe`.

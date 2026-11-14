@@ -125,3 +125,18 @@ and switches to the live events in the same synchronous step as its last read. T
 and publishes each entry synchronously, so nothing is missed or sent twice, and the memory a
 replay holds is one page. The price is that a `clear` or `session` event during a replay comes
 between replayed entries, and entries dropped meanwhile get a second `truncated` event.
+
+## The bridge is the single way in
+
+The Playwright server and Playwright MCP listen on `127.0.0.1`, and clients reach them through
+the bridge's HTTP port, on `/playwright` and `/playwright-mcp`. Before, they listened next to the
+API on `http.host` (by default every interface), and MCP had its host check turned off
+(`--allowed-hosts *`). The API checks `Host` and `Origin` against DNS rebinding and cross-site
+requests from the pages the VM's browser opens, but the far more powerful Playwright server
+(remote command execution) had no such check. Now one place applies one set of rules to all three,
+the firewall needs only one port, and the planned shared-secret token will have one place to go.
+
+The paths are fixed, not secret. The loopback ports stay reachable from inside the VM, so a page
+in the VM's browser could still open a WebSocket to `127.0.0.1:3000` directly. A random path
+would hide that port only as long as nothing reveals it; the token is the real answer, and until
+then the bridge only claims to protect what goes through it.

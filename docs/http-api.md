@@ -93,6 +93,14 @@ with every run.
 }
 ```
 
+## Playwright server and MCP
+
+The HTTP port also leads to the Playwright server (`ws://<bridge>:5151/playwright`) and Playwright
+MCP (`http://<bridge>:5151/playwright-mcp`), outside `/api/v1`. The bridge passes those requests
+through, with the access rules of the API plus a stricter `Origin` check, and answers
+`503 SERVICE_UNAVAILABLE` while a service is disabled or not running. See
+[Remote Playwright & MCP](playwright-mcp.md).
+
 ## Clients
 
 A client may name itself with the `X-SR-Speech-Client` request header (since API 1.10; the

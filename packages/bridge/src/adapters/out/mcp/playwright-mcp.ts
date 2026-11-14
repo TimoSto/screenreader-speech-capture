@@ -32,8 +32,9 @@ export interface PlaywrightMcpOptions {
 /**
  * Supervisor for Playwright MCP in HTTP mode, the bundled version. Each start first runs
  * `cli.js install-browser --no-shell chromium`, which installs the Chromium of MCP's own
- * Playwright and skips a build that is already there. `--allowed-hosts *` lets clients on other
- * machines in, `--isolated` gives each session a fresh profile in memory, and
+ * Playwright and skips a build that is already there. It listens on loopback, and clients reach
+ * it through the bridge, which sends a loopback `Host`: MCP's own host check (by default
+ * loopback names only) stays on. `--isolated` gives each session a fresh profile in memory, and
  * `--browser chromium` uses that Chromium (headed by default).
  */
 export function playwrightMcp(options: PlaywrightMcpOptions): ChildProcessSupervisor {
@@ -46,19 +47,7 @@ export function playwrightMcp(options: PlaywrightMcpOptions): ChildProcessSuperv
     });
     return {
       command: process.execPath,
-      // No shell, so `*` reaches MCP as it is.
-      args: [
-        cli,
-        '--port',
-        String(port),
-        '--host',
-        host,
-        '--allowed-hosts',
-        '*',
-        '--browser',
-        'chromium',
-        '--isolated',
-      ],
+      args: [cli, '--port', String(port), '--host', host, '--browser', 'chromium', '--isolated'],
     };
   };
   return new ChildProcessSupervisor({
