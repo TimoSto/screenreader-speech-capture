@@ -1,4 +1,4 @@
-import type { SpeechUseCases } from '../../../../application/ports/in/speech-use-cases.js';
+import type { SpeechUseCases } from '../../../../application/ports/in/speech.js';
 import type {
   WaitForSpeech,
   WaitResult,

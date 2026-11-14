@@ -3,7 +3,7 @@ import { API_PREFIX } from '@screenreader-speech-capture/shared';
 import type { GetStatus } from '../../../application/ports/in/get-status.js';
 import type { ManageConfig } from '../../../application/ports/in/manage-config.js';
 import type { ManageSessions } from '../../../application/ports/in/manage-sessions.js';
-import type { SpeechUseCases } from '../../../application/ports/in/speech-use-cases.js';
+import type { SpeechUseCases } from '../../../application/ports/in/speech.js';
 import type { WaitForSpeech } from '../../../application/ports/in/wait-for-speech.js';
 import type { Logger } from '../../../application/ports/out/logger.js';
 import type { Config } from '../../../domain/config/index.js';

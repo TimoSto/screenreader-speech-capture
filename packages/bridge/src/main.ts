@@ -11,7 +11,7 @@ import { MemorySessionRepository } from './adapters/out/memory/memory-session-re
 import { MemorySpeechRepository } from './adapters/out/memory/memory-speech-repository.js';
 import { defaultConfigFile } from './adapters/out/platform/paths.js';
 import type { ManageSessions } from './application/ports/in/manage-sessions.js';
-import type { SpeechUseCases } from './application/ports/in/speech-use-cases.js';
+import type { SpeechUseCases } from './application/ports/in/speech.js';
 import type { CaptureStatusSource } from './application/ports/out/capture-status.js';
 import type { Logger } from './application/ports/out/logger.js';
 import { ConfigService } from './application/services/config-service.js';

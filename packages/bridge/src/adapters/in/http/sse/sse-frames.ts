@@ -1,4 +1,4 @@
-import type { WatchEvent } from '../../../../application/ports/in/watch-speech.js';
+import type { WatchEvent } from '../../../../application/ports/in/speech.js';
 import { toSessionDto } from '../dto/session.js';
 import { toSpeechEntryDto } from '../dto/speech.js';
 

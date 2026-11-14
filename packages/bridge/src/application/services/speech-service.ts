@@ -1,12 +1,15 @@
 import type { SpeechPage } from '../../domain/speech-buffer.js';
 import type { NewSpeechEntry, SpeechEntry } from '../../domain/speech-entry.js';
 import { invalidField } from '../../domain/errors.js';
-import type { AddMarker } from '../ports/in/add-marker.js';
-import type { ClearSpeech } from '../ports/in/clear-speech.js';
-import { LIST_LIMIT, type ListOptions, type QuerySpeech } from '../ports/in/query-speech.js';
 import type { CapturedSpeech, RecordSpeech } from '../ports/in/record-speech.js';
-import type { ResizeBuffer } from '../ports/in/resize-buffer.js';
-import type { WatchListener, WatchOptions, WatchSpeech } from '../ports/in/watch-speech.js';
+import {
+  LIST_LIMIT,
+  type ListOptions,
+  type ResizeBuffer,
+  type SpeechUseCases,
+  type WatchListener,
+  type WatchOptions,
+} from '../ports/in/speech.js';
 import type { Clock } from '../ports/out/clock.js';
 import type { SessionRepository } from '../ports/out/session-repository.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
@@ -29,9 +32,7 @@ export const MAX_MARKER_LENGTH = 1000;
  * the event bus
  * (docs/speech-capture.md#from-line-to-speech-entry).
  */
-export class SpeechService
-  implements RecordSpeech, QuerySpeech, ClearSpeech, AddMarker, WatchSpeech, ResizeBuffer
-{
+export class SpeechService implements RecordSpeech, SpeechUseCases, ResizeBuffer {
   constructor(private readonly deps: SpeechServiceDeps) {}
 
   record({ text, voice, connectionId }: CapturedSpeech): void {
