@@ -214,9 +214,21 @@ packages/ui/src/
 
 Planned for the pages ([M5](../ROADMAP.md#m5-web-ui-)): a hexagon-lite layout with `lib/core`
 (client-side use cases and the ports `SpeechFeed`, `SessionsApi`, `StatusApi`, `InputApi`,
-`ConfigApi`), `lib/adapters` (their HTTP/SSE implementations) and `lib/stores`, so components never
-call `fetch` and can be tested against fake adapters. ESLint rules for that don't exist yet. The one
-rule that does: `packages/ui` never imports bridge or client code, and the bridge never imports the UI.
+`ConfigApi`), `lib/adapters` (their HTTP/SSE implementations), `lib/stores`, `lib/components` and one
+composition file (`lib/composition.ts`) that wires adapters into stores, so components never call
+`fetch` and can be tested against fake adapters.
+
+ESLint enforces the layers (`uiLayers` in `eslint.config.js`; `*.test.ts` is exempt). Every UI file
+also keeps the rule that `packages/ui` never imports bridge or client code (and the bridge never
+imports the UI).
+
+| Layer                                                          | May import                           | Must not                                                                                                      |
+| -------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `lib/core`                                                     | relative files, `#lib/core`, `shared` | packages, Svelte/SvelteKit, other layers; `fetch`, `EventSource`, browser globals, timers, `Date.now()`, `new Date()`, `console` |
+| `lib/adapters`                                                 | core, packages                       | stores, components, routes, `lib/server`                                                                      |
+| `lib/stores`                                                   | core, Svelte                         | adapters (injected), components, `lib/server`; `fetch`, `EventSource`, `WebSocket`, `XMLHttpRequest`          |
+| `lib/components`, `routes/**/*.svelte`, `+page.ts`, `+layout.ts` | stores, core                         | adapters, `lib/server`; the same I/O globals                                                                   |
+| `lib/server`, `*.server.ts` (the BFF)                          | core, `shared`, SvelteKit            | stores, components, adapters                                                                                  |
 
 ### Serving the UI
 
