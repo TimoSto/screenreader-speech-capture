@@ -86,9 +86,10 @@ shows in its summary what publishing that branch would release.
 
 **Publishing** is manual and has two steps:
 
-1. **Stage:** run **Actions → Publish → Run workflow** and pick the branch. CI builds the packages
-   and **stages** them on npm (`npm stage publish`, trusted publishing, no token). Anyone with
-   write access can do this. Nothing is installable yet.
+1. **Stage:** run **Actions → Publish → Run workflow**, pick the branch and the **package**
+   (`both` by default, or only `bridge` / `client`). CI builds the packages and **stages** them on
+   npm (`npm stage publish`, trusted publishing, no token). Anyone with write access can do this.
+   Nothing is installable yet.
 2. **Approve:** the maintainer approves each staged package with 2FA, on npmjs.com (package →
    **Staged Packages** → **Approve**) or with `npm stage list <package>` and
    `npm stage approve <stage-id>`. CI can't do this step, so nobody else can release.
