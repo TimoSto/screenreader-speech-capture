@@ -2,6 +2,8 @@
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
+import { DisabledInputInjector } from '../../bridge/src/adapters/out/input/disabled-input-injector.js';
+import { RecordingInputInjector } from '../../bridge/test/fakes.js';
 import { freePort, send, start } from '../../bridge/test/helpers.js';
 import { SystemClock } from '../../bridge/src/adapters/out/clock/system-clock.js';
 import { EXIT, runCli } from '../src/adapters/in/cli/run.js';
@@ -18,8 +20,8 @@ import { createClientConfig, SpeechCaptureClient } from '../src/main.js';
 /** No config file and no SR_SPEECH_URL from the developer's machine. */
 const env = { SR_SPEECH_CLIENT_CONFIG: '/nonexistent/client.json' };
 
-async function bridge(patch: object = {}) {
-  const b = await start(patch);
+async function bridge(patch: object = {}, inputInjector?: RecordingInputInjector) {
+  const b = await start(patch, inputInjector ? { inputInjector } : {});
   const url = `http://127.0.0.1:${b.httpPort}`;
   return {
     url,
@@ -35,6 +37,7 @@ async function cli(args: string[]) {
   const code = await runCli(args, {
     config: createClientConfig(env),
     speech: (url) => new SpeechCaptureClient({ baseUrl: url, env }),
+    input: (url) => new SpeechCaptureClient({ baseUrl: url, env }),
     stdout: (t) => (stdout += t),
     stderr: (t) => (stderr += t),
     version: '0.0.0',
@@ -270,6 +273,70 @@ describe('onSpeech', () => {
   });
 });
 
+describe('native input', () => {
+  it('sends clicks and keys, and focuses a page from its geometry', async () => {
+    const injector = new RecordingInputInjector();
+    const { client } = await bridge({}, injector);
+    const speech = client();
+    await speech.click({ x: 640, y: 12 });
+    await speech.pressKeys(['Insert+T', 'h'], { delayMs: 0 });
+    const page = {
+      evaluate: () =>
+        Promise.resolve({
+          screenX: 100,
+          screenY: 50,
+          outerWidth: 1000,
+          outerHeight: 800,
+          innerWidth: 984,
+          innerHeight: 700,
+          devicePixelRatio: 1,
+        }),
+    };
+    await speech.setFocus(page);
+    expect(injector.calls).toEqual([
+      'click left 640,12',
+      'down insert',
+      'tap t',
+      'up insert',
+      'tap h',
+      'click left 600,62',
+    ]);
+  });
+
+  it('rejects with INPUT_DISABLED when the bridge has no native input', async () => {
+    const b = await start({}, { inputInjector: new DisabledInputInjector('no robotjs') });
+    const speech = new SpeechCaptureClient({ baseUrl: `http://127.0.0.1:${b.httpPort}`, env });
+    await expect(speech.pressKeys('a')).rejects.toMatchObject({
+      status: 409,
+      code: 'INPUT_DISABLED',
+    });
+  });
+
+  it('click and press work from the CLI', async () => {
+    const injector = new RecordingInputInjector();
+    const { url } = await bridge({}, injector);
+    expect((await cli(['click', '--x', '5', '--y', '6', '--url', url])).code).toBe(EXIT.ok);
+    expect((await cli(['press', 'Control+Home', 'h', '--json', '--url', url])).stdout).toBe(
+      '{"pressed":true}\n',
+    );
+    expect(injector.calls).toEqual([
+      'click left 5,6',
+      'down control',
+      'tap home',
+      'up control',
+      'tap h',
+    ]);
+  });
+
+  it('the CLI exits 2 on INPUT_DISABLED', async () => {
+    const b = await start({}, { inputInjector: new DisabledInputInjector('no robotjs') });
+    const url = `http://127.0.0.1:${b.httpPort}`;
+    const result = await cli(['press', 'a', '--url', url]);
+    expect(result.code).toBe(EXIT.bridge);
+    expect(result.stderr).toContain('Native input is not available');
+  });
+});
+
 describe('CLI', () => {
   it('tail --json prints live events until interrupted', async () => {
     const { url, say } = await bridge();
@@ -279,6 +346,7 @@ describe('CLI', () => {
     const done = runCli(['tail', '--json', '--since', '0', '--url', url], {
       config: createClientConfig(env),
       speech: (u) => new SpeechCaptureClient({ baseUrl: u, env }),
+      input: (u) => new SpeechCaptureClient({ baseUrl: u, env }),
       stdout: (t) => (stdout += t),
       stderr: () => undefined,
       version: '0.0.0',

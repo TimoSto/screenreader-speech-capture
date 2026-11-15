@@ -14,7 +14,9 @@ input); much of it is **not implemented yet**. Check `docs/ROADMAP.md` for what 
 The bridge also supervises the Playwright server and Playwright MCP (M3: `adapters/out/process` is
 the generic supervisor, `adapters/out/npm` the per-version npm install, `adapters/out/playwright`
 installs and runs the configured Playwright version, `adapters/out/mcp` runs the `@playwright/mcp`
-dependency).
+dependency). Native input (M4) is real too: `NativeInputService` + `InputInjector` port in the
+bridge (robotjs adapter, optional dependency, `DisabledInputInjector` fallback), `NativeInput` in
+the client.
 
 ## Commands
 

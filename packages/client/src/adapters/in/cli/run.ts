@@ -1,4 +1,5 @@
 import { parseArgs } from 'node:util';
+import type { NativeInput } from '../../../application/ports/in/native-input.js';
 import type { SpeechCapture } from '../../../application/ports/in/speech-capture.js';
 import {
   BridgeHttpError,
@@ -66,11 +67,13 @@ async function dispatch(argv: readonly string[], io: CliIo): Promise<number> {
   checkOptions(name, command.options, values);
 
   let client: SpeechCapture | undefined;
+  let input: NativeInput | undefined;
   const ctx: Context = {
     values,
     json: values.json,
     io,
     speech: () => (client ??= io.speech(values.url)),
+    input: () => (input ??= io.input(values.url)),
     out: (_command, json, text) =>
       io.stdout(values.json ? `${JSON.stringify(json)}\n` : `${text}\n`),
   };

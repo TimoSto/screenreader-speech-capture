@@ -62,8 +62,7 @@ flowchart LR
 - **Test client**: a TypeScript library with a Playwright fixture (`waitForOutput('Submit, button')`,
   fixture planned, [M3](docs/ROADMAP.md#m3-playwright--mcp-)) and a CLI for scripts and AI agents.
 - **Remote browser** on the screen reader's machine through a Playwright server and Playwright MCP.
-- **Native input** for screen reader commands (`Insert+T`, browse mode `H`) that Playwright can't send
-  (planned, [M4](docs/ROADMAP.md#m4-native-input-)).
+- **Native input** for screen reader commands (`Insert+T`, browse mode `H`) that Playwright can't send.
 
 ## Quick start
 

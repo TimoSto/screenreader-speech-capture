@@ -2,8 +2,6 @@
 
 Real OS mouse clicks and key presses, for things Playwright input cannot do.
 
-> **Planned ([M4](../ROADMAP.md#m4-native-input-)), not implemented yet.** This page describes the design.
-
 Flows: [Native input](flows/native-input.md).
 
 Playwright sends keys and clicks **into the browser** through its browser protocol (CDP for
@@ -19,7 +17,7 @@ out:
 So the bridge has two native-input endpoints, both built on
 [`@jitsi/robotjs`](https://github.com/jitsi/robotjs) (a maintained robotjs fork with prebuilt binaries):
 
-- **`POST /api/v1/set-focus`** does a real mouse click at screen coordinates. The browser window becomes
+- **`POST /api/v1/input/click`** does a real mouse click at screen coordinates. The browser window becomes
   the foreground window, and the screen reader starts reading it. After that, Playwright input works as usual.
 - **`POST /api/v1/input/keys`** sends real key presses, for screen reader commands.
 
@@ -27,7 +25,7 @@ The bridge doesn't own the page, so it doesn't know where the browser window is.
 **client calculates the coordinates**. `setFocus(page)` reads `window.screenX/Y`, the difference
 between the outer and inner window size, and `devicePixelRatio` through `page.evaluate`. From those
 it computes a safe click point: the window's title bar by default, or the centre of a `target`
-element you pass. Then it calls `/api/v1/set-focus`.
+element you pass. Then it calls `/api/v1/input/click`.
 
 **Which keys to use:**
 
@@ -40,7 +38,7 @@ element you pass. Then it calls `/api/v1/set-focus`.
 **Key names** (`/api/v1/input/keys`): keys are joined with `+` for chords (`Insert+T`, `Control+Home`)
 and passed as an array for sequences (`["h", "h", "Insert+Down"]`). Names follow robotjs
 (`a`–`z`, `0`–`9`, `enter`, `tab`, `escape`, `up`, `down`, `left`, `right`, `home`, `end`,
-`pageup`, `pagedown`, `f1`–`f12`, `space`, `backspace`, `delete`, `insert`, `capslock`), case-insensitive.
+`pageup`, `pagedown`, `f1`–`f12`, `space`, `backspace`, `delete`, `insert`, `capslock`), case-insensitive. `Ctrl`, `Esc`, `Return`, `Del`, `Ins`, `PgUp`, `PgDn`, `Windows` and `Meta` are accepted as aliases. A name the bridge doesn't know answers `400 INVALID_REQUEST` with `details.field` `keys`, before any key is sent. A request holds at most 100 chords; `delayMs` (default 50, at most 10000) pauses between them.
 Modifiers are `Control`, `Shift`, `Alt`, `Win`. `Insert` and `CapsLock` also work as modifiers,
 because NVDA and JAWS use them as their screen reader key: they are held down with `keyToggle`
 while the other keys are pressed.
@@ -55,8 +53,11 @@ while the other keys are pressed.
 - Native input goes to whatever window is in the foreground. Call `setFocus` again after anything
   that could steal focus (a new window, a dialog, the MCP browser).
 
-**When input is off** (`--no-input`, not on Windows, or robotjs failed to load), both endpoints
-answer `409 INPUT_DISABLED`, and `GET /api/v1/status` reports `input: { enabled: false, reason }`
-with the same reason.
+**When input is not available** (not on Windows, or robotjs failed to load), the bridge still starts,
+logs why under `[native-input]`, and both endpoints answer `409 INPUT_DISABLED` with the reason in
+`error.message`. Clients throw a `BridgeHttpError` with that code, and the CLI exits with 2.
+
+Not verified on a real VM yet ([M7](../ROADMAP.md#m7-distribution-)): whether `Insert` and `CapsLock`
+work as held modifiers through robotjs, and the click point at other display scalings.
 
 People can send the same clicks and keys by hand from the [web UI](web-ui.md#actions).

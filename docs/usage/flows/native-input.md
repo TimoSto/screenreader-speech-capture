@@ -1,7 +1,5 @@
 # Native input flows
 
-> **Planned ([M4](../../ROADMAP.md#m4-native-input-)), not implemented yet.** These diagrams show the design.
-
 Sequence diagrams of real OS clicks and key presses, for what Playwright input can't do. Details:
 [Native input](../native-input.md).
 
@@ -10,7 +8,7 @@ Sequence diagrams of real OS clicks and key presses, for what Playwright input c
 1. [Why Playwright keys don't reach the screen reader](#why-playwright-keys-dont-reach-the-screen-reader)
 2. [Bring the browser to the front](#bring-the-browser-to-the-front)
 3. [Send a screen reader command](#send-a-screen-reader-command)
-4. [Input is off](#input-is-off)
+4. [Input is not available](#input-is-not-available)
 
 ## Why Playwright keys don't reach the screen reader
 
@@ -54,7 +52,7 @@ sequenceDiagram
     C->>Br: page.evaluate: screenX/Y, outer − inner size, devicePixelRatio
     Br-->>C: window geometry
     Note over C: click point = title bar<br/>(or the centre of target), in physical pixels
-    C->>B: POST /api/v1/set-focus {"x": 640, "y": 12, "button": "left"}
+    C->>B: POST /api/v1/input/click {"x": 640, "y": 12, "button": "left"}
     B->>OS: robotjs: move + click
     OS->>Br: browser window becomes foreground
     SR->>SR: reads the new foreground window
@@ -84,18 +82,16 @@ sequenceDiagram
     C-->>T: entry
 ```
 
-## Input is off
+## Input is not available
 
-With `--no-input`, not on Windows, or when robotjs failed to load, both endpoints refuse, and the
-status says why.
+Not on Windows, or when robotjs failed to load: the bridge starts anyway, and both endpoints refuse
+with the reason.
 
 ```mermaid
 sequenceDiagram
     participant C as Client
-    participant B as Bridge :5151<br/>(--no-input)
+    participant B as Bridge :5151<br/>(robotjs not loaded)
 
     C->>B: POST /api/v1/input/keys {"keys": "h"}
-    B-->>C: 409 INPUT_DISABLED
-    C->>B: GET /api/v1/status
-    B-->>C: input: { enabled: false, reason: "--no-input" }
+    B-->>C: 409 INPUT_DISABLED (message names the reason)
 ```

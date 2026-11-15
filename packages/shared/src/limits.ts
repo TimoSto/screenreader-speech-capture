@@ -17,6 +17,15 @@ export const API_LIMITS = {
   markerLength: 1000,
   /** Longest session `name`, `run` or client name (trimmed). */
   sessionLabelLength: 1000,
+  /** `POST /input/click` and `POST /input/keys`. */
+  input: {
+    /** Largest absolute screen coordinate (physical pixels). */
+    coordinate: 100_000,
+    /** Pause between the chords of a sequence. */
+    delayMs: { default: 50, max: 10_000 },
+    /** Most chords in one request. */
+    maxKeys: 100,
+  },
 } as const;
 
 /** Ranges of the settings (`GET` / `PUT /config`). */

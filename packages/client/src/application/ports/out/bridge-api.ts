@@ -1,6 +1,7 @@
 import type { BridgeStatus } from '../../../domain/bridge-status.js';
 import type { SpeechFeedEvent } from '../../../domain/feed-event.js';
 import type { SessionList, SessionRef, StartedSession } from '../../../domain/session.js';
+import type { MouseButton, ScreenPoint } from '../../../domain/native-input.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 
 /** One page of `GET /api/v1/speech`. */
@@ -35,6 +36,13 @@ export interface BridgeApi {
   endSession(): Promise<void>;
   /** `GET /api/v1/sessions` (API 1.3). */
   listSessions(): Promise<SessionList>;
+  /** `POST /api/v1/input/click` (API 1.14): a native click. */
+  click(request: ScreenPoint & { button?: MouseButton | undefined }): Promise<void>;
+  /** `POST /api/v1/input/keys` (API 1.14). */
+  pressKeys(request: {
+    keys: string | readonly string[];
+    delayMs?: number | undefined;
+  }): Promise<void>;
   /**
    * One connection to the live feed (`GET /api/v1/speech/stream`). With `lastEventId` the bridge
    * first replays the buffered entries with `seq > lastEventId` (all of them, after a

@@ -12,7 +12,7 @@ For people who set up the VM, write tests or run agents against the bridge.
 | [Speech capture](usage/speech-capture.md) | What the socket voice sends, the buffer, sessions |
 | [HTTP API](usage/http-api.md) | Data model, endpoints, errors, versioning ([OpenAPI](usage/openapi.yaml)) |
 | [Test client](usage/client.md) | Library, cursor, Playwright fixture, CLI and exit codes |
-| [Native input](usage/native-input.md) | Real clicks and key presses: when Playwright input isn't enough (planned) |
+| [Native input](usage/native-input.md) | Real clicks and key presses: when Playwright input isn't enough |
 | [Remote Playwright & MCP](usage/playwright-mcp.md) | The Playwright server and Playwright MCP run by the bridge |
 | [Agents](usage/agents.md) | Agent loop with the CLI, agent skill (partly planned) |
 | [Web UI](usage/web-ui.md) | Live log, settings, setup page (planned) |
@@ -32,7 +32,7 @@ Sequence diagrams of the use cases, each file with its own contents list.
 | [Live feed (SSE)](usage/flows/sse.md) | Subscribe, reconnect (also across restarts), session / clear events, how the client waits |
 | [Truncation](usage/flows/truncation.md) | Speech dropped from the full buffer: errors, flags and events in the API, library and CLI |
 | [Playwright & MCP](usage/flows/playwright-mcp.md) | Tests through the Playwright server, the fixture, agents through MCP, `503` |
-| [Native input](usage/flows/native-input.md) | Foreground window, screen reader commands, input off (planned) |
+| [Native input](usage/flows/native-input.md) | Foreground window, screen reader commands, input not available |
 | [Agents](usage/flows/agents.md) | The CLI agent loop, `tail` |
 
 ## Implementation

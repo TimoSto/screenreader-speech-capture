@@ -26,6 +26,10 @@ export const OPTIONS = {
   run: { type: 'string' },
   session: { type: 'string' },
   all: { type: 'boolean' },
+  x: { type: 'string' },
+  y: { type: 'string' },
+  button: { type: 'string' },
+  delay: { type: 'string' },
 } as const;
 
 export type Values = ReturnType<typeof parseArgs<{ options: typeof OPTIONS }>>['values'];
@@ -93,4 +97,14 @@ export async function scope(
   if (id !== undefined) return id;
   if (values.all) return undefined;
   return (await speech.status()).session.current?.id;
+}
+
+/** A required integer option, may be negative (a screen left of the primary one): `--x=-5`. */
+export function requiredSignedInt(values: Values, name: Option, usage: string): number {
+  const raw = values[name];
+  if (typeof raw !== 'string') throw new UsageError(`Usage: ${NAME} ${usage}`);
+  if (!/^-?\d+$/.test(raw) || !Number.isSafeInteger(Number(raw))) {
+    throw new UsageError(`--${name} must be an integer, got "${raw}".`);
+  }
+  return Number(raw);
 }

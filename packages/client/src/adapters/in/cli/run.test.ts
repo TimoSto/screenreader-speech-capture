@@ -8,6 +8,8 @@ import type {
   ExplicitValues,
   ManageClientConfig,
 } from '../../../application/ports/in/manage-client-config.js';
+import type { NativeInput } from '../../../application/ports/in/native-input.js';
+import { NativeInputService } from '../../../application/services/native-input-service.js';
 import type { SpeechCapture } from '../../../application/ports/in/speech-capture.js';
 import { SpeechCaptureService } from '../../../application/services/speech-capture-service.js';
 import {
@@ -54,19 +56,24 @@ function fakeSpeech() {
     urls.push(url);
     return new SpeechCaptureService({ api, clock, apiVersion: '1.3' });
   };
-  return { api, clock, urls, speech };
+  const input = (url: string | undefined): NativeInput => {
+    urls.push(url);
+    return new NativeInputService({ api, apiVersion: '1.3' });
+  };
+  return { api, clock, urls, speech, input };
 }
 
 async function run(
   args: string[],
   config: ManageClientConfig = fakeConfig().config,
-  speech = fakeSpeech().speech,
+  fake = fakeSpeech(),
 ) {
   let stdout = '';
   let stderr = '';
   const code = await runCli(args, {
     config,
-    speech,
+    speech: fake.speech,
+    input: fake.input,
     stdout: (t) => (stdout += t),
     stderr: (t) => (stderr += t),
     version: '1.2.3',
@@ -162,7 +169,7 @@ describe('config', () => {
 });
 
 describe('speech commands', () => {
-  const cli = (args: string[], fake = fakeSpeech()) => run(args, fakeConfig().config, fake.speech);
+  const cli = (args: string[], fake = fakeSpeech()) => run(args, fakeConfig().config, fake);
 
   it('status prints a summary, or the status with --json; --url reaches the client', async () => {
     const fake = fakeSpeech();
@@ -282,9 +289,9 @@ describe('speech commands', () => {
   it('session start warns when it ended the session of another client', async () => {
     const fake = fakeSpeech();
     fake.api.clientName = 'host pid 1';
-    expect((await run(['session', 'start', 'a'], undefined, fake.speech)).stderr).toBe('');
+    expect((await run(['session', 'start', 'a'], undefined, fake)).stderr).toBe('');
     fake.api.clientName = 'host cli';
-    expect(await run(['session', 'start', 'b'], undefined, fake.speech)).toEqual({
+    expect(await run(['session', 'start', 'b'], undefined, fake)).toEqual({
       code: EXIT.ok,
       stdout: '2\n',
       stderr: 'Warning: this ended session 1 "a" of another client (host pid 1).\n',
@@ -391,10 +398,14 @@ it('--help and --version', async () => {
 });
 
 it('config never creates a bridge client', async () => {
-  const speech = (): SpeechCapture => {
+  const fake = fakeSpeech();
+  fake.speech = (): SpeechCapture => {
     throw new Error('config must not create a bridge client');
   };
-  expect(await run(['config', 'path'], fakeConfig().config, speech)).toMatchObject({
+  fake.input = (): NativeInput => {
+    throw new Error('config must not create a bridge client');
+  };
+  expect(await run(['config', 'path'], fakeConfig().config, fake)).toMatchObject({
     code: EXIT.ok,
     stdout: '/cfg/client.json\n',
   });
@@ -424,6 +435,56 @@ it('works end to end with the real config file', async () => {
   }
 });
 
+describe('native input commands', () => {
+  const cli = (args: string[], fake = fakeSpeech()) => run(args, fakeConfig().config, fake);
+
+  it('click clicks at the given point', async () => {
+    const fake = fakeSpeech();
+    expect(await cli(['click', '--x', '640', '--y', '12'], fake)).toEqual({
+      code: EXIT.ok,
+      stdout: 'Clicked at 640,12\n',
+      stderr: '',
+    });
+    await cli(['click', '--x=-5', '--y', '3', '--button', 'right', '--json'], fake);
+    expect(fake.api.calls.filter((call) => call.startsWith('click'))).toEqual([
+      'click left 640,12',
+      'click right -5,3',
+    ]);
+  });
+
+  it('click needs both coordinates and a valid button', async () => {
+    expect((await cli(['click', '--x', '1'])).code).toBe(EXIT.usage);
+    expect((await cli(['click', '--x', 'a', '--y', '1'])).stderr).toContain(
+      '--x must be an integer',
+    );
+    expect((await cli(['click', '--x', '1', '--y', '1', '--button', 'back'])).code).toBe(
+      EXIT.usage,
+    );
+    expect((await cli(['click', '--x', '1', '--y', '1', '--delay', '5'])).code).toBe(EXIT.usage);
+  });
+
+  it('press sends one chord, or several arguments as a sequence', async () => {
+    const fake = fakeSpeech();
+    expect((await cli(['press', 'Insert+T', '--json'], fake)).stdout).toBe('{"pressed":true}\n');
+    await cli(['press', 'h', 'h', 'Insert+Down', '--delay', '20'], fake);
+    expect(fake.api.calls.filter((call) => call.startsWith('keys'))).toEqual([
+      'keys Insert+T',
+      'keys h h Insert+Down delay=20',
+    ]);
+  });
+
+  it('press needs keys, and a bridge error exits 2', async () => {
+    expect((await cli(['press'])).code).toBe(EXIT.usage);
+    const fake = fakeSpeech();
+    await fake.api.status();
+    fake.api.failures.push(
+      new BridgeHttpError(409, 'INPUT_DISABLED', 'Native input is not available'),
+    );
+    const result = await cli(['press', 'a'], fake);
+    expect(result.code).toBe(EXIT.bridge);
+  });
+});
+
 describe('tail', () => {
   /** Starts `tail`; `stop()` presses Ctrl+C and resolves with the exit code. */
   function tail(args: string[], speech = fakeSpeech()) {
@@ -432,6 +493,7 @@ describe('tail', () => {
     const done = runCli(['tail', ...args], {
       config: fakeConfig().config,
       speech: speech.speech,
+      input: speech.input,
       stdout: (t) => (output.stdout += t),
       stderr: (t) => (output.stderr += t),
       version: '1.2.3',

@@ -194,6 +194,8 @@ export const CLI_OUTPUT = {
   ),
   'wait-silence': v.object({ silent: v.literal(true) }),
   mark: SpeechEntryOutput,
+  click: v.object({ clicked: v.literal(true) }),
+  press: v.object({ pressed: v.literal(true) }),
   tail: v.pipe(
     v.variant('type', [
       v.object({ type: v.literal('entry'), entry: SpeechEntryOutput }),

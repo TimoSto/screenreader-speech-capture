@@ -19,7 +19,7 @@ if the major version differs (see [Versioning](http-api.md#versioning)). The cli
 version doesn't have to match the bridge's.
 
 It only uses `fetch` (Node ≥ 20) and depends only on `packages/shared`. `@playwright/test` is an
-optional peer dependency, needed only for the fixture and `setFocus(page)` (both planned).
+optional peer dependency, needed only for the fixture (planned); `setFocus(page)` takes any page with `evaluate()`.
 
 ```bash
 pnpm add -D screenreader-speech-capture-client
@@ -118,9 +118,9 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `waitForSilence({ quietFor?, timeout? })` | `void` | Wait until nothing new has been spoken for `quietFor` ms (default 500), counted from the call. Throws `SpeechTimeoutError` if speech goes on until `timeout` (default 10000 ms). Useful before asserting on "everything that was said". |
 | `record(fn, { quietFor?, timeout? })` | `{ result, entries, truncated }` | Run `fn` and return everything spoken while it ran (waits for silence at the end, then moves the cursor to the end). `truncated: true`: some of it was dropped because the bridge's buffer was full, so `entries` is incomplete (raise `buffer.maxEntries`). |
 | `mark(label)` | `SpeechEntry` | Insert a marker. Its `seq` can be used as `since`. |
-| `setFocus(page, { target? })` | `void` | *(planned, [M4](../ROADMAP.md#m4-native-input-))* Make the page's browser window the OS foreground window with a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
-| `click({ x, y })` | `void` | *(planned, [M4](../ROADMAP.md#m4-native-input-))* Native click at screen coordinates (`POST /api/v1/set-focus`). |
-| `pressKeys(keys, { delayMs? })` | `void` | *(planned, [M4](../ROADMAP.md#m4-native-input-))* Native key presses, for screen reader commands (`'Insert+T'`, `['h', 'h']`). |
+| `setFocus(page, { target? })` | `void` | Make the page's browser window the OS foreground window with a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
+| `click({ x, y }, { button? })` | `void` | Native click at screen coordinates in physical pixels (`POST /api/v1/input/click`). |
+| `pressKeys(keys, { delayMs? })` | `void` | Native key presses, for screen reader commands (`'Insert+T'`, `['h', 'h']`). |
 | `onSpeech(cb, { since?, includeMarkers?, onSession?, onClear?, onTruncated?, onError? })` | `() => void` | Subscribe to the live feed (see [Live feed](#live-feed)). `cb` gets every new speech entry as the bridge receives it. Returns an unsubscribe function. |
 | `status()` | `BridgeStatus` | Bridge health (TCP connections, Playwright/MCP state, versions). |
 | `waitForReady({ timeout? })` | `BridgeStatus` | Wait until the bridge answers and is `ready` (default `timeout` 120000 ms). Throws `BridgeNotReadyError` on timeout. |
@@ -252,8 +252,8 @@ npx screenreader-speech-capture-client text [--since <seq>] [--separator <s>] [-
 npx screenreader-speech-capture-client wait "Submit, button" [--regex] [--normalize] [--timeout 5000] [--since <seq>] [--session <id> | --all]
 npx screenreader-speech-capture-client wait-silence [--quiet-for 500] [--timeout 10000]
 npx screenreader-speech-capture-client mark "before tab"   # prints the marker's seq
-npx screenreader-speech-capture-client focus --x 640 --y 12  # native click (planned, M4)
-npx screenreader-speech-capture-client press "Insert+T"      # native keys, several args = sequence (planned, M4)
+npx screenreader-speech-capture-client click --x 640 --y 12  # native click (negative: --x=-5)
+npx screenreader-speech-capture-client press "Insert+T"      # native keys, several args = sequence (--delay <ms>)
 npx screenreader-speech-capture-client tail [--since <seq>]  # live feed until Ctrl+C (NDJSON with --json)
 ```
 

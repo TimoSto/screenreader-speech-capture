@@ -19,8 +19,9 @@ pnpm fake-speech --port 4449      # behaves like text-to-socket-engine (header l
 printf 'voice=dev\r\nSubmit, button\r\nEdit, Name, blank\r\n' | nc 127.0.0.1 4449
 ```
 
-Outside Windows (or with `--no-input`), the bridge will use a recording fake `InputInjector` that
-logs the clicks and keys it would send *(planned, [M4](../ROADMAP.md#m4-native-input-))*.
+Where `@jitsi/robotjs` can't be loaded, the bridge starts with a `DisabledInputInjector`: the input
+endpoints answer `409 INPUT_DISABLED`, everything else works. Tests inject a recording
+`InputInjector` (`RecordingInputInjector` in `packages/bridge/test/fakes.ts`).
 
 **Writing docs:** each fact has one home. Other docs mention it in one line and link there
 (troubleshooting and limitations are such collections of links). The README only introduces the
@@ -31,9 +32,9 @@ project and links into `docs/`.
 - **Domain / application:** unit tests against in-memory fakes of the driven ports (fake clock,
   the real `SpeechLog`, fake input injector), with no sockets or processes involved.
 - **Adapters:** integration tests per adapter (real TCP socket, real HTTP server, temporary config dir).
-  The robotjs adapter *(planned, [M4](../ROADMAP.md#m4-native-input-))* will be tested only on Windows.
+  The robotjs adapter is tested with a fake robotjs module here, and with the real one only on Windows.
 - **Client:** library and CLI tested against a real bridge fed by `fake-speech`, covering
-  the cursor, timeouts and exit codes. `setFocus` coordinate maths *(planned, [M4](../ROADMAP.md#m4-native-input-))* is unit-tested.
+  the cursor, timeouts and exit codes. `setFocus` coordinate maths (`clickPoint`) is unit-tested.
 - **UI** *(planned, [M5](../ROADMAP.md#m5-web-ui-))*: component tests with fake port implementations. End-to-end tests against a bridge
   fed by `fake-speech`.
 - **Smoke test on a real VM:** NVDA + socket voice + Chrome, checking one focus announcement and one

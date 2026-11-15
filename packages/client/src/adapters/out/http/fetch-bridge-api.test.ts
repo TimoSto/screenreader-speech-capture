@@ -156,6 +156,21 @@ describe('FetchBridgeApi requests', () => {
     ]);
   });
 
+  it('posts native clicks and key presses', async () => {
+    const { fetch, calls } = fakeFetch(() => new Response(null, { status: 204 }));
+    const bridge = api(fetch);
+    await bridge.click({ x: 640, y: 12 });
+    await bridge.click({ x: -5, y: 3, button: 'right' });
+    await bridge.pressKeys({ keys: 'Insert+T' });
+    await bridge.pressKeys({ keys: ['h', 'h'], delayMs: 20 });
+    expect(calls.map(({ method, url, body }) => [method, url, body])).toEqual([
+      ['POST', 'http://vm:5151/api/v1/input/click', { x: 640, y: 12 }],
+      ['POST', 'http://vm:5151/api/v1/input/click', { x: -5, y: 3, button: 'right' }],
+      ['POST', 'http://vm:5151/api/v1/input/keys', { keys: 'Insert+T' }],
+      ['POST', 'http://vm:5151/api/v1/input/keys', { keys: ['h', 'h'], delayMs: 20 }],
+    ]);
+  });
+
   it('maps the status', async () => {
     const { fetch } = fakeFetch(() => json(statusDto()));
     const status = await api(fetch).status();
