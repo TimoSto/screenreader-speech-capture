@@ -1,6 +1,8 @@
 // The fixture's per-test session handling against a real bridge (no browser needed).
 import { describe, expect, it } from 'vitest';
+import { RecordingInputInjector } from '../../bridge/test/fakes.js';
 import { send, start } from '../../bridge/test/helpers.js';
+import { focusPage } from '../src/adapters/in/playwright/focus.js';
 import {
   sessionName,
   withTestSession,
@@ -80,5 +82,31 @@ describe('withTestSession', () => {
     ).rejects.toThrow('boom');
     expect((await client.sessions()).currentId).toBeNull();
     expect(attachments[0]?.body).toBe('oops');
+  });
+});
+
+describe('focusPage', () => {
+  it('sends a native click at the content corner to the bridge, then reloads', async () => {
+    const inputInjector = new RecordingInputInjector();
+    const b = await start({}, { inputInjector });
+    const client = new SpeechCaptureClient({ baseUrl: `http://127.0.0.1:${b.httpPort}`, env });
+    const page = {
+      evaluate: () =>
+        Promise.resolve({
+          screenX: 100,
+          screenY: 50,
+          outerWidth: 1000,
+          outerHeight: 800,
+          innerWidth: 984,
+          innerHeight: 700,
+          devicePixelRatio: 1,
+        }),
+      reload: () => {
+        inputInjector.calls.push('reload');
+        return Promise.resolve();
+      },
+    };
+    await focusPage(client, page);
+    expect(inputInjector.calls).toEqual(['click left 109,143', 'reload']);
   });
 });

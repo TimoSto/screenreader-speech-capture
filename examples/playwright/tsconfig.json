@@ -1,5 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "noEmit": true },
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "screenreader-speech-capture-client/playwright": ["../../packages/client/src/playwright.ts"]
+    }
+  },
   "include": ["tests", "*.ts"]
 }

@@ -33,7 +33,7 @@ element you pass. Then it calls `/api/v1/input/click`.
 |---|---|
 | Interact with the page (Tab, type, Enter on a button) | Playwright: `page.keyboard.press('Tab')` |
 | Give the screen reader a command (next heading, read title, elements list) | Native: `speech.pressKeys('h')`, `speech.pressKeys('Insert+T')` |
-| Before either: make the browser the foreground window | `speech.setFocus(page)` (the fixture does this automatically) |
+| Before either: make the browser the foreground window | `speech.setFocus(page)` (title bar). The [Playwright fixture](client.md#playwright-fixture) does it automatically with its own `setFocus()`: a click on the top-left corner of the page content, then a reload |
 
 **Key names** (`/api/v1/input/keys`): keys are joined with `+` for chords (`Insert+T`, `Control+Home`)
 and passed as an array for sequences (`["h", "h", "Insert+Down"]`). Names follow robotjs

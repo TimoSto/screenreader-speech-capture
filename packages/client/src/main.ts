@@ -75,11 +75,13 @@ export interface SpeechCaptureClientOptions {
 export class SpeechCaptureClient implements SpeechCapture, NativeInput {
   readonly #service: SpeechCapture;
   readonly #input: NativeInput;
+  readonly #resolveUrl: () => Promise<string>;
 
   constructor(options: SpeechCaptureClientOptions = {}) {
     const config = createClientConfig(options.env ?? process.env);
+    this.#resolveUrl = async () => (await config.get('url', { url: options.baseUrl })).value;
     const api = new FetchBridgeApi({
-      baseUrl: async () => (await config.get('url', { url: options.baseUrl })).value,
+      baseUrl: this.#resolveUrl,
       clientName: options.clientName ?? `${hostname()} pid ${process.pid}`,
     });
     this.#service = new SpeechCaptureService({

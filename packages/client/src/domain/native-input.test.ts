@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clickPoint, type WindowGeometry } from './native-input.js';
+import { clickPoint, contentCornerPoint, type WindowGeometry } from './native-input.js';
 
 const window: WindowGeometry = {
   screenX: 100,
@@ -38,5 +38,16 @@ describe('clickPoint', () => {
 
   it('treats a missing ratio as 1', () => {
     expect(clickPoint({ ...window, devicePixelRatio: 0 })).toEqual({ x: 600, y: 62 });
+  });
+});
+
+describe('contentCornerPoint', () => {
+  it('is the top-left of the page, below the browser frame', () => {
+    // border 8, frame 92, 1px inside
+    expect(contentCornerPoint(window)).toEqual({ x: 100 + 8 + 1, y: 50 + 92 + 1 });
+  });
+
+  it('turns CSS pixels into physical pixels', () => {
+    expect(contentCornerPoint({ ...window, devicePixelRatio: 2 })).toEqual({ x: 218, y: 286 });
   });
 });

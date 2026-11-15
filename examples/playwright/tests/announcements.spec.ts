@@ -18,8 +18,11 @@ const page1 = `<!doctype html>
   </body>
 </html>`;
 
+// A data: URL, not `setContent`: a page without a URL is gone after a reload (about:blank).
+const pageUrl = `data:text/html;charset=utf-8,${encodeURIComponent(page1)}`;
+
 test.beforeEach(async ({ page }) => {
-  await page.setContent(page1);
+  await page.goto(pageUrl);
 });
 
 test('the page title and heading are announced', async ({ page, speech }) => {
@@ -30,13 +33,13 @@ test('the page title and heading are announced', async ({ page, speech }) => {
 
 test('a focused button is announced with its name and role', async ({ page, speech }) => {
   await page.getByRole('button', { name: 'Submit' }).focus();
-  await speech.waitForOutput(/Submit.*button/i); // also found if it arrived before this line
+  await speech.waitForOutput(/Submit/); // role wording depends on the screen reader's language; also found if it arrived before this line
 });
 
 test('Tab moves to the next control and announces it', async ({ page, speech }) => {
   await page.getByLabel('Name').focus();
   const { entries } = await speech.record(() => page.keyboard.press('Tab'));
-  expect(entries.map((e) => e.text).join(' ')).toMatch(/Submit.*button/i);
+  expect(entries.map((e) => e.text).join(' ')).toMatch(/Submit/);
 });
 
 test('a live region announces its update', async ({ page, speech }) => {

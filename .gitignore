@@ -13,3 +13,7 @@ coverage/
 *.log
 .DS_Store
 /.idea/
+
+# Playwright output
+test-results/
+playwright-report/
