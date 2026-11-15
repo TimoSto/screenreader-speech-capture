@@ -46,10 +46,13 @@ export const oneOf =
 
 export const encoding: Check = (value) => {
   if (typeof value !== 'string') return 'must be a string';
+  let label: string;
   try {
-    new TextDecoder(value);
-    return undefined;
+    label = new TextDecoder(value).encoding;
   } catch {
     return `unknown encoding "${value}"`;
   }
+  // The framing splits the byte stream on 0x0A before decoding, which cuts UTF-16 characters.
+  if (label.startsWith('utf-16')) return `"${value}" is not supported (lines are split on bytes)`;
+  return undefined;
 };

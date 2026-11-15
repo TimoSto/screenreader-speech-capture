@@ -68,4 +68,10 @@ describe('FsClientConfigStore', () => {
     await expect(store.save({ url: 'http://vm:1' })).rejects.toThrow(ClientConfigError);
     expect(await fs.readFile(file, 'utf8')).toBe(content);
   });
+
+  it('reads a file with a byte order mark', async () => {
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, '\uFEFF{"url":"http://vm:5151"}');
+    expect(await new FsClientConfigStore(file).load()).toEqual({ url: 'http://vm:5151' });
+  });
 });

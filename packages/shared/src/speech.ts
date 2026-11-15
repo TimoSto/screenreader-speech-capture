@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { API_LIMITS } from './limits.js';
+import { API_LIMITS, isTrimmedLabel } from './limits.js';
 
 const integer = (min: number) => v.pipe(v.number(), v.integer(), v.minValue(min));
 const timestamp = v.pipe(v.string(), v.isoTimestamp());
@@ -103,7 +103,7 @@ export type WaitResultDto = v.InferOutput<typeof WaitResultSchema>;
 export const MarkerRequestSchema = v.object({
   label: v.pipe(
     v.string(),
-    v.maxLength(API_LIMITS.markerLength),
+    v.check((label) => isTrimmedLabel(label, API_LIMITS.markerLength)),
     v.description(
       `Marker text. Trimmed, must not be empty, at most ${API_LIMITS.markerLength} characters.`,
     ),

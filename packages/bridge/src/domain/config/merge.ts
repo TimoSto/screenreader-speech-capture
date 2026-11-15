@@ -23,15 +23,16 @@ export function mergeConfig(base: Config, patch: unknown): Config {
   }
 
   for (const [section, values] of Object.entries(patch)) {
-    const sectionSchema = (SCHEMA as Record<string, Record<string, Check>>)[section];
-    if (sectionSchema === undefined) throw invalidField(section, 'unknown setting');
+    // `hasOwn`: a key like `valueOf` or `__proto__` must be unknown, not found on the prototype.
+    if (!Object.hasOwn(SCHEMA, section)) throw invalidField(section, 'unknown setting');
+    const sectionSchema = (SCHEMA as Record<string, Record<string, Check>>)[section]!;
     if (values === undefined) continue;
     if (!isPlainObject(values)) throw invalidField(section, 'must be an object');
 
     for (const [key, value] of Object.entries(values)) {
       const field = `${section}.${key}`;
-      const check = sectionSchema[key];
-      if (check === undefined) throw invalidField(field, 'unknown setting');
+      if (!Object.hasOwn(sectionSchema, key)) throw invalidField(field, 'unknown setting');
+      const check = sectionSchema[key]!;
       if (value === undefined) continue;
       const problem = check(value);
       if (problem !== undefined) throw invalidField(field, problem);

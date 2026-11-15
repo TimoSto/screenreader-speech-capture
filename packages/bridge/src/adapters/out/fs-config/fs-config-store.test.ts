@@ -35,4 +35,30 @@ describe('FsConfigStore', () => {
       `The config file ${file} is not valid JSON`,
     );
   });
+
+  it('reads a file with a byte order mark', async () => {
+    const file = path.join(dir, 'config.json');
+    await fs.writeFile(file, '\uFEFF{"tcp":{"port":4450}}');
+    expect(await new FsConfigStore(file).load()).toEqual({ tcp: { port: 4450 } });
+  });
+
+  it('keeps the previous file as .bak and falls back on it when the file is empty', async () => {
+    const file = path.join(dir, 'config.json');
+    const store = new FsConfigStore(file);
+    await store.save({ tcp: { port: 4450 } });
+    await store.save({ tcp: { port: 4451 } });
+    expect(JSON.parse(await fs.readFile(`${file}.bak`, 'utf8'))).toEqual({ tcp: { port: 4450 } });
+    await fs.writeFile(file, '');
+    expect(await store.load()).toEqual({ tcp: { port: 4450 } });
+  });
+
+  it('does not replace a good .bak with a broken file', async () => {
+    const file = path.join(dir, 'config.json');
+    const store = new FsConfigStore(file);
+    await store.save({ tcp: { port: 4450 } });
+    await store.save({ tcp: { port: 4451 } });
+    await fs.writeFile(file, '');
+    await store.save({ tcp: { port: 4452 } });
+    expect(JSON.parse(await fs.readFile(`${file}.bak`, 'utf8'))).toEqual({ tcp: { port: 4450 } });
+  });
 });

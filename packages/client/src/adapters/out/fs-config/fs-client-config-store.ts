@@ -20,7 +20,8 @@ export class FsClientConfigStore implements ClientConfigStore {
   }
 
   /**
-   * Writes a temporary file and renames it, so a crash never leaves half a file. Values already
+   * Writes a temporary file, flushes it to disk and renames it, so a crash never leaves half a
+   * file. Values already
    * in the file aren't checked, so `config set` can repair an invalid one.
    */
   async save(patch: ClientConfigPatch): Promise<void> {
@@ -38,7 +39,13 @@ export class FsClientConfigStore implements ClientConfigStore {
     await fs.mkdir(path.dirname(this.location), { recursive: true });
     const temporary = `${this.location}.${process.pid}.tmp`;
     try {
-      await fs.writeFile(temporary, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
+      const handle = await fs.open(temporary, 'w');
+      try {
+        await handle.writeFile(`${JSON.stringify(next, null, 2)}\n`, 'utf8');
+        await handle.sync();
+      } finally {
+        await handle.close();
+      }
       await fs.rename(temporary, this.location);
     } catch (error) {
       await fs.rm(temporary, { force: true });
@@ -59,7 +66,8 @@ export class FsClientConfigStore implements ClientConfigStore {
       );
     }
     try {
-      return JSON.parse(text) as unknown;
+      // A leading byte order mark (Notepad and PowerShell write one) isn't valid JSON.
+      return JSON.parse(text.replace(/^\uFEFF/, '')) as unknown;
     } catch (error) {
       throw new ClientConfigError(
         `The client config file ${this.location} is not valid JSON: ${(error as Error).message}`,

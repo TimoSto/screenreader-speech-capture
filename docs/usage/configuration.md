@@ -10,6 +10,8 @@ Precedence: **CLI flags > environment variables > config file > defaults**.
   development: `$XDG_CONFIG_HOME` or `~/.config`, then `screenreader-speech-capture/config.json`).
   `--config <path>` / `SR_SPEECH_CONFIG` selects another file. It holds only the settings saved so
   far; everything else comes from the defaults.
+- The file may start with a UTF-8 byte order mark (Notepad and PowerShell add one). Each save is flushed to disk;
+  the previous file stays next to it as `config.json.bak`, and the bridge falls back on it when the file is empty or broken.
 - Environment variables: `SR_SPEECH_` + the flag name in upper snake case, for example
   `SR_SPEECH_TCP_PORT=4449`, `SR_SPEECH_HTTP_PORT=5151`, `SR_SPEECH_NO_MCP=1`. Switches
   (`SR_SPEECH_NO_MCP`, `SR_SPEECH_CONSOLE_SPEECH`, …) are on with `1`, `true`, `yes` or `on`;
@@ -32,7 +34,7 @@ Precedence: **CLI flags > environment variables > config file > defaults**.
 ```
 
 The TCP listener reads CRLF-terminated lines, with an optional header line, as described in
-[Wire format](speech-capture.md#wire-format). `tcp.encoding` is the code page used to decode them
+[Wire format](speech-capture.md#wire-format). `tcp.encoding` (any `TextDecoder` label except `utf-16*`, since lines are split on bytes) is the code page used to decode them
 (default `windows-1252`).
 The ports of `tcp`, `http` and the enabled child services (`playwright`, `mcp`) must differ, and
 the child services need a real port (`1`–`65535`, not `0`): the bridge refuses such a

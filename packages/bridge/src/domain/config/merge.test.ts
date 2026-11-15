@@ -132,3 +132,15 @@ describe('assertDistinctPorts', () => {
     expect(() => assertDistinctPorts(config)).not.toThrow();
   });
 });
+
+describe('mergeConfig prototype keys', () => {
+  it.each(['valueOf', 'constructor', 'toString', '__proto__'])(
+    'rejects %s as an unknown setting, not a crash',
+    (key) => {
+      const section = JSON.parse(`{"${key}": 1}`) as object;
+      expect(() => mergeConfig(DEFAULT_CONFIG, { tcp: section })).toThrow(/unknown setting/);
+      const patch = JSON.parse(`{"${key}": {}}`) as object;
+      expect(() => mergeConfig(DEFAULT_CONFIG, patch)).toThrow(/unknown setting/);
+    },
+  );
+});

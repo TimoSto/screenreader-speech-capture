@@ -1,12 +1,22 @@
 import * as v from 'valibot';
 import { CONFIG_LIMITS, EXACT_VERSION_PATTERN, HOST_NAME_PATTERN } from './limits.js';
 
+/** A `TextDecoder` label other than UTF-16 (the framing splits the bytes on 0x0A first). */
+function isSupportedEncoding(label: string): boolean {
+  try {
+    return !new TextDecoder(label).encoding.startsWith('utf-16');
+  } catch {
+    return false;
+  }
+}
+
 export const LOG_LEVELS = ['error', 'warn', 'info', 'debug'] as const;
 export type LogLevel = (typeof LOG_LEVELS)[number];
 
 const range = ({ min, max }: { min: number; max: number }) =>
   v.pipe(v.number(), v.integer(), v.minValue(min), v.maxValue(max));
 const port = range(CONFIG_LIMITS.port);
+const nonBlank = v.pipe(v.string(), v.regex(/\S/), v.description('Not empty or blank.'));
 
 export const AllowedHostsSchema = v.pipe(
   v.array(v.pipe(v.string(), v.regex(HOST_NAME_PATTERN))),
@@ -34,19 +44,22 @@ export const McpConfigSchema = v.pipe(
 
 const sections = {
   tcp: {
-    host: v.string(),
+    host: nonBlank,
     port,
     encoding: v.pipe(
       v.string(),
-      v.description("TextDecoder label of the socket voice's code page."),
+      v.check(isSupportedEncoding),
+      v.description(
+        "TextDecoder label of the socket voice's code page. Not `utf-16*`: lines are split on bytes.",
+      ),
     ),
     maxLineBytes: range(CONFIG_LIMITS.maxLineBytes),
   },
-  http: { host: v.string(), port, allowedHosts: AllowedHostsSchema },
+  http: { host: nonBlank, port, allowedHosts: AllowedHostsSchema },
   buffer: { maxEntries: range(CONFIG_LIMITS.maxEntries) },
   log: {
     level: v.picklist(LOG_LEVELS),
-    file: v.pipe(v.nullable(v.string()), v.description('Bridge log file, `null` = default path.')),
+    file: v.pipe(v.nullable(nonBlank), v.description('Bridge log file, `null` = default path.')),
     consoleSpeech: v.pipe(v.boolean(), v.description('Also write the speech text to the console.')),
   },
 };

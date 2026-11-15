@@ -65,4 +65,10 @@ describe('config checks', () => {
     expect(encoding('klingon')).toBe('unknown encoding "klingon"');
     expect(encoding(1)).toBe('must be a string');
   });
+
+  it('encoding: rejects UTF-16, which the byte-wise line framing would cut', () => {
+    for (const label of ['utf-16', 'utf-16le', 'UTF-16BE', 'ucs-2']) {
+      expect(encoding(label)).toContain('not supported');
+    }
+  });
 });
