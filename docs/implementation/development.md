@@ -7,8 +7,7 @@ pnpm install
 pnpm dev          # bridge (watch); with the UI (M5) also the SvelteKit dev server
 pnpm test         # unit + integration tests
 pnpm build        # compiles the bridge and the client (and, from M5, the UI into the bridge); the client build also writes its .d.ts and fails if publint/attw find a broken package
-pnpm openapi      # regenerates the schemas in docs/usage/openapi.yaml from packages/shared
-pnpm cli-schema   # regenerates docs/usage/cli-output.schema.json from the client CLI's output schemas
+pnpm openapi      # regenerates docs/usage/openapi.yaml from packages/shared (schemas + openapi/spec.ts)
 ```
 
 You don't need Windows or a screen reader for most of the work. A fake speech sender stands in for the
