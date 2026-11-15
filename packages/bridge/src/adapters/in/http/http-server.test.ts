@@ -3,6 +3,7 @@ import { MemoryLogger } from '../../../../test/fakes.js';
 import { accepts } from '../../../../test/helpers.js';
 import { ListenError } from '../../shared/net/listen.js';
 import { HttpServer } from './http-server.js';
+import type { UiHandler } from './ui-handler.js';
 
 // The routes are covered by the integration tests (test/http-api.test.ts). Here: the server's
 // own lifecycle, so the ports stay unused and an unknown path is enough to see who answers.
@@ -11,7 +12,7 @@ const unused = {} as never;
 const servers: HttpServer[] = [];
 afterEach(() => Promise.all(servers.splice(0).map((s) => s.stop())));
 
-function server() {
+function server(ui?: UiHandler) {
   const logger = new MemoryLogger();
   const http = new HttpServer({
     speech: unused,
@@ -21,6 +22,7 @@ function server() {
     sessions: unused,
     input: unused,
     logger,
+    ...(ui ? { ui } : {}),
   });
   servers.push(http);
   return { http, logger };
@@ -72,5 +74,49 @@ describe('HttpServer', () => {
     for await (const chunk of socket) raw += String(chunk);
     expect(raw).toMatch(/^HTTP\/1\.1 400/);
     expect(raw).toContain('INVALID_REQUEST');
+  });
+
+  describe('web UI', () => {
+    const ui: UiHandler = (req, res) => {
+      res.end(`ui ${req.url}`);
+      return Promise.resolve();
+    };
+    const settings = { host: '127.0.0.1', port: 0, allowedHosts: [] };
+
+    it('answers every path outside the API', async () => {
+      const { http } = server(ui);
+      const port = await http.start(settings);
+      expect(await (await fetch(`http://127.0.0.1:${port}/`)).text()).toBe('ui /');
+      expect(await (await fetch(`http://127.0.0.1:${port}/live?x=1`)).text()).toBe('ui /live?x=1');
+      // Not the API prefix: `/api/v10` is the UI's.
+      expect(await (await fetch(`http://127.0.0.1:${port}/api/v10`)).text()).toBe('ui /api/v10');
+    });
+
+    it('leaves the API to the router, so an unknown API path is still a 404 error body', async () => {
+      const { http } = server(ui);
+      const port = await http.start(settings);
+      for (const path of ['/api/v1', '/api/v1/nope']) {
+        const res = await fetch(`http://127.0.0.1:${port}${path}`);
+        expect(res.status).toBe(404);
+        expect(await res.json()).toMatchObject({ error: { code: 'NOT_FOUND' } });
+      }
+    });
+
+    it('applies the Host rules to the UI too', async () => {
+      const { http } = server(ui);
+      const port = await http.start(settings);
+      const net = await import('node:net');
+      const socket = net.connect(port, '127.0.0.1');
+      socket.end('GET / HTTP/1.1\r\nHost: evil.example\r\nConnection: close\r\n\r\n');
+      let raw = '';
+      for await (const chunk of socket) raw += String(chunk);
+      expect(raw).toMatch(/^HTTP\/1\.1 403/);
+    });
+
+    it('answers 404 outside the API when there is no UI', async () => {
+      const { http } = server();
+      const port = await http.start(settings);
+      expect((await fetch(`http://127.0.0.1:${port}/`)).status).toBe(404);
+    });
   });
 });

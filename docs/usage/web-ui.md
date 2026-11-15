@@ -2,13 +2,14 @@
 
 The web UI served by the bridge, for people watching, driving and configuring it.
 
-> **Planned ([M5](../ROADMAP.md#m5-web-ui-)), not implemented yet.** This page describes the design. Until then, follow
-> the speech with `npx screenreader-speech-capture-client tail`.
+> **Planned ([M5](../ROADMAP.md#m5-web-ui-)), mostly not implemented yet.** This page describes the design. So far the
+> bridge serves only a start page at `/` that shows the bridge's version and state. Until the
+> rest lands, follow the speech with `npx screenreader-speech-capture-client tail`.
 
 The bridge serves a web UI at `http://<vm>:5151/`. It is for **people**: watching what the screen
 reader says while a test or an agent runs, exploring a page by hand, and setting up the VM. Tests
 and agents use the API, the client or the CLI instead. The UI uses only the public HTTP API (see
-[UI: SvelteKit, hexagonal-lite](../implementation/architecture.md#ui-sveltekit-hexagonal-lite)), so it can do nothing
+[the web UI](../implementation/architecture.md#the-web-ui-a-sveltekit-bff)), so it can do nothing
 a client can't.
 
 ## Layout

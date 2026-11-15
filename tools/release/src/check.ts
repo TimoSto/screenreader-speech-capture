@@ -55,9 +55,12 @@ export function checkPrTitle(
 
   const touchesShared = changedFiles.some((f) => config.sharedDirs.some((d) => within(f, d)));
   for (const pkg of named) {
-    if (!touchesShared && !changedFiles.some((f) => within(f, pkg.dir))) {
+    if (
+      !touchesShared &&
+      !changedFiles.some((f) => [pkg.dir, ...(pkg.extraDirs ?? [])].some((d) => within(f, d)))
+    ) {
       errors.push(
-        `Scope \`${pkg.scope}\` is named, but nothing in ${pkg.dir}/ or ` +
+        `Scope \`${pkg.scope}\` is named, but nothing in ${[pkg.dir, ...(pkg.extraDirs ?? [])].join('/, ')}/ or ` +
           `${config.sharedDirs.join(', ')}/ changed.`,
       );
     }

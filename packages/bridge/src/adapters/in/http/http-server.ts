@@ -16,6 +16,7 @@ import { describeListener } from '../../shared/net/reachable-urls.js';
 import { sendError, sendSocketError } from './errors.js';
 import { type ProxyRoute, ServiceProxy } from './proxy/service-proxy.js';
 import { Router } from './router.js';
+import type { UiHandler } from './ui-handler.js';
 import { configRoutes } from './routes/config-routes.js';
 import { inputRoutes } from './routes/input-routes.js';
 import { sessionRoutes } from './routes/session-routes.js';
@@ -42,6 +43,8 @@ interface HttpServerDeps {
    * Child services passed through on their own paths (docs/usage/playwright-mcp.md). Default: none.
    */
   proxies?: readonly ProxyRoute[];
+  /** The web UI, for everything outside the API and the proxied paths. Default: none (404). */
+  ui?: UiHandler;
 }
 
 /** How long `stop()` waits for open requests before it closes their connections. */
@@ -138,6 +141,7 @@ export class HttpServer {
       const route = this.proxy.match(url.pathname);
       this.checkAccess(req, route !== undefined);
       if (route) this.proxy.forward(route, req, res, url);
+      else if (this.deps.ui && !isApiPath(url.pathname)) await this.deps.ui(req, res);
       else await this.router.find(method, url.pathname)({ req, res, url });
     } catch (error) {
       sendError(res, error, this.deps.logger);
@@ -178,6 +182,11 @@ export class HttpServer {
       { strictOrigin: proxied },
     );
   }
+}
+
+/** Whether `pathname` is the API's (`/api/v1`, `/api/v1/…`). An unknown one is an API 404. */
+function isApiPath(pathname: string): boolean {
+  return pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`);
 }
 
 /** The request target as a URL. An absolute-form target such as `http://[` doesn't parse. */

@@ -27,6 +27,7 @@ import { createLogging } from './composition/logging.js';
 import { yieldEvery } from './composition/pace.js';
 import { proxyRoutes } from './composition/proxies.js';
 import { createSupervisors } from './composition/services.js';
+import { bridgeApiUrl, createUiMount, shippedUiDir } from './composition/ui.js';
 import type { TestSeams } from './composition/test-seams.js';
 import { CaptureState } from './domain/capture.js';
 import { configFields, overriddenFields, type ConfigField } from './domain/config/index.js';
@@ -149,6 +150,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     apiVersion: API_VERSION,
     startedAt,
   });
+  const ui = createUiMount(seams.uiDir ?? shippedUiDir(), log.for('web-ui'));
   const http = new HttpServer({
     speech,
     waits,
@@ -159,10 +161,12 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     logger: log.for('http-api'),
     hostnames: [hostname()],
     proxies: proxyRoutes(childServices),
+    ...(ui ? { ui: ui.handler } : {}),
     ...(seams.ssePingMs === undefined ? {} : { pingMs: seams.ssePingMs }),
   });
 
   const ports = await startListeners(tcp, http, config, bridgeLogger);
+  await ui?.mount(bridgeApiUrl(config.http.host, ports.http));
   const lifecycle = new BridgeLifecycleService({
     state: status,
     waits,

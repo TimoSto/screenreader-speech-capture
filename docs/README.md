@@ -55,3 +55,4 @@ For contributors: how the bridge and client are built and why.
 | [Lifecycle](implementation/flows/lifecycle.md) | Startup order and shutdown |
 | [Config](implementation/flows/config.md) | `PUT /config` through the layers |
 | [Child services](implementation/flows/child-services.md) | Install, spawn, crash restarts with backoff, giving up |
+| [Web UI](implementation/flows/web-ui.md) | Mounting the SvelteKit BFF, a page request through the bridge |

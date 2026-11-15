@@ -8,6 +8,8 @@ export interface ReleasePackage {
   name: string;
   /** Package directory, relative to the repo root. */
   dir: string;
+  /** More directories built into this package only (the bridge ships `packages/ui`). */
+  extraDirs?: string[];
 }
 
 export interface ReleaseConfig {

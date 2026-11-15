@@ -5,7 +5,12 @@ import type { ReleaseConfig } from './config.js';
 const config: ReleaseConfig = {
   mainBranch: 'main',
   packages: [
-    { scope: 'bridge', name: 'screenreader-speech-capture', dir: 'packages/bridge' },
+    {
+      scope: 'bridge',
+      name: 'screenreader-speech-capture',
+      dir: 'packages/bridge',
+      extraDirs: ['packages/ui'],
+    },
     { scope: 'client', name: 'screenreader-speech-capture-client', dir: 'packages/client' },
   ],
   sharedDirs: ['packages/shared'],
@@ -23,6 +28,14 @@ describe('checkPrTitle', () => {
       warnings: [],
       effects: { bridge: 'minor', client: '–' },
     });
+  });
+
+  it('counts a change in an extra directory (the UI ships in the bridge) for that package', () => {
+    const ui = 'packages/ui/src/routes/+page.svelte';
+    expect(checkPrTitle('feat(bridge): live log page', [ui], config).errors).toEqual([]);
+    expect(checkPrTitle('feat(client): x', [ui], config).errors).toEqual([
+      expect.stringMatching(/Scope `client` is named, but nothing/),
+    ]);
   });
 
   it('reports breaking changes', () => {

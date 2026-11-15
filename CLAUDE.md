@@ -16,7 +16,8 @@ the generic supervisor, `adapters/out/npm` the per-version npm install, `adapter
 installs and runs the configured Playwright version, `adapters/out/mcp` runs the `@playwright/mcp`
 dependency). Native input (M4) is real too: `NativeInputService` + `InputInjector` port in the
 bridge (robotjs adapter, optional dependency, `DisabledInputInjector` fallback), `NativeInput` in
-the client.
+the client. M5 has started: `packages/ui` is a SvelteKit BFF (adapter-node) that the bridge mounts on
+its HTTP port and ships in `dist/ui` (`composition/ui.ts`); only a status start page exists so far.
 
 ## Commands
 
@@ -25,6 +26,8 @@ pnpm monorepo, Node >= 22.12 (CI uses `.nvmrc`).
 ```bash
 pnpm install
 pnpm dev                 # bridge in watch mode (tsx watch src/bin/cli.ts)
+pnpm dev:ui              # the UI's Vite dev server; its BFF calls the bridge on 127.0.0.1:5151
+                         # (override with SR_BRIDGE_API_URL in the shell or packages/ui/.env.local)
 pnpm test                # all Vitest projects (packages/*/vitest.config.ts, tools/*/vitest.config.ts)
 pnpm test packages/bridge/src/domain/config/merge.test.ts # single test file (no `--`: that runs everything)
 pnpm test -t "name of test"                           # filter by test name

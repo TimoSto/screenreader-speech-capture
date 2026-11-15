@@ -22,6 +22,11 @@ export interface TestSeams {
   playwrightDir?: string;
   /** Replaces the Playwright install and `run-server` command. */
   playwrightLaunch?: Prepare;
+  /**
+   * Where the web UI build is. Default: `ui/` next to the bundled CLI, which doesn't exist when
+   * the bridge runs from source, so tests have no UI unless they set this.
+   */
+  uiDir?: URL;
   /** Replaces the MCP Chromium install and command. */
   mcpLaunch?: Prepare;
 }

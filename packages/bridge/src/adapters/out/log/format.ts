@@ -6,6 +6,7 @@ export type LogPrefix =
   | 'config'
   | 'speech-capture'
   | 'http-api'
+  | 'web-ui'
   | 'native-input'
   | 'playwright-server'
   | 'playwright-mcp';
@@ -18,6 +19,7 @@ const PREFIX_COLOURS: Record<LogPrefix, string> = {
   config: `${ESC}90m`, // grey
   'speech-capture': `${ESC}32m`, // green
   'http-api': `${ESC}34m`, // blue
+  'web-ui': `${ESC}96m`, // bright cyan
   'native-input': `${ESC}35m`, // magenta
   'playwright-server': `${ESC}36m`, // cyan
   'playwright-mcp': `${ESC}94m`, // bright blue

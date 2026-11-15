@@ -152,6 +152,7 @@ message.
 | `[config]` | grey | Loading and changing the configuration |
 | `[speech-capture]` | green | TCP listener: connections, cut lines, received lines (`debug`, file only, see above) |
 | `[http-api]` | blue | HTTP server and requests (`debug`), SSE clients |
+| `[web-ui]` | bright cyan | Loading the web UI (errors only: it failed to start) |
 | `[native-input]` | magenta | Clicks and key presses |
 | `[playwright-server]` | cyan | Output of the Playwright server child process |
 | `[playwright-mcp]` | bright blue | Output of the Playwright MCP child process |
