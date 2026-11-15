@@ -37,9 +37,7 @@ console window (`SIGHUP`) and `SIGTERM`. The bridge log names the signal
    (they get `503`),
 2. stops the child services and **kills their whole process tree**. On Windows, killing a process
    does not kill its children, so without this the browsers started by the Playwright server would
-   stay open. The bridge uses `taskkill /T /F /PID <pid>`, limited to 5 seconds. After a
-   service has crashed, its children can't be reached through it any more, so the bridge also
-   looks them up in the process table (they still name the dead parent) and kills them. On Linux
+   stay open. The bridge uses `taskkill /T /F /PID <pid>`, limited to 5 seconds. On Linux
    and macOS each service runs in its own process group, which gets `SIGTERM` and, 3 seconds
    later, `SIGKILL`,
 3. writes any buffered console output. The log file is written line by line as it goes, so it is

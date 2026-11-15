@@ -54,7 +54,7 @@ sequenceDiagram
     participant St as GET /status
 
     P--xS: exit code 1
-    S->>OS: taskkill /T /F, then the orphans found in the process table (browsers)
+    S->>OS: kill the rest of its tree (browsers)
     S->>S: nextAfterCrash(crashesInRow, ranForMs) → restart in 1 s
     S->>S: state "crashed", log "playwright exited with code 1, restart 1 in 1 s"
     St-->>St: state "crashed", exitCode 1, restarts 0

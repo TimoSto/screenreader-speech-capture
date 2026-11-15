@@ -7,10 +7,8 @@ import { eventually } from '../../../../test/helpers.js';
 import { MemoryLogger } from '../../../../test/fakes.js';
 import {
   type Exec,
-  findDescendants,
   killAllTreesNow,
   killTree,
-  parseProcessTable,
   pipeLines,
   trackTree,
   treeSpawnOptions,
@@ -80,63 +78,20 @@ describe('killTree', () => {
   );
 });
 
-describe('findDescendants', () => {
-  const table = [
-    { pid: 10, parentPid: 1, createdMs: 1000 },
-    { pid: 11, parentPid: 10, createdMs: 1100 },
-    { pid: 12, parentPid: 11, createdMs: 1200 },
-    { pid: 13, parentPid: 99, createdMs: 1300 },
-    // Reused pid: its recorded parent is 10, but it was created before 10 started.
-    { pid: 14, parentPid: 10, createdMs: 500 },
-  ];
-
-  it('finds children at any depth, also of a parent that no longer exists', () => {
-    expect(findDescendants(table, 10, 1000).sort()).toEqual([11, 12]);
-    // 10 itself is gone from the table (it died); its children still name it.
-    expect(findDescendants(table.slice(1), 10, 1000).sort()).toEqual([11, 12]);
-  });
-
-  it('ignores rows created before the root started (pid reuse)', () => {
-    expect(findDescendants(table, 10, 1000)).not.toContain(14);
-  });
-});
-
-describe('parseProcessTable', () => {
-  it('reads `pid parentPid createdMs` lines and skips anything else', () => {
-    expect(parseProcessTable('4 0 1\r\n10 4 2000\nnoise\n\n')).toEqual([
-      { pid: 4, parentPid: 0, createdMs: 1 },
-      { pid: 10, parentPid: 4, createdMs: 2000 },
-    ]);
-  });
-});
-
 describe('killTree on Windows', () => {
-  const exited = () => {
-    const child = spawn(process.execPath, ['-e', ''], treeSpawnOptions);
-    return once(child, 'exit').then(() => child);
-  };
-
-  it('still kills what a child that has already exited left behind', async () => {
-    const child = await exited();
-    trackTree(child);
-    const killed: string[] = [];
+  it('runs taskkill /T /F for a running child', async () => {
+    const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], treeSpawnOptions);
+    const calls: string[][] = [];
     const exec: Exec = (file, args) => {
-      if (file === 'powershell') {
-        const created = Date.now() + 1000;
-        return Promise.resolve({
-          ok: true,
-          stdout: `${child.pid} 1 ${created}\n7001 ${child.pid} ${created}\n7002 7001 ${created}\n`,
-        });
-      }
-      killed.push(args.at(-1)!);
+      calls.push([file, ...args]);
+      child.kill('SIGKILL');
       return Promise.resolve({ ok: true, stdout: '' });
     };
     await killTree(child, { platform: 'win32', exec });
-    // The child is gone, so no taskkill for it; its orphans are killed.
-    expect(killed.sort()).toEqual(['7001', '7002']);
+    expect(calls).toEqual([['taskkill', '/T', '/F', '/PID', String(child.pid)]]);
   });
 
-  it('does not hang when taskkill and the process query fail', async () => {
+  it('does not hang when taskkill fails', async () => {
     const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], treeSpawnOptions);
     const exec: Exec = () => Promise.resolve({ ok: false, stdout: '' });
     const started = Date.now();

@@ -208,11 +208,15 @@ server would stay behind. A Job Object (`KILL_ON_JOB_CLOSE`) would make the OS e
 even if the bridge dies, but Node can't create one without a native addon, which the bridge
 doesn't ship (it installs nothing native, and the VM has no compiler).
 
-Instead the bridge does it itself: `taskkill /T /F` raced against a 5 s limit, then a look into
-the process table for descendants of the dead process (Windows keeps the parent pid of an orphan,
-and a creation time earlier than the parent's start rules out a reused pid), and a synchronous
-kill of every tracked tree right before a forced exit (watchdog, second Ctrl+C). What this can't
-cover is a bridge that is killed without a chance to run code (Task Manager, log off). The next
-start then refuses to use a port such an orphan still holds, instead of treating the orphan as its
-own service. If that case turns out to matter, a small helper process holding the Job Object is
-the way to close it.
+Instead the bridge does it itself: `taskkill /T /F` raced against a 5 s limit, and a synchronous
+kill of every tracked tree right before a forced exit (watchdog, second Ctrl+C).
+
+Not covered, on purpose for now: the orphans of a child that already died on its own. `taskkill
+/T` can't reach them through the dead parent. A lookup in the process table (PowerShell
+`Get-CimInstance Win32_Process`, descendants by parent pid and creation time) would find them, but
+it is unverified that they exist: Playwright starts Chromium over a pipe, and Chromium usually
+exits when the pipe closes. Check on the VM (kill the run-server with a browser connected, see if
+`chrome.exe` stays) before adding it. Also not covered: a bridge killed with no chance to run
+code (Task Manager, log off). The next start refuses to use a port such an orphan still holds,
+instead of treating the orphan as its own service. A small helper process holding the Job Object
+would close that.
