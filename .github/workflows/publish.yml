@@ -92,6 +92,11 @@ jobs:
       - name: Install npm with staged publishing
         if: env.VERSION != ''
         run: npm install -g npm@11.15.0
+      # The package's workspace dependencies first: the bridge ships the UI build (`packages/ui`),
+      # which its own build script copies but does not make.
+      - name: Build workspace dependencies
+        if: env.VERSION != ''
+        run: pnpm --filter "${{ matrix.name }}^..." run --if-present build
       - name: Set version and build
         if: env.VERSION != ''
         working-directory: ${{ matrix.dir }}
