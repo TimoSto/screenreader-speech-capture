@@ -9,8 +9,20 @@ name: Publish
 # CI only *stages* the packages (`npm stage publish`, trusted publishing, no token). They go live
 # when the maintainer approves them on npmjs.com with 2FA. After that, run "Finalize releases" to
 # publish the draft GitHub releases.
+#
+# The `package` input limits a run to one package; `both` (the default) releases whatever has
+# releasing commits. Packages that are not selected are skipped.
 on:
   workflow_dispatch:
+    inputs:
+      package:
+        description: Which package to release
+        type: choice
+        options:
+          - both
+          - bridge
+          - client
+        default: both
 
 permissions:
   contents: read
@@ -67,7 +79,8 @@ jobs:
             name: screenreader-speech-capture-client
             dir: packages/client
     env:
-      VERSION: ${{ needs.determine-version.outputs[format('{0}_version', matrix.scope)] }}
+      # Empty (nothing to publish) when the `package` input selects the other package.
+      VERSION: ${{ (inputs.package == 'both' || inputs.package == matrix.scope) && needs.determine-version.outputs[format('{0}_version', matrix.scope)] || '' }}
       NPM_TAG: ${{ needs.determine-version.outputs[format('{0}_npm_tag', matrix.scope)] }}
       RELEASE: ${{ needs.determine-version.outputs[format('{0}_release', matrix.scope)] }}
       TAG: ${{ matrix.name }}@${{ needs.determine-version.outputs[format('{0}_version', matrix.scope)] }}

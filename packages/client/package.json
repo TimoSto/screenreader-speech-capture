@@ -36,6 +36,10 @@
     "tsdown": "0.23.7",
     "valibot": "1.5.0"
   },
+  "homepage": "https://github.com/TimoSto/screenreader-speech-capture/tree/main/packages/client#readme",
+  "bugs": {
+    "url": "https://github.com/TimoSto/screenreader-speech-capture/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/TimoSto/screenreader-speech-capture.git",
