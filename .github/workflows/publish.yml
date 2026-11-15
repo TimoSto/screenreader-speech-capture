@@ -92,12 +92,14 @@ jobs:
       - name: Install npm with staged publishing
         if: env.VERSION != ''
         run: npm install -g npm@11.15.0
+      # The version is built into the output (the CLI reports it), so it is set first. Then the
+      # package and its workspace dependencies build in order: the bridge ships the UI build
+      # (`packages/ui`), which its own build script copies but does not make. `shared` has no build.
       - name: Set version and build
         if: env.VERSION != ''
-        working-directory: ${{ matrix.dir }}
         run: |
-          npm pkg set version="$VERSION"
-          pnpm run build
+          (cd "${{ matrix.dir }}" && npm pkg set version="$VERSION")
+          pnpm --filter "${{ matrix.name }}..." run --if-present build
       - name: Stage on npm
         if: env.VERSION != ''
         working-directory: ${{ matrix.dir }}

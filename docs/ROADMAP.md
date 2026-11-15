@@ -60,8 +60,10 @@ GitHub issues. This file only tracks milestones.
 
 ### M5 Web UI ⬜
 
-- [ ] Bridge serves the built UI ([static files](implementation/architecture.md#serving-the-ui))
-- [ ] ESLint hexagon rules for `packages/ui` (components must not call `fetch`)
+- [x] SvelteKit BFF (`packages/ui`, adapter-node) mounted in the bridge on the HTTP port and shipped in
+      its package ([the web UI](implementation/architecture.md#the-web-ui-a-sveltekit-bff))
+- [ ] ESLint hexagon rules for `packages/ui` (components must not call `fetch`; the rule that the
+      UI imports no bridge or client code exists)
 - [ ] Layout, status bar and status panel (polls `GET /status`, or an SSE `status` event instead
       of polling)
 - [ ] Context pane: sessions (grouped by run, follow current, new / end session)

@@ -1,4 +1,6 @@
 pnpm-lock.yaml
 dist/
+build/
+.svelte-kit/
 coverage/
 *.md

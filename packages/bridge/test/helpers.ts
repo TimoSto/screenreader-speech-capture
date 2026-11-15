@@ -65,7 +65,7 @@ export async function start(
   patch: unknown = {},
   options: { store?: MemoryConfigStore } & Pick<
     TestSeams,
-    'sinks' | 'ssePingMs' | 'playwrightLaunch' | 'mcpLaunch' | 'clock' | 'inputInjector'
+    'sinks' | 'ssePingMs' | 'playwrightLaunch' | 'mcpLaunch' | 'clock' | 'inputInjector' | 'uiDir'
   > = {},
 ): Promise<Bridge> {
   const { store, sinks, ...rest } = options;

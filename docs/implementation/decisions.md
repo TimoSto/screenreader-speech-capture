@@ -251,3 +251,23 @@ a rule the composition root must not hold: `BridgeLifecycleService` (idempotent 
 order, error aggregation), `ChildServicesService` (what a config change does to each child
 service), `StatusService`, `SpeechService` (`RecordSpeech`) and the client's `ClientConfigService`
 (source precedence). The layer rules in `eslint.config.js` stay as they are.
+
+## The web UI is a SvelteKit BFF inside the bridge process
+
+The UI is a SvelteKit app with `adapter-node`. Its server code (a backend for the frontend) calls the
+bridge's public HTTP API over loopback; the browser never calls the API directly. The bridge loads the
+built handler in its own process and serves it on the same HTTP port as the API.
+
+1. **One contract.** The BFF is a client of the public API like any other (every answer is checked
+   against the schemas in `shared`), so the UI can do nothing a client can't, and `packages/ui` imports
+   no bridge code.
+2. **One port, one lifecycle.** No CORS, no extra port to configure or open in the firewall, and the UI
+   starts and stops with the bridge (`startBridge`).
+3. **Shipped in the bridge package.** The build output is copied to `dist/ui` and has no runtime
+   dependencies, so `npm i -g screenreader-speech-capture` is the whole install.
+
+Costs: the UI is a server, not static files, so it runs in the bridge's Node process (a crash in a
+load function is caught by SvelteKit, not the bridge); and the UI needs the bridge's API to be up,
+which is true whenever the bridge runs. Considered and rejected: static files with the browser calling
+the API (no place for server-side logic or later authentication), a separate port (more configuration
+and a second origin), and a supervised child process (heavier than needed for a handler).

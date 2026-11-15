@@ -1,7 +1,9 @@
 // @ts-check
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
+import svelte from 'eslint-plugin-svelte';
 import globals from 'globals';
+import svelteParser from 'svelte-eslint-parser';
 import tseslint from 'typescript-eslint';
 import { builtinModules } from 'node:module';
 
@@ -66,8 +68,11 @@ const otherPackage = {
       '**/packages/client/**',
       'screenreader-speech-capture-client',
       'screenreader-speech-capture-client/*',
+      '**/packages/ui/**',
+      '@screenreader-speech-capture/ui',
     ],
-    message: 'The bridge must not import the client. They share only the contract in shared.',
+    message:
+      'The bridge must not import the client or the UI. They share only the contract in shared (the bridge mounts the UI build at run time).',
   },
   client: {
     group: [
@@ -171,6 +176,36 @@ const architecture = [
     ignores: ['**/*.test.ts'],
     rules: { 'no-restricted-imports': ['error', { patterns: [otherPackage[pkg]] }] },
   })),
+  {
+    // The web UI is a BFF: it reaches the bridge over HTTP, never through its code.
+    files: ['packages/ui/src/**/*.{ts,svelte}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/packages/bridge/**',
+                '**/packages/client/**',
+                'screenreader-speech-capture',
+                'screenreader-speech-capture/*',
+                'screenreader-speech-capture-client',
+                'screenreader-speech-capture-client/*',
+              ],
+              message:
+                'The UI talks to the bridge over HTTP. It shares only the contract in shared.',
+            },
+            {
+              group: [`${SHARED}/platform-paths`],
+              message:
+                'platform-paths is Node-only; the browser part of the UI must not import it.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   ...perPackage(
     'domain',
     [onlyRelativeAndShared, adapters, application, compositionRoot],
@@ -225,7 +260,16 @@ const architecture = [
 ];
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**'] },
+  {
+    ignores: [
+      '**/dist/**',
+      '**/coverage/**',
+      '**/node_modules/**',
+      // The web UI's build output (SvelteKit, adapter-node) and generated files.
+      'packages/ui/build/**',
+      '**/.svelte-kit/**',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {
@@ -237,6 +281,7 @@ export default tseslint.config(
             'eslint.config.js',
             'eslint.architecture.js',
             'packages/*/test/fixtures/*.mjs',
+            'packages/*/test/fixtures/*/*.js',
           ],
         },
         tsconfigRootDir: import.meta.dirname,
@@ -248,6 +293,15 @@ export default tseslint.config(
     },
   },
   ...architecture,
+  // The web UI (packages/ui): Svelte files, type-checked like the rest.
+  ...svelte.configs['flat/recommended'],
+  {
+    files: ['packages/ui/**/*.svelte'],
+    languageOptions: {
+      parser: svelteParser,
+      parserOptions: { parser: tseslint.parser, extraFileExtensions: ['.svelte'] },
+    },
+  },
   {
     files: ['**/*.test.ts'],
     rules: {

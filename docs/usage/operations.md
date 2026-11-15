@@ -122,6 +122,7 @@ always starts in the same column:
 [bridge]            2026-11-07T14:03:10.002Z INFO  starting, version 0.3.0, config C:\Users\test\AppData\Roaming\screenreader-speech-capture\config.json
 [speech-capture]    2026-11-07T14:03:10.015Z INFO  listening on 127.0.0.1:4449, encoding windows-1252
 [http-api]          2026-11-07T14:03:10.031Z INFO  listening on 0.0.0.0:5151, reachable at http://192.168.122.57:5151, http://localhost:5151
+[http-api]          2026-11-07T14:03:10.031Z INFO  web UI at 0.0.0.0:5151, reachable at http://192.168.122.57:5151, http://localhost:5151
 [http-api]          2026-11-07T14:03:10.031Z INFO  Playwright server at 0.0.0.0:5151, reachable at ws://192.168.122.57:5151/playwright, ws://localhost:5151/playwright
 [http-api]          2026-11-07T14:03:10.031Z INFO  Playwright MCP at 0.0.0.0:5151, reachable at http://192.168.122.57:5151/playwright-mcp, http://localhost:5151/playwright-mcp
 [playwright-server] 2026-11-07T14:03:11.410Z INFO  Listening on ws://127.0.0.1:3000/
@@ -136,7 +137,8 @@ always starts in the same column:
 
 On `0.0.0.0` (the default `--host`), the `http-api` line lists the URLs the API can be reached at:
 the machine's IPv4 addresses, then `localhost`. Use one of them as the client's
-[bridge URL](client.md#bridge-url). The `Playwright server at …` line does the same for the
+[bridge URL](client.md#bridge-url). The `web UI at …` line (only when the UI is installed) names the address to open in a browser: the
+same base URL. The `Playwright server at …` line does the same for the
 Playwright server: its `ws://` URLs are the `wsEndpoint` to connect to. The `Playwright MCP at …`
 line lists the URLs for MCP clients. The `[bridge] … running` lines don't name an address: the
 services listen on loopback, which only the bridge uses, and the proxy lines above are where to
@@ -152,6 +154,7 @@ message.
 | `[config]` | grey | Loading and changing the configuration |
 | `[speech-capture]` | green | TCP listener: connections, cut lines, received lines (`debug`, file only, see above) |
 | `[http-api]` | blue | HTTP server and requests (`debug`), SSE clients |
+| `[web-ui]` | bright cyan | Loading the web UI (errors only: it failed to start) |
 | `[native-input]` | magenta | Clicks and key presses |
 | `[playwright-server]` | cyan | Output of the Playwright server child process |
 | `[playwright-mcp]` | bright blue | Output of the Playwright MCP child process |

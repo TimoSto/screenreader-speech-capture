@@ -4,11 +4,17 @@ How to build, run and test the project without (and with) a Windows VM.
 
 ```bash
 pnpm install
-pnpm dev          # bridge (watch); with the UI (M5) also the SvelteKit dev server
+pnpm dev          # bridge (watch)
+pnpm dev:ui       # the web UI's Vite dev server; its BFF calls the bridge at http://127.0.0.1:5151 (SR_BRIDGE_API_URL)
 pnpm test         # unit + integration tests
-pnpm build        # compiles the bridge and the client (and, from M5, the UI into the bridge); the client build also writes its .d.ts and fails if publint/attw find a broken package
+pnpm build        # builds the UI first, then the bridge (which copies the UI build into `dist/ui`) and the client; the client build also writes its .d.ts and fails if publint/attw find a broken package
 pnpm openapi      # regenerates docs/usage/openapi.yaml from packages/shared (schemas + openapi/spec.ts)
 ```
+
+To develop the UI against a bridge on the VM, copy `packages/ui/.env.example` to `packages/ui/.env.local`
+(gitignored) and set `SR_BRIDGE_API_URL=http://<vm-ip>:5151`. Only `pnpm dev:ui` reads it, and a variable
+set in the shell wins. The BFF's server-side calls go through the bridge's [Host check](../usage/security.md#host-and-origin),
+so use the VM's IP address or its own host name; any other name needs `--allowed-hosts` on the bridge.
 
 You don't need Windows or a screen reader for most of the work. A fake speech sender stands in for the
 SAPI voice:

@@ -47,7 +47,11 @@ for (const pkg of config.packages) {
         pkg,
         last,
         commits,
-        changed.some((f) => [pkg.dir, ...config.sharedDirs].some((d) => f.startsWith(`${d}/`))),
+        changed.some((f) =>
+          [pkg.dir, ...(pkg.extraDirs ?? []), ...config.sharedDirs].some((d) =>
+            f.startsWith(`${d}/`),
+          ),
+        ),
         slug,
         run,
       );

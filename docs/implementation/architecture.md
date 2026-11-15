@@ -11,13 +11,13 @@ pnpm monorepo:
 ```
 packages/
   bridge/   Node/TS process: TCP listener, HTTP API, native input, process supervisor (hexagonal)
-  ui/       SvelteKit app (adapter-static), served by the bridge (hexagonal-lite), planned (M5)
+  ui/       SvelteKit BFF (adapter-node), mounted in the bridge process (hexagonal-lite)
   client/   npm lib + CLI (`screenreader-speech-capture-client`) + Playwright fixture
             + agent skill (M6), for tests and agents
   shared/   HTTP API contract (DTO types), used by bridge, UI and client
 ```
 
-Published packages: `screenreader-speech-capture` (the bridge, with the UI bundled in from M5) and
+Published packages: `screenreader-speech-capture` (the bridge, with the built UI in `dist/ui`) and
 `screenreader-speech-capture-client`. `shared` is bundled into both and isn't published on its own.
 The client never imports from the bridge, so test projects don't pull in the bridge's dependencies
 (such as robotjs).
@@ -82,7 +82,7 @@ packages/bridge/src/
   adapters/
     in/tcp/          socket listener + wire-format parsers → RecordSpeech;
                      reports its listener and connections → TrackCapture
-    in/http/         server, router, request/response helpers; serves the built UI
+    in/http/         server, router, request/response helpers; hands every other path to the UI
       routes/        one file per resource → driving ports
       sse/           open SSE streams (SseHub) and the frame format
       proxy/         passes /playwright and /playwright-mcp through to the child services
@@ -107,8 +107,6 @@ packages/bridge/src/
                      Rules belong in the services; this only constructs and connects
   bin/cli.ts         executable: parses argv (adapters/in/cli), starts main.ts
 ```
-
-Planned, not in the code yet: serving the built UI ([M5](../ROADMAP.md#m5-web-ui-)).
 
 **Dependency rule:** `adapters → application → domain`. The domain imports only `shared`, the application
 imports only the domain, `shared` and its own ports, and the adapters implement or call the ports. Only the
@@ -201,33 +199,44 @@ can still expose one `speech` object composed from both ports. To avoid a hand-w
 method per function in `main.ts`, generate the delegation (a small `delegate()` helper or a
 `Proxy`) or expose the services through a factory.
 
-## UI: SvelteKit, hexagonal-lite
+## The web UI: a SvelteKit BFF
 
-*(planned, [M5](../ROADMAP.md#m5-web-ui-))*
+`packages/ui` is a SvelteKit app built with `adapter-node` that acts as a **backend for the frontend**:
+the browser talks only to the UI's server code, and that code calls the bridge's public HTTP API as
+the real backend ([decision](decisions.md#the-web-ui-is-a-sveltekit-bff-inside-the-bridge-process)).
 
 ```
 packages/ui/src/
-  lib/
-    core/        client-side domain + use cases (filter/search log, config draft & validation)
-                 and ports: SpeechFeed, SessionsApi, StatusApi, InputApi, ConfigApi
-    adapters/    HTTP/SSE implementations of those ports (talk to the bridge API)
-    stores/      Svelte state built on the use cases; ports are wired to adapters here
-  routes/        pages: Live log (with context pane and actions), Settings, Setup (NVDA / JAWS docs);
-                 status bar + status panel in the layout
+  env / hooks      (none yet)
+  lib/server/      the BFF's only way to the bridge: bridge-api.ts (fetch + schema check of every answer)
+  routes/          pages and their `+page.server.ts` / `+layout.server.ts` load functions
 ```
 
-Components never call `fetch` directly. They go through the ports, so the UI can be developed and
-tested against fake adapters without a running bridge. `eslint.config.js` gets hexagon rules for
-`packages/ui` that enforce this.
+Planned for the pages ([M5](../ROADMAP.md#m5-web-ui-)): a hexagon-lite layout with `lib/core`
+(client-side use cases and the ports `SpeechFeed`, `SessionsApi`, `StatusApi`, `InputApi`,
+`ConfigApi`), `lib/adapters` (their HTTP/SSE implementations) and `lib/stores`, so components never
+call `fetch` and can be tested against fake adapters. ESLint rules for that don't exist yet. The one
+rule that does: `packages/ui` never imports bridge or client code, and the bridge never imports the UI.
 
 ### Serving the UI
 
-The API `Router` (`adapters/in/http/router.ts`) only matches exact `METHOD path` keys under
-`/api/v1` and stays as it is. A separate `StaticAssets` handler in `adapters/in/http/` serves
-everything else: the built SvelteKit app with an SPA fallback to `index.html`, long cache headers
-for hashed assets, correct content types and path-traversal safety. The build copies the UI to
-`packages/bridge/dist/ui`, resolved relative to `import.meta.url` at runtime and listed in the
-package's `files`.
+The build of `packages/ui` (`build/`, with `handler.js`) is copied to `packages/bridge/dist/ui` by the
+bridge's build (tsdown `copy`; the bridge depends on the UI in the workspace, so `pnpm build` builds
+the UI first) and ships in the package's `files`. It has no runtime dependencies: all UI
+dependencies are dev dependencies, so `adapter-node` bundles them.
+
+At start the composition root (`composition/ui.ts`) checks for `ui/handler.js` next to the bundled
+`cli.mjs`. If it is there, it passes a `UiHandler` to `HttpServer`; if not (running from source, as in
+tests), there is no UI and the paths answer `404`. `HttpServer` sends a request to the UI when it is
+not the API (`/api/v1…`) and no proxied service (`/playwright`, `/playwright-mcp`) claims it. The
+Host and origin checks run first, so they cover the UI too. The API `Router` is unchanged.
+
+Once the HTTP port is known (it can be `0` in tests), the bridge sets `SR_BRIDGE_API_URL` to its own
+loopback address and loads `handler.js` (SvelteKit reads its environment when it loads). Until then a
+request waits; if loading fails, the error is logged and the UI answers `503` while the API keeps
+working. The BFF reads the variable per request and falls back to `http://127.0.0.1:5151`, so
+`pnpm dev:ui` (the Vite dev server) works next to `pnpm dev`. See the
+[flow](flows/web-ui.md).
 
 `packages/shared` holds only the **API contract**: the DTOs as valibot schemas, the protocol limits
 and a check function ([decisions](decisions.md#the-api-contract-is-valibot-schemas)). Each hexagon

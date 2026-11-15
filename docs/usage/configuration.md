@@ -70,7 +70,7 @@ curl -X PUT $VM/api/v1/config -H 'content-type: application/json' -d '{"buffer":
 | `--tcp-port <n>` | `4449` | Port the socket voice connects to (the default voice of `text-to-socket-engine` uses 4449). |
 | `--tcp-encoding <enc>` | `windows-1252` | Character encoding of the incoming text: the VM's ANSI code page (see [Wire format](speech-capture.md#wire-format)). |
 | `--host <addr>` | `0.0.0.0` | Interface for HTTP, which is reached remotely. The Playwright server and MCP are reached through it ([Remote Playwright & MCP](playwright-mcp.md)). |
-| `--http-port <n>` | `5151` | HTTP API, the paths `/playwright` and `/playwright-mcp` (see [Remote Playwright & MCP](playwright-mcp.md)), and the web UI ([M5](../ROADMAP.md#m5-web-ui-)). |
+| `--http-port <n>` | `5151` | HTTP API, the paths `/playwright` and `/playwright-mcp` (see [Remote Playwright & MCP](playwright-mcp.md)), and the [web UI](web-ui.md). |
 | `--allowed-hosts <names>` | | More host names the HTTP port answers to, comma-separated (`bridge.lab.example,vm42`), `*` for any ([Host and origin](security.md#host-and-origin)). |
 | `--playwright-port <n>` | `3000` | Internal port of the Playwright server, on `127.0.0.1`. Clients use `/playwright` on the HTTP port. |
 | `--playwright-version <v>` | *(bundled)* | Playwright version of the server, exact (`1.65.0`). Must match the clients (see [Version](playwright-mcp.md#version)). |
