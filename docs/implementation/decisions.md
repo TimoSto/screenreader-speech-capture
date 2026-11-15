@@ -220,3 +220,12 @@ exits when the pipe closes. Check on the VM (kill the run-server with a browser 
 code (Task Manager, log off). The next start refuses to use a port such an orphan still holds,
 instead of treating the orphan as its own service. A small helper process holding the Job Object
 would close that.
+
+## A wait's regex is not sandboxed
+
+A `regex` wait runs on the capture path, so a catastrophic pattern (`(a+)+$`, `.*.*.*.*!`) blocks
+the event loop while it runs. The bridge only limits the length and rejects an empty pattern. A
+nested-repeat check was tried and dropped: it can't prove a pattern safe (`.*.*.*.*!` passed it),
+so it only gave false confidence. A linear-time engine (`re2js`) would fix it, but adds a
+dependency and a different syntax to a developer tool whose callers write their own patterns.
+A slow pattern is the author's to fix.
