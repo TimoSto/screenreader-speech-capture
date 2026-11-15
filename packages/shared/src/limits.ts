@@ -34,3 +34,9 @@ export const EXACT_VERSION_PATTERN = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
 
 /** A host name without port or scheme, or `*` (`http.allowedHosts`). */
 export const HOST_NAME_PATTERN = /^(\*|[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?)$/;
+
+/** Whether `text` is a usable label: not empty after trimming, at most `max` characters trimmed. */
+export const isTrimmedLabel = (text: string, max: number): boolean => {
+  const trimmed = text.trim();
+  return trimmed !== '' && trimmed.length <= max;
+};

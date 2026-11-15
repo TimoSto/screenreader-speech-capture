@@ -18,6 +18,8 @@ export const END = '    # END GENERATED';
 export function componentSchemas(): Record<string, unknown> {
   return toJsonSchemaDefs(API_SCHEMAS, {
     target: 'draft-2020-12',
+    // Rules JSON Schema can't express (trimmed length, TextDecoder labels) stay in the prose.
+    ignoreActions: ['check'],
     overrideRef: ({ referenceId }) => `#/components/schemas/${referenceId}`,
   });
 }

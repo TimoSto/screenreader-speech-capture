@@ -11,18 +11,14 @@ export class FsConfigStore implements ConfigStore {
   constructor(readonly location: string) {}
 
   async load(): Promise<unknown> {
-    let text: string;
+    const text = await this.read(this.location);
+    if (text === undefined) return undefined;
     try {
-      text = await fs.readFile(this.location, 'utf8');
+      return parseJson(text);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
-      throw new Error(`Cannot read the config file ${this.location}: ${(error as Error).message}`, {
-        cause: error,
-      });
-    }
-    try {
-      return JSON.parse(text) as unknown;
-    } catch (error) {
+      // A hard reset can leave an empty or cut-off file: the last good save is the `.bak`.
+      const backup = await this.readBackup();
+      if (backup !== undefined) return backup;
       throw new Error(
         `The config file ${this.location} is not valid JSON: ${(error as Error).message}`,
         { cause: error },
@@ -30,16 +26,65 @@ export class FsConfigStore implements ConfigStore {
     }
   }
 
-  /** Writes a temporary file and renames it, so a crash never leaves half a file. */
+  /**
+   * Writes a temporary file, flushes it to disk and renames it, so a crash never leaves half a
+   * file. The previous file is kept as `config.json.bak` for `load` to fall back on.
+   */
   async save(file: ConfigPatch): Promise<void> {
     await fs.mkdir(path.dirname(this.location), { recursive: true });
     const temporary = `${this.location}.${process.pid}.tmp`;
     try {
-      await fs.writeFile(temporary, `${JSON.stringify(file, null, 2)}\n`, 'utf8');
+      const handle = await fs.open(temporary, 'w');
+      try {
+        await handle.writeFile(`${JSON.stringify(file, null, 2)}\n`, 'utf8');
+        await handle.sync();
+      } finally {
+        await handle.close();
+      }
+      // Only a file that parses replaces the backup, so a broken one never overwrites a good one.
+      if (await this.isValid(this.location)) {
+        await fs.copyFile(this.location, `${this.location}.bak`);
+      }
       await fs.rename(temporary, this.location);
     } catch (error) {
       await fs.rm(temporary, { force: true });
       throw error;
     }
   }
+
+  private async read(file: string): Promise<string | undefined> {
+    try {
+      return await fs.readFile(file, 'utf8');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+      throw new Error(`Cannot read the config file ${file}: ${(error as Error).message}`, {
+        cause: error,
+      });
+    }
+  }
+
+  private async readBackup(): Promise<unknown> {
+    try {
+      const text = await this.read(`${this.location}.bak`);
+      return text === undefined ? undefined : parseJson(text);
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async isValid(file: string): Promise<boolean> {
+    try {
+      const text = await this.read(file);
+      if (text === undefined) return false;
+      parseJson(text);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+/** `JSON.parse` that accepts a leading byte order mark (Notepad and PowerShell write one). */
+function parseJson(text: string): unknown {
+  return JSON.parse(text.replace(/^\uFEFF/, '')) as unknown;
 }
