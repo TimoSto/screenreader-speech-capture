@@ -1,0 +1,5 @@
+/* Self-hosted: the VM may have no internet. Vite bundles the woff2 files. */
+@import '@fontsource-variable/roboto-flex/opsz.css';
+@import '@fontsource/roboto-mono/400.css';
+@import '@fontsource/roboto-mono/500.css';
+@import '@fontsource/material-symbols-outlined/latin-400.css';

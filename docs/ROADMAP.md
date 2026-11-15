@@ -69,6 +69,8 @@ GitHub issues. This file only tracks milestones.
 - [ ] Context pane: sessions (grouped by run, follow current, new / end session)
 - [ ] Live log per session (follow, filter, markers, export, wipe)
 - [ ] Actions panel: keys, presets, click, delayed send (needs M4)
+- [x] Explicit light / dark toggle in the top bar (`data-theme` on `<html>`, choice remembered in
+      `localStorage`). The UI starts light and ignores `prefers-color-scheme`
 - [ ] Settings (validation, services)
 - [ ] Setup page with check button
 - [ ] Accessibility of the UI itself (no feedback loop)

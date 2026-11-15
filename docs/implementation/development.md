@@ -73,7 +73,7 @@ from the commit titles. PRs are squash-merged, so the commit title is the **PR t
 | `<any type>(…)!: …` | major (breaking change), also from 0.x: the first `!` releases `1.0.0` |
 | `refactor`, `docs`, `test`, `chore`, `ci`, `build`, `revert` | no release |
 
-- Scopes: `bridge` and `client` select the packages. `shared`, `fake-speech`, `release` and `deps`
+- Scopes: `bridge` and `client` select the packages. `shared`, `fake-speech`, `release`, `ui` and `deps`
   are allowed but release nothing. `fix(bridge,client): …` releases both.
 - A releasing title (`feat`, `fix`, `perf` or `!`) must name at least one package. A change in
   `packages/shared` names the packages it affects, since `shared` is bundled into both.

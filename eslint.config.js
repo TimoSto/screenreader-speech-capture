@@ -382,7 +382,8 @@ export default tseslint.config(
   // The web UI (packages/ui): Svelte files, type-checked like the rest.
   ...svelte.configs['flat/recommended'],
   {
-    files: ['packages/ui/**/*.svelte'],
+    // `*.svelte.ts` (stores with runes) goes through the Svelte parser too, so it needs the TS parser.
+    files: ['packages/ui/**/*.svelte', 'packages/ui/**/*.svelte.ts'],
     languageOptions: {
       parser: svelteParser,
       parserOptions: { parser: tseslint.parser, extraFileExtensions: ['.svelte'] },
