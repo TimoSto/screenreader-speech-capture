@@ -19,6 +19,8 @@ export class TcpListener {
   private server: net.Server | null = null;
   private readonly sockets = new Set<net.Socket>();
   private nextConnectionId = 1;
+  /** Only the first connection is news; a voice that reconnects per phrase would flood the log. */
+  private announced = false;
 
   constructor(
     private readonly recordSpeech: RecordSpeech,
@@ -34,7 +36,8 @@ export class TcpListener {
     server.on('error', (error) => this.logger.error(`TCP listener error: ${error.message}`));
     this.server = server;
     this.track.listening({ host: settings.host, port, encoding: settings.encoding });
-    this.logger.info(
+    // `debug`: the summary logged when the bridge is ready has the address (composition/summary.ts).
+    this.logger.debug(
       `listening on ${describeAddress(settings.host, port)}, encoding ${settings.encoding}`,
     );
     return port;
@@ -57,13 +60,15 @@ export class TcpListener {
     const id = this.nextConnectionId++;
     let voice: string | null = null;
     this.track.connectionOpened(id);
-    this.logger.info(`connection ${id} opened`);
+    const log = this.announced ? 'debug' : 'info';
+    this.announced = true;
+    this.logger[log](`connection ${id} opened`);
 
     const parser = new TextToSocketParser(settings.encoding, settings.maxLineBytes, {
       header: (header) => {
         voice = header;
         this.track.voiceIdentified(id, header);
-        this.logger.info(`connection ${id}: voice=${header}`);
+        this.logger[log](`connection ${id}: voice=${header}`);
       },
       line: (text) => this.recordSpeech.record({ text, voice, connectionId: id }),
       lineCut: (max) => this.logger.warn(`connection ${id}: line longer than ${max} bytes, cut it`),
@@ -75,7 +80,7 @@ export class TcpListener {
       parser.end();
       this.sockets.delete(socket);
       this.track.connectionClosed(id);
-      this.logger.info(`connection ${id} closed`);
+      this.logger[log](`connection ${id} closed`);
     });
   }
 }

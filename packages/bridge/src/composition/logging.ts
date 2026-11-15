@@ -5,15 +5,19 @@ import { fileSink } from '../adapters/out/log/file-sink.js';
 import { defaultLogFile } from '../adapters/out/platform/paths.js';
 import type { Config } from '../domain/config/index.js';
 
+/** The startup banner: one fact per line, so each is easy to find. */
 function startupMessage(config: Config, version: string, configFile: string, file: string | null) {
   const { level, consoleSpeech } = config.log;
-  let message = `starting, version ${version}, config ${configFile}, log level ${level}`;
-  if (file !== null) message += `, log file ${file}`;
-  if (level !== 'debug') return `${message} (speech text is logged at debug)`;
-  if (consoleSpeech) return `${message} (speech text also on the console)`;
-  return file === null
-    ? `${message} (speech text is not shown: no log file)`
-    : `${message} (speech text goes to the log file only, not to the console)`;
+  const lines = [
+    `version ${version}`,
+    `config  ${configFile}`,
+    `log     level ${level}, ${file === null ? 'console only' : `file ${file}`}`,
+  ];
+  if (level !== 'debug') lines.push('speech text is logged at debug');
+  else if (consoleSpeech) lines.push('speech text also on the console');
+  else if (file === null) lines.push('speech text is not shown: no log file');
+  else lines.push('speech text goes to the log file only, not to the console');
+  return lines.join('\n');
 }
 
 function defaultSinks(config: Config): { sinks: LogSink[]; file: string } {

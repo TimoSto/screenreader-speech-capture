@@ -17,11 +17,11 @@ export async function createInputInjector(logger: Logger): Promise<InputInjector
       default?: RobotApi;
     } & RobotApi;
     const robot = module.default ?? module;
-    logger.info('native input is available (robotjs)');
+    logger.debug('native input is available (robotjs)');
     return new RobotjsInputInjector(robot);
   } catch (error) {
     const reason = `@jitsi/robotjs could not be loaded (${error instanceof Error ? error.message : String(error)})`;
-    logger.info(`native input is off: ${reason}`);
+    logger.warn(`native input is off: ${reason}`);
     return new DisabledInputInjector(reason);
   }
 }

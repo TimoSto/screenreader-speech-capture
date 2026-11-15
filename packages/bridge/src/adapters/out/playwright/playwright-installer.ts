@@ -24,7 +24,7 @@ export async function ensurePlaywright(options: EnsurePlaywrightOptions): Promis
     name: 'playwright',
     entry: 'cli.js',
   });
-  logger.info(`checking the Chromium of playwright ${version}`);
+  logger.debug(`checking the Chromium of playwright ${version}`);
   await run(process.execPath, [cli, 'install', '--no-shell', 'chromium'], signal ? { signal } : {});
   return cli;
 }

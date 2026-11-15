@@ -14,6 +14,7 @@ function setup(stopOrder: (calls: string[]) => Stoppable[] = () => []) {
     waits: { shutdown: () => void calls.push('waits shutdown') },
     startServices: () => new Promise<void>((resolve) => (servicesStarted = resolve)),
     stopOrder: stopOrder(calls),
+    readyMessage: () => 'ready in 0.0s',
     logger,
   });
   return { calls, logger, lifecycle, servicesStarted: () => servicesStarted() };
@@ -37,7 +38,7 @@ describe('BridgeLifecycleService', () => {
     servicesStarted();
     await flush();
     expect(calls).toEqual(['state ready']);
-    expect(logger.lines).toContain('info ready');
+    expect(logger.lines).toContain('info ready in 0.0s');
   });
 
   it('stops: state, then pending waits, then each part in order, once', async () => {

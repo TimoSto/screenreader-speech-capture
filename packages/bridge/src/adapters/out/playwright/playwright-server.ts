@@ -3,6 +3,7 @@ import type { ServiceSettings } from '../../../application/ports/out/process-sup
 import type { RestartPolicy } from '../../../domain/child-service.js';
 import { ChildProcessSupervisor } from '../process/child-process-supervisor.js';
 import type { Prepare } from '../process/types.js';
+import { listeningLine, quietOutput } from '../process/quiet-output.js';
 import { runCommand } from '../process/run-command.js';
 import { ensurePlaywright } from './playwright-installer.js';
 
@@ -27,7 +28,8 @@ interface PlaywrightServerOptions {
 
 /** Supervisor for `playwright run-server` in the configured version. */
 export function playwrightServer(options: PlaywrightServerOptions): ChildProcessSupervisor {
-  const { cacheRoot, output } = options;
+  const { cacheRoot } = options;
+  const output = quietOutput(options.output, listeningLine);
   const prepare: Prepare = async ({ host, port, version }, signal) => {
     const cli = await ensurePlaywright({
       version,

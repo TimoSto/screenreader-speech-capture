@@ -12,7 +12,7 @@ const config = (patch: ConfigPatch = {}) => mergeConfig(DEFAULT_CONFIG, patch);
 const message = (line: string) => line.replace(/^\[\S+\]\s+\S+ \S+\s+/, '');
 
 describe('createLogging', () => {
-  it('always writes the startup line, whatever the level', () => {
+  it('always writes the startup lines, whatever the level', () => {
     const out = sink();
     createLogging(config({ log: { level: 'error' } }), {
       version: '1.2.3',
@@ -20,13 +20,16 @@ describe('createLogging', () => {
       sinks: [out],
     });
     expect(out.lines.map(message)).toEqual([
-      'starting, version 1.2.3, config /cfg.json, log level error (speech text is logged at debug)',
+      'version 1.2.3',
+      'config  /cfg.json',
+      'log     level error, console only',
+      'speech text is logged at debug',
     ]);
   });
 
   it.each([
-    [{ consoleSpeech: true }, '(speech text also on the console)'],
-    [{ consoleSpeech: false }, '(speech text is not shown: no log file)'],
+    [{ consoleSpeech: true }, 'speech text also on the console'],
+    [{ consoleSpeech: false }, 'speech text is not shown: no log file'],
   ])('at debug, says where the speech text goes (%j)', (log, hint) => {
     const out = sink();
     createLogging(config({ log: { level: 'debug', ...log } }), {
@@ -34,6 +37,11 @@ describe('createLogging', () => {
       configLocation: 'c',
       sinks: [out],
     });
-    expect(message(out.lines[0]!)).toBe(`starting, version 1, config c, log level debug ${hint}`);
+    expect(out.lines.map(message)).toEqual([
+      'version 1',
+      'config  c',
+      'log     level debug, console only',
+      hint,
+    ]);
   });
 });

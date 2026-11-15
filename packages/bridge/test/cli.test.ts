@@ -40,7 +40,7 @@ describe.skipIf(process.platform === 'win32')('CLI lifecycle (real process)', ()
     await new Promise<void>((resolve, reject) => {
       child.stdout.on('data', (chunk: string) => {
         stdout += chunk;
-        if (/INFO {2}ready$/m.test(stdout)) resolve();
+        if (/INFO {2}ready in \d+\.\ds$/m.test(stdout)) resolve();
       });
       void exited.then(() => reject(new Error(`exited before ready:\n${stdout}`)));
     });
