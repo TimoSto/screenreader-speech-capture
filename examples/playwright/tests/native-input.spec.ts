@@ -1,0 +1,32 @@
+import { test, expect } from 'screenreader-speech-capture-client/playwright';
+
+const html = `<!doctype html>
+<html lang="en">
+  <head><title>Headings</title></head>
+  <body>
+    <h1>Start</h1>
+    <h2>Details</h2>
+  </body>
+</html>`;
+
+// A data: URL, not `setContent`: a page without a URL is gone after a reload (about:blank).
+const pageUrl = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+
+// The fixture gives the browser window OS-level focus before each test (turn off with
+// `speechCaptureFocus: false`), so native keys reach the page.
+test('the screen reader jumps to the next heading', async ({ page: p, speech, pressKeys }) => {
+  await p.goto(pageUrl);
+  // Browse mode: H moves to the next heading (NVDA / JAWS quick navigation).
+  const { entries } = await speech.record(() => pressKeys('h'));
+  expect(entries.map((e) => e.text).join(' ')).toMatch(/heading/i);
+});
+
+test('setFocus reloads the page and it is announced again', async ({
+  page: p,
+  setFocus,
+  speech,
+}) => {
+  await p.goto(pageUrl);
+  await setFocus(); // reloads the page
+  await speech.waitForOutput(/Headings/);
+});

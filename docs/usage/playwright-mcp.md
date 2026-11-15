@@ -37,7 +37,7 @@ const browser = await chromium.connect('ws://my-test-vm:5151/playwright', {
 ```
 
 Remote launches are **headless by default**. A headless browser has no window, so the screen reader
-can't read it. Always launch with `headless: false` (the fixture will do this for you, [M3](../ROADMAP.md#m3-playwright--mcp-)). The bridge
+can't read it. Always launch with `headless: false` (the [fixture](client.md#playwright-fixture) does this for you). The bridge
 doesn't install Playwright's headless-only browser, so a headless launch fails with
 `Executable doesn't exist at …chrome-headless-shell` instead of running unseen.
 

@@ -32,7 +32,7 @@ GitHub issues. This file only tracks milestones.
 - [x] Live feed: `onSpeech` (SSE) and CLI `tail`
 - [x] Stored bridge URL per user (`config set url`), used by CLI, library and fixture
 
-### M3 Playwright & MCP 🚧
+### M3 Playwright & MCP ✅
 
 - [x] Supervisor for the Playwright server with selectable version, process-tree kill, restart backoff
 - [x] Supervisor for Playwright MCP (`--allowed-hosts`, `--isolated`, auto-installed Chromium),
@@ -42,7 +42,7 @@ GitHub issues. This file only tracks milestones.
       (API 1.3)
 - [x] Client + CLI sessions: `startSession` / `endSession` / `sessions`, `onSession`, CLI
       `session start|end|list`, CLI reads scoped to the current session
-- [ ] Playwright fixture (`connectOptions`, `headless: false`, one session per test instead of
+- [x] Playwright fixture (`connectOptions`, `headless: false`, one session per test instead of
       clearing, transcript attachment) as the client's `./playwright` subpath export
       (`@playwright/test` an optional peer dependency, external in the bundle)
 

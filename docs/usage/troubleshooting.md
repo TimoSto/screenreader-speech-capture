@@ -32,7 +32,7 @@ Common problems, what causes them and how to fix them. Start with
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| The browser opens, but the screen reader says nothing about the page | The browser runs **headless** (no window). | Pass `headless: false` (the fixture will do it, [M3](../ROADMAP.md#m3-playwright--mcp-)) ([Playwright server](playwright-mcp.md#playwright-server)). |
+| The browser opens, but the screen reader says nothing about the page | The browser runs **headless** (no window). | Pass `headless: false` (the fixture does it) ([Playwright server](playwright-mcp.md#playwright-server)). |
 | | The browser window is not the **foreground** window. | `setFocus(page)` or CLI `click` ([Native input](native-input.md)). |
 | Nothing works after an RDP session | The disconnected RDP session has no active desktop: no input, no foreground window. | Use the hypervisor console or VNC. Don't leave the VM on a disconnected RDP session ([Running on the VM](vm-setup.md#running-on-the-vm)). |
 | Screen reader commands (`H`, `Insert+T`) do nothing | They were sent with Playwright (`page.keyboard`), which the screen reader never sees. | Use `pressKeys()` / CLI `press` ([Native input](native-input.md)). |

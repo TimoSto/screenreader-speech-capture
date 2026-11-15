@@ -12,6 +12,10 @@
     ".": {
       "types": "./dist/index.d.mts",
       "default": "./dist/index.mjs"
+    },
+    "./playwright": {
+      "types": "./dist/playwright.d.mts",
+      "default": "./dist/playwright.mjs"
     }
   },
   "bin": {
@@ -26,6 +30,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/core": "0.18.5",
+    "@playwright/test": "1.65.0",
     "@screenreader-speech-capture/shared": "workspace:*",
     "publint": "0.3.25",
     "tsdown": "0.23.7",
@@ -35,5 +40,13 @@
     "type": "git",
     "url": "git+https://github.com/TimoSto/screenreader-speech-capture.git",
     "directory": "packages/client"
+  },
+  "peerDependencies": {
+    "@playwright/test": "1.65.0"
+  },
+  "peerDependenciesMeta": {
+    "@playwright/test": {
+      "optional": true
+    }
   }
 }

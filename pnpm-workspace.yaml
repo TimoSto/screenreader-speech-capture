@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - tools/*
+  - examples/*
 allowBuilds:
   esbuild: true
   '@jitsi/robotjs': false # ships prebuilt binaries, loaded by node-gyp-build at run time

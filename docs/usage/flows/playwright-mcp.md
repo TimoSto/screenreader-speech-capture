@@ -39,9 +39,7 @@ sequenceDiagram
 
 ## A test with the Playwright fixture
 
-*(planned, [M3](../../ROADMAP.md#m3-playwright--mcp-))*
-
-The fixture connects through the bridge, brings the browser to the front, and wraps every test in a
+The fixture connects through the bridge, brings the browser to the front (native click on the page content, then a reload), and wraps every test in a
 session. Details: [Playwright fixture](../client.md#playwright-fixture).
 
 ```mermaid
@@ -55,7 +53,8 @@ sequenceDiagram
     F->>B: connect ws://vm:5151/playwright (headless false)
     F->>B: POST /api/v1/sessions {name: test title path, run: run label}
     B-->>F: session, cursor = startSeq
-    F->>B: POST /api/v1/input/click (setFocus(page))
+    F->>B: POST /api/v1/input/click (top-left corner of the page content)
+    F->>Br: reload the page
     R->>Br: test body: page actions
     R->>F: speech.waitForOutput("Submit, button")
     F->>B: GET /speech + stream (see the SSE flows)

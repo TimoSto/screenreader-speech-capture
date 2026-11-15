@@ -54,6 +54,15 @@ export function clickPoint(geometry: WindowGeometry, target?: ElementBox): Scree
   return { x: Math.round(x * scale), y: Math.round(y * scale) };
 }
 
+/**
+ * The top-left corner of the page content, in physical pixels: where the web page starts, below
+ * the browser's tabs and address bar. Lands 1 CSS pixel inside, so it hits the page and not the
+ * window border.
+ */
+export function contentCornerPoint(geometry: WindowGeometry): ScreenPoint {
+  return clickPoint(geometry, { x: 1, y: 1, width: 0, height: 0 });
+}
+
 /** The page's window geometry could not be read, or the target element isn't on screen. */
 export class FocusError extends Error {
   override name = 'FocusError';

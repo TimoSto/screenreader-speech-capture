@@ -28,6 +28,7 @@ import type {
 import { ClientConfigService } from './application/services/client-config-service.js';
 import { NativeInputService } from './application/services/native-input-service.js';
 import { SpeechCaptureService } from './application/services/speech-capture-service.js';
+import { playwrightEndpoint } from './domain/playwright-endpoint.js';
 import { URL_ENV } from './domain/bridge-url.js';
 import type { BridgeStatus } from './domain/bridge-status.js';
 import type { SessionList, StartedSession } from './domain/session.js';
@@ -74,11 +75,13 @@ export interface SpeechCaptureClientOptions {
 export class SpeechCaptureClient implements SpeechCapture, NativeInput {
   readonly #service: SpeechCapture;
   readonly #input: NativeInput;
+  readonly #resolveUrl: () => Promise<string>;
 
   constructor(options: SpeechCaptureClientOptions = {}) {
     const config = createClientConfig(options.env ?? process.env);
+    this.#resolveUrl = async () => (await config.get('url', { url: options.baseUrl })).value;
     const api = new FetchBridgeApi({
-      baseUrl: async () => (await config.get('url', { url: options.baseUrl })).value,
+      baseUrl: this.#resolveUrl,
       clientName: options.clientName ?? `${hostname()} pid ${process.pid}`,
     });
     this.#service = new SpeechCaptureService({
@@ -99,6 +102,11 @@ export class SpeechCaptureClient implements SpeechCapture, NativeInput {
 
   setFocus(page: FocusablePage, options?: SetFocusOptions): Promise<void> {
     return this.#input.setFocus(page, options);
+  }
+
+  /** WebSocket URL of the bridge's Playwright server, for `browserType.connect()`. */
+  async playwrightEndpoint(): Promise<string> {
+    return playwrightEndpoint(await this.#resolveUrl());
   }
 
   getSpeech(options?: GetSpeechOptions): Promise<SpeechEntry[]> {
