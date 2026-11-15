@@ -106,7 +106,9 @@ describe('ChildProcessSupervisor', () => {
       (lines) => lines.some((line) => line.startsWith('info Listening on')),
     );
     expect(output.lines).toContain('warn fake service warming up');
-    expect(logger.lines).toContain('info playwright running');
+    expect(logger.lines).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^info playwright running \(\d+\.\ds\)$/)]),
+    );
     expect(logger.lines).toContain('info starting playwright 9.9.9');
   });
 

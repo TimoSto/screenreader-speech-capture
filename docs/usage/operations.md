@@ -93,8 +93,8 @@ in-memory [buffer](speech-capture.md#buffer).
 Bridge log details:
 
 - written to the console **and** to a file. The default file is
-  `%LOCALAPPDATA%\screenreader-speech-capture\logs\bridge.log`. The first line always shows the
-  version, the log level and the file, whatever the level is,
+  `%LOCALAPPDATA%\screenreader-speech-capture\logs\bridge.log`. The first lines always show the
+  version, the config, the log level and the file, whatever the level is,
 - levels: `error`, `warn`, `info` (default), `debug`. `debug` also logs every received line and
   every HTTP request,
 - the file is rotated at 10 MB, and the last 5 files are kept.
@@ -119,31 +119,38 @@ from. Prefixes are padded with spaces to the length of the longest one, so the r
 always starts in the same column:
 
 ```
-[bridge]            2026-11-07T14:03:10.002Z INFO  starting, version 0.3.0, config C:\Users\test\AppData\Roaming\screenreader-speech-capture\config.json
-[speech-capture]    2026-11-07T14:03:10.015Z INFO  listening on 127.0.0.1:4449, encoding windows-1252
-[http-api]          2026-11-07T14:03:10.031Z INFO  listening on 0.0.0.0:5151, reachable at http://192.168.122.57:5151, http://localhost:5151
-[http-api]          2026-11-07T14:03:10.031Z INFO  web UI at 0.0.0.0:5151, reachable at http://192.168.122.57:5151, http://localhost:5151
-[http-api]          2026-11-07T14:03:10.031Z INFO  Playwright server at 0.0.0.0:5151, reachable at ws://192.168.122.57:5151/playwright, ws://localhost:5151/playwright
-[http-api]          2026-11-07T14:03:10.031Z INFO  Playwright MCP at 0.0.0.0:5151, reachable at http://192.168.122.57:5151/playwright-mcp, http://localhost:5151/playwright-mcp
-[playwright-server] 2026-11-07T14:03:11.410Z INFO  Listening on ws://127.0.0.1:3000/
-[bridge]            2026-11-07T14:03:11.497Z INFO  playwright running
-[playwright-mcp]    2026-11-07T14:03:11.622Z WARN  Listening on http://localhost:8931
-[bridge]            2026-11-07T14:03:11.623Z INFO  mcp running
-[bridge]            2026-11-07T14:03:11.624Z INFO  ready
-[speech-capture]    2026-11-07T14:03:12.345Z INFO  connection 3 opened (voice=null)
+[bridge]            2026-11-07T14:03:10.002Z INFO  version 0.3.0
+[bridge]            2026-11-07T14:03:10.002Z INFO  config  C:\Users\test\AppData\Roaming\screenreader-speech-capture\config.json
+[bridge]            2026-11-07T14:03:10.002Z INFO  log     level info, file C:\Users\test\AppData\Local\screenreader-speech-capture\logs\bridge.log
+[bridge]            2026-11-07T14:03:10.002Z INFO  speech text is logged at debug
+[bridge]            2026-11-07T14:03:10.050Z INFO  starting playwright 1.65.0
+[bridge]            2026-11-07T14:03:10.050Z INFO  starting mcp 0.0.85
+[bridge]            2026-11-07T14:03:11.497Z INFO  playwright running (1.4s)
+[bridge]            2026-11-07T14:03:11.623Z INFO  mcp running (1.6s)
+[bridge]            2026-11-07T14:03:11.624Z INFO  ready in 1.6s
+[bridge]            2026-11-07T14:03:11.624Z INFO    speech capture     127.0.0.1:4449 (windows-1252)
+[bridge]            2026-11-07T14:03:11.624Z INFO    HTTP API + web UI  http://192.168.122.57:5151, http://localhost:5151
+[bridge]            2026-11-07T14:03:11.624Z INFO    Playwright server  ws://192.168.122.57:5151/playwright, ws://localhost:5151/playwright (1.65.0)
+[bridge]            2026-11-07T14:03:11.624Z INFO    Playwright MCP     http://192.168.122.57:5151/playwright-mcp, http://localhost:5151/playwright-mcp (0.0.85)
+[bridge]            2026-11-07T14:03:11.624Z INFO    native input       robotjs
+[speech-capture]    2026-11-07T14:03:12.345Z INFO  connection 1 opened
 [native-input]      2026-11-07T14:03:15.100Z INFO  keys Insert+T
 [playwright-server] 2026-11-07T14:03:20.733Z ERROR browserType.launch: Executable doesn't exist
 ```
 
-On `0.0.0.0` (the default `--host`), the `http-api` line lists the URLs the API can be reached at:
-the machine's IPv4 addresses, then `localhost`. Use one of them as the client's
-[bridge URL](client.md#bridge-url). The `web UI at …` line (only when the UI is installed) names the address to open in a browser: the
-same base URL. The `Playwright server at …` line does the same for the
-Playwright server: its `ws://` URLs are the `wsEndpoint` to connect to. The `Playwright MCP at …`
-line lists the URLs for MCP clients. The `[bridge] … running` lines don't name an address: the
-services listen on loopback, which only the bridge uses, and the proxy lines above are where to
-connect. The `speech-capture` line follows the same format when bound to a wildcard host. MCP writes its banner to stderr (so the
-lines show as `WARN`).
+The block after `ready in …` is the summary of what runs where, and the one place with the URLs.
+On `0.0.0.0` (the default `--host`) it lists the machine's IPv4 addresses, then `localhost`. Use
+its URLs: the `HTTP API` row for the client's [bridge URL](client.md#bridge-url) (`HTTP API + web
+UI` when the web UI is served), the `Playwright server` row (`ws://`) as the `wsEndpoint`, the
+`Playwright MCP` row for MCP clients. A row reads `off (disabled in the config)` for a disabled
+service and `FAILED, see the log above` for one that did not start. Native input shows `off` when
+robotjs could not be loaded (a `WARN` line gives the reason).
+
+These are `debug`, so `--log-level debug` shows them: the `listening on …` lines of the TCP and
+HTTP listeners and the URL of each proxied path (the summary has the same addresses), the
+`Listening on …` lines of the child services and the start banner of MCP (loopback ports only the
+bridge uses), the Chromium check before each start, and every `connection … opened` after the
+first (a voice that reconnects for every phrase).
 
 After the prefix comes the timestamp (ISO 8601, UTC), the level (padded to 5 characters) and the
 message.

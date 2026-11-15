@@ -152,7 +152,7 @@ Get-NetFirewallRule -Direction Inbound -Action Block |
 ```
 
 **Check it from the machine that runs the tests**, not from the VM. Use one of the URLs from the
-bridge's `listening on …, reachable at …` log line:
+bridge's `HTTP API` row in the `ready` summary:
 
 ```bash
 curl http://<vm-ip>:5151/api/v1/status

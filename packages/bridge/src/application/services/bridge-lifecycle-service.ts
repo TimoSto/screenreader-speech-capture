@@ -14,6 +14,8 @@ interface BridgeLifecycleDeps {
   startServices: () => Promise<void>;
   /** Stopped in this order (docs/usage/operations.md#shutdown). */
   stopOrder: readonly Stoppable[];
+  /** The message logged when the bridge is ready: a summary of what runs where. */
+  readyMessage: () => string;
   /** `[bridge]` log. */
   logger: Logger;
 }
@@ -28,7 +30,7 @@ export class BridgeLifecycleService implements BridgeLifecycle {
     void this.deps.startServices().then(() => {
       if (this.stopping !== undefined) return;
       this.deps.state.setState('ready');
-      this.deps.logger.info('ready');
+      this.deps.logger.info(this.deps.readyMessage());
     });
   }
 

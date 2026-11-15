@@ -102,13 +102,15 @@ export class HttpServer {
     this.allowedHosts = settings.allowedHosts;
     // On 0.0.0.0, name the addresses clients can actually use
     // (docs/usage/operations.md#line-format).
-    this.deps.logger.info(`listening on ${describeListener('http', settings.host, port)}`);
+    // These lines are `debug`: the summary logged when the bridge is ready has the same URLs
+    // (composition/summary.ts).
+    this.deps.logger.debug(`listening on ${describeListener('http', settings.host, port)}`);
     if (this.deps.ui) {
-      this.deps.logger.info(`web UI at ${describeListener('http', settings.host, port)}`);
+      this.deps.logger.debug(`web UI at ${describeListener('http', settings.host, port)}`);
     }
     for (const route of this.deps.proxies ?? []) {
       const at = describeListener(route.scheme, settings.host, port, route.path);
-      this.deps.logger.info(`${route.name} at ${at}`);
+      this.deps.logger.debug(`${route.name} at ${at}`);
     }
     return port;
   }

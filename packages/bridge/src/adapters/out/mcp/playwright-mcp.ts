@@ -6,6 +6,7 @@ import type { ServiceSettings } from '../../../application/ports/out/process-sup
 import type { RestartPolicy } from '../../../domain/child-service.js';
 import { ChildProcessSupervisor } from '../process/child-process-supervisor.js';
 import type { Prepare } from '../process/types.js';
+import { mcpBanner, quietOutput } from '../process/quiet-output.js';
 import { runCommand } from '../process/run-command.js';
 
 /**
@@ -38,10 +39,10 @@ interface PlaywrightMcpOptions {
  * `--browser chromium` uses that Chromium (headed by default).
  */
 export function playwrightMcp(options: PlaywrightMcpOptions): ChildProcessSupervisor {
-  const { output } = options;
+  const output = quietOutput(options.output, mcpBanner());
   const { version, cli } = bundledMcp();
   const prepare: Prepare = async ({ host, port }, signal) => {
-    output.info(`checking the Chromium of playwright mcp ${version}`);
+    output.debug(`checking the Chromium of playwright mcp ${version}`);
     await runCommand(output)(process.execPath, [cli, 'install-browser', '--no-shell', 'chromium'], {
       signal,
     });

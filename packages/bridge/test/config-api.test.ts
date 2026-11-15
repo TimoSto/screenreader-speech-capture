@@ -102,7 +102,7 @@ describe('config file at startup', () => {
         /^\[config\] .* WARN {2}buffer\.maxEntries: the config file sets 42, but a flag or environment variable sets 7, which wins$/,
       ),
     ]);
-    expect(lines[0]).toContain('config memory:config.json');
+    expect(lines.some((line) => line.includes('config  memory:config.json'))).toBe(true);
   });
 
   it('refuses to start with an invalid setting in the file, naming the file and the setting', async () => {

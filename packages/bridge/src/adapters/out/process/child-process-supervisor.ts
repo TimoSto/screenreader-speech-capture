@@ -48,6 +48,8 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
   private crashesInRow = 0;
   private child: ChildProcess | null = null;
   private runningSince: number | null = null;
+  /** When the current launch began, for the time to `running` in the log. */
+  private launchedAt = 0;
   private restartTimer: NodeJS.Timeout | undefined;
   private abort: AbortController | null = null;
   /** Bumped by every launch and stop, so callbacks of an older run do nothing. */
@@ -117,6 +119,7 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
     const abort = new AbortController();
     this.abort = abort;
     this.setState('starting');
+    this.launchedAt = Date.now();
     this.options.logger.info(`starting ${this.options.name} ${settings.version}`);
 
     this.options.prepare(settings, abort.signal).then(
@@ -182,7 +185,8 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
       if (open) {
         this.runningSince = Date.now();
         this.setState('running');
-        this.options.logger.info(`${this.options.name} running`);
+        const seconds = ((Date.now() - this.launchedAt) / 1000).toFixed(1);
+        this.options.logger.info(`${this.options.name} running (${seconds}s)`);
       } else {
         this.options.logger.error(
           `${this.options.name} did not open port ${settings.port} in time, killing it`,

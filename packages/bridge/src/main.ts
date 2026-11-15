@@ -6,6 +6,7 @@ import { HttpServer } from './adapters/in/http/http-server.js';
 import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { FsConfigStore } from './adapters/out/fs-config/fs-config-store.js';
+import { DisabledInputInjector } from './adapters/out/input/disabled-input-injector.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
 import { defaultConfigFile } from './adapters/out/platform/paths.js';
 import type { ManageSessions } from './application/ports/in/manage-sessions.js';
@@ -22,6 +23,7 @@ import { TranscriptService } from './application/services/transcript-service.js'
 import { WaitForSpeechService } from './application/services/wait-for-speech-service.js';
 import { startListeners } from './composition/lifecycle.js';
 import { loadConfig } from './composition/load-config.js';
+import { readySummary } from './composition/summary.js';
 import { createInputInjector } from './composition/input.js';
 import { createLogging } from './composition/logging.js';
 import { yieldEvery } from './composition/pace.js';
@@ -120,8 +122,9 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     clock,
     logger: log.for('bridge'),
   });
+  const injector = seams.inputInjector ?? (await createInputInjector(log.for('native-input')));
   const input = new NativeInputService({
-    injector: seams.inputInjector ?? (await createInputInjector(log.for('native-input'))),
+    injector,
     clock,
     logger: log.for('native-input'),
   });
@@ -172,6 +175,15 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     waits,
     startServices: () => childServices.startEnabled(),
     stopOrder: [http, tcp, { stop: () => childServices.stopAll() }],
+    readyMessage: () =>
+      readySummary({
+        config,
+        ports,
+        supervisors,
+        webUi: ui !== undefined,
+        nativeInput: injector instanceof DisabledInputInjector ? null : 'robotjs',
+        tookMs: clock.now().getTime() - startedAt.getTime(),
+      }),
     logger: bridgeLogger,
   });
   lifecycle.start();

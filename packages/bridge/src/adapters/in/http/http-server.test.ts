@@ -35,7 +35,7 @@ describe('HttpServer', () => {
     const res = await fetch(`http://127.0.0.1:${port}/api/v1/nope`);
     expect(res.status).toBe(404);
     expect(await res.json()).toMatchObject({ error: { code: 'NOT_FOUND' } });
-    expect(logger.lines).toContain(`info listening on http://127.0.0.1:${port}`);
+    expect(logger.lines).toContain(`debug listening on http://127.0.0.1:${port}`);
   });
 
   it('refuses a second start', async () => {
@@ -116,7 +116,7 @@ describe('HttpServer', () => {
     it('logs where the UI is reachable, only when there is one', async () => {
       const withUi = server(ui);
       const port = await withUi.http.start(settings);
-      expect(withUi.logger.lines).toContain(`info web UI at http://127.0.0.1:${port}`);
+      expect(withUi.logger.lines).toContain(`debug web UI at http://127.0.0.1:${port}`);
       const without = server();
       await without.http.start(settings);
       expect(without.logger.lines.filter((l) => l.includes('web UI'))).toEqual([]);
