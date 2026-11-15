@@ -41,7 +41,7 @@ bridge doesn't answer to, or a \`POST\` / \`PUT\` / \`DELETE\` carries a foreign
 (\`docs/usage/security.md#host-and-origin\`).
 `,
   license: {
-    name: 'UNLICENSED',
+    name: 'MIT',
   },
 };
 

@@ -2,7 +2,7 @@
   "name": "screenreader-speech-capture-client",
   "version": "0.0.0-dev",
   "description": "Test client for the screenreader-speech-capture bridge: library, Playwright fixture and CLI.",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=20"
