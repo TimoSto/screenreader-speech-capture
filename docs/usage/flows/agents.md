@@ -32,7 +32,7 @@ sequenceDiagram
         alt page interaction
             A->>B: MCP: browser_click / browser_press_key (/playwright-mcp)
             B->>MCP: passthrough
-        else screen reader command (planned, M4)
+        else screen reader command
             A->>CLI: press h
             CLI->>B: POST /api/v1/input/keys
         end

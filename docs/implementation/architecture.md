@@ -42,7 +42,7 @@ flowchart LR
         MEM["out/memory<br/>event bus"]
         CFG["out/fs-config<br/>config.json"]
         SUP["out/process, out/playwright, out/mcp<br/>process supervisors"]
-        ROBOT["out/robotjs<br/>InputInjector (planned)"]
+        ROBOT["out/robotjs<br/>InputInjector"]
         LOG["out/log<br/>bridge log"]
         CLK["out/clock"]
     end
@@ -108,8 +108,7 @@ packages/bridge/src/
   bin/cli.ts         executable: parses argv (adapters/in/cli), starts main.ts
 ```
 
-Planned, not in the code yet: `KeyChord`, `SendNativeInput`, `InputInjector` and `out/robotjs/`
-([M4](../ROADMAP.md#m4-native-input-)), and serving the built UI ([M5](../ROADMAP.md#m5-web-ui-)).
+Planned, not in the code yet: serving the built UI ([M5](../ROADMAP.md#m5-web-ui-)).
 
 **Dependency rule:** `adapters → application → domain`. The domain imports only `shared`, the application
 imports only the domain, `shared` and its own ports, and the adapters implement or call the ports. Only the
@@ -136,17 +135,18 @@ import each other. `shared` stays browser-safe (no Node built-ins) except `platf
 
 ### Native input in the bridge
 
-*(planned, [M4](../ROADMAP.md#m4-native-input-))*
-
 The bridge is bundled into one `cli.mjs`, and CI and development run on Linux, so robotjs must not
 be required to build or start it:
 
-- The `InputInjector` out-port has two adapters: `RobotjsInputInjector` and a
-  `DisabledInputInjector` that throws `INPUT_DISABLED` with a reason ("not on Windows",
-  `--no-input`, "robotjs failed to load: …").
-- `@jitsi/robotjs` is an **optional dependency**, external in `tsdown.config.ts`, loaded with a
-  dynamic `import()` in the composition root. If loading fails, the bridge starts with the disabled
-  injector and logs why. The status reports the same reason (`input: { enabled, reason }`).
+- The `InputInjector` out-port (`keyDown`, `keyUp`, `keyTap`, `click`) has two adapters:
+  `RobotjsInputInjector` and a `DisabledInputInjector` that rejects with `INPUT_DISABLED` and the
+  reason ("robotjs failed to load: …"). `NativeInputService` builds a chord from the primitives:
+  modifiers down, key tap, modifiers up (also when the key fails).
+- `@jitsi/robotjs` is an **optional dependency** (external in the bundle because it is listed in
+  `optionalDependencies`), loaded with a dynamic `import()` in `composition/input.ts`. If loading
+  fails, the bridge starts with the disabled injector and logs why. Tests pass an injector through
+  `TestSeams.inputInjector`. pnpm doesn't run its install script (`allowBuilds` in
+  `pnpm-workspace.yaml`): the prebuilt binaries ship in the package.
 - Key-name parsing (`KeyChord`) lives in the domain and knows no robotjs names. The adapter maps
   them, so another `InputInjector` can replace it.
 - Input is serialized in one queue, so a click and a key chord from two requests can't interleave.
@@ -186,13 +186,13 @@ of extending it, so the service's internals never become public types.
 
 ### Native input in the client
 
-*(planned, [M4](../ROADMAP.md#m4-native-input-))*
-
 Native input gets its own in-port, `NativeInput` (`click(point)`, `pressKeys(keys)`,
-`setFocus(point)`), instead of growing `SpeechCapture`: it has a different availability (Windows
-only, `INPUT_DISABLED`), and users' fakes of `SpeechCapture` shouldn't grow with it. The port works
-in **screen coordinates** and has no Playwright types, so `@playwright/test` never becomes a type
-dependency of the core.
+`setFocus(page)`), instead of growing `SpeechCapture`: it has a different availability (Windows
+only, `INPUT_DISABLED`), and users' fakes of `SpeechCapture` shouldn't grow with it. `click` and `pressKeys` work
+in **screen coordinates**. `setFocus` takes a structural `FocusablePage` (`evaluate(expression)`,
+which a Playwright `Page` satisfies) and an optional `FocusTarget` (`boundingBox()`, a `Locator`), so
+`@playwright/test` never becomes a type dependency of the core. `SpeechCaptureClient` implements both
+ports (the speech one and this one) and forwards to two services that share a `VersionGate`.
 
 The fixture (the `./playwright` subpath, a driving adapter) reads the window geometry from the
 `Page` (see [Native input](../usage/native-input.md)) and calls `NativeInput`. A pure domain function

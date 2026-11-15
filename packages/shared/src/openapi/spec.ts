@@ -14,8 +14,7 @@ export const INFO = {
 \`GET /status\` reports as \`bridge.apiVersion\` (\`<major>.<minor>\`; minor versions only add things).
 The prose reference is \`docs/usage/http-api.md\`. The types match \`packages/shared\`.
 
-This file describes the endpoints the bridge serves today. Not implemented yet:
-\`POST /set-focus\`, \`POST /input/keys\`.
+This file describes the endpoints the bridge serves today.
 
 Changes: 1.1 added \`playwright\` to \`GET /status\`, 1.2 added \`mcp\`, 1.3 added sessions
 (\`/sessions\`, \`sessionId\` on entries, the \`session\` filter and SSE event, \`session\` in the
@@ -24,15 +23,15 @@ in \`SpeechList\`, the SSE \`bridge\` event), 1.5 added \`http.allowedHosts\` to
 \`FORBIDDEN\` error and \`session=none\`, 1.6 added \`restartRequired\` to the \`/config\` answers. 1.7 removed the bridge run
 (\`instanceId\` and the SSE \`bridge\` event) again: \`seq\` now keeps rising across restarts. 1.8
 removed settings and fields of features that don't exist yet: \`tcp.format\` (one possible
-value), \`input\` in the config and the status, and the \`INPUT_DISABLED\` error code (they come
-back with native input, M4). 1.9 added \`startSeq\` to \`Session\`. 1.10 added
+value), \`input\` in the config and the status, and the \`INPUT_DISABLED\` error code. 1.9 added \`startSeq\` to \`Session\`. 1.10 added
 \`client\` to \`Session\`, the \`X-SR-Speech-Client\` request header and \`replaced\` in the
 \`POST /sessions\` answer. 1.11 added \`omitted\` to the timeout answer of \`GET /speech/wait\`,
 which now holds the last 1000 entries seen instead of all of them. 1.12 added the \`position\`
 event of \`GET /speech/stream\` and the replay of a \`Last-Event-ID\` above every \`seq\`. 1.13
 removed \`restartRequired\` again (an exception to "minor versions only add", since no client
 existed): \`PUT /config\` now only saves, a setting takes effect on the next start, and \`GET\`
-shows the settings in use.
+shows the settings in use. 1.14 added native input (\`POST /input/click\`, \`POST /input/keys\`) and
+the \`INPUT_DISABLED\` error code again.
 
 Every error has the same body (\`ErrorBody\`). Clients must handle unknown error codes as errors
 of their HTTP status.
@@ -73,6 +72,10 @@ export const TAGS = [
   {
     name: 'sessions',
     description: 'Sessions group the speech of one test or agent task',
+  },
+  {
+    name: 'input',
+    description: 'Native mouse and keyboard input on the VM',
   },
   {
     name: 'bridge',
@@ -383,6 +386,66 @@ so a web page can't add markers cross-origin without a CORS preflight. At most 1
       },
     },
   },
+  '/input/click': {
+    post: {
+      tags: ['input'],
+      operationId: 'click',
+      summary: 'Click at a screen point',
+      description: `Sends a native mouse click, to give a window the focus (\`docs/usage/native-input.md\`). The body must be sent as \`application/json\`.
+`,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              $ref: '#/components/schemas/ClickRequest',
+            },
+          },
+        },
+      },
+      responses: {
+        '204': {
+          description: 'Done.',
+        },
+        '400': {
+          $ref: '#/components/responses/InvalidRequest',
+        },
+        '409': {
+          $ref: '#/components/responses/InputDisabled',
+        },
+      },
+    },
+  },
+  '/input/keys': {
+    post: {
+      tags: ['input'],
+      operationId: 'sendKeys',
+      summary: 'Send key presses',
+      description: `Presses one chord or a sequence of chords in the focused window (\`docs/usage/native-input.md#key-names\`). Requests are queued, so two requests never interleave. The body must be sent as \`application/json\`.
+`,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              $ref: '#/components/schemas/KeysRequest',
+            },
+          },
+        },
+      },
+      responses: {
+        '204': {
+          description: 'Done.',
+        },
+        '400': {
+          $ref: '#/components/responses/InvalidRequest',
+        },
+        '409': {
+          $ref: '#/components/responses/InputDisabled',
+        },
+      },
+    },
+  },
   '/sessions': {
     get: {
       tags: ['sessions'],
@@ -645,6 +708,23 @@ export const RESPONSES = {
             details: {
               field: 'limit',
             },
+          },
+        },
+      },
+    },
+  },
+  InputDisabled: {
+    description:
+      'Native input is not available: the bridge could not load `@jitsi/robotjs` (for example outside Windows). `error.message` names the reason.',
+    content: {
+      'application/json': {
+        schema: {
+          $ref: '#/components/schemas/ErrorBody',
+        },
+        example: {
+          error: {
+            code: 'INPUT_DISABLED',
+            message: 'Native input is not available: @jitsi/robotjs could not be loaded',
           },
         },
       },

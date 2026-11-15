@@ -1,3 +1,5 @@
+import type { MouseButton } from '../src/application/ports/in/send-native-input.js';
+import type { InputInjector } from '../src/application/ports/out/input-injector.js';
 import type { ConfigStore } from '../src/application/ports/out/config-store.js';
 import type { Logger } from '../src/application/ports/out/logger.js';
 import type { SpeechEventBus } from '../src/application/ports/out/speech-event-bus.js';
@@ -57,5 +59,33 @@ export class DeferredEventBus implements SpeechEventBus {
     for (const { event, to } of queue) {
       for (const listener of to) if (this.#listeners.has(listener)) listener(event);
     }
+  }
+}
+
+/** Injector that records what it was asked to do, as `"click left 1,2"`, `"down insert"`, … */
+export class RecordingInputInjector implements InputInjector {
+  readonly calls: string[] = [];
+  /** Makes `keyTap` of this key fail. */
+  failOn: string | undefined;
+
+  click(x: number, y: number, button: MouseButton): Promise<void> {
+    this.calls.push(`click ${button} ${x},${y}`);
+    return Promise.resolve();
+  }
+
+  keyDown(key: string): Promise<void> {
+    this.calls.push(`down ${key}`);
+    return Promise.resolve();
+  }
+
+  keyUp(key: string): Promise<void> {
+    this.calls.push(`up ${key}`);
+    return Promise.resolve();
+  }
+
+  keyTap(key: string): Promise<void> {
+    if (key === this.failOn) return Promise.reject(new Error(`cannot tap ${key}`));
+    this.calls.push(`tap ${key}`);
+    return Promise.resolve();
   }
 }

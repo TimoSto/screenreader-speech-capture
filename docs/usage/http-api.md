@@ -66,8 +66,8 @@ with every run.
 | `POST /api/v1/sessions` `{ "name": "checkout test", "run": "nightly-42" }` | Start a [session](speech-capture.md#sessions): it becomes current and the previous one ends. `name` is required, `run` optional (both trimmed, not empty, at most 1000 characters). Requires `content-type: application/json`. Returns `201` with the new `Session`; its `startSeq` is the `since` that reads it from its start. If another client's session was current (see [Clients](#clients)), it is not refused: the bridge logs a warning and the answer has that session in `replaced` (otherwise `null`, since API 1.10). |
 | `POST /api/v1/sessions/end` | End the current session (`204`). Entries after this have `sessionId: null`. Does nothing if no session is current. Ending another client's session is logged as a warning. |
 | `GET /api/v1/sessions` | `{ "sessions": [...], "currentId": 7 }`: the sessions that still have entries in the buffer, plus the current one, newest first. `currentId` is `null` when no session is current. |
-| `POST /api/v1/set-focus` `{ "x": 640, "y": 12, "button": "left" }` | *(planned, [M4](../ROADMAP.md#m4-native-input-))* Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
-| `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | *(planned, [M4](../ROADMAP.md#m4-native-input-))* Native key presses: one chord, or a sequence with `delayMs` between them. |
+| `POST /api/v1/input/click` `{ "x": 640, "y": 12, "button": "left" }` | Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
+| `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | Native key presses: one chord, or a sequence with `delayMs` between them. |
 | `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. `PUT` takes any subset as `application/json`, saves it to the config file and answers with the configuration the next start will use; `GET` answers with the one in use. A saved setting takes effect on the next start of the bridge. See [Changing settings](configuration.md#changing-settings). |
 | `GET /api/v1/status` | Bridge and API version, when the bridge started (`startedAt`), state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, current session. |
 
@@ -124,7 +124,7 @@ curl "$VM/api/v1/speech/wait?contains=Submit%2C%20button&timeoutMs=5000"
 curl -N $VM/api/v1/speech/stream
 curl -X POST $VM/api/v1/sessions/end
 curl -X DELETE $VM/api/v1/speech   # wipe everything
-curl -X POST $VM/api/v1/input/keys -H 'content-type: application/json' -d '{"keys":"Insert+T"}'   # planned (M4)
+curl -X POST $VM/api/v1/input/keys -H 'content-type: application/json' -d '{"keys":"Insert+T"}'
 ```
 
 For tests and agents, the [test client](client.md) wraps these endpoints.
@@ -148,7 +148,7 @@ Every error response has the same body:
 | `400` | `INVALID_REQUEST` | Bad query or body (unknown key name, invalid regex, invalid config value). `details.field` names the field. |
 | `403` | `FORBIDDEN` | The `Host` header names a host the bridge doesn't answer to, or a `POST` / `PUT` / `DELETE` comes from another page's `Origin` ([Host and origin](security.md#host-and-origin)). Since API 1.5. |
 | `404` | `NOT_FOUND` | Unknown endpoint. |
-| `409` | `INPUT_DISABLED` | Native input endpoint called, but input is off (`--no-input`, or not on Windows). *(planned, [M4](../ROADMAP.md#m4-native-input-))* |
+| `409` | `INPUT_DISABLED` | Native input endpoint called, but the bridge couldn't load `@jitsi/robotjs` (for example not on Windows). |
 | `503` | `SERVICE_UNAVAILABLE` | The bridge is shutting down (for example a pending `wait`). |
 | `500` | `INTERNAL` | Anything else. The bridge log has the details. |
 

@@ -118,6 +118,8 @@ older bridge lacks. Bridge and client are installed from the same release, so th
 guarded a combination nobody runs, and they made every API addition a compatibility question.
 Settings and status fields of features that don't exist yet (`input.enabled`, `--no-input`,
 `tcp.format` with its single value) were removed for the same reason: they return with the feature.
+Native input (API 1.14) brought back only `INPUT_DISABLED`: the bridge has no switch for input, it is
+off exactly when robotjs can't be loaded, and the endpoints say so.
 
 ## The speech log owns the buffer and session rules
 

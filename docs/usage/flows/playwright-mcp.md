@@ -55,7 +55,7 @@ sequenceDiagram
     F->>B: connect ws://vm:5151/playwright (headless false)
     F->>B: POST /api/v1/sessions {name: test title path, run: run label}
     B-->>F: session, cursor = startSeq
-    F->>B: POST /api/v1/set-focus (setFocus(page), M4)
+    F->>B: POST /api/v1/input/click (setFocus(page))
     R->>Br: test body: page actions
     R->>F: speech.waitForOutput("Submit, button")
     F->>B: GET /speech + stream (see the SSE flows)

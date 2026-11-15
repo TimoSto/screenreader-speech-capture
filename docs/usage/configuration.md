@@ -77,7 +77,6 @@ curl -X PUT $VM/api/v1/config -H 'content-type: application/json' -d '{"buffer":
 | `--mcp-port <n>` | `8931` | Internal port of Playwright MCP, on `127.0.0.1`. Clients use `/playwright-mcp` on the HTTP port. |
 | `--no-playwright` | | Don't start the Playwright server. |
 | `--no-mcp` | | Don't start Playwright MCP. |
-| `--no-input` | | Disable the native input endpoints. *(planned, [M4](../ROADMAP.md#m4-native-input-))* |
 | `--log-level <level>` | `info` | Level of the bridge's own log: `error`, `warn`, `info`, `debug`. |
 | `--bridge-log <path>` | `%LOCALAPPDATA%\screenreader-speech-capture\logs\bridge.log` | File for the bridge's own log (see [Operations](operations.md#logging)). |
 | `--console-speech` | off | Also write the received speech to the console. Causes a feedback loop when the console is on the VM ([Operations](operations.md#speech-text-stays-off-the-console)). |

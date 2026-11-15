@@ -18,11 +18,20 @@ import type {
   StartSessionOptions,
   WaitOptions,
 } from './application/ports/in/speech-capture.js';
+import type {
+  ClickOptions,
+  FocusablePage,
+  NativeInput,
+  PressKeysOptions,
+  SetFocusOptions,
+} from './application/ports/in/native-input.js';
 import { ClientConfigService } from './application/services/client-config-service.js';
+import { NativeInputService } from './application/services/native-input-service.js';
 import { SpeechCaptureService } from './application/services/speech-capture-service.js';
 import { URL_ENV } from './domain/bridge-url.js';
 import type { BridgeStatus } from './domain/bridge-status.js';
 import type { SessionList, StartedSession } from './domain/session.js';
+import type { ScreenPoint } from './domain/native-input.js';
 import type { SpeechEntry } from './domain/speech-entry.js';
 import type { SpeechMatch } from './domain/text-match.js';
 
@@ -62,19 +71,34 @@ export interface SpeechCaptureClientOptions {
  * Wraps the service instead of extending it, so the service's internals stay out of the public
  * type surface (docs/implementation/architecture.md).
  */
-export class SpeechCaptureClient implements SpeechCapture {
+export class SpeechCaptureClient implements SpeechCapture, NativeInput {
   readonly #service: SpeechCapture;
+  readonly #input: NativeInput;
 
   constructor(options: SpeechCaptureClientOptions = {}) {
     const config = createClientConfig(options.env ?? process.env);
+    const api = new FetchBridgeApi({
+      baseUrl: async () => (await config.get('url', { url: options.baseUrl })).value,
+      clientName: options.clientName ?? `${hostname()} pid ${process.pid}`,
+    });
     this.#service = new SpeechCaptureService({
-      api: new FetchBridgeApi({
-        baseUrl: async () => (await config.get('url', { url: options.baseUrl })).value,
-        clientName: options.clientName ?? `${hostname()} pid ${process.pid}`,
-      }),
+      api,
       clock: new SystemClock(),
       apiVersion: API_VERSION,
     });
+    this.#input = new NativeInputService({ api, apiVersion: API_VERSION });
+  }
+
+  click(point: ScreenPoint, options?: ClickOptions): Promise<void> {
+    return this.#input.click(point, options);
+  }
+
+  pressKeys(keys: string | readonly string[], options?: PressKeysOptions): Promise<void> {
+    return this.#input.pressKeys(keys, options);
+  }
+
+  setFocus(page: FocusablePage, options?: SetFocusOptions): Promise<void> {
+    return this.#input.setFocus(page, options);
   }
 
   getSpeech(options?: GetSpeechOptions): Promise<SpeechEntry[]> {

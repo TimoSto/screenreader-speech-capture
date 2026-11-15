@@ -19,6 +19,7 @@ function server() {
     status: unused,
     config: unused,
     sessions: unused,
+    input: unused,
     logger,
   });
   servers.push(http);

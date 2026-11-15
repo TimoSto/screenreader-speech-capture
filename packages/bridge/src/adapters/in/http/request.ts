@@ -94,6 +94,38 @@ export function stringField(body: unknown, name: string): string {
   return value;
 }
 
+/** An optional string field of a JSON body. */
+export function optionalStringField(body: unknown, name: string): string | undefined {
+  const value = field(body, name);
+  if (value !== undefined && typeof value !== 'string')
+    throw invalidField(name, 'must be a string');
+  return value;
+}
+
+/** A required number field of a JSON body. Ranges are checked by the use case. */
+export function numberField(body: unknown, name: string): number {
+  const value = field(body, name);
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw invalidField(name, 'must be a number');
+  }
+  return value;
+}
+
+/** An optional number field of a JSON body. */
+export function optionalNumberField(body: unknown, name: string): number | undefined {
+  return field(body, name) === undefined ? undefined : numberField(body, name);
+}
+
+/** A required field that is a string or an array of strings. */
+export function keysField(body: unknown, name: string): string | string[] {
+  const value = field(body, name);
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value) && value.every((item) => typeof item === 'string')) {
+    return value;
+  }
+  throw invalidField(name, 'must be a string or an array of strings');
+}
+
 /** An optional string field of a JSON body that may also be `null`. */
 export function nullableStringField(body: unknown, name: string): string | null | undefined {
   const value = field(body, name);

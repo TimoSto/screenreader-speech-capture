@@ -14,6 +14,7 @@ import type { Logger } from './application/ports/out/logger.js';
 import { BridgeLifecycleService } from './application/services/bridge-lifecycle-service.js';
 import { ChildServicesService } from './application/services/child-services-service.js';
 import { ConfigService } from './application/services/config-service.js';
+import { NativeInputService } from './application/services/native-input-service.js';
 import { SessionService } from './application/services/session-service.js';
 import { SpeechService } from './application/services/speech-service.js';
 import { StatusService } from './application/services/status-service.js';
@@ -21,6 +22,7 @@ import { TranscriptService } from './application/services/transcript-service.js'
 import { WaitForSpeechService } from './application/services/wait-for-speech-service.js';
 import { startListeners } from './composition/lifecycle.js';
 import { loadConfig } from './composition/load-config.js';
+import { createInputInjector } from './composition/input.js';
 import { createLogging } from './composition/logging.js';
 import { yieldEvery } from './composition/pace.js';
 import { proxyRoutes } from './composition/proxies.js';
@@ -117,6 +119,11 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     clock,
     logger: log.for('bridge'),
   });
+  const input = new NativeInputService({
+    injector: seams.inputInjector ?? (await createInputInjector(log.for('native-input'))),
+    clock,
+    logger: log.for('native-input'),
+  });
   const configService = new ConfigService({
     store,
     logger: configLogger,
@@ -148,6 +155,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     status,
     config: configService,
     sessions,
+    input,
     logger: log.for('http-api'),
     hostnames: [hostname()],
     proxies: proxyRoutes(childServices),
