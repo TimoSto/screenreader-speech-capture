@@ -19,7 +19,7 @@ GitHub issues. This file only tracks milestones.
 - [x] TCP listener: framing, `voice=<id>` header, decoding with the configured code page
 - [x] In-memory buffer (capped), `seq`, `truncated`
 - [x] HTTP API v1: speech, wait, markers, status, SSE stream, `GET /config`
-- [x] HTTP API v1: `PUT /config` with the config file and live re-apply
+- [x] HTTP API v1: `PUT /config` with the config file (applied on the next start)
 - [x] One error format, `bridge.version` / `apiVersion` in status
 - [x] Lifecycle: startup order, graceful shutdown, bridge log, CLI flags and env vars
 - [x] `fake-speech` tool for development

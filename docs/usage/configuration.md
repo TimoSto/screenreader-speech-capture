@@ -53,32 +53,14 @@ curl -X PUT $VM/api/v1/config -H 'content-type: application/json' -d '{"buffer":
 
 - The whole patch is checked first. An invalid value changes nothing and answers `400` with
   `details.field`.
-- The patch is saved to the config file, then applied to the running bridge. The file keeps its
-  own settings plus the patch, never values from flags or environment variables. If the file
-  can't be written, nothing changes. Once it is saved, the new settings are in use (`GET`
-  shows them); if a part of the bridge fails to apply them, for example a child service that
-  doesn't stop, that is logged under `[config]` or `[bridge]` and shows in `GET /status`.
-- **Restart-only settings** (`tcp.*`, `http.host`, `http.port`, `log.file`, `log.consoleSpeech`)
-  are saved but take effect on the **next start** of the bridge. The answer, like `GET`, lists
-  the ones saved with a value other than the one in use in `restartRequired`
-  (`["tcp.port"]`), and shows the values in use. `restartRequired` in a request body is ignored,
-  so a `GET` answer can be sent back as it is.
-- Updates run one at a time, and every changed setting is logged under `[config]`, a restart-only
-  one as `tcp.port: 4449 → 4450 on the next start`.
+- The patch is saved to the config file and takes effect on the **next start** of the bridge: the
+  running bridge keeps its settings, so `GET` shows the ones in use. The answer of `PUT` shows
+  what the next start will use. The file keeps its own settings plus the patch, never values from
+  flags or environment variables. If the file can't be written, nothing changes.
+- Updates run one at a time, and every setting that differs from the one in use is logged under
+  `[config]` as `tcp.port: 4449 → 4450 on the next start`.
 - A flag or variable still wins on the next start. The log warns: `[config] WARN tcp.port: saved
-  to …\config.json, but --tcp-port overrides it on the next start`. Such a setting is not listed
-  in `restartRequired`, since a restart wouldn't apply it either.
-
-What each section does when it changes:
-
-| Section | Effect |
-|---|---|
-| `tcp` | Next start. |
-| `http` | `allowedHosts` applies to the next request. `host` and `port` on the next start. |
-| `buffer` | `maxEntries` applies at once. A smaller value drops the oldest entries (they count as `truncated`). |
-| `log` | The level applies at once. `file` and `consoleSpeech` on the next start. |
-| `playwright` | The Playwright server restarts with the new port or version (a new version is installed first). The `PUT` answers at once; `status` shows the service as `starting` until it runs. `enabled: false` stops it. It listens on the interface of `http.host` in use. |
-| `mcp` | Like `playwright`, for Playwright MCP. It has no `version`: the bridge runs the [bundled one](playwright-mcp.md#mcp-version). |
+  to …\config.json, but --tcp-port overrides it on the next start`.
 
 ## CLI flags
 

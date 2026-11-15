@@ -25,27 +25,6 @@ function server() {
   return { http, logger };
 }
 
-/** The status a request to `port` with the `Host` header `host` gets, `null` if nothing answers. */
-async function answer(port: number, host: string) {
-  const http = await import('node:http');
-  return new Promise<number | null>((resolve) => {
-    const req = http.get(
-      {
-        host: '127.0.0.1',
-        port,
-        path: '/api/v1/nope',
-        timeout: 2000,
-        headers: { host },
-      },
-      (res) => {
-        res.resume();
-        resolve(res.statusCode ?? null);
-      },
-    );
-    req.on('error', () => resolve(null));
-  });
-}
-
 describe('HttpServer', () => {
   it('answers on the bound port and logs it, with errors as JSON', async () => {
     const { http, logger } = server();
@@ -71,15 +50,6 @@ describe('HttpServer', () => {
     await expect(
       http.start({ host: '127.0.0.1', port: taken, allowedHosts: [] }),
     ).rejects.toBeInstanceOf(ListenError);
-  });
-
-  it('setAllowedHosts() applies to the next request', async () => {
-    const { http } = server();
-    const port = await http.start({ host: '127.0.0.1', port: 0, allowedHosts: [] });
-    const request = () => answer(port, 'bridge.lab');
-    expect(await request()).toBe(403);
-    http.setAllowedHosts(['bridge.lab']);
-    expect(await request()).toBe(404);
   });
 
   it('stop() closes the port and can be called twice', async () => {

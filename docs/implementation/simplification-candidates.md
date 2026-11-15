@@ -30,6 +30,8 @@ measure the bridge's RSS (`ps -o rss`) before and after any change.
 - Config validated once: the bridge uses the shared valibot `ConfigPatchSchema` instead of its own
   `checks.ts` / `schema.ts` and the equivalence test. Child-service ports (min 1) now live in the
   schema, see [Decisions](decisions.md).
+- Live `PUT /config` re-apply: settings now apply on the next start, see
+  [Decisions](decisions.md#settings-apply-on-the-next-start).
 - Client `seen` cap: timeout errors from the client's waits and `waitForSilence` keep the last
   `API_LIMITS.wait.seen` entries, like the bridge.
 
@@ -50,9 +52,6 @@ measure the bridge's RSS (`ps -o rss`) before and after any change.
     `openapi.yaml` (1,235 lines) is half generated, half hand-written. Drop the CLI schema, and make
     the OpenAPI file either fully generated or fully hand-written. Saves about 1,900 lines of
     artifacts and one or two devDependencies.
-11. **Live `PUT /config` re-apply** (`changedSections`, `restart.ts`, `composition/reapply.ts`).
-    Few settings can change live. Restart-to-apply would remove about 300-400 lines but is an API
-    change (version bump).
 
 ## Needs a decision (largest payoff, highest risk)
 

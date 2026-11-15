@@ -67,8 +67,7 @@ sequenceDiagram
 ## Too many crashes in a row
 
 After 5 crashes without 60 s of stable running in between, the supervisor gives up: `failed` until
-the bridge restarts, or a `PUT /config` change to the service's section restarts it
-([Config flows](config.md)).
+the bridge restarts.
 
 ```mermaid
 sequenceDiagram
@@ -81,7 +80,4 @@ sequenceDiagram
     S->>S: state "failed", log "5 crashes in a row: giving up"
     C->>S: ws://vm:5151/playwright (through the proxy)
     S-->>C: 503 SERVICE_UNAVAILABLE (state: failed)
-    C->>Ch: PUT /api/v1/config {"playwright": {"version": "1.66.0"}}
-    Ch->>S: reconfigure + restart
-    S->>S: state "starting", crash count reset
 ```

@@ -37,12 +37,12 @@ function fake(...args: string[]): Prepare {
     });
 }
 
-async function setup(prepare: Prepare, port?: number, urlPath?: string) {
+async function setup(prepare: Prepare, port?: number, urlPath?: string, host = '0.0.0.0') {
   const logger = new MemoryLogger();
   const output = new MemoryLogger();
   const supervisor = new ChildProcessSupervisor({
     name: 'playwright',
-    settings: { host: '0.0.0.0', port: port ?? (await freePort()), version: null },
+    settings: { host, port: port ?? (await freePort()), version: null },
     defaultVersion: '9.9.9',
     prepare,
     scheme: 'ws',
@@ -144,7 +144,7 @@ describe('ChildProcessSupervisor', () => {
     expect(logger.lines).toContain('error playwright could not be prepared: npm failed');
   });
 
-  it('restarts a crashed service, and restart() starts over with a fresh count', async () => {
+  it('restarts a crashed service, and a start after a stop starts over with a fresh count', async () => {
     let crashes = 2;
     const { supervisor } = await setup((settings, signal) =>
       crashes-- > 0 ? fake('--exit', '1')(settings, signal) : fake()(settings, signal),
@@ -158,7 +158,8 @@ describe('ChildProcessSupervisor', () => {
     );
     expect(supervisor.status()).toMatchObject({ state: 'running', restarts: 2, exitCode: 1 });
 
-    await supervisor.restart();
+    await supervisor.stop();
+    await supervisor.start();
     expect(supervisor.status()).toMatchObject({ state: 'running', restarts: 0, exitCode: null });
   });
 
@@ -202,29 +203,16 @@ describe('ChildProcessSupervisor', () => {
   });
 
   it('names its URL when it listens on one address', async () => {
-    const { supervisor, logger } = await setup(fake());
     const port = await freePort();
-    supervisor.reconfigure({ host: '127.0.0.1', port, version: null });
+    const { supervisor, logger } = await setup(fake(), port, undefined, '127.0.0.1');
     await supervisor.start();
     expect(logger.lines).toContain(`info playwright running on ws://127.0.0.1:${port}`);
   });
 
   it('appends its path to the URLs', async () => {
-    const { supervisor, logger } = await setup(fake(), undefined, '/mcp');
     const port = await freePort();
-    supervisor.reconfigure({ host: '127.0.0.1', port, version: null });
+    const { supervisor, logger } = await setup(fake(), port, '/mcp', '127.0.0.1');
     await supervisor.start();
     expect(logger.lines).toContain(`info playwright running on ws://127.0.0.1:${port}/mcp`);
-  });
-
-  it('uses new settings from the next start', async () => {
-    const { supervisor } = await setup(fake());
-    await supervisor.start();
-    const port = await freePort();
-    supervisor.reconfigure({ host: '127.0.0.1', port, version: '1.2.3' });
-    expect(supervisor.status().port).not.toBe(port);
-
-    await supervisor.restart();
-    expect(supervisor.status()).toMatchObject({ state: 'running', port, version: '1.2.3' });
   });
 });

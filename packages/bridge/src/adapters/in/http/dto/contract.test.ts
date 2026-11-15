@@ -2,7 +2,7 @@
 // packages/shared), which the client checks every answer against.
 import {
   checkDto,
-  ConfigResponseSchema,
+  ConfigSchema,
   type DtoSchema,
   SessionListSchema,
   SessionSchema,
@@ -15,7 +15,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { entry, session, status } from '../../../../../test/dto-fixtures.js';
 import { DEFAULT_CONFIG } from '../../../../domain/config/index.js';
-import { toConfigResponseDto } from './config.js';
+import { toConfigDto } from './config.js';
 import { toSessionDto, toSessionListDto, toStartSessionResponseDto } from './session.js';
 import { toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from './speech.js';
 import { toStatusDto } from './status.js';
@@ -47,11 +47,7 @@ const cases: [string, DtoSchema, unknown][] = [
   ['session list', SessionListSchema, toSessionListDto({ sessions: [session()], currentId: 1 })],
   ['status', StatusSchema, toStatusDto(status(session()))],
   ['status without a session', StatusSchema, toStatusDto(status(null))],
-  [
-    'config',
-    ConfigResponseSchema,
-    toConfigResponseDto({ config: DEFAULT_CONFIG, restartRequired: ['tcp.port'] }),
-  ],
+  ['config', ConfigSchema, toConfigDto(DEFAULT_CONFIG)],
 ];
 
 describe('HTTP answers match the API contract', () => {

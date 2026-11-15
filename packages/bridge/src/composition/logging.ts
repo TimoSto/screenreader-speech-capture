@@ -22,8 +22,7 @@ function defaultSinks(config: Config): { sinks: LogSink[]; file: string } {
 
 /**
  * The bridge log on the console and `config.log.file`, or on `sinks` (tests). Writes the
- * startup line. A new level applies at once (`setLevel`); a new file or `consoleSpeech` on the
- * next start.
+ * startup line.
  */
 export function createLogging(
   config: Config,

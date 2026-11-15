@@ -77,8 +77,7 @@ If the Playwright server or MCP exits unexpectedly:
 - `status` shows `state: "crashed"`, the `exitCode` (`null` when it was killed by a signal or
   could not start) and `restarts` (restarts since the service was last started),
 - after **5 crashes in a row** (without 60 seconds of stable running in between), it stops trying.
-  The state stays `"failed"` until the bridge restarts, or a `PUT /api/v1/config` change to the
-  service's settings restarts it,
+  The state stays `"failed"` until the bridge restarts,
 - the service's output is in the bridge log, line by line, and a `[bridge]` line says how it
   ended: `[bridge] ERROR playwright exited with code 1, restart 2 in 2 s`.
 

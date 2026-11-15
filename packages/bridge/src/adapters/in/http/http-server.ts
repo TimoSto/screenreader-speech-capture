@@ -103,11 +103,6 @@ export class HttpServer {
     return port;
   }
 
-  /** `http.allowedHosts`, for the next request (`PUT /api/v1/config`). */
-  setAllowedHosts(hosts: readonly string[]): void {
-    this.allowedHosts = hosts;
-  }
-
   /**
    * Stops accepting connections, ends the SSE streams and waits briefly for open requests before
    * it closes their connections.

@@ -208,12 +208,11 @@ describe('forgetting ended sessions', () => {
   });
 
   it('forgets an ended session whose last entry a smaller buffer drops', () => {
-    const { speech, sessions, say } = setup(10);
+    const { speech, sessions, say } = setup(1);
     sessions.start({ name: 'a' });
     say('a1');
     sessions.start({ name: 'b' });
     say('b1');
-    speech.setMaxEntries(1);
     expect(speech.list().entries.map((e) => e.text)).toEqual(['b1']);
     expect(sessions.list().sessions.map((s) => s.name)).toEqual(['b']);
   });

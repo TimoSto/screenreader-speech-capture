@@ -23,7 +23,6 @@ import { startListeners } from './composition/lifecycle.js';
 import { loadConfig } from './composition/load-config.js';
 import { createLogging } from './composition/logging.js';
 import { yieldEvery } from './composition/pace.js';
-import { registerReapply } from './composition/reapply.js';
 import { proxyRoutes } from './composition/proxies.js';
 import { createSupervisors } from './composition/services.js';
 import type { TestSeams } from './composition/test-seams.js';
@@ -156,12 +155,6 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   });
 
   const ports = await startListeners(tcp, http, config, bridgeLogger);
-  registerReapply(configService, {
-    http,
-    buffer: speech,
-    log,
-    services: childServices,
-  });
   const lifecycle = new BridgeLifecycleService({
     state: status,
     waits,

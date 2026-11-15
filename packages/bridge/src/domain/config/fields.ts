@@ -1,11 +1,4 @@
-import type { Config, ConfigField, ConfigPatch } from './types.js';
-
-/** Names of the sections whose values differ between `a` and `b`. */
-export function changedSections(a: Config, b: Config): (keyof Config)[] {
-  return (Object.keys(a) as (keyof Config)[]).filter(
-    (section) => JSON.stringify(a[section]) !== JSON.stringify(b[section]),
-  );
-}
+import type { ConfigField, ConfigPatch } from './types.js';
 
 /** The settings in a (partial) configuration, as `section.key` → value. */
 export function configFields(config: ConfigPatch): Map<ConfigField, unknown> {
@@ -27,20 +20,6 @@ export function fromFields(fields: Map<ConfigField, unknown>): ConfigPatch {
     (result[section] ??= {})[key] = value;
   }
   return result;
-}
-
-/** The settings whose values differ between `a` and `b`. */
-export function changedFields(
-  a: Config,
-  b: Config,
-): { field: ConfigField; from: unknown; to: unknown }[] {
-  const before = configFields(a);
-  return (
-    [...configFields(b)]
-      // JSON, so an unchanged list (`http.allowedHosts`) doesn't count as changed.
-      .filter(([field, to]) => JSON.stringify(before.get(field)) !== JSON.stringify(to))
-      .map(([field, to]) => ({ field, from: before.get(field), to }))
-  );
 }
 
 /** The settings that `overrides` (flags, environment) sets although the config file has them. */

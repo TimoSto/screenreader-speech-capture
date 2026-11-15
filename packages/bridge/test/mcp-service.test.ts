@@ -79,25 +79,6 @@ describe('Playwright MCP service', () => {
     expect(await accepts(port)).toBe(true);
   });
 
-  it('restarts on the new port after PUT /config, and stops when disabled', async () => {
-    const { bridge, port } = await startWithMcp();
-    await ready(bridge);
-    const newPort = await freePort();
-
-    expect(await putConfig(bridge, { mcp: { port: newPort } })).toBe(200);
-
-    const moved = await eventually(
-      () => status(bridge),
-      (s) => s.mcp?.state === 'running' && s.mcp.port === newPort,
-    );
-    expect(moved.mcp).toMatchObject({ state: 'running', port: newPort });
-    expect(await accepts(port)).toBe(false);
-
-    expect(await putConfig(bridge, { mcp: { enabled: false } })).toBe(200);
-    expect((await status(bridge)).mcp?.state).toBe('stopped');
-    expect(await accepts(newPort)).toBe(false);
-  });
-
   it('rejects a version: the bundled one runs', async () => {
     const bridge = await start();
     expect(await putConfig(bridge, { mcp: { version: '0.0.85' } })).toBe(400);

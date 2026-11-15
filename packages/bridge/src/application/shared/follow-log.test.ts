@@ -25,8 +25,8 @@ const show = (event: WatchEvent) =>
       : event.type;
 
 describe.each(buses)('followLog on %s', (_, createBus) => {
-  function setup() {
-    const log = new SpeechLog(100);
+  function setup(maxEntries = 100) {
+    const log = new SpeechLog(maxEntries);
     const events = createBus();
     const speech = new SpeechService({ log, events, clock: new SystemClock() });
     const say = (...texts: string[]) => {
@@ -124,8 +124,7 @@ describe.each(buses)('followLog on %s', (_, createBus) => {
   });
 
   it('says truncated once for a stale since when the replay was truncated too', () => {
-    const { log, say, seen, follow } = setup();
-    log.resize(2);
+    const { say, seen, follow } = setup(2);
     say('one', 'two', 'three');
     follow(500, {}, undefined, 'replay');
     expect(seen).toEqual(['truncated', 'two', 'three']);

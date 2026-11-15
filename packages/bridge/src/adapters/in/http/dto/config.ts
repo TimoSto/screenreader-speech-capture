@@ -1,5 +1,4 @@
-import type { ConfigDto, ConfigResponseDto } from '@screenreader-speech-capture/shared';
-import type { ConfigUpdate } from '../../../../application/ports/in/manage-config.js';
+import type { ConfigDto } from '@screenreader-speech-capture/shared';
 import type { Config } from '../../../../domain/config/index.js';
 
 // Lists every field on purpose: a field added to the config (for example a secret) doesn't reach
@@ -19,8 +18,4 @@ export function toConfigDto({ tcp, http, playwright, mcp, buffer, log }: Config)
     buffer: { maxEntries: buffer.maxEntries },
     log: { level: log.level, file: log.file, consoleSpeech: log.consoleSpeech },
   };
-}
-
-export function toConfigResponseDto({ config, restartRequired }: ConfigUpdate): ConfigResponseDto {
-  return { ...toConfigDto(config), restartRequired: [...restartRequired] };
 }

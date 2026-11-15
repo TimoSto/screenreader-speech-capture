@@ -7,7 +7,6 @@ import type { CapturedSpeech, RecordSpeech } from '../ports/in/record-speech.js'
 import {
   LIST_LIMIT,
   type ListOptions,
-  type ResizeBuffer,
   type SpeechUseCases,
   type WatchListener,
   type WatchOptions,
@@ -30,7 +29,7 @@ export const MAX_MARKER_LENGTH = API_LIMITS.markerLength;
  * from the speech log and `receivedAt` from the clock, and is published on the event bus
  * (docs/implementation/tcp-capture.md#from-line-to-speech-entry).
  */
-export class SpeechService implements RecordSpeech, SpeechUseCases, ResizeBuffer {
+export class SpeechService implements RecordSpeech, SpeechUseCases {
   constructor(private readonly deps: SpeechServiceDeps) {}
 
   record({ text, voice, connectionId }: CapturedSpeech): void {
@@ -61,10 +60,6 @@ export class SpeechService implements RecordSpeech, SpeechUseCases, ResizeBuffer
   clear(): void {
     this.deps.log.clear();
     this.deps.events.publish({ type: 'clear' });
-  }
-
-  setMaxEntries(maxEntries: number): void {
-    this.deps.log.resize(maxEntries);
   }
 
   addMarker(label: string): SpeechEntry {

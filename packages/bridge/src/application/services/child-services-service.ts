@@ -1,11 +1,10 @@
 import {
   reachability,
   SERVICE_NAMES,
-  serviceSettings,
   type Reachability,
   type ServiceName,
 } from '../../domain/child-service.js';
-import { changedSections, type Config } from '../../domain/config/index.js';
+import type { Config } from '../../domain/config/index.js';
 import type { ChildServices } from '../ports/in/child-services.js';
 import type { Logger } from '../ports/out/logger.js';
 import type { ProcessSupervisor } from '../ports/out/process-supervisor.js';
@@ -30,25 +29,6 @@ export class ChildServicesService implements ChildServices {
     const config = this.deps.config();
     const enabled = SERVICE_NAMES.filter((name) => config[name].enabled);
     await Promise.all(enabled.map((name) => this.supervisor(name).start()));
-  }
-
-  async apply(next: Config, previous: Config): Promise<void> {
-    const changed = changedSections(previous, next);
-    for (const name of SERVICE_NAMES) {
-      if (!changed.includes(name)) continue;
-      const supervisor = this.supervisor(name);
-      supervisor.reconfigure(serviceSettings(name, next));
-      if (next[name].enabled) {
-        // Not awaited: an install can take minutes. `status` shows the progress.
-        supervisor.restart().catch((error: unknown) => {
-          this.deps.logger.error(`${name} restart failed: ${String(error)}`);
-        });
-      } else {
-        await supervisor.stop().catch((error: unknown) => {
-          this.deps.logger.error(`${name} stop failed: ${String(error)}`);
-        });
-      }
-    }
   }
 
   async stopAll(): Promise<void> {

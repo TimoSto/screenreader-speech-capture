@@ -29,10 +29,6 @@ export class BridgeLog {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  setLevel(level: LogLevel): void {
-    this.level = level;
-  }
-
   for(prefix: LogPrefix, options: { channel?: LogChannel } = {}): Logger {
     const channel = options.channel ?? 'log';
     const log = (level: LogLevel) => (message: string) =>

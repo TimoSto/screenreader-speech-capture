@@ -44,7 +44,7 @@ const READY_TIMEOUT_MS = 60_000;
  * and kill the whole process tree on stop.
  */
 export class ChildProcessSupervisor implements ProcessSupervisor {
-  private settings: ServiceSettings;
+  private readonly settings: ServiceSettings;
   /** Settings of the current run, until it is stopped. `status()` reports these. */
   private active: ResolvedSettings | null = null;
   private state: ServiceState = 'stopped';
@@ -74,10 +74,6 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
     };
   }
 
-  reconfigure(settings: ServiceSettings): void {
-    this.settings = settings;
-  }
-
   start(): Promise<void> {
     // Already running: nothing changes state, so waiting would never end.
     if (this.state === 'running') return Promise.resolve();
@@ -104,11 +100,6 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
     this.setState('stopped');
     if (!wasStopped) this.options.logger.info(`${this.options.name} stopped`);
     if (child) await killTree(child);
-  }
-
-  async restart(): Promise<void> {
-    await this.stop();
-    await this.start();
   }
 
   private resolved(): ResolvedSettings {
