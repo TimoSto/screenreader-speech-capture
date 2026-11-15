@@ -19,7 +19,7 @@ import type { Router } from '../router.js';
 import { sseFrame } from '../sse/sse-frames.js';
 import type { SseHub, SseStream } from '../sse/sse-hub.js';
 
-export interface SpeechRoutesDeps {
+interface SpeechRoutesDeps {
   speech: SpeechUseCases;
   waits: WaitForSpeech;
   /** The open SSE streams. */

@@ -4,7 +4,7 @@ import { clientHeader, jsonBody, nullableStringField, stringField } from '../req
 import { sendJson, sendNoContent } from '../response.js';
 import type { Router } from '../router.js';
 
-export interface SessionRoutesDeps {
+interface SessionRoutesDeps {
   sessions: ManageSessions;
 }
 

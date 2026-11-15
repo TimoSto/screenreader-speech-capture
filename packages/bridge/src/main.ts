@@ -34,7 +34,7 @@ import { SpeechLog } from './domain/speech-log.js';
 
 export { ConfigError } from './composition/load-config.js';
 
-export interface BridgeOptions {
+interface BridgeOptions {
   version: string;
   /** Settings from flags and environment variables. They win over the config file. */
   overrides?: unknown;

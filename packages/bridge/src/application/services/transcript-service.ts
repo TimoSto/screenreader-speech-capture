@@ -1,7 +1,7 @@
 import type { Logger } from '../ports/out/logger.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 
-export interface TranscriptServiceDeps {
+interface TranscriptServiceDeps {
   events: SpeechEventBus;
   /**
    * Where the lines go. Should be a logger on the `speech` channel, so the text stays off the

@@ -10,7 +10,7 @@ import type { Clock } from '../ports/out/clock.js';
 import type { Logger } from '../ports/out/logger.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 
-export interface SessionServiceDeps {
+interface SessionServiceDeps {
   log: Pick<SpeechLog, 'startSession' | 'endSession' | 'sessions' | 'currentSession'>;
   events: SpeechEventBus;
   clock: Pick<Clock, 'now'>;

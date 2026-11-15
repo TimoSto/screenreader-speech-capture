@@ -52,7 +52,7 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
-export interface FetchBridgeApiOptions {
+interface FetchBridgeApiOptions {
   /** Resolves the bridge URL (no trailing slash). Called once, on the first request. */
   baseUrl: () => Promise<string>;
   /** Sent as `X-SR-Speech-Client` with every request, so the bridge can tell clients apart. */

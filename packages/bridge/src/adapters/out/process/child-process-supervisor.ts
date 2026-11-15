@@ -16,7 +16,7 @@ import { describeListener } from '../../shared/net/reachable-urls.js';
 import { killTree, pipeLines, trackTree, treeSpawnOptions } from './process-tree.js';
 import type { Command, Prepare, ResolvedSettings } from './types.js';
 
-export interface ChildProcessSupervisorOptions {
+interface ChildProcessSupervisorOptions {
   /** Service name for the `[bridge]` log and hints, for example `playwright`. */
   name: string;
   settings: ServiceSettings;

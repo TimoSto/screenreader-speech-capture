@@ -19,7 +19,7 @@ import type {
 import type { ConfigStore } from '../ports/out/config-store.js';
 import type { Logger } from '../ports/out/logger.js';
 
-export interface ConfigServiceDeps {
+interface ConfigServiceDeps {
   store: ConfigStore;
   logger: Logger;
   /** The configuration in use: defaults, config file, environment and flags. */

@@ -8,7 +8,7 @@ import type {
 } from '../ports/in/manage-client-config.js';
 import type { ClientConfigStore } from '../ports/out/client-config-store.js';
 
-export interface ClientConfigServiceDeps {
+interface ClientConfigServiceDeps {
   store: ClientConfigStore;
   /** Value of `SR_SPEECH_URL`, read once by the composition root. */
   envUrl?: string | undefined;

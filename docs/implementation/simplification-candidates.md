@@ -23,6 +23,8 @@ measure the bridge's RSS (`ps -o rss`) before and after any change.
 - Client build time: `tsdown` generated declarations from `tsconfig.json`, which includes `test/`,
   so the dts step type-checked the tests too. `packages/client/tsconfig.build.json` (src only)
   halves the build (about 18 s to about 9 s). The generated `index.d.mts` is unchanged.
+- Dead code and needless exports: removed `ConfigPatchDto` and the `export` of `readJson`,
+  `MAX_BODY_BYTES`, `errorResponse` and 30 `*Deps` / `*Options` types used only in their own file.
 
 ## Quick wins (low risk)
 
@@ -32,11 +34,9 @@ measure the bridge's RSS (`ps -o rss`) before and after any change.
    (default 64 KB to something like 16 KB). Optionally add a total-bytes cap in `SpeechLog`.
 3. Cap the client's `seen` array in `speech-capture-service.ts` (waits and `waitForSilence`) at
    `API_LIMITS.wait.seen`; it is unbounded today, the bridge's own copy is capped.
-4. Remove dead code and needless `export`s: `ConfigPatchDto`, `readJson` / `MAX_BODY_BYTES`,
-   `errorResponse`, about 75 `*Deps` / `*Options` types used only in their own file.
-5. Skip building the transcript string in `TranscriptService` unless debug logging is on; drop the
+4. Skip building the transcript string in `TranscriptService` unless debug logging is on; drop the
    listener array copy in `in-process-event-bus.ts`.
-6. The client's `dist/cli.d.mts` is not needed (the CLI is a bin). Emit declarations for `index`
+5. The client's `dist/cli.d.mts` is not needed (the CLI is a bin). Emit declarations for `index`
    only.
 
 ## Simplifications (moderate effort, tests need rewiring)

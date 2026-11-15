@@ -24,7 +24,7 @@ import { SseHub } from './sse/sse-hub.js';
 export type HttpSettings = Config['http'];
 
 /** The driving ports the API calls, plus the logger. */
-export interface HttpServerDeps {
+interface HttpServerDeps {
   speech: SpeechUseCases;
   waits: WaitForSpeech;
   status: GetStatus;

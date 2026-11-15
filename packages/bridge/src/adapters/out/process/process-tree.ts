@@ -56,7 +56,7 @@ const exec: Exec = (file, args, timeoutMs) =>
   });
 
 /** Test seams of {@link killTree}. */
-export interface KillTreeOptions {
+interface KillTreeOptions {
   platform?: NodeJS.Platform;
   exec?: Exec;
   /** How long `taskkill` and the process table query may take each. Default 5 s. */
