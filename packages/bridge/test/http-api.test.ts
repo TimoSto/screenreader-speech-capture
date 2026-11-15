@@ -444,13 +444,12 @@ describe('HTTP API', () => {
   it('serves the configuration', async () => {
     const bridge = await start({ buffer: { maxEntries: 42 } });
     const config = await json<unknown>(await fetch(api(bridge, '/config')));
-    expect(config).toEqual({
-      ...(JSON.parse(JSON.stringify(testConfig({ buffer: { maxEntries: 42 } }))) as object),
-      restartRequired: [],
-    });
+    expect(config).toEqual(
+      JSON.parse(JSON.stringify(testConfig({ buffer: { maxEntries: 42 } }))) as object,
+    );
   });
 
-  it('refuses foreign host names and origins, and takes new allowedHosts without a restart', async () => {
+  it('refuses foreign host names and origins', async () => {
     const bridge = await start();
     const port = bridge.httpPort;
     const status = (host: string) =>
@@ -466,23 +465,6 @@ describe('HTTP API', () => {
           'Origin: http://rebind.example\r\ncontent-length: 0\r\n\r\n',
       ),
     ).toBe('HTTP/1.1 403 Forbidden');
-
-    const stream = await openStream(bridge);
-    const put = await fetch(api(bridge, '/config'), {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ http: { allowedHosts: ['rebind.example'] } }),
-    });
-    expect(put.status).toBe(200);
-    expect(await status(`rebind.example:${port}`)).toBe('HTTP/1.1 200 OK');
-    // Same server: the stream opened before the change still gets speech.
-    await send(bridge.tcpPort, 'after the change\r\n');
-    const text = await eventually(
-      () => stream.text,
-      (t) => t.includes('after the change'),
-    );
-    expect(text).toContain('after the change');
-    stream.close();
   });
 
   it('answers unknown endpoints and methods with 404 NOT_FOUND', async () => {

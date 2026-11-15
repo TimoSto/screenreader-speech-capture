@@ -81,34 +81,6 @@ describe('Playwright server service', () => {
     expect(restart.status).toBe(404);
   });
 
-  it('restarts on the new port after PUT /config, and stops when disabled', async () => {
-    const { bridge, port } = await startWithPlaywright();
-    await ready(bridge);
-    const newPort = await freePort();
-
-    const response = await fetch(api(bridge, '/config'), {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ playwright: { port: newPort } }),
-    });
-    expect(response.status).toBe(200);
-
-    const moved = await eventually(
-      () => status(bridge),
-      (s) => s.playwright?.state === 'running' && s.playwright.port === newPort,
-    );
-    expect(moved.playwright).toMatchObject({ state: 'running', port: newPort });
-    expect(await accepts(port)).toBe(false);
-
-    await fetch(api(bridge, '/config'), {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ playwright: { enabled: false } }),
-    });
-    expect((await status(bridge)).playwright?.state).toBe('stopped');
-    expect(await accepts(newPort)).toBe(false);
-  });
-
   it('kills the Playwright server when the bridge stops', async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), 'services-api-'));
     dirs.push(dir);

@@ -59,7 +59,7 @@ export const StatusSchema = v.pipe(
       apiVersion: v.pipe(
         v.string(),
         v.description('`<major>.<minor>` of this API.'),
-        v.examples(['1.12']),
+        v.examples(['1.13']),
       ),
       state: v.picklist(BRIDGE_STATES),
       startedAt: v.pipe(

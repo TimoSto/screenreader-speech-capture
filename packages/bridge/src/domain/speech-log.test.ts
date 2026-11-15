@@ -77,17 +77,6 @@ describe('SpeechLog', () => {
       expect(texts(log, 9998)).toEqual(['t9999', 't10000']);
     });
 
-    it('drops the oldest entries at once when maxEntries shrinks, and keeps more when it grows', () => {
-      const log = new SpeechLog(5);
-      fill(log, 5);
-      log.resize(2);
-      expect(log.stats()).toEqual({ size: 2, maxEntries: 2, firstSeq: 4, lastSeq: 5 });
-      expect(log.page(0).truncated).toBe(true);
-      log.resize(4);
-      fill(log, 2);
-      expect(log.stats()).toMatchObject({ size: 4, firstSeq: 4, lastSeq: 7 });
-    });
-
     it('keeps counting seq after clear, and clear is not truncation', () => {
       const log = new SpeechLog(2);
       fill(log, 3);

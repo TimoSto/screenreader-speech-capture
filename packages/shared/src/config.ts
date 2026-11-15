@@ -83,20 +83,6 @@ export const ConfigSchema = v.pipe(
 /** The bridge configuration (docs/usage/configuration.md). */
 export type ConfigDto = v.InferOutput<typeof ConfigSchema>;
 
-export const ConfigResponseSchema = v.pipe(
-  v.object({
-    ...configEntries,
-    restartRequired: v.pipe(v.array(v.string()), v.examples([['tcp.port']])),
-  }),
-  v.description(
-    '`Config` as in use, plus the restart-only settings saved with another value, which take ' +
-      'effect on the next start. Since API 1.6.',
-  ),
-);
-
-/** Answer of `GET` and `PUT /api/v1/config`. */
-export type ConfigResponseDto = v.InferOutput<typeof ConfigResponseSchema>;
-
 /** A section with every setting optional and no others allowed. */
 const patchOf = <T extends v.ObjectEntries>(entries: T) =>
   v.strictObject(

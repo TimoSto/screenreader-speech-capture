@@ -72,12 +72,3 @@ export interface SpeechUseCases {
   /** Inserts a marker. `INVALID_REQUEST` for an empty or too long label. */
   addMarker(label: string): SpeechEntry;
 }
-
-/** Driven by the composition root on a config change, not by the HTTP API. */
-export interface ResizeBuffer {
-  /**
-   * Changes the cap of the speech buffer (`buffer.maxEntries`). A smaller one drops the oldest
-   * entries at once.
-   */
-  setMaxEntries(maxEntries: number): void;
-}

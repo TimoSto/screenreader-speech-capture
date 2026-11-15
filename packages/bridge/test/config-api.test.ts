@@ -1,9 +1,4 @@
-import type {
-  ConfigDto,
-  ConfigResponseDto,
-  ErrorBodyDto,
-  StatusDto,
-} from '@screenreader-speech-capture/shared';
+import type { ConfigDto, ErrorBodyDto, StatusDto } from '@screenreader-speech-capture/shared';
 import { describe, expect, it } from 'vitest';
 import { MemoryConfigStore } from './fakes.js';
 import { eventually, send, start } from './helpers.js';
@@ -47,29 +42,23 @@ describe('PUT /api/v1/config', () => {
     expect((await json<ErrorBodyDto>(text)).error.details).toEqual({ field: 'content-type' });
   });
 
-  it('applies the buffer size live and saves only the changed setting', async () => {
-    const store = new MemoryConfigStore();
-    const bridge = await start({}, { store });
-    const response = await put(bridge, { buffer: { maxEntries: 5 } });
-    expect(response.status).toBe(200);
-    expect((await json<ConfigDto>(response)).buffer.maxEntries).toBe(5);
-
-    const status = await json<StatusDto>(await fetch(api(bridge, '/status')));
-    expect(status.buffer.maxEntries).toBe(5);
-    // The ports the test passes like flags are not written to the file.
-    expect(store.saved).toEqual({ buffer: { maxEntries: 5 } });
-  });
-
-  it('saves restart-only settings for the next start and reports them as restartRequired', async () => {
+  it('saves settings for the next start and keeps the running ones', async () => {
     const store = new MemoryConfigStore();
     const bridge = await start({}, { store });
     const response = await put(bridge, { tcp: { encoding: 'utf-8' }, buffer: { maxEntries: 5 } });
     expect(response.status).toBe(200);
-    const body = await json<ConfigResponseDto>(response);
-    expect(body.restartRequired).toEqual(['tcp.encoding']);
-    expect(body.tcp.encoding).toBe('windows-1252');
+    // The answer is what the next start will use, `GET` what runs now.
+    const body = await json<ConfigDto>(response);
+    expect(body.tcp.encoding).toBe('utf-8');
     expect(body.buffer.maxEntries).toBe(5);
+    // The ports the test passes like flags are not written to the file.
     expect(store.saved).toEqual({ tcp: { encoding: 'utf-8' }, buffer: { maxEntries: 5 } });
+
+    const current = await json<ConfigDto>(await fetch(api(bridge, '/config')));
+    expect(current.tcp.encoding).toBe('windows-1252');
+    expect(current.buffer.maxEntries).toBe(10000);
+    const status = await json<StatusDto>(await fetch(api(bridge, '/status')));
+    expect(status.buffer.maxEntries).toBe(10000);
 
     // Still decoded with the encoding of the start.
     await send(bridge.tcpPort, Buffer.from([0x4d, 0xe4, 0x72, 0x7a, 0x0d, 0x0a]));
@@ -79,15 +68,11 @@ describe('PUT /api/v1/config', () => {
     );
     expect(entries[0]!.text).toBe('März');
 
-    const current = await json<ConfigResponseDto>(await fetch(api(bridge, '/config')));
-    expect(current.restartRequired).toEqual(['tcp.encoding']);
-
-    // The next start takes it.
+    // The next start takes it. The answer of a GET can be sent back as it is.
     const next = await start({}, { store });
-    const after = await json<ConfigResponseDto>(await fetch(api(next, '/config')));
+    const after = await json<ConfigDto>(await fetch(api(next, '/config')));
     expect(after.tcp.encoding).toBe('utf-8');
-    expect(after.restartRequired).toEqual([]);
-    // The answer of a GET can be sent back as it is.
+    expect(after.buffer.maxEntries).toBe(5);
     expect((await put(next, after)).status).toBe(200);
   });
 

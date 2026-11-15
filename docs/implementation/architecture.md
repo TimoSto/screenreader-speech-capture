@@ -103,7 +103,7 @@ packages/bridge/src/
     out/platform/    default file locations (config, log, Playwright cache) on shared `appDir`
   main.ts            composition root: startBridge, the only place adapters are wired to ports
   composition/       its helpers: config loading, logging, building the supervisors and the
-                     proxy routes, wiring the live re-apply (PUT /config), listener start order.
+                     proxy routes, listener start order.
                      Rules belong in the services; this only constructs and connects
   bin/cli.ts         executable: parses argv (adapters/in/cli), starts main.ts
 ```

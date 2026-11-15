@@ -17,8 +17,7 @@ in [Test client → Errors](../client.md#errors). The fix is always the same: ra
 ## The buffer drops the oldest entry
 
 The buffer holds at most `buffer.maxEntries` entries (default 10 000). Each new entry beyond that
-drops the oldest one, and `buffer.firstSeq` moves up. A smaller `maxEntries` set through
-`PUT /config` drops the oldest entries at once. Entries removed by a clear don't count as dropped.
+drops the oldest one, and `buffer.firstSeq` moves up. Entries removed by a clear don't count as dropped.
 
 ```mermaid
 sequenceDiagram

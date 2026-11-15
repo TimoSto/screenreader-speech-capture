@@ -157,8 +157,7 @@ sequenceDiagram
 
 ## Change the configuration
 
-`PUT /config` checks the whole patch, saves it, then applies what can change while running.
-Restart-only settings are saved and listed in `restartRequired`. Details:
+`PUT /config` checks the whole patch, and saves it. The settings take effect on the next start. Details:
 [Changing settings](../configuration.md#changing-settings).
 
 ```mermaid
@@ -172,8 +171,8 @@ sequenceDiagram
         B-->>C: 400 INVALID_REQUEST, details.field (nothing changed)
     else valid
         B->>F: save the file's settings + the patch
-        Note over B: buffer.maxEntries applies at once,<br/>tcp.port waits for the next start
-        B-->>C: 200 config in use, restartRequired: ["tcp.port"]
+        Note over B: the running bridge keeps its settings,<br/>the next start uses them
+        B-->>C: 200 config for the next start
     end
 ```
 
@@ -213,7 +212,7 @@ sequenceDiagram
 
     T->>C: waitForOutput("Submit")
     C->>B: GET /api/v1/status
-    B-->>C: 200 bridge.apiVersion "1.12"
+    B-->>C: 200 bridge.apiVersion "1.13"
     alt same major version
         C->>B: GET /api/v1/speech?since=…
         Note over C: later calls skip the check

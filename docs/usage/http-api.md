@@ -68,7 +68,7 @@ with every run.
 | `GET /api/v1/sessions` | `{ "sessions": [...], "currentId": 7 }`: the sessions that still have entries in the buffer, plus the current one, newest first. `currentId` is `null` when no session is current. |
 | `POST /api/v1/set-focus` `{ "x": 640, "y": 12, "button": "left" }` | *(planned, [M4](../ROADMAP.md#m4-native-input-))* Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
 | `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | *(planned, [M4](../ROADMAP.md#m4-native-input-))* Native key presses: one chord, or a sequence with `delayMs` between them. |
-| `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. `PUT` takes any subset as `application/json`, saves it to the config file, applies what can change while running and answers with the configuration in use plus `restartRequired` (since API 1.6): the restart-only settings, such as ports, saved for the next start. See [Changing settings](configuration.md#changing-settings). |
+| `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. `PUT` takes any subset as `application/json`, saves it to the config file and answers with the configuration the next start will use; `GET` answers with the one in use. A saved setting takes effect on the next start of the bridge. See [Changing settings](configuration.md#changing-settings). |
 | `GET /api/v1/status` | Bridge and API version, when the bridge started (`startedAt`), state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, current session. |
 
 `GET /api/v1/status` example:
@@ -77,7 +77,7 @@ with every run.
 {
   "bridge": {
     "version": "0.3.0",
-    "apiVersion": "1.12",
+    "apiVersion": "1.13",
     "state": "ready",
     "startedAt": "2026-11-07T14:00:58.000Z"
   },

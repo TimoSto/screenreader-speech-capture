@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: screenreader-speech-capture bridge API
-  version: '1.12'
+  version: '1.13'
   summary: Capture what a screen reader says and read it over HTTP.
   description: |
     REST + Server-Sent Events API of the bridge. `info.version` is the API version that
@@ -15,8 +15,7 @@ info:
     (`/sessions`, `sessionId` on entries, the `session` filter and SSE event, `session` in the
     status), 1.4 added the bridge run (`instanceId` and `startedAt` in the status, `instanceId`
     in `SpeechList`, the SSE `bridge` event), 1.5 added `http.allowedHosts` to the config, the
-    `FORBIDDEN` error and `session=none`, 1.6 added `restartRequired` to the `/config` answers
-    (ports, hosts and the log output no longer change while running). 1.7 removed the bridge run
+    `FORBIDDEN` error and `session=none`, 1.6 added `restartRequired` to the `/config` answers. 1.7 removed the bridge run
     (`instanceId` and the SSE `bridge` event) again: `seq` now keeps rising across restarts. 1.8
     removed settings and fields of features that don't exist yet: `tcp.format` (one possible
     value), `input` in the config and the status, and the `INPUT_DISABLED` error code (they come
@@ -24,7 +23,10 @@ info:
     `client` to `Session`, the `X-SR-Speech-Client` request header and `replaced` in the
     `POST /sessions` answer. 1.11 added `omitted` to the timeout answer of `GET /speech/wait`,
     which now holds the last 1000 entries seen instead of all of them. 1.12 added the `position`
-    event of `GET /speech/stream` and the replay of a `Last-Event-ID` above every `seq`.
+    event of `GET /speech/stream` and the replay of a `Last-Event-ID` above every `seq`. 1.13
+    removed `restartRequired` again (an exception to "minor versions only add", since no client
+    existed): `PUT /config` now only saves, a setting takes effect on the next start, and `GET`
+    shows the settings in use.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -318,27 +320,23 @@ paths:
       operationId: getConfig
       summary: The active configuration
       description: |
-        Defaults, then the config file, then flags and environment variables, as in use. Plus the
-        restart-only settings saved for the next start (`restartRequired`).
+        Defaults, then the config file, then flags and environment variables, as in use. It does
+        not change while the bridge runs.
       responses:
         '200':
           description: The configuration.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ConfigResponse' }
+              schema: { $ref: '#/components/schemas/Config' }
     put:
       tags: [bridge]
       operationId: updateConfig
-      summary: Change settings, in the config file and live
+      summary: Change settings in the config file, for the next start
       description: |
         Takes any subset of the configuration. The whole patch is checked first, then saved to the
         config file (only the file's own settings plus the patch, never values from flags or
-        environment variables), then applied to the running bridge.
-
-        Restart-only settings (`tcp.*`, `http.host`, `http.port`, `log.file`,
-        `log.consoleSpeech`) are only saved: they take effect on the next start and are listed in
-        `restartRequired`. A flag or environment variable still wins on the next start (the
-        bridge log warns about it). A `restartRequired` key in the body is ignored.
+        environment variables). The running bridge keeps its settings: they take effect on the next
+        start. A flag or environment variable still wins then (the bridge log warns about it).
 
         The body must be `application/json` (`400` with `field: content-type` otherwise).
       requestBody:
@@ -349,10 +347,10 @@ paths:
             example: { tcp: { port: 4450 }, log: { level: debug } }
       responses:
         '200':
-          description: The configuration in use.
+          description: The configuration the next start will use.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ConfigResponse' }
+              schema: { $ref: '#/components/schemas/Config' }
         '400':
           description: |
             Invalid or unknown setting, or a body that is not JSON. `error.details.field` names it.
@@ -705,7 +703,7 @@ components:
               type: string
               description: '`<major>.<minor>` of this API.'
               examples:
-                - '1.12'
+                - '1.13'
             state:
               enum:
                 - starting
@@ -899,101 +897,6 @@ components:
         - buffer
         - log
       description: The bridge configuration (docs/usage/configuration.md).
-    ConfigResponse:
-      type: object
-      properties:
-        tcp:
-          type: object
-          properties:
-            host:
-              type: string
-              pattern: \S
-              description: Not empty or blank.
-            port:
-              type: integer
-              minimum: 0
-              maximum: 65535
-            encoding:
-              type: string
-              description: "TextDecoder label of the socket voice's code page. Not `utf-16*`: lines are split on bytes."
-            maxLineBytes:
-              type: integer
-              minimum: 1024
-              maximum: 16777216
-          required:
-            - host
-            - port
-            - encoding
-            - maxLineBytes
-        http:
-          type: object
-          properties:
-            host:
-              type: string
-              pattern: \S
-              description: Not empty or blank.
-            port:
-              type: integer
-              minimum: 0
-              maximum: 65535
-            allowedHosts:
-              $ref: '#/components/schemas/AllowedHosts'
-          required:
-            - host
-            - port
-            - allowedHosts
-        playwright:
-          $ref: '#/components/schemas/ServiceConfig'
-        mcp:
-          $ref: '#/components/schemas/McpConfig'
-        buffer:
-          type: object
-          properties:
-            maxEntries:
-              type: integer
-              minimum: 1
-              maximum: 1000000
-          required:
-            - maxEntries
-        log:
-          type: object
-          properties:
-            level:
-              enum:
-                - error
-                - warn
-                - info
-                - debug
-              type: string
-            file:
-              anyOf:
-                - type: string
-                  pattern: \S
-                  description: Not empty or blank.
-                - type: 'null'
-              description: Bridge log file, `null` = default path.
-            consoleSpeech:
-              type: boolean
-              description: Also write the speech text to the console.
-          required:
-            - level
-            - file
-            - consoleSpeech
-        restartRequired:
-          type: array
-          items:
-            type: string
-          examples:
-            - - tcp.port
-      required:
-        - tcp
-        - http
-        - playwright
-        - mcp
-        - buffer
-        - log
-        - restartRequired
-      description: '`Config` as in use, plus the restart-only settings saved with another value, which take effect on the next start. Since API 1.6.'
     ConfigPatch:
       type: object
       properties:

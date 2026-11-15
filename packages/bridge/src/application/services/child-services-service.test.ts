@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryLogger } from '../../../test/fakes.js';
-import type {
-  ServiceName,
-  ServiceSettings,
-  ServiceState,
-  ServiceStatus,
-} from '../../domain/child-service.js';
+import type { ServiceName, ServiceState, ServiceStatus } from '../../domain/child-service.js';
 import {
   DEFAULT_CONFIG,
   mergeConfig,
@@ -20,7 +15,6 @@ class FakeSupervisor implements ProcessSupervisor {
   readonly calls: string[] = [];
   state: ServiceState = 'stopped';
   failStop = false;
-  failRestart = false;
   #settle: (() => void)[] = [];
 
   start(): Promise<void> {
@@ -30,13 +24,6 @@ class FakeSupervisor implements ProcessSupervisor {
   stop(): Promise<void> {
     this.calls.push('stop');
     return this.failStop ? Promise.reject(new Error('cannot stop')) : Promise.resolve();
-  }
-  restart(): Promise<void> {
-    this.calls.push('restart');
-    return this.failRestart ? Promise.reject(new Error('cannot restart')) : new Promise(() => {});
-  }
-  reconfigure(settings: ServiceSettings): void {
-    this.calls.push(`reconfigure ${settings.host}:${settings.port} ${settings.version}`);
   }
   status(): ServiceStatus {
     return { state: this.state, version: '1', port: 3000, restarts: 0, exitCode: null };
@@ -73,40 +60,6 @@ describe('ChildServicesService', () => {
     supervisors.playwright.settle();
     await flush();
     expect(done).toBe(true);
-  });
-
-  it('leaves the services alone when their section did not change', async () => {
-    const { services, supervisors } = setup();
-    await services.apply(config({ buffer: { maxEntries: 5 } }), config());
-    expect([...supervisors.playwright.calls, ...supervisors.mcp.calls]).toEqual([]);
-  });
-
-  it('reconfigures and restarts an enabled service, without waiting for the restart', async () => {
-    const { services, supervisors } = setup();
-    // The fake's restart never settles: `apply` must still resolve.
-    await services.apply(config({ playwright: { port: 3100, version: '1.66.0' } }), config());
-    expect(supervisors.playwright.calls).toEqual(['reconfigure 127.0.0.1:3100 1.66.0', 'restart']);
-    expect(supervisors.mcp.calls).toEqual([]);
-  });
-
-  it('reconfigures and stops a disabled service', async () => {
-    const { services, supervisors } = setup();
-    await services.apply(config({ mcp: { enabled: false } }), config());
-    expect(supervisors.mcp.calls).toEqual(['reconfigure 127.0.0.1:8931 null', 'stop']);
-  });
-
-  it('logs a failed restart or stop instead of rejecting', async () => {
-    const { services, supervisors, logger } = setup();
-    supervisors.playwright.failRestart = true;
-    supervisors.mcp.failStop = true;
-    await services.apply(config({ playwright: { port: 3100 }, mcp: { enabled: false } }), config());
-    await flush();
-    expect(logger.lines).toEqual(
-      expect.arrayContaining([
-        'error playwright restart failed: Error: cannot restart',
-        'error mcp stop failed: Error: cannot stop',
-      ]),
-    );
   });
 
   it('stops all services, even if one fails, then rethrows', async () => {

@@ -92,12 +92,6 @@ export class SpeechLog {
     return { entries: items, truncated: since < droppedUpToSeq, hasMore };
   }
 
-  /** Changes the cap. A smaller one drops the oldest entries at once, as truncated. */
-  resize(maxEntries: number): void {
-    this.#maxEntries = maxEntries;
-    this.#trim();
-  }
-
   /** Removes all entries and the ended sessions. The current session stays current. */
   clear(): void {
     this.#entries.clear();
