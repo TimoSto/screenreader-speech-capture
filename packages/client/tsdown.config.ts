@@ -7,6 +7,8 @@ export default defineConfig({
   target: 'node20',
   // Type declarations for the library entry (`exports.types`); `shared` is inlined like in the JS.
   dts: { tsc: { eager: true } },
+  // Declarations only need `src`: the default tsconfig also includes the tests and makes the dts step ~3x slower.
+  tsconfig: 'tsconfig.build.json',
   // Fail the build when the package would be broken for consumers (missing types, bad exports).
   publint: { level: 'error' },
   attw: { profile: 'esm-only', level: 'error' },
