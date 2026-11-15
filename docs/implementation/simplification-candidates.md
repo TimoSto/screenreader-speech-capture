@@ -48,11 +48,6 @@ measure the bridge's RSS (`ps -o rss`) before and after any change.
 
 9. **Three "yield every N" mechanisms** for replay (`sse-hub.ts`, `composition/pace.ts`,
    `follow-log.ts`). Careful: they protect the no-gap, no-duplicate SSE guarantee.
-10. **Generated artifacts.** `cli-output.schema.json` (742 lines) is generated from valibot schemas;
-    `openapi.yaml` (1,235 lines) is half generated, half hand-written. Drop the CLI schema, and make
-    the OpenAPI file either fully generated or fully hand-written. Saves about 1,900 lines of
-    artifacts and one or two devDependencies.
-
 ## Needs a decision (largest payoff, highest risk)
 
 12. **Playwright / MCP supervision stack** (about 1,300 lines, over 20% of the bridge, M3 is marked

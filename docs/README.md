@@ -11,7 +11,7 @@ For people who set up the VM, write tests or run agents against the bridge.
 | [VM setup](usage/vm-setup.md) | Requirements, socket voice, NVDA / JAWS setup, running the bridge on the VM |
 | [Speech capture](usage/speech-capture.md) | What the socket voice sends, the buffer, sessions |
 | [HTTP API](usage/http-api.md) | Data model, endpoints, errors, versioning ([OpenAPI](usage/openapi.yaml)) |
-| [Test client](usage/client.md) | Library, cursor, Playwright fixture, CLI and exit codes ([`--json` schema](usage/cli-output.schema.json)) |
+| [Test client](usage/client.md) | Library, cursor, Playwright fixture, CLI and exit codes |
 | [Native input](usage/native-input.md) | Real clicks and key presses: when Playwright input isn't enough (planned) |
 | [Remote Playwright & MCP](usage/playwright-mcp.md) | The Playwright server and Playwright MCP run by the bridge |
 | [Agents](usage/agents.md) | Agent loop with the CLI, agent skill (partly planned) |

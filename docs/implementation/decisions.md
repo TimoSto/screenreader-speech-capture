@@ -185,7 +185,8 @@ drifted (a `seq` comment from API 1.6, limits copied into the client).
 Now one definition gives:
 
 - the types bridge and client compile against;
-- `components.schemas` of `docs/usage/openapi.yaml`, generated with `pnpm openapi` and checked by a test;
+- `docs/usage/openapi.yaml`, generated entirely with `pnpm openapi` (the schemas from these definitions,
+  the endpoints and prose from `packages/shared/src/openapi/spec.ts`) and checked by a test;
 - the client's check of every answer (`checkDto`). A body that doesn't match fails at the boundary
   with the field that is wrong (`INVALID_RESPONSE`), not somewhere inside the client. Unknown
   fields pass and are dropped, because minor versions may add them.

@@ -96,10 +96,11 @@ the DTOs) holds `appDir`, the per-user config/state/cache folders, so the bridge
 the client's `client.json` agree. It is private and bundled into published packages by tsdown — never published on its own.
 Each hexagon owns its own domain model and maps to/from DTOs in its HTTP adapter
 (`adapters/in/http/dto/`, one file per resource; `dto/contract.test.ts` checks their output
-against the schemas). The OpenAPI spec lives at `docs/usage/openapi.yaml`: its `components.schemas` are
-**generated** from the schemas (`pnpm openapi`, list in `shared/src/schemas.ts`), the rest is
-hand-written. `shared/src/openapi/openapi.test.ts` fails when the file drifts from the schemas
-or from `API_VERSION`. valibot is bundled into bridge and client with `shared` (`deps.onlyBundle`
+against the schemas). The OpenAPI spec lives at `docs/usage/openapi.yaml`: it is
+**fully generated** (`pnpm openapi`): `components.schemas` from the schemas (list in
+`shared/src/schemas.ts`), everything else (info, paths, parameters, responses, prose) from
+`shared/src/openapi/spec.ts`. Never edit the YAML. `shared/src/openapi/openapi.test.ts` fails when the
+file drifts. valibot is bundled into bridge and client with `shared` (`deps.onlyBundle`
 in each `tsdown.config.ts`).
 
 ### Config
@@ -132,10 +133,10 @@ its diagram with the prose. Source comments link to docs by repo path (`docs/usa
 Each fact has one home in `docs/`; other docs link to it in one line. The README only introduces the
 project and links into `docs/`. Update `docs/ROADMAP.md` checkboxes when a milestone item lands, and
 keep `docs/usage/http-api.md` / `docs/usage/openapi.yaml` in sync with HTTP changes (change a schema in
-`packages/shared`, then run `pnpm openapi`; paths and prose in the YAML are edited by hand). The
+`packages/shared`, or edit `openapi/spec.ts` for paths and prose, then run `pnpm openapi`). The
 client CLI's `--json` output is a contract too: one valibot schema per command in
 `packages/client/src/adapters/in/cli/output.ts` (`out(command, json, text)` only accepts what it
-describes), published as `docs/usage/cli-output.schema.json` with `pnpm cli-schema`. Tests check every
+describes). Tests check every
 `--json` output against it (`packages/client/test/cli-output.ts`).
 
 Docs may describe features that don't exist yet. Mark them so a reader who lands on a page can tell:
