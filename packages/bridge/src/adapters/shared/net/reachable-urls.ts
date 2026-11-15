@@ -18,12 +18,31 @@ export function reachableUrls(
   port: number,
   interfaces: NodeJS.Dict<os.NetworkInterfaceInfo[]> = os.networkInterfaces(),
 ): string[] {
-  if (!isWildcard(host)) return [`${scheme}://${hostPort(host, port)}`];
+  return reachableHosts(host, interfaces).map((a) => `${scheme}://${hostPort(a, port)}`);
+}
+
+/** Hosts for a listener on `host`: itself, or on a wildcard the external IPv4 addresses, then `localhost`. */
+function reachableHosts(
+  host: string,
+  interfaces: NodeJS.Dict<os.NetworkInterfaceInfo[]>,
+): string[] {
+  if (!isWildcard(host)) return [host];
   const addresses = Object.values(interfaces)
     .flatMap((infos) => infos ?? [])
     .filter((info) => info.family === 'IPv4' && !info.internal)
     .map((info) => info.address);
-  return [...new Set(addresses), 'localhost'].map((a) => `${scheme}://${hostPort(a, port)}`);
+  return [...new Set(addresses), 'localhost'];
+}
+
+/** Like `describeListener`, without a URL scheme (for the plain TCP socket). */
+export function describeAddress(
+  host: string,
+  port: number,
+  interfaces: NodeJS.Dict<os.NetworkInterfaceInfo[]> = os.networkInterfaces(),
+): string {
+  if (!isWildcard(host)) return hostPort(host, port);
+  const addresses = reachableHosts(host, interfaces).map((a) => hostPort(a, port));
+  return `${hostPort(host, port)}, reachable at ${addresses.join(', ')}`;
 }
 
 /**

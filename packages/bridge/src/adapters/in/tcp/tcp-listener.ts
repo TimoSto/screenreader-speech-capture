@@ -4,6 +4,7 @@ import type { TrackCapture } from '../../../application/ports/in/track-capture.j
 import type { Logger } from '../../../application/ports/out/logger.js';
 import type { Config } from '../../../domain/config/index.js';
 import { listen } from '../../shared/net/listen.js';
+import { describeAddress } from '../../shared/net/reachable-urls.js';
 import { TextToSocketParser } from './text-to-socket-parser.js';
 
 export type TcpSettings = Config['tcp'];
@@ -33,7 +34,9 @@ export class TcpListener {
     server.on('error', (error) => this.logger.error(`TCP listener error: ${error.message}`));
     this.server = server;
     this.track.listening({ host: settings.host, port, encoding: settings.encoding });
-    this.logger.info(`listening on ${settings.host}:${port}, encoding ${settings.encoding}`);
+    this.logger.info(
+      `listening on ${describeAddress(settings.host, port)}, encoding ${settings.encoding}`,
+    );
     return port;
   }
 

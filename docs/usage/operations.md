@@ -125,9 +125,9 @@ always starts in the same column:
 [http-api]          2026-11-07T14:03:10.031Z INFO  Playwright server at 0.0.0.0:5151, reachable at ws://192.168.122.57:5151/playwright, ws://localhost:5151/playwright
 [http-api]          2026-11-07T14:03:10.031Z INFO  Playwright MCP at 0.0.0.0:5151, reachable at http://192.168.122.57:5151/playwright-mcp, http://localhost:5151/playwright-mcp
 [playwright-server] 2026-11-07T14:03:11.410Z INFO  Listening on ws://127.0.0.1:3000/
-[bridge]            2026-11-07T14:03:11.497Z INFO  playwright running on ws://127.0.0.1:3000
+[bridge]            2026-11-07T14:03:11.497Z INFO  playwright running
 [playwright-mcp]    2026-11-07T14:03:11.622Z WARN  Listening on http://localhost:8931
-[bridge]            2026-11-07T14:03:11.623Z INFO  mcp running on http://127.0.0.1:8931/mcp
+[bridge]            2026-11-07T14:03:11.623Z INFO  mcp running
 [bridge]            2026-11-07T14:03:11.624Z INFO  ready
 [speech-capture]    2026-11-07T14:03:12.345Z INFO  connection 3 opened (voice=null)
 [native-input]      2026-11-07T14:03:15.100Z INFO  keys Insert+T
@@ -138,8 +138,9 @@ On `0.0.0.0` (the default `--host`), the `http-api` line lists the URLs the API 
 the machine's IPv4 addresses, then `localhost`. Use one of them as the client's
 [bridge URL](client.md#bridge-url). The `Playwright server at …` line does the same for the
 Playwright server: its `ws://` URLs are the `wsEndpoint` to connect to. The `Playwright MCP at …`
-line lists the URLs for MCP clients. The `[bridge] … running on …` lines name the services'
-internal loopback addresses, which only the bridge uses. MCP writes its banner to stderr (so the
+line lists the URLs for MCP clients. The `[bridge] … running` lines don't name an address: the
+services listen on loopback, which only the bridge uses, and the proxy lines above are where to
+connect. The `speech-capture` line follows the same format when bound to a wildcard host. MCP writes its banner to stderr (so the
 lines show as `WARN`).
 
 After the prefix comes the timestamp (ISO 8601, UTC), the level (padded to 5 characters) and the
