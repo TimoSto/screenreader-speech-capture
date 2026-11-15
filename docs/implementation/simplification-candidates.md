@@ -38,8 +38,6 @@ measure the bridge's RSS (`ps -o rss`) before and after any change.
    `API_LIMITS.wait.seen`; it is unbounded today, the bridge's own copy is capped.
 4. Skip building the transcript string in `TranscriptService` unless debug logging is on; drop the
    listener array copy in `in-process-event-bus.ts`.
-5. The client's `dist/cli.d.mts` is not needed (the CLI is a bin). Emit declarations for `index`
-   only.
 
 ## Simplifications (moderate effort, tests need rewiring)
 
