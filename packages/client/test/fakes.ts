@@ -181,6 +181,22 @@ export class FakeBridgeApi implements BridgeApi {
     });
   }
 
+  click(request: { x: number; y: number; button?: string | undefined }): Promise<void> {
+    this.calls.push(`click ${request.button ?? 'left'} ${request.x},${request.y}`);
+    return this.fail() ?? Promise.resolve();
+  }
+
+  pressKeys(request: {
+    keys: string | readonly string[];
+    delayMs?: number | undefined;
+  }): Promise<void> {
+    const keys = typeof request.keys === 'string' ? request.keys : request.keys.join(' ');
+    this.calls.push(
+      `keys ${keys}${request.delayMs === undefined ? '' : ` delay=${request.delayMs}`}`,
+    );
+    return this.fail() ?? Promise.resolve();
+  }
+
   async *streamSpeech(options: {
     lastEventId: number | null;
     session?: number | undefined;

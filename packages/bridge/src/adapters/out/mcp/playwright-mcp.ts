@@ -55,8 +55,6 @@ export function playwrightMcp(options: PlaywrightMcpOptions): ChildProcessSuperv
     settings: options.settings,
     defaultVersion: version,
     prepare: options.launch ?? prepare,
-    scheme: 'http',
-    path: '/mcp',
     logger: options.logger,
     output,
     ...(options.policy ? { policy: options.policy } : {}),

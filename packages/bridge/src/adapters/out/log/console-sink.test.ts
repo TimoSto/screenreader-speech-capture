@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { wantsColour } from './console-sink.js';
+import { consoleSink, wantsColour } from './console-sink.js';
 
 describe('wantsColour', () => {
   it('uses colours on a terminal only', () => {
@@ -13,5 +13,14 @@ describe('wantsColour', () => {
     expect(wantsColour(false, { FORCE_COLOR: '1' })).toBe(true);
     expect(wantsColour(false, { FORCE_COLOR: '0' })).toBe(false);
     expect(wantsColour(false, { FORCE_COLOR: '1', NO_COLOR: '1' })).toBe(false);
+  });
+});
+
+describe('consoleSink', () => {
+  it('writes each line with a newline to `write`', () => {
+    const lines: string[] = [];
+    const sink = consoleSink({ write: (text) => lines.push(text), env: {} });
+    sink.write('hello');
+    expect(lines).toEqual(['hello\n']);
   });
 });

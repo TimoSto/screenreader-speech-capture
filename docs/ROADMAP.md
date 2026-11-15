@@ -46,17 +46,17 @@ GitHub issues. This file only tracks milestones.
       clearing, transcript attachment) as the client's `./playwright` subpath export
       (`@playwright/test` an optional peer dependency, external in the bundle)
 
-### M4 Native input ⬜
+### M4 Native input ✅
 
-- [ ] `POST /api/v1/set-focus`, `POST /api/v1/input/keys` on `@jitsi/robotjs`, as an optional
+- [x] `POST /api/v1/input/click`, `POST /api/v1/input/keys` on `@jitsi/robotjs`, as an optional
       dependency with a disabled fallback, so Linux CI and `pnpm dev` keep working
       ([input injector](implementation/architecture.md#native-input-in-the-bridge))
-- [ ] Setting `input.enabled` / `--no-input` and status `input: { enabled, reason }`, error code
-      `INPUT_DISABLED`
-- [ ] Key-name parsing incl. `Insert` / `CapsLock` as held modifiers
-- [ ] Client `NativeInput` in-port in screen coordinates
+- [x] Error code `INPUT_DISABLED` (no setting, no status field: input is off only when robotjs can't
+      load)
+- [x] Key-name parsing incl. `Insert` / `CapsLock` as held modifiers
+- [x] Client `NativeInput` in-port in screen coordinates
       ([client ports](implementation/architecture.md#native-input-in-the-client)), `setFocus(page)` (coordinate
-      calculation), `click`, `pressKeys`. CLI `focus`, `press`
+      calculation), `click`, `pressKeys`. CLI `click`, `press`
 
 ### M5 Web UI ⬜
 
@@ -115,7 +115,7 @@ own SAPI 5 voice written in Rust.
 - **Delayed send:** does the UI's delayed send live in the UI, or in the API (`delayMs` on
   `/input/keys`, so a person can switch to the browser window first, also from the CLI)?
 - **Screen reader key:** do `Insert` and `CapsLock` work as held modifiers through robotjs, so NVDA
-  and JAWS see `Insert+T`? Check on a real VM early in M4.
+  and JAWS see `Insert+T`? Check on a real VM in the M7 smoke test.
 - **Default versions:** `DEFAULT_PLAYWRIGHT_VERSION` (1.65.0) and the `@playwright/mcp`
   dependency (0.0.85) are both pinned. Still open: how often to update them.
 - **Windows job object:** tie the child services to the bridge's process, so a hard kill of the

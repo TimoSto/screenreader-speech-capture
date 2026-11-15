@@ -61,8 +61,7 @@ flowchart LR
 - **HTTP API + live stream** to read, wait for and clear the recorded speech, plus a **web UI** to watch them (UI planned, [M5](docs/ROADMAP.md#m5-web-ui-)).
 - **Test client**: a TypeScript library with a Playwright fixture (`waitForOutput('Submit, button')`) and a CLI for scripts and AI agents.
 - **Remote browser** on the screen reader's machine through a Playwright server and Playwright MCP.
-- **Native input** for screen reader commands (`Insert+T`, browse mode `H`) that Playwright can't send
-  (planned, [M4](docs/ROADMAP.md#m4-native-input-)).
+- **Native input** for screen reader commands (`Insert+T`, browse mode `H`) that Playwright can't send.
 
 ## Quick start
 

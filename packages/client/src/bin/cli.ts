@@ -10,6 +10,8 @@ process.exitCode = await runCli(process.argv.slice(2), {
   // processes of the same user.
   speech: (url) =>
     new SpeechCaptureClient({ baseUrl: url, env: process.env, clientName: `${hostname()} cli` }),
+  input: (url) =>
+    new SpeechCaptureClient({ baseUrl: url, env: process.env, clientName: `${hostname()} cli` }),
   stdout: (text) => process.stdout.write(text),
   stderr: (text) => process.stderr.write(text),
   version: packageJson.version,

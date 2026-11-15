@@ -42,7 +42,7 @@ Selecting the status bar opens the **status panel** with everything from
 - TCP listener (host, port, encoding) and each open connection with its voice and connect time,
 - buffer fill (`size` / `maxEntries`, `firstSeq`–`lastSeq`),
 - Playwright server and MCP: state, version, port, restarts, last exit code,
-- native input on/off, with the reason when it is off (`--no-input`, not on Windows),
+- native input: whether the last action was refused with `INPUT_DISABLED`,
 - the current session and the number of sessions.
 
 The UI polls `GET /api/v1/status` every 2 s while the tab is visible, and right after its own
@@ -88,14 +88,14 @@ the bottom.
 ## Actions
 
 The actions panel sends [native input](native-input.md) through the bridge, the same as
-`press` and `focus` in the CLI. It is disabled, with the reason, when `input.enabled` is `false`.
+`press` and `click` in the CLI. It shows the reason when the bridge answers `INPUT_DISABLED`.
 
 - **Keys:** a field for one chord (`Insert+T`) or a sequence separated by spaces (`h h Insert+Down`),
   with the delay between keys (`delayMs`). Sent with `POST /api/v1/input/keys`. Invalid key names
   are shown next to the field (`INVALID_REQUEST`, `details.field`).
 - **Presets:** buttons for common screen reader commands: read title (`Insert+T`), next heading
   (`h`), next link (`k`), elements list (`Insert+F7`), say all (`Insert+Down`). The labels name the NVDA / JAWS command, not only the keys.
-- **Click:** x / y in physical screen pixels and the button, sent with `POST /api/v1/set-focus`.
+- **Click:** x / y in physical screen pixels and the button, sent with `POST /api/v1/input/click`.
   This makes a window the foreground window. The UI can't find the browser window under test by
   itself; tests use the client's `setFocus(page)` for that.
 - **Send after n seconds** (0–10 s, default 0): sends the input later, with a countdown.

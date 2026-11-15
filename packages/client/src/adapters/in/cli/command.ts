@@ -1,4 +1,5 @@
 import type { ManageClientConfig } from '../../../application/ports/in/manage-client-config.js';
+import type { NativeInput } from '../../../application/ports/in/native-input.js';
 import type { SpeechCapture } from '../../../application/ports/in/speech-capture.js';
 import type { Option, Values } from './options.js';
 import type { CliCommand, CliOutput } from './output.js';
@@ -11,6 +12,8 @@ export interface CliIo {
   config: ManageClientConfig;
   /** A client for the bridge at `url` (`--url`), or at the configured URL if `undefined`. */
   speech: (url: string | undefined) => SpeechCapture;
+  /** The same for native input (`click`, `press`). */
+  input: (url: string | undefined) => NativeInput;
   stdout: (text: string) => void;
   stderr: (text: string) => void;
   version: string;
@@ -41,6 +44,8 @@ export interface Context {
   io: CliIo;
   /** The bridge client, created on first use (`config` never needs one). */
   speech: () => SpeechCapture;
+  /** The native input client, created on first use. */
+  input: () => NativeInput;
   /**
    * Prints `json` with --json, `text` otherwise. `json` must be what `command`'s schema
    * (`CLI_OUTPUT` in output.ts) describes: the shapes scripts and agents rely on.

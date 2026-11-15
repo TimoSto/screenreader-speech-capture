@@ -103,7 +103,7 @@ CLI or the HTTP API above.
 
 > The MCP browser and a browser started by a test through the Playwright server are **separate
 > windows**. The screen reader reads whichever is in the foreground, so use only one at a time and
-> bring the right one to the front after switching (CLI `focus`, [M4](../ROADMAP.md#m4-native-input-)).
+> bring the right one to the front after switching (CLI `click`, [Native input](native-input.md)).
 
 ### MCP version
 

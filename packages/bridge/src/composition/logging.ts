@@ -1,4 +1,5 @@
 import { BridgeLog, type LogSink } from '../adapters/out/log/bridge-log.js';
+import { terminalWriter } from '../adapters/out/log/async-console.js';
 import { consoleSink } from '../adapters/out/log/console-sink.js';
 import { fileSink } from '../adapters/out/log/file-sink.js';
 import { defaultLogFile } from '../adapters/out/platform/paths.js';
@@ -17,7 +18,13 @@ function startupMessage(config: Config, version: string, configFile: string, fil
 
 function defaultSinks(config: Config): { sinks: LogSink[]; file: string } {
   const file = config.log.file ?? defaultLogFile();
-  return { sinks: [consoleSink({ speech: config.log.consoleSpeech }), fileSink(file)], file };
+  return {
+    sinks: [
+      consoleSink({ speech: config.log.consoleSpeech, write: terminalWriter() }),
+      fileSink(file),
+    ],
+    file,
+  };
 }
 
 /**

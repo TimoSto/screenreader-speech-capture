@@ -23,6 +23,20 @@ export type {
   StartSessionOptions,
   WaitOptions,
 } from './application/ports/in/speech-capture.js';
+export type {
+  ClickOptions,
+  FocusablePage,
+  FocusTarget,
+  NativeInput,
+  PressKeysOptions,
+  SetFocusOptions,
+} from './application/ports/in/native-input.js';
+export {
+  FocusError,
+  type ElementBox,
+  type MouseButton,
+  type ScreenPoint,
+} from './domain/native-input.js';
 export {
   DEFAULT_BRIDGE_URL,
   normalizeBridgeUrl,

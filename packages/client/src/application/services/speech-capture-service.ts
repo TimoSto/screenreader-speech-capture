@@ -1,5 +1,4 @@
 import { API_LIMITS } from '@screenreader-speech-capture/shared';
-import { checkApiVersion } from '../../domain/api-version.js';
 import {
   BridgeHttpError,
   BridgeNotReadyError,
@@ -26,6 +25,7 @@ import type { BridgeApi } from '../ports/out/bridge-api.js';
 import type { Clock } from '../ports/out/clock.js';
 import { startLiveFeed } from './live-feed.js';
 import { speechEvents } from './speech-events.js';
+import { VersionGate } from './version-gate.js';
 
 interface SpeechCaptureServiceDeps {
   api: BridgeApi;
@@ -61,9 +61,11 @@ export class SpeechCaptureService implements SpeechCapture {
    * moves the cursor if none happened since it started: the explicit move wins.
    */
   #moves = 0;
-  #compatible: Promise<void> | undefined;
+  readonly #gate: VersionGate;
 
-  constructor(private readonly deps: SpeechCaptureServiceDeps) {}
+  constructor(private readonly deps: SpeechCaptureServiceDeps) {
+    this.#gate = new VersionGate(deps.api, deps.apiVersion);
+  }
 
   cursor(): number {
     return this.#cursor;
@@ -152,8 +154,7 @@ export class SpeechCaptureService implements SpeechCapture {
 
   async status(): Promise<BridgeStatus> {
     const status = await this.deps.api.status();
-    checkApiVersion(status.bridge.apiVersion, this.deps.apiVersion);
-    this.#compatible = Promise.resolve();
+    this.#gate.passed(status.bridge.apiVersion);
     return status;
   }
 
@@ -266,14 +267,7 @@ export class SpeechCaptureService implements SpeechCapture {
 
   /** Checks the API version once. A failed check is repeated on the next call. */
   private compatible(): Promise<void> {
-    this.#compatible ??= this.status().then(
-      () => undefined,
-      (error: unknown) => {
-        this.#compatible = undefined;
-        throw error;
-      },
-    );
-    return this.#compatible;
+    return this.#gate.ensure();
   }
 
   /** The `seq` of the newest entry in the buffer, 0 if it is empty. */

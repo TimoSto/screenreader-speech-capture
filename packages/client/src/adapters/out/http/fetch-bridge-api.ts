@@ -13,8 +13,10 @@ import {
   StatusSchema,
   type DtoOf,
   type DtoSchema,
+  type KeysRequestDto,
   type MarkerRequestDto,
   type ServiceStatusDto,
+  type ClickRequestDto,
   type SessionDto,
   type SpeechEntryDto,
   type StartSessionRequestDto,
@@ -33,6 +35,7 @@ import {
 } from '../../../domain/errors.js';
 import type { BridgeStatus, ServiceStatus } from '../../../domain/bridge-status.js';
 import type { Session, SessionList, SessionRef, StartedSession } from '../../../domain/session.js';
+import type { MouseButton, ScreenPoint } from '../../../domain/native-input.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import { parseSse, type SseMessage } from './sse-parser.js';
 
@@ -111,6 +114,26 @@ export class FetchBridgeApi implements BridgeApi {
 
   async endSession(): Promise<void> {
     await this.request('POST', '/sessions/end');
+  }
+
+  async click(request: ScreenPoint & { button?: MouseButton | undefined }): Promise<void> {
+    const body: ClickRequestDto = {
+      x: request.x,
+      y: request.y,
+      ...(request.button === undefined ? {} : { button: request.button }),
+    };
+    await this.request('POST', '/input/click', { body });
+  }
+
+  async pressKeys(request: {
+    keys: string | readonly string[];
+    delayMs?: number | undefined;
+  }): Promise<void> {
+    const body: KeysRequestDto = {
+      keys: typeof request.keys === 'string' ? request.keys : [...request.keys],
+      ...(request.delayMs === undefined ? {} : { delayMs: request.delayMs }),
+    };
+    await this.request('POST', '/input/keys', { body });
   }
 
   async listSessions(): Promise<SessionList> {

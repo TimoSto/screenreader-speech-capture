@@ -9,6 +9,7 @@ import {
   ServiceConfigSchema,
 } from './config.js';
 import { ErrorBodySchema, ErrorCodeSchema } from './errors.js';
+import { KeysRequestSchema, ClickRequestSchema } from './input.js';
 import {
   SessionListSchema,
   SessionSchema,
@@ -31,6 +32,8 @@ export const API_SCHEMAS: Record<string, GenericSchema> = {
   SpeechEntry: SpeechEntrySchema,
   SpeechList: SpeechListSchema,
   MarkerRequest: MarkerRequestSchema,
+  ClickRequest: ClickRequestSchema,
+  KeysRequest: KeysRequestSchema,
   Session: SessionSchema,
   StartSessionResponse: StartSessionResponseSchema,
   SessionList: SessionListSchema,
