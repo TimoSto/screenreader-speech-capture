@@ -1,5 +1,5 @@
-// The bridge configuration: model, defaults, validation and field diffs. Import from here; the
-// checks and the schema are internal to this folder.
+// The bridge configuration: model, defaults, validation (the shared `ConfigPatchSchema`) and
+// field diffs. Import from here.
 export { DEFAULT_CONFIG } from './defaults.js';
 export { changedFields, changedSections, configFields, overriddenFields } from './fields.js';
 export { assertDistinctPorts, mergeConfig, mergePatch, validatePatch } from './merge.js';

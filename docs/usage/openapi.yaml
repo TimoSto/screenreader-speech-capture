@@ -1113,7 +1113,7 @@ components:
           type: boolean
         port:
           type: integer
-          minimum: 0
+          minimum: 1
           maximum: 65535
         version:
           anyOf:
@@ -1130,7 +1130,7 @@ components:
           type: boolean
         port:
           type: integer
-          minimum: 0
+          minimum: 1
           maximum: 65535
         version:
           anyOf:
@@ -1149,7 +1149,7 @@ components:
           type: boolean
         port:
           type: integer
-          minimum: 0
+          minimum: 1
           maximum: 65535
       required: []
       additionalProperties: false
@@ -1160,7 +1160,7 @@ components:
           type: boolean
         port:
           type: integer
-          minimum: 0
+          minimum: 1
           maximum: 65535
       required:
         - enabled

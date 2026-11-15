@@ -27,6 +27,9 @@ measure the bridge's RSS (`ps -o rss`) before and after any change.
   services hold rules and stay, see [Decisions](decisions.md#services-stay-where-they-hold-a-rule).
 - Dead code and needless exports: removed `ConfigPatchDto` and the `export` of `readJson`,
   `MAX_BODY_BYTES`, `errorResponse` and 30 `*Deps` / `*Options` types used only in their own file.
+- Config validated once: the bridge uses the shared valibot `ConfigPatchSchema` instead of its own
+  `checks.ts` / `schema.ts` and the equivalence test. Child-service ports (min 1) now live in the
+  schema, see [Decisions](decisions.md).
 - Client `seen` cap: timeout errors from the client's waits and `waitForSilence` keep the last
   `API_LIMITS.wait.seen` entries, like the bridge.
 
@@ -41,9 +44,6 @@ measure the bridge's RSS (`ps -o rss`) before and after any change.
 
 ## Simplifications (moderate effort, tests need rewiring)
 
-8. **Config validated twice.** The valibot schema in `shared` and the hand-written
-   `domain/config/{checks,schema}.ts` in the bridge, held together by `schema-equivalence.test.ts`.
-   Use the schema in the bridge (valibot is already bundled). About 90-120 lines.
 9. **Three "yield every N" mechanisms** for replay (`sse-hub.ts`, `composition/pace.ts`,
    `follow-log.ts`). Careful: they protect the no-gap, no-duplicate SSE guarantee.
 10. **Generated artifacts.** `cli-output.schema.json` (742 lines) is generated from valibot schemas;

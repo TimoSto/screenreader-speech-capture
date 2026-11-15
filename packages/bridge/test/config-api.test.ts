@@ -127,7 +127,7 @@ describe('config file at startup', () => {
     });
     await expect(start).rejects.toThrow(ConfigError);
     await expect(start).rejects.toThrow(
-      'Invalid setting in the config file memory:config.json: tcp.port: must be an integer',
+      'Invalid setting in the config file memory:config.json: tcp.port: Invalid type',
     );
   });
 
@@ -138,6 +138,6 @@ describe('config file at startup', () => {
       overrides: { tcp: { port: 70000 } },
       overrideSources: new Map([['tcp.port', '--tcp-port']]),
     });
-    await expect(start).rejects.toThrow('Invalid --tcp-port: tcp.port: must be an integer');
+    await expect(start).rejects.toThrow('Invalid --tcp-port: tcp.port: Invalid value');
   });
 });

@@ -186,9 +186,13 @@ Now one definition gives:
   fields pass and are dropped, because minor versions may add them.
 
 valibot because it is small and tree-shakes: it is bundled into bridge and client with `shared`,
-so users install nothing extra. The bridge keeps its own request checks (`request.ts`, the config
-checks): they give the field-specific `INVALID_REQUEST` messages the API documents. They use the
-same limits and patterns from `shared`.
+so users install nothing extra. The bridge keeps its own request checks (`request.ts`): they give
+the field-specific `INVALID_REQUEST` messages the API documents. They use the same limits and
+patterns from `shared`.
+
+The config is the exception: the bridge validates `PUT /config` and the config file with the shared
+`ConfigPatchSchema` (`mergeConfig`) and adds no rules of its own, so the contract and the
+enforcement cannot drift. The error `field` is the schema's dotted path; the message is valibot's.
 
 ## The socket voice stays the only capture source
 

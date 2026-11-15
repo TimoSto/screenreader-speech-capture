@@ -16,6 +16,8 @@ export type LogLevel = (typeof LOG_LEVELS)[number];
 const range = ({ min, max }: { min: number; max: number }) =>
   v.pipe(v.number(), v.integer(), v.minValue(min), v.maxValue(max));
 const port = range(CONFIG_LIMITS.port);
+/** Port of a child service: `0` ("any free port") would leave the bridge no port to proxy to. */
+const childPort = range({ min: 1, max: CONFIG_LIMITS.port.max });
 const nonBlank = v.pipe(v.string(), v.regex(/\S/), v.description('Not empty or blank.'));
 
 export const AllowedHostsSchema = v.pipe(
@@ -33,12 +35,12 @@ const playwrightVersion = v.pipe(
 
 export const ServiceConfigSchema = v.object({
   enabled: v.boolean(),
-  port,
+  port: childPort,
   version: playwrightVersion,
 });
 
 export const McpConfigSchema = v.pipe(
-  v.object({ enabled: v.boolean(), port }),
+  v.object({ enabled: v.boolean(), port: childPort }),
   v.description('No `version`: the bridge runs its bundled `@playwright/mcp`.'),
 );
 
@@ -106,7 +108,7 @@ const patchOf = <T extends v.ObjectEntries>(entries: T) =>
   );
 
 export const ServiceConfigPatchSchema = patchOf(ServiceConfigSchema.entries);
-export const McpConfigPatchSchema = patchOf({ enabled: v.boolean(), port });
+export const McpConfigPatchSchema = patchOf({ enabled: v.boolean(), port: childPort });
 
 export const ConfigPatchSchema = v.pipe(
   v.strictObject({
