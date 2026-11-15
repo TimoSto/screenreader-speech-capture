@@ -10,5 +10,5 @@
     { "scope": "client", "name": "screenreader-speech-capture-client", "dir": "packages/client" }
   ],
   "sharedDirs": ["packages/shared"],
-  "otherScopes": ["shared", "fake-speech", "release", "deps"]
+  "otherScopes": ["shared", "fake-speech", "release", "ui", "deps"]
 }
