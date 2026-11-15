@@ -30,6 +30,7 @@ describe('createSpeechMatcher', () => {
     [{}, 'contains'],
     [{ contains: 'a', regex: 'a' }, 'regex'],
     [{ regex: '(' }, 'regex'],
+    [{ regex: '' }, 'regex'],
     [{ contains: '   ', normalize: true }, 'contains'],
   ])('rejects %j', (options, field) => {
     try {
@@ -41,33 +42,7 @@ describe('createSpeechMatcher', () => {
     }
   });
 
-  describe('regex cost', () => {
-    it.each([
-      '(a+)+$',
-      '(a*)*b',
-      '(\\w+\\s?)*$',
-      '((ab)+)+',
-      '(?:x+){2,}',
-      '(a{1,9})+',
-      '((a+)b)*',
-    ])('rejects the nested repeat %s', (regex) => {
-      expect(() => createSpeechMatcher({ regex })).toThrow(
-        expect.objectContaining({ details: { field: 'regex' } }) as Error,
-      );
-    });
-
-    it.each([
-      '(ab)+',
-      'a+b*',
-      '(Submit|OK), button',
-      '[(a+)]+',
-      '\\(a+\\)+',
-      '(a+)?',
-      '^(\\d{3}) items$',
-    ])('accepts %s', (regex) => {
-      expect(() => createSpeechMatcher({ regex })).not.toThrow();
-    });
-
+  describe('regex length', () => {
     it('rejects a regex over the length limit', () => {
       expect(() => createSpeechMatcher({ regex: 'a'.repeat(MAX_REGEX_LENGTH + 1) })).toThrow(
         `at most ${MAX_REGEX_LENGTH} characters`,

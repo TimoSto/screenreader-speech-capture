@@ -112,9 +112,9 @@ paths:
           in: query
           description: >-
             Regular expression (JavaScript syntax, `u` flag) to look for, instead of `contains`. At
-            most 500 characters, and no repeated group that repeats inside (`(a+)+`): it runs on
-            every new entry, so a pattern that backtracks badly would stall the capture.
-          schema: { type: string, maxLength: 500 }
+            most 500 characters. It runs on every new entry, so a pattern that backtracks badly
+            (`(a+)+$`) is slow and holds up the capture while it runs.
+          schema: { type: string, minLength: 1, maxLength: 500 }
           example: ^Submit
         - name: normalize
           in: query
