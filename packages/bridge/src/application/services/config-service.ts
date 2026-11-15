@@ -1,4 +1,5 @@
 import {
+  assertDistinctPorts,
   changedFields,
   configFields,
   liveConfig,
@@ -75,7 +76,9 @@ export class ConfigService implements ManageConfig {
   private async apply(patch: unknown): Promise<ConfigUpdate> {
     const changes = validatePatch(patch);
     const previous = this.active;
-    const next = liveConfig(mergeConfig(previous, changes), previous);
+    const merged = mergeConfig(previous, changes);
+    assertDistinctPorts(merged);
+    const next = liveConfig(merged, previous);
 
     // Saved first: if the file can't be written, nothing has changed.
     const saved = configFields(this.file);

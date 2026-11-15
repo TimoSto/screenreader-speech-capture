@@ -57,7 +57,9 @@ The bridge installs what it needs automatically. Nobody has to run an install st
    `%LOCALAPPDATA%\screenreader-speech-capture\playwright\<version>` (on Linux and macOS:
    `$XDG_CACHE_HOME` or `~/.cache`, then `screenreader-speech-capture/playwright/<version>`). npm
    install scripts are off. The install happens in a temporary folder that is renamed when it is
-   complete, so an interrupted install leaves nothing half-done.
+   complete, so an interrupted install leaves nothing half-done. A folder that a killed bridge left
+   behind (`<version>.tmp-<pid>-<time>`) is removed by the next install. An install step that
+   runs longer than 10 minutes is killed together with everything it started.
 2. **Playwright's Chromium** for that version, on every start of the service:
    `playwright install --no-shell chromium`. It downloads only when that build is missing (into
    Playwright's usual browser folder, `%LOCALAPPDATA%\ms-playwright`).

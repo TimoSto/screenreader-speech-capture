@@ -5,7 +5,14 @@ import type { ChildProcess } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { eventually } from '../../../../test/helpers.js';
 import { MemoryLogger } from '../../../../test/fakes.js';
-import { killTree, pipeLines, treeSpawnOptions } from './process-tree.js';
+import {
+  type Exec,
+  killAllTreesNow,
+  killTree,
+  pipeLines,
+  trackTree,
+  treeSpawnOptions,
+} from './process-tree.js';
 
 const alive = (pid: number) => {
   try {
@@ -69,4 +76,38 @@ describe('killTree', () => {
       ).toBe(false);
     },
   );
+});
+
+describe('killTree on Windows', () => {
+  it('runs taskkill /T /F for a running child', async () => {
+    const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], treeSpawnOptions);
+    const calls: string[][] = [];
+    const exec: Exec = (file, args) => {
+      calls.push([file, ...args]);
+      child.kill('SIGKILL');
+      return Promise.resolve({ ok: true, stdout: '' });
+    };
+    await killTree(child, { platform: 'win32', exec });
+    expect(calls).toEqual([['taskkill', '/T', '/F', '/PID', String(child.pid)]]);
+  });
+
+  it('does not hang when taskkill fails', async () => {
+    const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], treeSpawnOptions);
+    const exec: Exec = () => Promise.resolve({ ok: false, stdout: '' });
+    const started = Date.now();
+    await killTree(child, { platform: 'win32', exec, exitTimeoutMs: 100 });
+    expect(Date.now() - started).toBeLessThan(2000);
+    child.kill('SIGKILL');
+    await once(child, 'exit');
+  });
+});
+
+describe.skipIf(process.platform === 'win32')('killAllTreesNow', () => {
+  it('ends every tracked tree at once', async () => {
+    const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], treeSpawnOptions);
+    trackTree(child);
+    killAllTreesNow();
+    await once(child, 'exit');
+    expect(child.signalCode).toBe('SIGKILL');
+  });
 });

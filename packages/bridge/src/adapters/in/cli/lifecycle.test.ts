@@ -165,4 +165,23 @@ describe('runUntilStopped', () => {
     proc.emit('SIGBREAK');
     expect(bridge.reasons).toEqual(['SIGBREAK']);
   });
+
+  it('ends the child processes before a forced exit (watchdog and second signal)', async () => {
+    for (const forcedBy of ['watchdog', 'second signal']) {
+      const calls: string[] = [];
+      const forced = new FakeProcess('linux');
+      forced.exit = (code: number) => void calls.push(`exit ${code}`);
+      const stuck = new FakeBridge();
+      await runUntilStopped(() => Promise.resolve(stuck), forced, {
+        timeoutMs: 1000,
+        flush: () => Promise.resolve(),
+        onForcedExit: () => void calls.push('kill'),
+      });
+      forced.emit('SIGINT');
+      if (forcedBy === 'watchdog') await vi.advanceTimersByTimeAsync(1000);
+      else forced.emit('SIGINT');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(calls.slice(0, 2), forcedBy).toEqual(['kill', 'exit 1']);
+    }
+  });
 });

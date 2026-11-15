@@ -13,7 +13,7 @@ import {
 } from '../../../domain/child-service.js';
 import { portOpen } from '../../shared/net/port-probe.js';
 import { describeListener } from '../../shared/net/reachable-urls.js';
-import { killTree, pipeLines, treeSpawnOptions } from './process-tree.js';
+import { killTree, pipeLines, trackTree, treeSpawnOptions } from './process-tree.js';
 import type { Command, Prepare, ResolvedSettings } from './types.js';
 
 export interface ChildProcessSupervisorOptions {
@@ -79,6 +79,8 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
   }
 
   start(): Promise<void> {
+    // Already running: nothing changes state, so waiting would never end.
+    if (this.state === 'running') return Promise.resolve();
     const settled = new Promise<void>((resolve) => this.waiters.push(resolve));
     if (this.state === 'stopped' || this.state === 'failed') {
       this.restarts = 0;
@@ -134,7 +136,19 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
     );
 
     this.options.prepare(settings, abort.signal).then(
-      (command) => {
+      async (command) => {
+        if (!current()) return;
+        // Something on the port already (an orphan of an earlier run, another program) would
+        // pass for our child's readiness, which then dies of EADDRINUSE: refuse to start.
+        if (await portOpen(settings.host, settings.port)) {
+          if (!current()) return;
+          this.options.logger.error(
+            `${this.options.name}: port ${settings.port} is already in use ` +
+              '(a leftover process of an earlier run, or another program)',
+          );
+          this.crashed(null, 'could not start');
+          return;
+        }
         if (current()) this.spawn(command, settings, generation);
       },
       (error: unknown) => {
@@ -154,6 +168,7 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     this.child = child;
+    trackTree(child);
     pipeLines(child, this.options.output);
 
     let exited = false;

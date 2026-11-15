@@ -200,3 +200,23 @@ review suggested a source-neutral `capture: { sources: [...] }` model, so anothe
 It stays as it is: the SAPI socket voice is and will remain the only capture source, because it
 works the same for JAWS and NVDA without touching either. A source-neutral model would add an
 abstraction with one implementation. If a second source ever comes, that change starts here.
+
+## Child process trees are killed by the bridge, not the OS
+
+On Windows, the children of a killed process live on, so the browsers of a crashed Playwright
+server would stay behind. A Job Object (`KILL_ON_JOB_CLOSE`) would make the OS end the whole tree
+even if the bridge dies, but Node can't create one without a native addon, which the bridge
+doesn't ship (it installs nothing native, and the VM has no compiler).
+
+Instead the bridge does it itself: `taskkill /T /F` raced against a 5 s limit, and a synchronous
+kill of every tracked tree right before a forced exit (watchdog, second Ctrl+C).
+
+Not covered, on purpose for now: the orphans of a child that already died on its own. `taskkill
+/T` can't reach them through the dead parent. A lookup in the process table (PowerShell
+`Get-CimInstance Win32_Process`, descendants by parent pid and creation time) would find them, but
+it is unverified that they exist: Playwright starts Chromium over a pipe, and Chromium usually
+exits when the pipe closes. Check on the VM (kill the run-server with a browser connected, see if
+`chrome.exe` stays) before adding it. Also not covered: a bridge killed with no chance to run
+code (Task Manager, log off). The next start refuses to use a port such an orphan still holds,
+instead of treating the orphan as its own service. A small helper process holding the Job Object
+would close that.

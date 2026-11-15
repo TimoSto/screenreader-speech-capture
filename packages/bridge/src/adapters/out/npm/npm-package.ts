@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Logger } from '../../../application/ports/out/logger.js';
 import { isExactVersion } from '../../../domain/version.js';
@@ -17,6 +17,8 @@ export interface EnsureNpmPackageOptions {
   logger: Logger;
   signal?: AbortSignal;
   platform?: NodeJS.Platform;
+  /** Whether a process with this pid runs (tests). */
+  isAlive?: (pid: number) => boolean;
 }
 
 export interface NpmPackage {
@@ -43,6 +45,7 @@ export async function ensureNpmPackage(options: EnsureNpmPackageOptions): Promis
   const installed = entryOf(dir, name, entry);
   if (existsSync(installed)) return { dir, entry: installed };
 
+  await removeStaleTemps(cacheRoot, options.isAlive ?? processAlive);
   logger.info(`installing ${name} ${version} into ${dir}`);
   // Installed next to the target and renamed when complete, so an interrupted install leaves
   // no half-filled folder behind.
@@ -74,4 +77,35 @@ export async function ensureNpmPackage(options: EnsureNpmPackageOptions): Promis
     await rm(tmp, { recursive: true, force: true });
   }
   return { dir, entry: installed };
+}
+
+function processAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    // EPERM: it exists, we just may not signal it.
+    return (error as NodeJS.ErrnoException).code === 'EPERM';
+  }
+}
+
+/**
+ * Removes `<version>.tmp-<pid>-<time>` folders that an install left behind when it was killed
+ * before its `finally` ran (a crash, a forced exit). A folder whose bridge (`pid`) still runs
+ * stays: that install may be in progress.
+ */
+async function removeStaleTemps(cacheRoot: string, isAlive: (pid: number) => boolean) {
+  let names: string[];
+  try {
+    names = await readdir(cacheRoot);
+  } catch {
+    return;
+  }
+  for (const name of names) {
+    const match = /\.tmp-(\d+)-\d+$/.exec(name);
+    if (!match) continue;
+    const pid = Number(match[1]);
+    if (pid === process.pid || isAlive(pid)) continue;
+    await rm(path.join(cacheRoot, name), { recursive: true, force: true });
+  }
 }

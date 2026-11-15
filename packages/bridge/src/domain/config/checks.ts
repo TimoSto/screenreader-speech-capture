@@ -13,6 +13,9 @@ export const integer =
 
 export const port = integer(CONFIG_LIMITS.port.min, CONFIG_LIMITS.port.max);
 
+/** Port of a child service: `0` ("any free port") would leave the bridge no port to proxy to. */
+export const childPort = integer(1, CONFIG_LIMITS.port.max);
+
 export const boolean: Check = (value) =>
   typeof value === 'boolean' ? undefined : 'must be true or false';
 

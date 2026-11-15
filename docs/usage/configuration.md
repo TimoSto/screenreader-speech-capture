@@ -34,6 +34,9 @@ Precedence: **CLI flags > environment variables > config file > defaults**.
 The TCP listener reads CRLF-terminated lines, with an optional header line, as described in
 [Wire format](speech-capture.md#wire-format). `tcp.encoding` is the code page used to decode them
 (default `windows-1252`).
+The ports of `tcp`, `http` and the enabled child services (`playwright`, `mcp`) must differ, and
+the child services need a real port (`1`–`65535`, not `0`): the bridge refuses such a
+configuration at start and in `PUT /config` (`INVALID_REQUEST`, naming the second setting).
 `log` is explained in [Operations](operations.md#logging). `http.allowedHosts` lists host names
 the API answers to besides IP addresses, `localhost` and the machine's name, see
 [Host and origin](security.md#host-and-origin).

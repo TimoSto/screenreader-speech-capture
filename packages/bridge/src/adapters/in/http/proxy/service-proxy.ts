@@ -132,6 +132,8 @@ export class ServiceProxy {
       }
       sendSocketError(socket, this.unreachable(route, error), this.logger);
     });
+    // The client leaves before (or after) the tunnel is up: don't keep the upstream socket.
+    socket.once('close', () => upstream.destroy());
     socket.on('error', () => upstream.destroy());
   }
 

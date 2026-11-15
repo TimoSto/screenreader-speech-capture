@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AppError } from '../errors.js';
 import { DEFAULT_CONFIG } from './defaults.js';
-import { mergeConfig, mergePatch, validatePatch } from './merge.js';
+import { assertDistinctPorts, mergeConfig, mergePatch, validatePatch } from './merge.js';
 
 function fieldOf(fn: () => unknown): unknown {
   try {
@@ -98,5 +98,37 @@ describe('mergePatch', () => {
     expect(
       mergePatch({ tcp: { port: 1, host: 'a' }, log: { level: 'debug' } }, { tcp: { port: 2 } }),
     ).toEqual({ tcp: { port: 2, host: 'a' }, log: { level: 'debug' } });
+  });
+});
+
+describe('child service ports', () => {
+  it('rejects port 0 for the child services, but not for the listeners', () => {
+    expect(fieldOf(() => mergeConfig(DEFAULT_CONFIG, { playwright: { port: 0 } }))).toBe(
+      'playwright.port',
+    );
+    expect(fieldOf(() => mergeConfig(DEFAULT_CONFIG, { mcp: { port: 0 } }))).toBe('mcp.port');
+    expect(() =>
+      mergeConfig(DEFAULT_CONFIG, { tcp: { port: 0 }, http: { port: 0 } }),
+    ).not.toThrow();
+  });
+});
+
+describe('assertDistinctPorts', () => {
+  it('accepts the defaults and ignores port 0', () => {
+    expect(() => assertDistinctPorts(DEFAULT_CONFIG)).not.toThrow();
+    const zero = mergeConfig(DEFAULT_CONFIG, { tcp: { port: 0 }, http: { port: 0 } });
+    expect(() => assertDistinctPorts(zero)).not.toThrow();
+  });
+
+  it('names the second field that reuses a port', () => {
+    const clash = mergeConfig(DEFAULT_CONFIG, { mcp: { port: 3000 } });
+    expect(fieldOf(() => assertDistinctPorts(clash))).toBe('mcp.port');
+    const withBridge = mergeConfig(DEFAULT_CONFIG, { playwright: { port: 5151 } });
+    expect(fieldOf(() => assertDistinctPorts(withBridge))).toBe('playwright.port');
+  });
+
+  it('ignores a disabled service', () => {
+    const config = mergeConfig(DEFAULT_CONFIG, { mcp: { port: 3000, enabled: false } });
+    expect(() => assertDistinctPorts(config)).not.toThrow();
   });
 });
