@@ -27,6 +27,8 @@ measure the bridge's RSS (`ps -o rss`) before and after any change.
   services hold rules and stay, see [Decisions](decisions.md#services-stay-where-they-hold-a-rule).
 - Dead code and needless exports: removed `ConfigPatchDto` and the `export` of `readJson`,
   `MAX_BODY_BYTES`, `errorResponse` and 30 `*Deps` / `*Options` types used only in their own file.
+- Client `seen` cap: timeout errors from the client's waits and `waitForSilence` keep the last
+  `API_LIMITS.wait.seen` entries, like the bridge.
 
 ## Quick wins (low risk)
 
@@ -34,8 +36,6 @@ measure the bridge's RSS (`ps -o rss`) before and after any change.
    breaking-change PR title (`fix(bridge)!:`).
 2. Lower the config maxima: `maxEntries.max` to about 100,000, `maxLineBytes.max` to about 1 MB
    (default 64 KB to something like 16 KB). Optionally add a total-bytes cap in `SpeechLog`.
-3. Cap the client's `seen` array in `speech-capture-service.ts` (waits and `waitForSilence`) at
-   `API_LIMITS.wait.seen`; it is unbounded today, the bridge's own copy is capped.
 4. Skip building the transcript string in `TranscriptService` unless debug logging is on; drop the
    listener array copy in `in-process-event-bus.ts`.
 

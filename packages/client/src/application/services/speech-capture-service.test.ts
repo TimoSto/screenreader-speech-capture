@@ -1,3 +1,4 @@
+import { API_LIMITS } from '@screenreader-speech-capture/shared';
 import { describe, expect, it, vi } from 'vitest';
 import { FakeBridgeApi, FakeClock } from '../../../test/fakes.js';
 import {
@@ -210,6 +211,19 @@ describe('waitForOutput', () => {
     const { sr } = setup();
     await expect(sr.waitForOutput('')).rejects.toThrow(TypeError);
   });
+
+  it('keeps only the last speech seen in the timeout error', async () => {
+    const { api, sr } = setup();
+    const total = API_LIMITS.wait.seen + 50;
+    for (let i = 1; i <= total; i++) api.speak(`line ${i}`);
+    const error = await sr
+      .waitForOutput('never', { since: 0, timeout: 0 })
+      .catch((e: unknown) => e);
+    const { entries } = error as SpeechTimeoutError;
+    expect(entries).toHaveLength(API_LIMITS.wait.seen);
+    expect(entries[0]?.text).toBe('line 51');
+    expect(entries.at(-1)?.text).toBe(`line ${total}`);
+  });
 });
 
 describe('waitForSequence', () => {
@@ -257,6 +271,16 @@ describe('waitForSilence', () => {
       .catch((e: unknown) => e);
     expect(error).toBeInstanceOf(SpeechTimeoutError);
     expect((error as SpeechTimeoutError).entries.every((e) => e.kind === 'speech')).toBe(true);
+  });
+
+  it('keeps only the last speech seen in the timeout error', async () => {
+    const { api, clock, sr } = setup();
+    const total = API_LIMITS.wait.seen + 50;
+    for (let i = 1; i <= total; i++) clock.at(1 + i * 0.01, () => api.speak(`line ${i}`));
+    const error = await sr.waitForSilence({ quietFor: 500, timeout: 100 }).catch((e: unknown) => e);
+    const { entries } = error as SpeechTimeoutError;
+    expect(entries).toHaveLength(API_LIMITS.wait.seen);
+    expect(entries.at(-1)?.text).toBe(`line ${total}`);
   });
 });
 

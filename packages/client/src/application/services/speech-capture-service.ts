@@ -37,6 +37,14 @@ interface SpeechCaptureServiceDeps {
 /** Largest `limit` the bridge accepts for `GET /api/v1/speech`. */
 const MAX_PAGE = API_LIMITS.list.max;
 
+/** Entries a timeout error holds at most: the last ones seen, as on the bridge. */
+const MAX_SEEN = API_LIMITS.wait.seen;
+
+function remember(seen: SpeechEntry[], entries: SpeechEntry[]): void {
+  seen.push(...entries);
+  if (seen.length > MAX_SEEN) seen.splice(0, seen.length - MAX_SEEN);
+}
+
 const DEFAULTS = { timeout: 5000, quietFor: 500, silenceTimeout: 10_000, readyTimeout: 120_000 };
 
 /** How often `waitForReady` asks for the status. */
@@ -221,7 +229,7 @@ export class SpeechCaptureService implements SpeechCapture {
     const left = () => Math.min(lastSpeech + quietFor, start + timeout) - clock.now();
     await this.follow({ since: end }, left(), (entry, timer) => {
       if (!isSpeech(entry)) return undefined;
-      seen.push(entry);
+      remember(seen, [entry]);
       lastSpeech = clock.now();
       timer.set(left());
       return undefined;
@@ -327,7 +335,7 @@ export class SpeechCaptureService implements SpeechCapture {
     const session = await this.resolveSession(options.session);
     const seen: SpeechEntry[] = [];
     const consume = (entries: SpeechEntry[]) => {
-      seen.push(...entries.filter(isSpeech));
+      remember(seen, entries.filter(isSpeech));
       return step(entries);
     };
     // Speech that is already there is found without opening the live feed.
