@@ -103,6 +103,9 @@ export class HttpServer {
     // On 0.0.0.0, name the addresses clients can actually use
     // (docs/usage/operations.md#line-format).
     this.deps.logger.info(`listening on ${describeListener('http', settings.host, port)}`);
+    if (this.deps.ui) {
+      this.deps.logger.info(`web UI at ${describeListener('http', settings.host, port)}`);
+    }
     for (const route of this.deps.proxies ?? []) {
       const at = describeListener(route.scheme, settings.host, port, route.path);
       this.deps.logger.info(`${route.name} at ${at}`);

@@ -113,6 +113,15 @@ describe('HttpServer', () => {
       expect(raw).toMatch(/^HTTP\/1\.1 403/);
     });
 
+    it('logs where the UI is reachable, only when there is one', async () => {
+      const withUi = server(ui);
+      const port = await withUi.http.start(settings);
+      expect(withUi.logger.lines).toContain(`info web UI at http://127.0.0.1:${port}`);
+      const without = server();
+      await without.http.start(settings);
+      expect(without.logger.lines.filter((l) => l.includes('web UI'))).toEqual([]);
+    });
+
     it('answers 404 outside the API when there is no UI', async () => {
       const { http } = server();
       const port = await http.start(settings);
