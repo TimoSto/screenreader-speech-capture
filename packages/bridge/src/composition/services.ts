@@ -7,7 +7,7 @@ import { serviceSettings, type ServiceName } from '../domain/child-service.js';
 import type { Config } from '../domain/config/index.js';
 import type { TestSeams } from './test-seams.js';
 
-export type ServiceOptions = Pick<TestSeams, 'playwrightDir' | 'playwrightLaunch' | 'mcpLaunch'>;
+type ServiceOptions = Pick<TestSeams, 'playwrightDir' | 'playwrightLaunch' | 'mcpLaunch'>;
 
 /** One supervisor per child service, not started yet (`ChildServicesService` runs them). */
 export function createSupervisors(

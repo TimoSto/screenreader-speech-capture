@@ -2,7 +2,7 @@ import type { Logger } from '../../../application/ports/out/logger.js';
 import { ensureNpmPackage } from '../npm/npm-package.js';
 import type { RunCommand } from '../process/run-command.js';
 
-export interface EnsurePlaywrightOptions {
+interface EnsurePlaywrightOptions {
   version: string;
   /** One folder per version below it. */
   cacheRoot: string;

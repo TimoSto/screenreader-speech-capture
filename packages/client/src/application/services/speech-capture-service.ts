@@ -27,7 +27,7 @@ import type { Clock } from '../ports/out/clock.js';
 import { startLiveFeed } from './live-feed.js';
 import { speechEvents } from './speech-events.js';
 
-export interface SpeechCaptureServiceDeps {
+interface SpeechCaptureServiceDeps {
   api: BridgeApi;
   clock: Clock;
   /** The HTTP API version this client was built for (`API_VERSION` from the shared contract). */

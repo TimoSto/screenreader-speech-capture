@@ -3,7 +3,7 @@ import { toStatusDto } from '../dto/status.js';
 import { sendJson } from '../response.js';
 import type { Router } from '../router.js';
 
-export interface StatusRoutesDeps {
+interface StatusRoutesDeps {
   status: GetStatus;
 }
 

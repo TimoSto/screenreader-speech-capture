@@ -5,7 +5,7 @@ import type { Logger } from '../../../application/ports/out/logger.js';
 import { isExactVersion } from '../../../domain/version.js';
 import type { RunCommand } from '../process/run-command.js';
 
-export interface EnsureNpmPackageOptions {
+interface EnsureNpmPackageOptions {
   /** npm package name. A constant, never from the config: it goes on a command line. */
   name: string;
   version: string;

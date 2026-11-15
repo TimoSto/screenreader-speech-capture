@@ -12,7 +12,7 @@ import { ensurePlaywright } from './playwright-installer.js';
  */
 export const DEFAULT_PLAYWRIGHT_VERSION = '1.65.0';
 
-export interface PlaywrightServerOptions {
+interface PlaywrightServerOptions {
   settings: ServiceSettings;
   /** Where the Playwright versions are installed. */
   cacheRoot: string;

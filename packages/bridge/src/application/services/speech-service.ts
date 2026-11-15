@@ -17,7 +17,7 @@ import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 import { followLog } from '../shared/follow-log.js';
 import { intOption } from '../shared/int-option.js';
 
-export interface SpeechServiceDeps {
+interface SpeechServiceDeps {
   log: SpeechLog;
   events: SpeechEventBus;
   clock: Pick<Clock, 'now'>;

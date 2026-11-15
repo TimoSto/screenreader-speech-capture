@@ -13,7 +13,7 @@ export interface LifecycleProcess {
   exit(code: number): void;
 }
 
-export interface LifecycleOptions {
+interface LifecycleOptions {
   /** How long a shutdown may take before the process exits anyway. Default 10 s. */
   timeoutMs?: number;
   /** Writes out buffered console output. Default: drains stdout and stderr. */

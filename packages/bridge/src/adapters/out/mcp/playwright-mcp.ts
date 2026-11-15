@@ -18,7 +18,7 @@ export function bundledMcp(): { version: string; cli: string } {
   return { version, cli: path.join(path.dirname(manifest), 'cli.js') };
 }
 
-export interface PlaywrightMcpOptions {
+interface PlaywrightMcpOptions {
   settings: ServiceSettings;
   /** `[bridge]` log. */
   logger: Logger;

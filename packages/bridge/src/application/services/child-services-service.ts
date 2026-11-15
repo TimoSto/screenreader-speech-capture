@@ -10,7 +10,7 @@ import type { ChildServices } from '../ports/in/child-services.js';
 import type { Logger } from '../ports/out/logger.js';
 import type { ProcessSupervisor } from '../ports/out/process-supervisor.js';
 
-export interface ChildServicesDeps {
+interface ChildServicesDeps {
   /** One supervisor per service. */
   supervisors: Readonly<Record<ServiceName, ProcessSupervisor>>;
   /**

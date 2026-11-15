@@ -12,7 +12,7 @@ export function wantsColour(isTTY: boolean | undefined, env: NodeJS.ProcessEnv):
   return isTTY === true;
 }
 
-export interface ConsoleSinkOptions {
+interface ConsoleSinkOptions {
   /** Also write the speech channel to the console. Off by default (feedback loop). */
   speech?: boolean;
   stream?: NodeJS.WriteStream;

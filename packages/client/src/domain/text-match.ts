@@ -4,7 +4,7 @@ import { isSpeech, type SpeechEntry } from './speech-entry.js';
 /** What a wait looks for: a substring, a regular expression or a predicate. */
 export type SpeechMatch = string | RegExp | ((entry: SpeechEntry) => boolean);
 
-export interface MatchOptions {
+interface MatchOptions {
   /** Ignore case and extra whitespace (strings and regular expressions). */
   normalize?: boolean | undefined;
 }

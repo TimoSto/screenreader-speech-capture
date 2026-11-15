@@ -9,10 +9,7 @@ import { sendJson } from './response.js';
  * The error body every endpoint uses (docs/usage/http-api.md#errors) and its status. An `AppError`
  * keeps its code. Anything else is `INTERNAL`, with the details in the bridge log only.
  */
-export function errorResponse(
-  error: unknown,
-  logger: Logger,
-): { status: number; body: ErrorBodyDto } {
+function errorResponse(error: unknown, logger: Logger): { status: number; body: ErrorBodyDto } {
   let body: ErrorBodyDto;
   if (error instanceof AppError) {
     body = { error: { code: error.code, message: error.message } };

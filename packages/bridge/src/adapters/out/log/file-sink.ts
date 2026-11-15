@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { LogSink } from './bridge-log.js';
 
-export interface FileSinkOptions {
+interface FileSinkOptions {
   /** Rotate when the file would grow past this size. Default 10 MB. */
   maxBytes?: number;
   /** Number of rotated files to keep (`bridge.log.1` … `.<keep>`). Default 5. */

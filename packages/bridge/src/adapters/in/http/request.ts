@@ -42,7 +42,7 @@ export function sessionParam(url: URL): SessionFilter | undefined {
   return id;
 }
 
-export const MAX_BODY_BYTES = 1024 * 1024;
+const MAX_BODY_BYTES = 1024 * 1024;
 
 /**
  * Rejects a body that isn't declared as `application/json`. Besides being the contract, this
@@ -57,7 +57,7 @@ export function requireJson(req: http.IncomingMessage): void {
 const tooLarge = () => invalidField('body', `must be at most ${MAX_BODY_BYTES} bytes`);
 
 /** Reads the request body as JSON. */
-export async function readJson(req: http.IncomingMessage): Promise<unknown> {
+async function readJson(req: http.IncomingMessage): Promise<unknown> {
   // Checked before reading, so the client gets the 400 instead of a reset connection. A chunked
   // body that grows too large is cut off while it is read.
   if (Number(req.headers['content-length'] ?? 0) > MAX_BODY_BYTES) throw tooLarge();

@@ -4,7 +4,7 @@ import { jsonBody } from '../request.js';
 import { sendJson } from '../response.js';
 import type { Router } from '../router.js';
 
-export interface ConfigRoutesDeps {
+interface ConfigRoutesDeps {
   config: ManageConfig;
 }
 

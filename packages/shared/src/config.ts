@@ -124,4 +124,3 @@ export const ConfigPatchSchema = v.pipe(
 );
 
 /** Body of `PUT /api/v1/config`: any subset of the configuration. */
-export type ConfigPatchDto = v.InferOutput<typeof ConfigPatchSchema>;

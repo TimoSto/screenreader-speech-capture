@@ -2,7 +2,7 @@ import type { CaptureState } from '../../domain/capture.js';
 import type { TrackCapture } from '../ports/in/track-capture.js';
 import type { Clock } from '../ports/out/clock.js';
 
-export interface CaptureServiceDeps {
+interface CaptureServiceDeps {
   state: CaptureState;
   clock: Pick<Clock, 'now'>;
 }

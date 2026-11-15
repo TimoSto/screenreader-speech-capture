@@ -6,7 +6,7 @@ import type { BridgeState, GetStatus, Status } from '../ports/in/get-status.js';
 import type { BridgeStateControl } from '../ports/in/lifecycle.js';
 import type { ProcessSupervisor } from '../ports/out/process-supervisor.js';
 
-export interface StatusServiceDeps {
+interface StatusServiceDeps {
   capture: Pick<CaptureState, 'captureStatus'>;
   log: Pick<SpeechLog, 'stats' | 'sessions' | 'currentSession'>;
   /** One supervisor per child service. */

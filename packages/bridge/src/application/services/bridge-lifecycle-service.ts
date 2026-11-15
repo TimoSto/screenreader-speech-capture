@@ -6,7 +6,7 @@ import type {
 } from '../ports/in/lifecycle.js';
 import type { Logger } from '../ports/out/logger.js';
 
-export interface BridgeLifecycleDeps {
+interface BridgeLifecycleDeps {
   state: BridgeStateControl;
   /** Pending waits, which answer before the HTTP server closes their connections. */
   waits: Shutdown;

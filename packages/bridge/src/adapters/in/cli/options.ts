@@ -116,7 +116,7 @@ export class UsageError extends Error {
   override readonly name = 'UsageError';
 }
 
-export interface CliOptions {
+interface CliOptions {
   /** Settings from flags and environment variables, flags winning. Not validated yet. */
   overrides: Record<string, Record<string, unknown>>;
   /** What set each setting in `overrides`, for example `--tcp-port` or `SR_SPEECH_TCP_PORT`. */
