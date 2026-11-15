@@ -16,15 +16,18 @@ interface ConsoleSinkOptions {
   /** Also write the speech channel to the console. Off by default (feedback loop). */
   speech?: boolean;
   stream?: NodeJS.WriteStream;
+  /** Where the text goes. Default: the stream. */
+  write?: ((text: string) => void) | undefined;
   env?: NodeJS.ProcessEnv;
 }
 
 /** Console sink on stdout. */
 export function consoleSink(options: ConsoleSinkOptions = {}): LogSink {
   const { speech = false, stream = process.stdout, env = process.env } = options;
+  const write = options.write ?? ((text: string) => void stream.write(text));
   return {
     colour: wantsColour(stream.isTTY, env),
     speech,
-    write: (line) => void stream.write(`${line}\n`),
+    write: (line) => write(`${line}\n`),
   };
 }
