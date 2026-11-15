@@ -17,3 +17,7 @@ Your project needs `@types/node`. `@playwright/test` is a peer dependency.
 - [Repository](https://github.com/TimoSto/screenreader-speech-capture)
 - [Client documentation](https://github.com/TimoSto/screenreader-speech-capture/blob/main/docs/usage/client.md)
 - [The bridge](https://www.npmjs.com/package/screenreader-speech-capture)
+
+## License
+
+[MIT](https://github.com/TimoSto/screenreader-speech-capture/blob/main/LICENSE)

@@ -35,7 +35,7 @@ info:
     bridge doesn't answer to, or a `POST` / `PUT` / `DELETE` carries a foreign `Origin`
     (`docs/usage/security.md#host-and-origin`).
   license:
-    name: UNLICENSED
+    name: MIT
 servers:
   - url: http://localhost:5151/api/v1
     description: Bridge on this machine (default HTTP port 5151)

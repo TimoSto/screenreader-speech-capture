@@ -113,7 +113,6 @@ own SAPI 5 voice written in Rust.
 
 ## Open questions
 
-- **License:** which one (MIT would match `text-to-socket-engine`)?
 - **Delayed send:** does the UI's delayed send live in the UI, or in the API (`delayMs` on
   `/input/keys`, so a person can switch to the browser window first, also from the CLI)?
 - **Screen reader key:** do `Insert` and `CapsLock` work as held modifiers through robotjs, so NVDA

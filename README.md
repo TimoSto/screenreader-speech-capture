@@ -122,4 +122,4 @@ desktop and effectively run programs on the VM. Use it only on isolated test VMs
 
 ## License
 
-TBD
+[MIT](LICENSE).

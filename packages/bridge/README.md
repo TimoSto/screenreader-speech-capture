@@ -18,3 +18,7 @@ Run it in the interactive user session of the Windows machine, with the socket v
 - [VM setup](https://github.com/TimoSto/screenreader-speech-capture/blob/main/docs/usage/vm-setup.md)
 - [HTTP API](https://github.com/TimoSto/screenreader-speech-capture/blob/main/docs/usage/http-api.md)
 - [Test client for your tests](https://www.npmjs.com/package/screenreader-speech-capture-client)
+
+## License
+
+[MIT](https://github.com/TimoSto/screenreader-speech-capture/blob/main/LICENSE)
