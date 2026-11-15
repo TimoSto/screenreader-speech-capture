@@ -23,6 +23,10 @@
     "@screenreader-speech-capture/ui": "workspace:*",
     "tsdown": "0.23.7"
   },
+  "homepage": "https://github.com/TimoSto/screenreader-speech-capture/tree/main/packages/bridge#readme",
+  "bugs": {
+    "url": "https://github.com/TimoSto/screenreader-speech-capture/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/TimoSto/screenreader-speech-capture.git",
