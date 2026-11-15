@@ -1,0 +1,1147 @@
+<!doctype html>
+<!--
+  Speech Capture — Monitor (mockup)
+  Standalone, clickable export of the design canvas artboard (Main.dc.html).
+  Open it directly in a browser or WebStorm's preview. No build step, no network needed
+  (fonts fall back to system fonts when offline).
+  The markup inside <template id="dc-template"> and the Component class are the design source;
+  the small runtime at the bottom only interprets them. See ../DESIGN.md for the spec.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speech Capture — Monitor (mockup)</title>
+<style>sc-if,sc-for{display:contents}body{margin:0}</style>
+</head>
+<body>
+<div id="app"></div>
+
+<details id="mock-controls">
+  <summary>Mockup state</summary>
+  <form>
+    <label><input type="checkbox" name="dark"> Dark theme</label>
+    <label><input type="checkbox" name="voiceConnected"> Voice connected</label>
+    <label><input type="checkbox" name="inputEnabled"> Native input on</label>
+    <label><input type="checkbox" name="simulateSpeech"> Simulate speech</label>
+    <label>MCP <select name="mcpState"><option>running</option><option>crashed</option><option>stopped</option></select></label>
+    <p>Also as URL params, e.g. <code>?voiceConnected=0&amp;mcpState=crashed</code></p>
+  </form>
+</details>
+<style>
+#mock-controls{position:fixed;left:8px;bottom:8px;z-index:100;font:12px/1.4 system-ui,sans-serif;background:#fff;color:#191C20;border:1px solid #C4C6D0;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.15);max-width:240px}
+#mock-controls summary{cursor:pointer;padding:6px 10px;font-weight:600}
+#mock-controls form{display:flex;flex-direction:column;gap:6px;padding:0 10px 10px}
+#mock-controls p{margin:4px 0 0;color:#44474E}
+</style>
+<template id="dc-template">
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400;8..144,500;8..144,600&amp;family=Roboto+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+.srm{
+--md-sys-color-primary:#415F91;--md-sys-color-on-primary:#FFFFFF;--md-sys-color-primary-container:#D6E3FF;--md-sys-color-on-primary-container:#001B3E;
+--md-sys-color-secondary:#565F71;--md-sys-color-on-secondary:#FFFFFF;--md-sys-color-secondary-container:#DAE2F9;--md-sys-color-on-secondary-container:#131C2B;
+--md-sys-color-tertiary:#705575;--md-sys-color-on-tertiary:#FFFFFF;--md-sys-color-tertiary-container:#FAD8FD;--md-sys-color-on-tertiary-container:#28132E;
+--md-sys-color-error:#BA1A1A;--md-sys-color-on-error:#FFFFFF;--md-sys-color-error-container:#FFDAD6;--md-sys-color-on-error-container:#410002;
+--app-success:#2F6A1E;--app-on-success:#FFFFFF;--app-success-container:#B6F29A;--app-on-success-container:#062100;
+--app-warning:#7A5900;--app-on-warning:#FFFFFF;--app-warning-container:#FFDEA4;--app-on-warning-container:#261900;
+--md-sys-color-surface:#F9F9FF;--md-sys-color-on-surface:#191C20;--md-sys-color-on-surface-variant:#44474E;
+--md-sys-color-outline:#74777F;--md-sys-color-outline-variant:#C4C6D0;
+--md-sys-color-surface-container-lowest:#FFFFFF;--md-sys-color-surface-container-low:#F3F3FA;--md-sys-color-surface-container:#EDEDF4;--md-sys-color-surface-container-high:#E7E8EE;--md-sys-color-surface-container-highest:#E2E2E9;
+--md-sys-color-inverse-surface:#2E3036;--md-sys-color-inverse-on-surface:#F0F0F7;--md-sys-color-inverse-primary:#AAC7FF;
+--app-new-row:rgba(65,95,145,.10);--md-sys-color-scrim:rgba(0,0,0,.32);
+}
+.srm.dark{
+--md-sys-color-primary:#AAC7FF;--md-sys-color-on-primary:#0A305F;--md-sys-color-primary-container:#284777;--md-sys-color-on-primary-container:#D6E3FF;
+--md-sys-color-secondary:#BEC6DC;--md-sys-color-on-secondary:#283141;--md-sys-color-secondary-container:#3E4759;--md-sys-color-on-secondary-container:#DAE2F9;
+--md-sys-color-tertiary:#DDBCE0;--md-sys-color-on-tertiary:#3F2844;--md-sys-color-tertiary-container:#573E5C;--md-sys-color-on-tertiary-container:#FAD8FD;
+--md-sys-color-error:#FFB4AB;--md-sys-color-on-error:#690005;--md-sys-color-error-container:#93000A;--md-sys-color-on-error-container:#FFDAD6;
+--app-success:#9BD680;--app-on-success:#0B3900;--app-success-container:#185108;--app-on-success-container:#B6F29A;
+--app-warning:#F5BF48;--app-on-warning:#412D00;--app-warning-container:#5C4200;--app-on-warning-container:#FFDEA4;
+--md-sys-color-surface:#111318;--md-sys-color-on-surface:#E2E2E9;--md-sys-color-on-surface-variant:#C4C6D0;
+--md-sys-color-outline:#8E9099;--md-sys-color-outline-variant:#44474E;
+--md-sys-color-surface-container-lowest:#0C0E13;--md-sys-color-surface-container-low:#191C20;--md-sys-color-surface-container:#1D2024;--md-sys-color-surface-container-high:#282A2F;--md-sys-color-surface-container-highest:#33353A;
+--md-sys-color-inverse-surface:#E2E2E9;--md-sys-color-inverse-on-surface:#2E3036;--md-sys-color-inverse-primary:#415F91;
+--app-new-row:rgba(170,199,255,.12);--md-sys-color-scrim:rgba(0,0,0,.5);
+}
+.srm{font-family:'Roboto Flex',Roboto,system-ui,sans-serif;color:var(--md-sys-color-on-surface);background:var(--md-sys-color-surface);-webkit-font-smoothing:antialiased}
+.srm *{box-sizing:border-box}
+.mono{font-family:'Roboto Mono',ui-monospace,Consolas,monospace}
+.srm button{font-family:inherit}
+.btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 24px;border-radius:20px;border:0;font-size:14px;font-weight:500;letter-spacing:.1px;cursor:pointer;white-space:nowrap}
+.btn::after,.icon-btn::after,.chip::after,.nav-item::after,.seg-item::after,.rail-item .rail-ind::after,.list-btn::after,.status-btn::after{content:'';position:absolute;inset:0;border-radius:inherit;background:currentColor;opacity:0;transition:opacity .15s;pointer-events:none}
+.btn:hover::after,.icon-btn:hover::after,.chip:hover::after,.nav-item:hover::after,.seg-item:hover::after,.rail-item:hover .rail-ind::after,.list-btn:hover::after,.status-btn:hover::after{opacity:.08}
+.btn:active::after,.icon-btn:active::after,.chip:active::after,.nav-item:active::after,.seg-item:active::after,.list-btn:active::after{opacity:.12}
+.srm button:focus-visible,.srm input:focus-visible,.srm [tabindex]:focus-visible{outline:3px solid var(--md-sys-color-secondary);outline-offset:2px}
+.btn:disabled,.icon-btn:disabled,.chip:disabled,.seg-item:disabled,.list-btn:disabled{opacity:.38;cursor:not-allowed}
+.btn:disabled::after,.list-btn:disabled::after{display:none}
+.filled{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary)}
+.tonal{background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container)}
+.outlined{background:transparent;color:var(--md-sys-color-primary);border:1px solid var(--md-sys-color-outline)}
+.textbtn{background:transparent;color:var(--md-sys-color-primary);padding:0 12px}
+.danger{background:var(--md-sys-color-error);color:var(--md-sys-color-on-error)}
+.icon-btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;border:0;border-radius:20px;background:transparent;color:var(--md-sys-color-on-surface-variant);cursor:pointer;flex:none}
+.chip{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--md-sys-color-outline-variant);background:transparent;color:var(--md-sys-color-on-surface-variant);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
+.chip.on{background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);border-color:transparent}
+.nav-item{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 16px;border:0;border-radius:28px;text-align:left;cursor:pointer;color:var(--md-sys-color-on-surface-variant);background:transparent}
+.rail-item{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:transparent;color:var(--md-sys-color-on-surface-variant);cursor:pointer;font-size:12px;font-weight:500;padding:0;width:80px}
+.rail-ind{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;width:56px;height:32px;border-radius:16px}
+.seg{display:flex;border:1px solid var(--md-sys-color-outline);border-radius:20px;overflow:hidden;height:40px}
+.seg-item{position:relative;overflow:hidden;flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:6px;border:0;border-right:1px solid var(--md-sys-color-outline);background:transparent;color:var(--md-sys-color-on-surface);font-size:14px;font-weight:500;cursor:pointer;padding:0 8px;min-width:0}
+.seg-item:last-child{border-right:0}
+.seg-item.on{background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container)}
+.fld{position:relative;display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld label{position:absolute;top:-8px;left:12px;padding:0 4px;font-size:12px;line-height:16px;color:var(--md-sys-color-on-surface-variant);background:var(--fld-bg,var(--md-sys-color-surface));pointer-events:none}
+.inp{height:56px;width:100%;border:1px solid var(--md-sys-color-outline);border-radius:4px;padding:0 16px;font-size:16px;background:transparent;color:var(--md-sys-color-on-surface);font-family:inherit}
+.inp.sm{height:48px;font-size:14px}
+.inp:focus{outline:none;border:2px solid var(--md-sys-color-primary);padding:0 15px}
+.fld:focus-within label{color:var(--md-sys-color-primary)}
+.inp.err{border-color:var(--md-sys-color-error)}
+.fld .sup{font-size:12px;line-height:16px;color:var(--md-sys-color-on-surface-variant);padding:0 16px}
+.fld .sup.err{color:var(--md-sys-color-error)}
+.search{display:flex;align-items:center;gap:8px;height:48px;padding:0 4px 0 16px;border-radius:24px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);flex:1 1 220px;min-width:180px}
+.search input{flex:1;border:0;background:transparent;font-size:16px;color:var(--md-sys-color-on-surface);font-family:inherit;min-width:0;height:100%}
+.search input:focus{outline:none}
+.search:focus-within{outline:2px solid var(--md-sys-color-primary)}
+.switch{position:relative;width:52px;height:32px;border-radius:16px;border:2px solid var(--md-sys-color-outline);background:var(--md-sys-color-surface-container-highest);cursor:pointer;padding:0;flex:none}
+.switch .knob{position:absolute;top:6px;left:6px;width:16px;height:16px;border-radius:8px;background:var(--md-sys-color-outline);transition:all .15s}
+.switch.on{background:var(--md-sys-color-primary);border-color:var(--md-sys-color-primary)}
+.switch.on .knob{left:22px;top:2px;width:24px;height:24px;border-radius:12px;background:var(--md-sys-color-on-primary)}
+.list-btn{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 12px 8px 16px;border:1px solid var(--md-sys-color-outline-variant);border-radius:12px;background:var(--md-sys-color-surface-container-lowest);color:var(--md-sys-color-on-surface);cursor:pointer;text-align:left}
+.status-btn{position:relative;overflow:hidden;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:4px;border:0;border-radius:20px;background:transparent;color:inherit;cursor:pointer}
+.schip{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:8px;background:var(--md-sys-color-surface-container-lowest);border:1px solid var(--md-sys-color-outline-variant);font-size:13px;font-weight:500;color:var(--md-sys-color-on-surface);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:4px;flex:none}
+.live-dot{width:8px;height:8px;border-radius:4px;background:var(--app-success);animation:pulse 1.6s ease-in-out infinite;flex:none}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.logrow:hover{background:var(--md-sys-color-surface-container)}
+.trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scroll::-webkit-scrollbar{width:10px}.scroll::-webkit-scrollbar-thumb{background:var(--md-sys-color-outline-variant);border-radius:5px;border:2px solid transparent;background-clip:padding-box}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</helmet>
+
+<div class="srm {{themeClass}}" style="min-height: 1000px; display: flex; flex-direction: column; background: var(--md-sys-color-surface); position: relative;">
+
+  <!-- Top app bar = status bar -->
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 10px 16px 10px 0; min-height: 68px; background: {{barBg}}; color: {{barFg}};">
+    <div style="display: flex; align-items: center; width: 92px; margin-right: -4px; justify-content: center; flex: none;">
+      <div style="width: 44px; height: 44px; border-radius: 14px; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); display: flex; align-items: center; justify-content: center;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2"></path></svg>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; min-width: 0; margin-right: auto;">
+      <span style="font-size: 22px; line-height: 28px; font-weight: 500;">Speech Capture</span>
+      <span class="mono" style="font-size: 12px; line-height: 16px; opacity: .8;">my-test-vm:5151 · bridge 0.3.0 · API 1.13 · {{bridgeState}}</span>
+    </div>
+
+    <button class="status-btn" onClick="{{openStatus}}" aria-label="Bridge status: {{statusSummary}}. Open details.">
+      <span class="schip"><span class="dot" style="background: {{voiceDot}};"></span>{{voiceLabel}}</span>
+      <span class="schip"><span class="dot" style="background: var(--app-success);"></span>Playwright 1.65.0</span>
+      <span class="schip"><span class="dot" style="background: {{mcpDot}};"></span>{{mcpLabel}}</span>
+      <span class="schip"><span class="dot" style="background: {{inputDot}};"></span>{{inputLabel}}</span>
+      <span class="schip">
+        <sc-if value="{{hasCurrent}}" hint-placeholder-val="{{ true }}"><span class="live-dot"></span>Session #{{currentId}}</sc-if>
+        <sc-if value="{{noCurrent}}" hint-placeholder-val="{{ false }}"><span class="dot" style="background: var(--md-sys-color-outline);"></span>No session</sc-if>
+      </span>
+    </button>
+
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <span class="mono" style="font-size: 12px; opacity: .8; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px;" title="GET /api/v1/status every 2 s">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M21 3v5h-5M3 21v-5h5"></path></svg>
+        status {{pollAgo}}
+      </span>
+      <button class="icon-btn" onClick="{{toggleDark}}" aria-label="{{darkLabel}}" style="color: inherit;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg>
+      </button>
+    </div>
+  </header>
+
+  <sc-if value="{{noVoice}}" hint-placeholder-val="{{ false }}">
+    <div role="alert" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0 12px 0 104px; padding: 12px 16px; border-radius: 12px; background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); font-size: 14px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></svg>
+      <span style="flex: 1 1 300px;"><strong>No voice connected to TCP :4449.</strong> In NVDA or JAWS select the voice “Text To Socket 127.0.0.1:4449”.</span>
+      <button class="btn textbtn" style="color: var(--md-sys-color-on-error-container);" onClick="{{gotoSetup}}">Open setup</button>
+    </div>
+  </sc-if>
+
+  <div style="display: flex; flex-wrap: nowrap; align-items: stretch; gap: 12px; padding: 12px 12px 12px 0; flex: 1; min-width: 0;">
+
+    <!-- Navigation rail -->
+    <nav aria-label="Pages" style="width: 92px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 16px; padding-top: 4px;">
+      <button class="rail-item" aria-current="page" style="color: var(--md-sys-color-on-surface);">
+        <span class="rail-ind" style="background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2"></path></svg>
+        </span>Monitor</button>
+      <button class="rail-item" onClick="{{gotoSettings}}">
+        <span class="rail-ind">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"></path></svg>
+        </span>Settings</button>
+      <button class="rail-item" onClick="{{gotoSetup}}">
+        <span class="rail-ind">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        </span>Setup</button>
+    </nav>
+
+    <!-- Sessions -->
+    <nav aria-labelledby="sessions-h" style="flex: 0 0 300px; min-width: 0; background: var(--md-sys-color-surface-container-low); border-radius: 16px; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 0 0 16px;">
+        <h2 id="sessions-h" style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 500;">Sessions</h2>
+        <button class="icon-btn" onClick="{{askNew}}" aria-label="Start new session" title="Start new session" style="color: var(--md-sys-color-primary);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+      </div>
+      <ul class="scroll" style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; max-height: 820px;">
+        <sc-for list="{{sessionItems}}" as="s" hint-placeholder-count="5">
+          <li style="display: flex; align-items: center; gap: 0; border-radius: 28px; background: {{s.bg}}; color: {{s.fg}};">
+            <button class="nav-item" onClick="{{s.select}}" aria-current="{{s.ariaCurrent}}" style="color: inherit; min-height: 60px; flex: 1 1 auto; min-width: 0; width: auto;">
+              <span style="display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px;">
+                <span class="trunc" style="font-size: 14px; line-height: 20px; font-weight: 500;">{{s.name}}</span>
+                <span class="mono trunc" style="font-size: 12px; line-height: 16px; opacity: .8; display: flex; align-items: center; gap: 6px;"><sc-if value="{{s.live}}" hint-placeholder-val="{{ false }}"><span class="live-dot"></span></sc-if>{{s.meta}}</span>
+              </span>
+            </button>
+            <sc-if value="{{s.live}}" hint-placeholder-val="{{ false }}">
+              <button class="icon-btn" onClick="{{s.stop}}" aria-label="End session #{{s.id}}" title="End session" style="color: var(--md-sys-color-error); margin-right: 8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg></button>
+            </sc-if>
+          </li>
+        </sc-for>
+      </ul>
+      <sc-if value="{{noSessions}}" hint-placeholder-val="{{ false }}">
+        <p style="margin: 8px 16px; font-size: 13px; line-height: 18px; color: var(--md-sys-color-on-surface-variant);">No sessions in the buffer. Start one with +.</p>
+      </sc-if>
+    </nav>
+
+    <!-- Live log -->
+    <main style="flex: 1 1 auto; min-width: 0; background: var(--md-sys-color-surface-container-lowest); border: 1px solid var(--md-sys-color-outline-variant); border-radius: 16px; display: flex; flex-direction: row; overflow: hidden;">
+      <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column;">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 16px 12px 8px 24px;">
+        <div style="display: flex; flex-direction: column; min-width: 0; flex: 1 1 240px;">
+          <h1 class="trunc" style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 500;">{{viewTitle}}</h1>
+          <span class="mono trunc" style="font-size: 12px; line-height: 16px; color: var(--md-sys-color-on-surface-variant);">{{viewSub}}</span>
+        </div>
+        <div style="display: flex; gap: 4px;" role="toolbar" aria-label="Log actions">
+          <button class="icon-btn" onClick="{{toggleActions}}" aria-expanded="{{actionsOpen}}" aria-controls="actions-panel" aria-label="Actions panel" title="Actions: keys, click, Playwright" style="background: {{actionsBtnBg}}; color: {{actionsBtnFg}};">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"></path></svg></button>
+          <span aria-hidden="true" style="width: 1px; height: 24px; background: var(--md-sys-color-outline-variant); align-self: center; margin: 0 4px;"></span>
+          <button class="icon-btn" onClick="{{askMarker}}" aria-label="Add marker" title="Add marker">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg></button>
+          <button class="icon-btn" onClick="{{copyLog}}" aria-label="Copy visible text" title="Copy visible text">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+          <button class="icon-btn" onClick="{{exportLog}}" aria-label="Export as JSONL" title="Export (JSON / JSONL / text)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5M12 15V3"></path></svg></button>
+          <button class="icon-btn" onClick="{{askWipe}}" aria-label="Wipe everything" title="Wipe everything" style="color: var(--md-sys-color-error);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"></path></svg></button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 16px 8px 16px;">
+        <label class="search">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+          <span class="sr-only">Filter speech</span>
+          <input value="{{query}}" onChange="{{onQuery}}" placeholder="{{queryPlaceholder}}">
+          <sc-if value="{{hasQuery}}" hint-placeholder-val="{{ false }}"><button class="icon-btn" onClick="{{clearQuery}}" aria-label="Clear filter"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"></path></svg></button></sc-if>
+        </label>
+        <button class="chip {{regexClass}}" aria-pressed="{{regex}}" onClick="{{toggleRegex}}">
+          <sc-if value="{{regex}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></sc-if>
+          <span class="mono">.*</span> Regex</button>
+        <button class="chip {{hideMarkersClass}}" aria-pressed="{{hideMarkers}}" onClick="{{toggleHideMarkers}}">
+          <sc-if value="{{hideMarkers}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></sc-if>
+          Hide markers</button>
+        <button class="chip" onClick="{{cycleVoice}}" aria-label="Voice filter: {{voiceFilterLabel}}">Voice: {{voiceFilterLabel}}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+      </div>
+      <sc-if value="{{regexError}}" hint-placeholder-val="{{ false }}">
+        <div role="alert" style="padding: 0 32px 8px; font-size: 12px; color: var(--md-sys-color-error);">{{regexError}}</div>
+      </sc-if>
+
+      <div style="display: grid; grid-template-columns: 112px 64px minmax(0, 1fr) 56px; gap: 12px; padding: 6px 24px; border-top: 1px solid var(--md-sys-color-outline-variant); border-bottom: 1px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface-container-low); font-size: 11px; font-weight: 500; letter-spacing: .5px; color: var(--md-sys-color-on-surface-variant);" aria-hidden="true">
+        <span>RECEIVED</span><span>GAP</span><span>SPOKEN TEXT</span><span style="text-align: right;">SEQ</span>
+      </div>
+
+      <section aria-label="Speech log" aria-live="{{ariaLive}}" ref="{{logRef}}" onScroll="{{onLogScroll}}" tabindex="0" class="scroll" style="flex: 1 1 auto; height: 560px; overflow-y: auto; position: relative;">
+        <ol style="list-style: none; margin: 0; padding: 4px 0 12px;">
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="12">
+            <li>
+              <sc-if value="{{r.isGap}}" hint-placeholder-val="{{ false }}">
+                <div style="margin: 8px 16px; padding: 8px 12px; border-radius: 8px; background: var(--app-warning-container); color: var(--app-on-warning-container); font-size: 12px; display: flex; align-items: center; gap: 8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" transform="rotate(45 12 12)"></path></svg>
+                  <span>{{r.text}}</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{r.isSession}}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; align-items: center; gap: 12px; padding: 14px 24px 6px;">
+                  <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 12px; background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); font-size: 12px; font-weight: 500; max-width: 70%;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg><span class="trunc">{{r.text}}</span></span>
+                  <span style="flex: 1; height: 1px; background: var(--md-sys-color-primary-container);"></span>
+                  <span class="mono" style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">{{r.time}}</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{r.isMarker}}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; align-items: center; gap: 12px; padding: 6px 24px; background: {{r.bg}};">
+                  <span class="mono" style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); width: 112px; flex: none;">{{r.time}}</span>
+                  <span title="{{r.text}}" style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 6px; background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); font-size: 12px; font-weight: 500; min-width: 0; max-width: 70%; flex: 0 1 auto;"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="flex: none;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg><span class="mono trunc">{{r.text}}</span></span>
+                  <span style="flex: 1 1 24px; height: 1px; border-top: 1px dashed var(--md-sys-color-outline-variant);"></span>
+                  <span class="mono" style="font-size: 11px; color: var(--md-sys-color-outline); width: 56px; flex: none; text-align: right;">#{{r.seq}}</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{r.isSpeech}}" hint-placeholder-val="{{ true }}">
+                <div class="logrow" style="display: grid; grid-template-columns: 112px 64px minmax(0, 1fr) 56px; gap: 12px; align-items: baseline; padding: 7px 24px; background: {{r.bg}};">
+                  <span class="mono" style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">{{r.time}}</span>
+                  <span class="mono" style="font-size: 12px; color: {{r.gapColor}};">{{r.gap}}</span>
+                  <span style="font-size: 15px; line-height: 22px; color: var(--md-sys-color-on-surface); overflow-wrap: anywhere;">{{r.text}}<sc-if value="{{r.voice}}" hint-placeholder-val="{{ false }}"> <span class="mono" style="font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface-variant);">{{r.voice}}</span></sc-if></span>
+                  <span class="mono" style="font-size: 11px; color: var(--md-sys-color-outline); text-align: right;">#{{r.seq}}</span>
+                </div>
+              </sc-if>
+            </li>
+          </sc-for>
+        </ol>
+        <sc-if value="{{isEmpty}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 96px 24px; text-align: center; color: var(--md-sys-color-on-surface-variant);">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"></path></svg>
+            <div style="font-size: 16px; font-weight: 500; color: var(--md-sys-color-on-surface);">{{emptyTitle}}</div>
+            <div style="font-size: 14px; max-width: 360px;">Make the screen reader speak, or send an action from the panel on the right.</div>
+          </div>
+        </sc-if>
+      </section>
+
+      <footer style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 12px 8px 24px; border-top: 1px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface-container-low);">
+        <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+          <span class="dot" style="background: var(--app-success);"></span>
+          <span class="mono">SSE connected · last id {{lastSeq}} · {{visibleCount}} shown</span>
+        </span>
+        <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+          <button class="switch {{announceClass}}" role="switch" aria-checked="{{announce}}" aria-label="Announce new entries with aria-live" onClick="{{toggleAnnounce}}" style="transform: scale(.8);"><span class="knob"></span></button>
+          Announce new entries
+        </span>
+        <span style="flex: 1;"></span>
+        <sc-if value="{{following}}" hint-placeholder-val="{{ true }}">
+          <button class="chip on" onClick="{{pauseFollow}}" aria-pressed="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M19 12l-7 7-7-7"></path></svg>Following</button>
+        </sc-if>
+        <sc-if value="{{paused}}" hint-placeholder-val="{{ false }}">
+          <button class="btn tonal" onClick="{{jumpLatest}}" style="height: 40px; padding: 0 16px 0 12px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.2);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M19 12l-7 7-7-7"></path></svg>{{newCount}} new · jump to latest</button>
+        </sc-if>
+      </footer>
+      </div>
+
+      <!-- Actions (side panel inside the log pane) -->
+      <sc-if value="{{actionsOpen}}" hint-placeholder-val="{{ true }}">
+      <aside aria-labelledby="actions-h" id="actions-panel" style="--fld-bg: var(--md-sys-color-surface-container-low); flex: 0 0 360px; min-width: 0; background: var(--md-sys-color-surface-container-low); border-left: 1px solid var(--md-sys-color-outline-variant); padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; align-items: flex-start; gap: 8px;">
+          <div style="flex: 1; padding-top: 8px;">
+            <h2 id="actions-h" style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 500;">Actions</h2>
+            <p style="margin: 2px 0 0; font-size: 12px; line-height: 16px; color: var(--md-sys-color-on-surface-variant);">Each action inserts a marker first, so the log shows where its speech starts.</p>
+          </div>
+          <button class="icon-btn" onClick="{{toggleActions}}" aria-label="Close actions" title="Close actions"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>
+        </div>
+
+        <div class="seg" role="group" aria-label="Action type">
+          <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+            <button class="seg-item {{t.cls}}" aria-pressed="{{t.on}}" onClick="{{t.pick}}">
+              <sc-if value="{{t.on}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></sc-if>
+              <span class="trunc">{{t.label}}</span></button>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{showInputOff}}" hint-placeholder-val="{{ false }}">
+          <div role="note" style="display: flex; gap: 10px; padding: 12px; border-radius: 12px; background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); font-size: 13px; line-height: 18px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 1px;"><circle cx="12" cy="12" r="10"></circle><path d="M4.9 4.9l14.2 14.2"></path></svg>
+            <span>Native input is unavailable: the bridge couldn’t load <span class="mono">@jitsi/robotjs</span> (for example not on Windows). The last request answered 409 INPUT_DISABLED.</span>
+          </div>
+        </sc-if>
+
+        <!-- Keys -->
+        <sc-if value="{{tabKeys}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="fld" style="margin-top: 6px;">
+              <label for="keys-in">Keys</label>
+              <input id="keys-in" class="inp mono {{keysErrClass}}" value="{{keys}}" onChange="{{onKeys}}" onKeyDown="{{onKeysKey}}" disabled="{{inputOff}}" aria-describedby="keys-sup" spellcheck="false">
+              <span id="keys-sup" class="sup {{keysSupClass}}">{{keysSup}}</span>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+              <div class="fld" style="width: 120px; margin-top: 6px;">
+                <label for="delay-in">Delay (ms)</label>
+                <input id="delay-in" class="inp sm mono" value="{{delayMs}}" onChange="{{onDelay}}" disabled="{{inputOff}}" inputmode="numeric">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+                <span style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">Send after</span>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  <sc-for list="{{afterOpts}}" as="a" hint-placeholder-count="4">
+                    <button class="chip {{a.cls}}" aria-pressed="{{a.on}}" onClick="{{a.pick}}" disabled="{{inputOff}}" style="padding: 0 10px;">{{a.label}}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+            <button class="btn filled" onClick="{{sendKeys}}" disabled="{{inputOff}}" style="width: 100%;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"></path></svg>
+              Press keys</button>
+            <div class="mono" style="font-size: 11px; color: var(--md-sys-color-on-surface-variant);">POST /api/v1/input/keys</div>
+          </div>
+        </sc-if>
+
+        <!-- Presets -->
+        <sc-if value="{{tabPresets}}" hint-placeholder-val="{{ false }}">
+          <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px;">
+            <sc-for list="{{presets}}" as="p" hint-placeholder-count="5">
+              <li><button class="list-btn" onClick="{{p.fire}}" disabled="{{inputOff}}">
+                <span style="display: flex; flex-direction: column; flex: 1; min-width: 0;">
+                  <span style="font-size: 14px; line-height: 20px; font-weight: 500;">{{p.name}}</span>
+                  <span style="font-size: 12px; line-height: 16px; color: var(--md-sys-color-on-surface-variant);">{{p.desc}}</span>
+                </span>
+                <span class="mono" style="font-size: 12px; padding: 4px 8px; border-radius: 6px; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface-variant);">{{p.keys}}</span>
+              </button></li>
+            </sc-for>
+          </ul>
+        </sc-if>
+
+        <!-- Click -->
+        <sc-if value="{{tabClick}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; gap: 12px; margin-top: 6px;">
+              <div class="fld" style="flex: 1;">
+                <label for="x-in">X (px)</label>
+                <input id="x-in" class="inp mono {{clickErrClass}}" value="{{clickX}}" onChange="{{onClickX}}" disabled="{{inputOff}}" inputmode="numeric">
+              </div>
+              <div class="fld" style="flex: 1;">
+                <label for="y-in">Y (px)</label>
+                <input id="y-in" class="inp mono {{clickErrClass}}" value="{{clickY}}" onChange="{{onClickY}}" disabled="{{inputOff}}" inputmode="numeric">
+              </div>
+            </div>
+            <sc-if value="{{clickError}}" hint-placeholder-val="{{ false }}"><div role="alert" style="font-size: 12px; color: var(--md-sys-color-error); padding: 0 16px; margin-top: -10px;">{{clickError}}</div></sc-if>
+            <div class="seg" role="group" aria-label="Mouse button">
+              <sc-for list="{{buttons}}" as="b" hint-placeholder-count="3">
+                <button class="seg-item {{b.cls}}" aria-pressed="{{b.on}}" onClick="{{b.pick}}" disabled="{{inputOff}}">{{b.label}}</button>
+              </sc-for>
+            </div>
+            <p style="margin: 0; font-size: 12px; line-height: 16px; color: var(--md-sys-color-on-surface-variant);">Physical screen pixels on the VM. The window under the point becomes the foreground window, so the screen reader starts reading it. Tests use the client’s <span class="mono">setFocus(page)</span> to find the browser window.</p>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+              <span style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-right: 4px;">Send after</span>
+              <sc-for list="{{afterOpts}}" as="a" hint-placeholder-count="4">
+                <button class="chip {{a.cls}}" aria-pressed="{{a.on}}" onClick="{{a.pick}}" disabled="{{inputOff}}" style="padding: 0 10px;">{{a.label}}</button>
+              </sc-for>
+            </div>
+            <button class="btn filled" onClick="{{sendClick}}" disabled="{{inputOff}}" style="width: 100%;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51z"></path></svg>
+              Set focus (click)</button>
+            <div class="mono" style="font-size: 11px; color: var(--md-sys-color-on-surface-variant);">POST /api/v1/input/click</div>
+          </div>
+        </sc-if>
+
+        <!-- Playwright -->
+        <sc-if value="{{tabPw}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: {{pwInfoBg}}; color: {{pwInfoFg}}; font-size: 12px; line-height: 16px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none;"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 9h18M7 6.5h.01M10 6.5h.01"></path></svg>
+              <span>{{pwInfo}}</span>
+            </div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;" role="group" aria-label="Browser action">
+              <sc-for list="{{pwActions}}" as="a" hint-placeholder-count="5">
+                <button class="chip {{a.cls}}" aria-pressed="{{a.on}}" onClick="{{a.pick}}" style="padding: 0 10px;">{{a.label}}</button>
+              </sc-for>
+            </div>
+            <sc-if value="{{pwNavigate}}" hint-placeholder-val="{{ true }}">
+              <div class="fld" style="margin-top: 6px;"><label for="pw-url">URL</label><input id="pw-url" class="inp sm mono" value="{{pwUrl}}" onChange="{{onPwUrl}}"></div>
+            </sc-if>
+            <sc-if value="{{pwNeedsElement}}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; gap: 12px; margin-top: 6px;">
+                <div class="fld" style="flex: 1;"><label for="pw-el">Element</label><input id="pw-el" class="inp sm" value="{{pwElement}}" onChange="{{onPwElement}}"></div>
+                <div class="fld" style="width: 80px;"><label for="pw-ref">Ref</label><input id="pw-ref" class="inp sm mono" value="{{pwRef}}" onChange="{{onPwRef}}"></div>
+              </div>
+            </sc-if>
+            <sc-if value="{{pwType}}" hint-placeholder-val="{{ false }}">
+              <div class="fld" style="margin-top: 6px;"><label for="pw-text">Text</label><input id="pw-text" class="inp sm" value="{{pwText}}" onChange="{{onPwText}}"></div>
+            </sc-if>
+            <sc-if value="{{pwPress}}" hint-placeholder-val="{{ false }}">
+              <div class="fld" style="margin-top: 6px;"><label for="pw-key">Key (Playwright name)</label><input id="pw-key" class="inp sm mono" value="{{pwKey}}" onChange="{{onPwKey}}"></div>
+            </sc-if>
+            <button class="btn filled" onClick="{{runPw}}" disabled="{{pwDisabled}}" style="width: 100%;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+              <span>Run <span class="mono">{{pwTool}}</span></span></button>
+            <sc-if value="{{pwResult}}" hint-placeholder-val="{{ false }}">
+              <div style="border-radius: 12px; border: 1px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface-container-lowest); overflow: hidden;">
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); background: var(--md-sys-color-surface-container);"><span>MCP result</span><span class="mono">{{pwResultTool}}</span></div>
+                <pre class="mono scroll" style="margin: 0; padding: 10px 12px; font-size: 11.5px; line-height: 17px; max-height: 180px; overflow: auto; white-space: pre-wrap; color: var(--md-sys-color-on-surface);">{{pwResult}}</pre>
+              </div>
+            </sc-if>
+            <p style="margin: 0; font-size: 12px; line-height: 16px; color: var(--md-sys-color-on-surface-variant);">Playwright input goes into the page and works without native input. Screen reader commands (browse mode H, Insert+T) need the Keys tab.</p>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{pending}}" hint-placeholder-val="{{ false }}">
+          <div role="status" style="display: flex; align-items: center; gap: 12px; padding: 12px 8px 12px 16px; border-radius: 12px; background: var(--md-sys-color-inverse-surface); color: var(--md-sys-color-inverse-on-surface);">
+            <span class="mono" style="font-size: 22px; font-weight: 500; width: 28px; text-align: center;">{{pendingSec}}</span>
+            <span style="flex: 1; font-size: 13px; line-height: 18px;">Sending <span class="mono">{{pendingLabel}}</span>. Switch to the window under test now.</span>
+            <button class="btn textbtn" onClick="{{cancelPending}}" style="color: var(--md-sys-color-inverse-primary);">Cancel</button>
+          </div>
+        </sc-if>
+
+        <div style="height: 1px; background: var(--md-sys-color-outline-variant);"></div>
+        <section aria-labelledby="recent-h" style="display: flex; flex-direction: column; gap: 4px;">
+          <h3 id="recent-h" style="margin: 0 0 4px; font-size: 14px; line-height: 20px; font-weight: 500;">Recent actions</h3>
+          <sc-if value="{{noRecent}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">Nothing sent yet.</span></sc-if>
+          <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;">
+            <sc-for list="{{recent}}" as="rc" hint-placeholder-count="3">
+              <li style="display: flex; align-items: center; gap: 8px; min-height: 40px;">
+                <span style="width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface-variant); font-size: 10px; font-weight: 600;" aria-hidden="true">{{rc.kind}}</span>
+                <span class="mono trunc" style="flex: 1; font-size: 12px;">{{rc.label}}</span>
+                <span class="mono" style="font-size: 11px; color: var(--md-sys-color-on-surface-variant);">{{rc.ago}}</span>
+                <button class="icon-btn" onClick="{{rc.fire}}" aria-label="Send again: {{rc.label}}" style="width: 36px; height: 36px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path></svg></button>
+              </li>
+            </sc-for>
+          </ul>
+        </section>
+      </aside>
+      </sc-if>
+    </main>
+
+  </div>
+
+  <!-- Dialogs -->
+  <sc-if value="{{dlgOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: var(--md-sys-color-scrim); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 24px;">
+      <div role="dialog" aria-modal="true" aria-labelledby="dlg-h" style="--fld-bg: var(--md-sys-color-surface-container-high); width: 420px; max-width: 100%; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); border-radius: 28px; padding: 24px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.25);">
+        <h2 id="dlg-h" style="margin: 0; font-size: 24px; line-height: 32px; font-weight: 400;">{{dlgTitle}}</h2>
+        <p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--md-sys-color-on-surface-variant);">{{dlgBody}}</p>
+        <sc-if value="{{dlgNew}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 6px;">
+            <div class="fld"><label for="ns-name">Name *</label><input id="ns-name" class="inp {{newErrClass}}" value="{{newName}}" onChange="{{onNewName}}" placeholder="manual: explore checkout"><sc-if value="{{newErr}}" hint-placeholder-val="{{ false }}"><span class="sup err" role="alert">{{newErr}}</span></sc-if></div>
+            <div class="fld"><label for="ns-run">Run (optional)</label><input id="ns-run" class="inp mono" value="{{newRun}}" onChange="{{onNewRun}}" placeholder="groups sessions, e.g. nightly-43"><span class="sup">Shown next to the session in the list.</span></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{dlgMarker}}" hint-placeholder-val="{{ false }}">
+          <div class="fld" style="margin-top: 6px;"><label for="mk-in">Label</label><input id="mk-in" class="inp" value="{{markerLabel}}" onChange="{{onMarkerLabel}}" placeholder="step 3"></div>
+        </sc-if>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+          <button class="btn textbtn" onClick="{{closeDlg}}">Cancel</button>
+          <button class="btn {{dlgOkClass}}" onClick="{{dlgOk}}">{{dlgOkLabel}}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- Status side sheet -->
+  <sc-if value="{{statusOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: var(--md-sys-color-scrim); z-index: 20; display: flex; justify-content: flex-end;">
+      <button aria-label="Close status" onClick="{{closeStatus}}" style="flex: 1; border: 0; background: transparent; cursor: default;"></button>
+      <aside role="dialog" aria-modal="true" aria-labelledby="st-h" class="scroll" style="width: 420px; max-width: 100%; background: var(--md-sys-color-surface-container-low); color: var(--md-sys-color-on-surface); border-radius: 16px 0 0 16px; padding: 12px 24px 24px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto;">
+        <div style="display: flex; align-items: center; justify-content: space-between; min-height: 56px;">
+          <h2 id="st-h" style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 400;">Bridge status</h2>
+          <button class="icon-btn" onClick="{{closeStatus}}" aria-label="Close"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>
+        </div>
+        <span class="mono" style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: -12px;">GET /api/v1/status · polled {{pollAgo}}</span>
+        <sc-for list="{{statusSections}}" as="sec" hint-placeholder-count="6">
+          <section style="background: var(--md-sys-color-surface-container-lowest); border: 1px solid var(--md-sys-color-outline-variant); border-radius: 12px; padding: 12px 16px;">
+            <h3 style="margin: 0 0 8px; font-size: 14px; line-height: 20px; font-weight: 500; display: flex; align-items: center; gap: 8px;"><span class="dot" style="background: {{sec.dot}};"></span>{{sec.title}}</h3>
+            <dl style="margin: 0; display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 4px 12px; font-size: 13px; line-height: 20px;">
+              <sc-for list="{{sec.rows}}" as="kv" hint-placeholder-count="3">
+                <dt style="color: var(--md-sys-color-on-surface-variant);">{{kv.k}}</dt><dd class="mono" style="margin: 0; overflow-wrap: anywhere;">{{kv.v}}</dd>
+              </sc-for>
+            </dl>
+          </section>
+        </sc-for>
+      </aside>
+    </div>
+  </sc-if>
+
+  <!-- Snackbar -->
+  <sc-if value="{{snack}}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 30; min-width: 320px; max-width: 560px; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 4px; background: var(--md-sys-color-inverse-surface); color: var(--md-sys-color-inverse-on-surface); font-size: 14px; line-height: 20px; box-shadow: 0 4px 12px rgba(0,0,0,.3);">
+      <span style="flex: 1;">{{snack}}</span>
+    </div>
+  </sc-if>
+</div>
+</template>
+<script>
+/*
+ * Minimal standalone runtime for the mockup.
+ * Interprets the .dc.html template format (<x-dc> markup with {{holes}},
+ * <sc-if>, <sc-for>, on* handlers, ref) and a `class Component extends DCLogic`.
+ * Mockup tooling only: not meant for the real UI.
+ */
+(function () {
+  'use strict';
+  var HTML_NS = 'http://www.w3.org/1999/xhtml';
+  var WHOLE = /^\s*\{\{([^}]+)\}\}\s*$/;
+  var ANY = /\{\{([^}]+)\}\}/g;
+
+  function DCLogic(props) { this.props = props || {}; this.state = {}; this.__q = []; }
+  DCLogic.prototype.setState = function (u) { this.__q.push(u); if (this.__schedule) this.__schedule(); };
+  DCLogic.prototype.forceUpdate = function () { if (this.__schedule) this.__schedule(); };
+  window.DCLogic = DCLogic;
+
+  function lookup(path, scopes) {
+    path = path.trim();
+    if (path === 'true') return true;
+    if (path === 'false') return false;
+    if (path === 'null') return null;
+    if (/^-?\d+(\.\d+)?$/.test(path)) return Number(path);
+    if (/^'.*'$|^".*"$/.test(path)) return path.slice(1, -1);
+    var parts = path.split('.');
+    for (var i = scopes.length - 1; i >= 0; i--) {
+      var sc = scopes[i];
+      if (sc && Object.prototype.hasOwnProperty.call(sc, parts[0])) {
+        var v = sc[parts[0]];
+        for (var j = 1; j < parts.length; j++) { if (v == null) return undefined; v = v[parts[j]]; }
+        return v;
+      }
+    }
+    return undefined;
+  }
+  function interp(str, scopes) {
+    return str.replace(ANY, function (m, p) { var v = lookup(p, scopes); return v == null || v === false ? '' : String(v); });
+  }
+  function attrRaw(val, scopes) {
+    var m = val.match(WHOLE);
+    if (m) return lookup(m[1], scopes);
+    return val.indexOf('{{') >= 0 ? interp(val, scopes) : val;
+  }
+
+  function build(nodes, scopes, out) {
+    for (var k = 0; k < nodes.length; k++) {
+      var n = nodes[k];
+      if (n.nodeType === 3) {
+        var t = n.nodeValue;
+        out.push({ text: t.indexOf('{{') >= 0 ? interp(t, scopes) : t });
+      } else if (n.nodeType === 1) {
+        var tag = n.localName;
+        if (tag === 'sc-if') {
+          var kids = [];
+          if (attrRaw(n.getAttribute('value') || '', scopes)) build(n.childNodes, scopes, kids);
+          out.push({ tag: 'sc-if', ns: HTML_NS, attrs: {}, ev: {}, kids: kids });
+        } else if (tag === 'sc-for') {
+          var list = attrRaw(n.getAttribute('list') || '', scopes) || [];
+          var as = n.getAttribute('as') || 'item';
+          var fk = [];
+          for (var i = 0; i < list.length; i++) {
+            var sc = { $index: i }; sc[as] = list[i];
+            build(n.childNodes, scopes.concat([sc]), fk);
+          }
+          out.push({ tag: 'sc-for', ns: HTML_NS, attrs: {}, ev: {}, kids: fk });
+        } else {
+          var vn = { tag: tag, ns: n.namespaceURI, attrs: {}, ev: {}, kids: [] };
+          for (var a = 0; a < n.attributes.length; a++) {
+            var name = n.attributes[a].name, val = n.attributes[a].value;
+            if (name.indexOf('hint-') === 0) continue;
+            var raw = attrRaw(val, scopes);
+            if (name === 'ref') { if (typeof raw === 'function') vn.ref = raw; continue; }
+            if (name.indexOf('on') === 0 && name.length > 2) {
+              if (typeof raw === 'function') vn.ev[name === 'onchange' ? 'input' : name.slice(2)] = raw;
+              continue;
+            }
+            if (name === 'value' && (tag === 'input' || tag === 'textarea')) { vn.value = raw == null ? '' : String(raw); continue; }
+            if (name.indexOf('aria-') === 0) { vn.attrs[name] = raw == null ? '' : String(raw); continue; }
+            if (raw === false || raw == null) continue;
+            vn.attrs[name] = raw === true ? '' : String(raw);
+          }
+          build(n.childNodes, scopes, vn.kids);
+          out.push(vn);
+        }
+      }
+    }
+    return out;
+  }
+
+  function patch(parent, vns, refs) {
+    var cn = parent.childNodes;
+    for (var i = 0; i < vns.length; i++) {
+      var vn = vns[i];
+      var el = cn[i];
+      if (vn.text !== undefined) {
+        if (el && el.nodeType === 3) { if (el.nodeValue !== vn.text) el.nodeValue = vn.text; }
+        else { var tn = document.createTextNode(vn.text); if (el) parent.replaceChild(tn, el); else parent.appendChild(tn); }
+        continue;
+      }
+      if (!el || el.nodeType !== 1 || el.localName !== vn.tag || el.namespaceURI !== vn.ns) {
+        var ne = document.createElementNS(vn.ns, vn.tag);
+        if (el) parent.replaceChild(ne, el); else parent.appendChild(ne);
+        el = ne;
+      }
+      var prev = el.__a || {};
+      for (var pk in prev) if (!(pk in vn.attrs)) el.removeAttribute(pk);
+      for (var ak in vn.attrs) if (prev[ak] !== vn.attrs[ak]) el.setAttribute(ak, vn.attrs[ak]);
+      el.__a = vn.attrs;
+      if ('value' in vn && el.value !== vn.value) el.value = vn.value;
+      if ('disabled' in el) el.disabled = 'disabled' in vn.attrs;
+      bindEvents(el, vn.ev);
+      patch(el, vn.kids, refs);
+      if (vn.ref) refs.push([vn.ref, el]);
+    }
+    while (cn.length > vns.length) parent.removeChild(parent.lastChild);
+  }
+  function bindEvents(el, ev) {
+    var h = el.__h || (el.__h = {});
+    Object.keys(ev).forEach(function (type) {
+      if (!(type in h)) el.addEventListener(type, function (e) { var fn = el.__h[type]; if (fn) fn(e); });
+      h[type] = ev[type];
+    });
+    Object.keys(h).forEach(function (type) { if (!(type in ev)) h[type] = null; });
+  }
+
+  window.mountDC = function (opts) {
+    var tpl = document.getElementById(opts.templateId).content;
+    var helmet = tpl.querySelector('helmet');
+    if (helmet) {
+      Array.prototype.slice.call(helmet.childNodes).forEach(function (n) { if (n.nodeType === 1) document.head.appendChild(document.importNode(n, true)); });
+      helmet.parentNode.removeChild(helmet);
+    }
+    var roots = tpl.childNodes;
+    var Comp = opts.component;
+    var comp = new Comp(opts.props || {});
+    if (!comp.__q) comp.__q = [];
+    var app = opts.mount;
+    var scheduled = false, mounted = false;
+    function flush() {
+      scheduled = false;
+      var q = comp.__q; comp.__q = [];
+      for (var i = 0; i < q.length; i++) {
+        var u = q[i];
+        var p = typeof u === 'function' ? u(comp.state, comp.props) : u;
+        if (p) comp.state = Object.assign({}, comp.state, p);
+      }
+      var vals = comp.renderVals ? comp.renderVals() : {};
+      var refs = [];
+      patch(app, build(roots, [vals], []), refs);
+      refs.forEach(function (r) { r[0](r[1]); });
+      if (!mounted) { mounted = true; if (comp.componentDidMount) comp.componentDidMount(); }
+      else if (comp.componentDidUpdate) comp.componentDidUpdate();
+    }
+    comp.__schedule = function () { if (!scheduled) { scheduled = true; Promise.resolve().then(flush); } };
+    flush();
+    return {
+      component: comp,
+      setProps: function (p) { comp.props = Object.assign({}, comp.props, p); comp.__schedule(); }
+    };
+  };
+})();
+
+</script>
+<script>
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const now = Date.now();
+    const min = 60000;
+    let seq = 222;
+    const entries = [];
+    const add = (t, kind, text, sid, voice) => { seq += 1; entries.push({ seq: seq, kind: kind, text: text, t: t, sessionId: sid, voice: voice || null }); };
+    let t = now - 41 * min;
+    ['Text To Socket 127.0.0.1:4449', 'Desktop, list', 'Recycle Bin, 1 of 6'].forEach((x) => { t += 1300; add(t, 'speech', x, null); });
+    const plan = [
+      { id: 3, name: 'form › labels are announced', run: 'nightly-42', at: -38, truncated: true, lines: [
+        ['speech', 'Contact – Example Shop – Chromium', 800], ['speech', 'main landmark', 300], ['speech', 'Contact us, heading level 1', 420],
+        ['speech', 'Full name, edit, required, blank', 1200], ['speech', 'Email, edit, required, blank', 980], ['speech', 'Message, edit, multi line, blank', 1010]] },
+      { id: 4, name: 'form › submit button is announced', run: 'nightly-42', at: -35, lines: [
+        ['marker', 'focus submit', 600], ['speech', 'Send message, button', 380]] },
+      { id: 5, name: 'checkout › error summary is announced', run: 'nightly-42', at: -31, lines: [
+        ['speech', 'Checkout – Example Shop – Chromium', 900], ['speech', 'Place order, button', 1400], ['marker', 'click place order', 700],
+        ['speech', 'alert, There are 2 errors in this form', 260], ['speech', 'Card number is required, link', 540], ['speech', 'Expiry date is required, link', 610]] },
+      { id: 6, name: 'manual: explore header', run: null, at: -22, lines: [
+        ['marker', 'ui: h', 2000], ['speech', 'Example Shop, heading level 1', 310], ['marker', 'ui: k', 4200], ['speech', 'link, Skip to main content', 290],
+        ['marker', 'ui: k', 3100], ['speech', 'navigation landmark, Main, list with 5 items, link, Home', 330]] },
+      { id: 7, name: 'agent: audit checkout form', run: 'agent-2026-11-12', at: -4, current: true, lines: [
+        ['marker', 'mcp: browser_navigate https://shop.example/checkout', 1200], ['speech', 'Checkout – Example Shop – Chromium', 900], ['speech', 'Checkout, heading level 1', 420],
+        ['marker', 'ui: Insert+F7', 5200], ['speech', 'Elements List dialog', 350], ['speech', 'Headings, radio button, checked, 1 of 5', 480], ['speech', 'tree view, Checkout, level 1, 1 of 4', 520],
+        ['marker', 'ui: Escape', 4300], ['speech', 'Checkout – Example Shop – Chromium', 300]] }
+    ];
+    const sessions = [];
+    plan.forEach((p) => {
+      let tt = now + p.at * min;
+      const start = tt;
+      p.lines.forEach((l) => { tt += l[2]; add(tt, l[0], l[1], p.id); });
+      sessions.push({ id: p.id, name: p.name, run: p.run, startedAt: start, endedAt: p.current ? null : tt + 2000, truncated: !!p.truncated });
+      if (p.id === 6) { add(tt + 6 * min, 'speech', 'Chromium, window', null); add(tt + 6 * min + 700, 'speech', 'Example Shop – Chromium', null); }
+    });
+    this.timers = [];
+    this.state = {
+      now: now, lastPoll: now - 600, entries: entries, sessions: sessions, lastSeq: seq,
+      selected: 7, followCurrent: true, following: true, pausedAt: seq,
+      query: '', regex: false, hideMarkers: false, voiceFilter: 'all', announce: false,
+      tab: 'keys', keys: 'Insert+T', keysError: null, delayMs: '50', sendAfter: 0,
+      clickX: '640', clickY: '12', button: 'left', clickError: null,
+      pwAction: 'navigate', pwUrl: 'https://shop.example/checkout', pwElement: 'Continue to payment button', pwRef: 'e42', pwText: 'max@example.org', pwKey: 'Tab', pwResult: null, pwResultTool: '',
+      dialog: null, newName: '', newRun: '', newErr: null, markerLabel: '',
+      statusOpen: false, actionsOpen: true, snack: null, pending: null, recent: [], liveIdx: 0, dark: null
+    };
+    this.liveScript = ['Shipping address, heading level 2', 'First name, edit, required, blank', 'Last name, edit, required, blank', 'Street and number, edit, required, blank',
+      'Country, combo box, Germany, collapsed', 'Postcode, edit, required, invalid entry, Enter a valid postcode', 'Continue to payment, button', 'Order summary, region', 'Total, 84,90 €'];
+    this.logRef = (el) => { this.logEl = el; };
+  }
+
+  componentDidMount() {
+    this.tick = setInterval(() => this.setState({ now: Date.now() }), 1000);
+    this.poll = setInterval(() => {
+      const s = this.state;
+      const cur = s.sessions.find((x) => x.endedAt == null);
+      this.setState({ lastPoll: Date.now() });
+      if ((this.props.simulateSpeech ?? true) && (this.props.voiceConnected ?? true) && cur && !s.pending && Math.random() < 0.4) {
+        this.addEntry('speech', this.liveScript[s.liveIdx % this.liveScript.length]);
+        this.setState((p) => ({ liveIdx: p.liveIdx + 1 }));
+      }
+    }, 2000);
+    this.scrollDown();
+  }
+  componentWillUnmount() { clearInterval(this.tick); clearInterval(this.poll); this.timers.forEach(clearTimeout); clearInterval(this.countdown); }
+  componentDidUpdate() { if (this.state.following) this.scrollDown(); }
+  scrollDown() { if (this.logEl) this.logEl.scrollTop = this.logEl.scrollHeight; }
+  later(fn, ms) { this.timers.push(setTimeout(fn, ms)); }
+
+  pad(n, w) { return String(n).padStart(w || 2, '0'); }
+  fmtTime(ms) { const d = new Date(ms); return this.pad(d.getHours()) + ':' + this.pad(d.getMinutes()) + ':' + this.pad(d.getSeconds()) + '.' + this.pad(d.getMilliseconds(), 3); }
+  fmtClock(ms) { const d = new Date(ms); return this.pad(d.getHours()) + ':' + this.pad(d.getMinutes()) + ':' + this.pad(d.getSeconds()); }
+  fmtDur(ms) { const s = Math.max(0, Math.round(ms / 1000)); if (s < 60) return s + ' s'; const m = Math.floor(s / 60); if (m < 60) return m + ' m ' + this.pad(s % 60) + ' s'; return Math.floor(m / 60) + ' h ' + this.pad(m % 60) + ' m'; }
+  fmtAgo(ms) { const s = Math.max(0, Math.round(ms / 1000)); if (s < 1) return 'now'; if (s < 60) return s + ' s ago'; return Math.floor(s / 60) + ' m ago'; }
+
+  snackbar(text) { this.setState({ snack: text }); clearTimeout(this.snackT); this.snackT = setTimeout(() => this.setState({ snack: null }), 3600); }
+
+  addEntry(kind, text) {
+    this.setState((s) => {
+      const cur = s.sessions.find((x) => x.endedAt == null);
+      const seq = s.lastSeq + 1;
+      const e = { seq: seq, kind: kind, text: text, t: Date.now(), sessionId: cur ? cur.id : null, voice: null };
+      return { entries: s.entries.concat([e]).slice(-2000), lastSeq: seq };
+    });
+  }
+
+  dispatch(kind, label, lines, after) {
+    const fire = () => {
+      this.addEntry('marker', label);
+      lines.forEach((x, i) => this.later(() => this.addEntry('speech', x), 450 + i * 650));
+    };
+    const rec = { kind: kind, label: label.replace(/^(ui|mcp): /, ''), t: Date.now() };
+    rec.fire = () => this.dispatch(kind, label, lines, 0);
+    this.setState((s) => ({ recent: [rec].concat(s.recent).slice(0, 5) }));
+    const delay = after || 0;
+    if (delay > 0) {
+      clearInterval(this.countdown);
+      this.setState({ pending: { label: label.replace(/^(ui|mcp): /, ''), left: delay, fire: fire } });
+      this.countdown = setInterval(() => {
+        const p = this.state.pending;
+        if (!p) { clearInterval(this.countdown); return; }
+        if (p.left <= 1) { clearInterval(this.countdown); this.setState({ pending: null }); p.fire(); }
+        else this.setState({ pending: Object.assign({}, p, { left: p.left - 1 }) });
+      }, 1000);
+    } else fire();
+  }
+
+  speechFor(token) {
+    const k = token.toLowerCase();
+    const map = {
+      'insert+t': ['Checkout – Example Shop – Chromium'],
+      'h': ['Shipping address, heading level 2'],
+      'k': ['link, Return policy'],
+      'insert+f7': ['Elements List dialog', 'Links, radio button, checked, 1 of 5'],
+      'insert+down': ['Checkout, heading level 1', 'Shipping address, heading level 2', 'First name, edit, required, blank'],
+      'tab': ['Last name, edit, required, blank'],
+      'escape': ['Checkout – Example Shop – Chromium']
+    };
+    return map[k] || [];
+  }
+  validKey(name) {
+    const n = name.toLowerCase();
+    const named = ['enter', 'tab', 'escape', 'up', 'down', 'left', 'right', 'home', 'end', 'pageup', 'pagedown', 'space', 'backspace', 'delete', 'insert', 'capslock', 'control', 'shift', 'alt', 'win'];
+    return /^[a-z0-9]$/.test(n) || /^f([1-9]|1[0-2])$/.test(n) || named.indexOf(n) >= 0;
+  }
+
+  sendKeys() {
+    const raw = (this.state.keys || '').trim();
+    if (!raw) { this.setState({ keysError: 'keys: enter at least one key (INVALID_REQUEST)' }); return; }
+    const tokens = raw.split(/\s+/);
+    for (let i = 0; i < tokens.length; i++) {
+      const parts = tokens[i].split('+');
+      for (let j = 0; j < parts.length; j++) {
+        if (!this.validKey(parts[j])) { this.setState({ keysError: 'Unknown key “' + parts[j] + '” · 400 INVALID_REQUEST, details.field: keys' }); return; }
+      }
+    }
+    this.setState({ keysError: null });
+    let lines = [];
+    tokens.forEach((tk) => { lines = lines.concat(this.speechFor(tk)); });
+    this.dispatch('K', 'ui: ' + tokens.join(' '), lines, this.state.sendAfter);
+  }
+
+  sendClick() {
+    const x = Number(this.state.clickX), y = Number(this.state.clickY);
+    if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0) { this.setState({ clickError: 'x and y must be whole pixels ≥ 0 · 400 INVALID_REQUEST' }); return; }
+    this.setState({ clickError: null });
+    this.dispatch('C', 'ui: click ' + x + ',' + y + ' ' + this.state.button, ['Checkout – Example Shop – Chromium', 'Shipping address, heading level 2'], this.state.sendAfter);
+  }
+
+  runPw() {
+    const s = this.state;
+    const tool = { navigate: 'browser_navigate', click: 'browser_click', type: 'browser_type', press: 'browser_press_key', snapshot: 'browser_snapshot' }[s.pwAction];
+    let label, lines, result;
+    if (s.pwAction === 'navigate') {
+      label = 'mcp: browser_navigate ' + s.pwUrl; lines = ['Checkout – Example Shop – Chromium', 'Checkout, heading level 1'];
+      result = '- Page URL: ' + s.pwUrl + '\n- Page Title: Checkout – Example Shop\n- Page Snapshot:\n  - banner [ref=e3]\n  - main [ref=e9]:\n    - heading "Checkout" [level=1] [ref=e12]\n    - heading "Shipping address" [level=2] [ref=e20]\n    - textbox "First name" [required] [ref=e31]\n    - button "Continue to payment" [ref=e42]';
+    } else if (s.pwAction === 'click') {
+      label = 'mcp: browser_click ' + s.pwRef + ' (' + s.pwElement + ')'; lines = ['Payment, heading level 2', 'Card number, edit, required, blank'];
+      result = '### Ran Playwright code\nawait page.getByRole(\'button\', { name: \'Continue to payment\' }).click();\n\n- Page URL: https://shop.example/checkout/payment';
+    } else if (s.pwAction === 'type') {
+      label = 'mcp: browser_type ' + s.pwRef + ' "' + s.pwText + '"'; lines = ['Email, edit, required, ' + s.pwText];
+      result = '### Ran Playwright code\nawait page.getByRole(\'textbox\', { name: \'Email\' }).fill(\'' + s.pwText + '\');';
+    } else if (s.pwAction === 'press') {
+      label = 'mcp: browser_press_key ' + s.pwKey; lines = this.speechFor(s.pwKey).length ? this.speechFor(s.pwKey) : ['Last name, edit, required, blank'];
+      result = '### Ran Playwright code\nawait page.keyboard.press(\'' + s.pwKey + '\');';
+    } else {
+      label = 'mcp: browser_snapshot'; lines = [];
+      result = '- Page URL: https://shop.example/checkout\n- Page Snapshot:\n  - heading "Checkout" [level=1] [ref=e12]\n  - textbox "First name" [required] [ref=e31]\n  - textbox "Email" [required] [ref=e33]\n  - combobox "Country" [ref=e37]: Germany\n  - button "Continue to payment" [ref=e42]';
+    }
+    this.dispatch('P', label, lines, 0);
+    this.setState({ pwResult: null });
+    this.later(() => this.setState({ pwResult: result, pwResultTool: tool }), 380);
+  }
+
+  startSession() {
+    const name = (this.state.newName || '').trim();
+    if (!name) { this.setState({ newErr: 'name is required · 400 INVALID_REQUEST, details.field: name' }); return; }
+    this.setState((s) => {
+      const id = s.sessions.reduce((m, x) => Math.max(m, x.id), 0) + 1;
+      const now = Date.now();
+      const sessions = s.sessions.map((x) => x.endedAt == null ? Object.assign({}, x, { endedAt: now }) : x)
+        .concat([{ id: id, name: name, run: (s.newRun || '').trim() || null, startedAt: now, endedAt: null }]);
+      return { sessions: sessions, dialog: null, newName: '', newRun: '', newErr: null, selected: s.followCurrent ? id : s.selected, following: true };
+    });
+    const nextId = this.state.sessions.reduce((m, x) => Math.max(m, x.id), 0) + 1;
+    this.snackbar('Session #' + nextId + ' started · POST /api/v1/sessions');
+  }
+  endSession() {
+    const cur = this.state.sessions.find((x) => x.endedAt == null);
+    if (!cur) return;
+    this.setState((s) => ({ sessions: s.sessions.map((x) => x.id === cur.id ? Object.assign({}, x, { endedAt: Date.now() }) : x), dialog: null }));
+    this.snackbar('Session #' + cur.id + ' ended · POST /api/v1/sessions/end');
+  }
+  wipe() {
+    const s = this.state;
+    const cur = s.sessions.find((x) => x.endedAt == null);
+    const n = s.entries.length, m = s.sessions.filter((x) => x.endedAt != null).length;
+    this.setState({ entries: [], sessions: cur ? [Object.assign({}, cur, { truncated: false })] : [], dialog: null, selected: cur ? cur.id : null });
+    this.snackbar('Wiped ' + n + ' entries and ' + m + ' sessions · DELETE /api/v1/speech');
+  }
+  addMarker() {
+    const label = (this.state.markerLabel || '').trim() || 'marker';
+    this.addEntry('marker', label);
+    this.setState({ dialog: null, markerLabel: '' });
+    this.snackbar('Marker added · POST /api/v1/markers');
+  }
+
+  renderVals() {
+    const s = this.state;
+    const p = this.props;
+    const dark = s.dark == null ? !!p.dark : s.dark;
+    const voiceOk = p.voiceConnected ?? true;
+    const inputOn = p.inputEnabled ?? true;
+    const mcp = p.mcpState || 'running';
+    const now = s.now;
+    const cur = s.sessions.find((x) => x.endedAt == null) || null;
+    const countBy = {};
+    let outCount = 0;
+    s.entries.forEach((e) => { if (e.sessionId == null) outCount++; else countBy[e.sessionId] = (countBy[e.sessionId] || 0) + 1; });
+
+    // sessions, newest first
+    const sessionItems = s.sessions.slice().sort((a, b) => b.id - a.id).map((x) => {
+      const sel = s.selected === x.id;
+      const live = x.endedAt == null;
+      return {
+        id: x.id, name: x.name, live: live,
+        meta: '#' + x.id + (x.run ? ' · ' + x.run : '') + ' · ' + this.fmtDur((x.endedAt || now) - x.startedAt) + ' · ' + (countBy[x.id] || 0),
+        bg: sel ? 'var(--md-sys-color-secondary-container)' : 'transparent', fg: sel ? 'var(--md-sys-color-on-secondary-container)' : 'var(--md-sys-color-on-surface)',
+        ariaCurrent: sel ? 'true' : 'false',
+        select: () => this.setState((st) => ({ selected: x.id, followCurrent: live, following: true })),
+        stop: () => this.setState({ dialog: 'end' })
+      };
+    });
+
+    // view
+    const sel = s.selected;
+    const selSession = typeof sel === 'number' ? s.sessions.find((x) => x.id === sel) : null;
+    let viewTitle, viewSub;
+    if (sel === 'all') { viewTitle = 'All speech'; viewSub = 'whole buffer · ' + s.entries.length + ' / 10000 entries'; }
+    else if (sel === 'outside') { viewTitle = 'Outside sessions'; viewSub = 'entries with sessionId: null'; }
+    else if (selSession) { viewTitle = selSession.name; viewSub = '#' + selSession.id + (selSession.run ? ' · run ' + selSession.run : '') + ' · started ' + this.fmtClock(selSession.startedAt) + (selSession.endedAt ? ' · ended after ' + this.fmtDur(selSession.endedAt - selSession.startedAt) : ' · live') + ' · ?session=' + selSession.id; }
+    else if (sel == null) { viewTitle = 'No session selected'; viewSub = 'pick a session or start one with +'; }
+    else { viewTitle = 'Session gone'; viewSub = 'its entries left the buffer'; }
+
+    let regexError = null; let matcher = null;
+    if (s.query) {
+      if (s.regex) { try { const re = new RegExp(s.query, 'i'); matcher = (t) => re.test(t); } catch (err) { regexError = 'Invalid regular expression: ' + err.message; } }
+      else { const q = s.query.toLowerCase(); matcher = (t) => t.toLowerCase().indexOf(q) >= 0; }
+    }
+    const inView = (e) => sel === 'all' ? true : sel === 'outside' ? e.sessionId == null : e.sessionId === sel;
+    const rows = [];
+    if (sel === 'all' && s.entries.length && s.entries[0].seq > 1) rows.push({ isGap: true, text: 'Entries before #' + s.entries[0].seq + ' were dropped from the capped buffer (truncated: true).' });
+    if (selSession && selSession.truncated) rows.push({ isGap: true, text: 'This session lost its oldest entries: they left the capped buffer.' });
+    let prevT = null; let prevSid = undefined; let visible = 0; let newCount = 0;
+    s.entries.forEach((e) => {
+      if (!inView(e)) return;
+      if (sel === 'all' && e.sessionId !== prevSid && e.sessionId != null) {
+        const ss = s.sessions.find((x) => x.id === e.sessionId);
+        if (ss) rows.push({ isSession: true, text: 'Session #' + ss.id + ' · ' + ss.name, time: this.fmtTime(ss.startedAt) });
+      }
+      prevSid = e.sessionId;
+      if (e.kind === 'marker') {
+        if (s.hideMarkers) return;
+        rows.push({ isMarker: true, text: e.text, time: this.fmtTime(e.t), seq: e.seq, bg: now - e.t < 1600 ? 'var(--app-new-row)' : 'transparent' });
+        return;
+      }
+      if (matcher && !matcher(e.text)) return;
+      const gapMs = prevT == null ? null : e.t - prevT;
+      prevT = e.t;
+      visible++;
+      if (!s.following && e.seq > s.pausedAt) newCount++;
+      rows.push({ isSpeech: true, text: e.text, seq: e.seq, time: this.fmtTime(e.t), voice: e.voice,
+        gap: gapMs == null ? '—' : gapMs < 10000 ? '+' + (gapMs / 1000).toFixed(2) + 's' : '+' + this.fmtDur(gapMs),
+        gapColor: gapMs != null && gapMs > 3000 ? 'var(--md-sys-color-tertiary)' : 'var(--md-sys-color-on-surface-variant)',
+        bg: now - e.t < 1600 ? 'var(--app-new-row)' : 'transparent' });
+    });
+
+    const tabsDef = [['keys', 'Keys'], ['presets', 'Presets'], ['click', 'Click'], ['pw', 'Playwright']];
+    const tabs = tabsDef.map((d) => ({ label: d[1], on: s.tab === d[0], cls: s.tab === d[0] ? 'on' : '', pick: () => this.setState({ tab: d[0] }) }));
+    const afterOpts = [0, 3, 5, 10].map((n) => ({ label: n + ' s', on: s.sendAfter === n, cls: s.sendAfter === n ? 'on' : '', pick: () => this.setState({ sendAfter: n }) }));
+    const buttons = ['left', 'right', 'middle'].map((b) => ({ label: b[0].toUpperCase() + b.slice(1), on: s.button === b, cls: s.button === b ? 'on' : '', pick: () => this.setState({ button: b }) }));
+    const presetsDef = [
+      ['Read title', 'NVDA+T · JAWS Insert+T', 'Insert+T'],
+      ['Next heading', 'Browse mode / virtual cursor H', 'h'],
+      ['Next link', 'Browse mode / virtual cursor K', 'k'],
+      ['Elements list', 'NVDA+F7 · JAWS Insert+F7 (links list)', 'Insert+F7'],
+      ['Say all', 'NVDA+↓ · JAWS Insert+↓', 'Insert+Down']
+    ];
+    const presets = presetsDef.map((d) => ({ name: d[0], desc: d[1], keys: d[2], fire: () => this.dispatch('K', 'ui: ' + d[2], this.speechFor(d[2]), this.state.sendAfter) }));
+    const pwDef = [['navigate', 'Navigate'], ['click', 'Click'], ['type', 'Type'], ['press', 'Press key'], ['snapshot', 'Snapshot']];
+    const pwActions = pwDef.map((d) => ({ label: d[1], on: s.pwAction === d[0], cls: s.pwAction === d[0] ? 'on' : '', pick: () => this.setState({ pwAction: d[0] }) }));
+    const pwTool = { navigate: 'browser_navigate', click: 'browser_click', type: 'browser_type', press: 'browser_press_key', snapshot: 'browser_snapshot' }[s.pwAction];
+
+    const recent = s.recent.map((r) => ({ kind: r.kind, label: r.label, ago: this.fmtAgo(now - r.t), fire: r.fire }));
+
+    const dlg = s.dialog;
+    const dlgDef = {
+      new: ['Start a session', cur ? 'Session #' + cur.id + ' ends. Everything recorded from now on gets the new session’s id.' : 'Everything recorded from now on gets the new session’s id.', 'Start', 'filled', () => this.startSession()],
+      end: ['End session #' + (cur ? cur.id : '') + '?', 'Speech recorded after this has sessionId: null. The session stays in the list until its entries leave the buffer.', 'End session', 'filled', () => this.endSession()],
+      wipe: ['Wipe everything?', 'Removes ' + s.entries.length + ' entries and ' + s.sessions.filter((x) => x.endedAt != null).length + ' ended sessions from the buffer. The current session stays current, empty. Tests and agents don’t need this: they start sessions.', 'Wipe', 'danger', () => this.wipe()],
+      marker: ['Add marker', 'Inserts a separator into the timeline' + (cur ? ' of session #' + cur.id : '') + '.', 'Add', 'filled', () => this.addMarker()]
+    }[dlg] || ['', '', '', '', () => {}];
+
+    const voiceDot = voiceOk ? 'var(--app-success)' : 'var(--md-sys-color-error)';
+    const mcpDot = mcp === 'running' ? 'var(--app-success)' : mcp === 'crashed' ? 'var(--app-warning)' : 'var(--md-sys-color-outline)';
+    const bufFirst = s.entries.length ? s.entries[0].seq : '—';
+    const statusSections = [
+      { title: 'Bridge', dot: 'var(--app-success)', rows: [{ k: 'version', v: '0.3.0' }, { k: 'apiVersion', v: '1.13' }, { k: 'state', v: 'ready' }] },
+      { title: 'TCP listener', dot: voiceDot, rows: [{ k: 'listening', v: '127.0.0.1:4449' }, { k: 'encoding', v: 'windows-1252' }, { k: 'connections', v: voiceOk ? '#3 · voice null · since ' + this.fmtClock(now - 44 * 60000) : 'none' }] },
+      { title: 'Buffer', dot: 'var(--app-success)', rows: [{ k: 'size', v: s.entries.length + ' / 10000' }, { k: 'seq range', v: bufFirst + ' – ' + s.lastSeq }] },
+      { title: 'Playwright server', dot: 'var(--app-success)', rows: [{ k: 'state', v: 'running' }, { k: 'version', v: '1.65.0' }, { k: 'endpoint', v: 'ws://my-test-vm:5151/playwright' }, { k: 'restarts', v: '0' }] },
+      { title: 'Playwright MCP', dot: mcpDot, rows: [{ k: 'state', v: mcp }, { k: 'version', v: '0.0.85' }, { k: 'endpoint', v: 'http://my-test-vm:5151/playwright-mcp' }, { k: 'restarts / exit', v: mcp === 'crashed' ? '2 / 1' : '0 / null' }] },
+      { title: 'Native input', dot: inputOn ? 'var(--app-success)' : 'var(--md-sys-color-outline)', rows: [{ k: 'last request', v: inputOn ? 'ok' : '409 INPUT_DISABLED (robotjs not loaded)' }] },
+      { title: 'Sessions', dot: cur ? 'var(--app-success)' : 'var(--md-sys-color-outline)', rows: [{ k: 'current', v: cur ? '#' + cur.id + ' ' + cur.name : 'null' }, { k: 'count', v: String(s.sessions.length) }] }
+    ];
+
+    const barBg = !voiceOk ? 'var(--md-sys-color-error-container)' : mcp === 'crashed' ? 'var(--app-warning-container)' : 'var(--md-sys-color-surface-container)';
+    const barFg = !voiceOk ? 'var(--md-sys-color-on-error-container)' : mcp === 'crashed' ? 'var(--app-on-warning-container)' : 'var(--md-sys-color-on-surface)';
+    const voiceLabel = voiceOk ? '1 voice · windows-1252' : 'No voice';
+    const mcpLabel = 'MCP 0.0.85' + (mcp === 'running' ? '' : ' · ' + mcp);
+    const inputLabel = inputOn ? 'Input ok' : 'Input unavailable';
+    const pwDisabled = mcp !== 'running';
+
+    return {
+      themeClass: dark ? 'dark' : '', darkLabel: dark ? 'Switch to light theme' : 'Switch to dark theme', toggleDark: () => this.setState({ dark: !dark }),
+      barBg: barBg, barFg: barFg, bridgeState: 'ready', noVoice: !voiceOk,
+      voiceDot: voiceDot, voiceLabel: voiceLabel, mcpDot: mcpDot, mcpLabel: mcpLabel, inputDot: inputOn ? 'var(--app-success)' : 'var(--md-sys-color-outline)', inputLabel: inputLabel,
+      statusSummary: [voiceLabel, 'Playwright 1.65.0 running', mcpLabel, inputLabel, cur ? 'session #' + cur.id + ' live' : 'no session'].join(', '),
+      pollAgo: this.fmtAgo(now - s.lastPoll),
+      openStatus: () => this.setState({ statusOpen: true }), closeStatus: () => this.setState({ statusOpen: false }), statusOpen: s.statusOpen, statusSections: statusSections,
+      gotoSetup: () => this.snackbar('Setup page: not part of this mockup yet'), gotoSettings: () => this.snackbar('Settings page: not part of this mockup yet'),
+
+      hasCurrent: !!cur, noCurrent: !cur, currentId: cur ? cur.id : '', currentName: cur ? cur.name : '', currentRun: cur ? (cur.run || 'no run') : '',
+      currentDur: cur ? this.fmtDur(now - cur.startedAt) : '', currentEntries: cur ? (countBy[cur.id] || 0) : 0,
+      askEnd: () => this.setState({ dialog: 'end' }), askNew: () => this.setState({ dialog: 'new', newErr: null }),
+      sessionCount: s.sessions.length,
+      followCurrent: s.followCurrent, followCurClass: s.followCurrent ? 'on' : '',
+      toggleFollowCurrent: () => this.setState((st) => { const f = !st.followCurrent; const c = st.sessions.find((x) => x.endedAt == null); return { followCurrent: f, selected: f && c ? c.id : st.selected }; }),
+      allCount: s.entries.length, outCount: outCount,
+      allBg: sel === 'all' ? 'var(--md-sys-color-secondary-container)' : 'transparent', allFg: sel === 'all' ? 'var(--md-sys-color-on-secondary-container)' : 'var(--md-sys-color-on-surface)', allCurrent: sel === 'all' ? 'true' : 'false',
+      outBg: sel === 'outside' ? 'var(--md-sys-color-secondary-container)' : 'transparent', outFg: sel === 'outside' ? 'var(--md-sys-color-on-secondary-container)' : 'var(--md-sys-color-on-surface)', outCurrent: sel === 'outside' ? 'true' : 'false',
+      selectAll: () => this.setState({ selected: 'all', followCurrent: false, following: true }),
+      selectOutside: () => this.setState({ selected: 'outside', followCurrent: false, following: true }),
+      sessionItems: sessionItems, noSessions: sessionItems.length === 0,
+      actionsOpen: s.actionsOpen, toggleActions: () => this.setState({ actionsOpen: !s.actionsOpen }),
+      actionsBtnBg: s.actionsOpen ? 'var(--md-sys-color-secondary-container)' : 'transparent', actionsBtnFg: s.actionsOpen ? 'var(--md-sys-color-on-secondary-container)' : 'var(--md-sys-color-on-surface-variant)',
+
+      viewTitle: viewTitle, viewSub: viewSub,
+      askMarker: () => this.setState({ dialog: 'marker' }), askWipe: () => this.setState({ dialog: 'wipe' }),
+      copyLog: () => this.snackbar('Copied ' + visible + ' lines to the clipboard'),
+      exportLog: () => this.snackbar('Exported ' + (selSession ? 'session-' + selSession.id : sel) + '.jsonl (' + visible + ' entries)'),
+      query: s.query, hasQuery: !!s.query, onQuery: (e) => this.setState({ query: e.target.value }), clearQuery: () => this.setState({ query: '' }),
+      queryPlaceholder: s.regex ? 'Filter by regex, e.g. heading level [12]' : 'Filter spoken text',
+      regex: s.regex, regexClass: s.regex ? 'on' : '', toggleRegex: () => this.setState({ regex: !s.regex }), regexError: regexError,
+      hideMarkers: s.hideMarkers, hideMarkersClass: s.hideMarkers ? 'on' : '', toggleHideMarkers: () => this.setState({ hideMarkers: !s.hideMarkers }),
+      voiceFilterLabel: s.voiceFilter === 'all' ? 'all' : s.voiceFilter, cycleVoice: () => this.snackbar('Only one voice is connected, so there is nothing to filter'),
+      rows: rows, isEmpty: visible === 0 && !rows.some((r) => r.isMarker), emptyTitle: s.query ? 'Nothing matches the filter' : 'No speech yet',
+      logRef: this.logRef,
+      onLogScroll: (e) => { const el = e.currentTarget; const far = el.scrollHeight - el.scrollTop - el.clientHeight > 48; if (far && this.state.following) this.setState({ following: false, pausedAt: this.state.lastSeq }); else if (!far && !this.state.following) this.setState({ following: true }); },
+      following: s.following, paused: !s.following, newCount: newCount,
+      pauseFollow: () => this.setState({ following: false, pausedAt: s.lastSeq }),
+      jumpLatest: () => this.setState({ following: true }),
+      lastSeq: s.lastSeq, visibleCount: visible,
+      announce: s.announce, announceClass: s.announce ? 'on' : '', ariaLive: s.announce ? 'polite' : 'off', toggleAnnounce: () => this.setState({ announce: !s.announce }),
+
+      tabs: tabs, tabKeys: s.tab === 'keys', tabPresets: s.tab === 'presets', tabClick: s.tab === 'click', tabPw: s.tab === 'pw',
+      inputOff: !inputOn, showInputOff: !inputOn && s.tab !== 'pw',
+      keys: s.keys, onKeys: (e) => this.setState({ keys: e.target.value, keysError: null }), onKeysKey: (e) => { if (e.key === 'Enter') this.sendKeys(); },
+      keysErrClass: s.keysError ? 'err' : '', keysSupClass: s.keysError ? 'err' : '',
+      keysSup: s.keysError || 'One chord (Insert+T) or a sequence separated by spaces (h h Insert+Down).',
+      delayMs: s.delayMs, onDelay: (e) => this.setState({ delayMs: e.target.value }),
+      afterOpts: afterOpts, sendKeys: () => this.sendKeys(),
+      presets: presets,
+      clickX: s.clickX, clickY: s.clickY, onClickX: (e) => this.setState({ clickX: e.target.value, clickError: null }), onClickY: (e) => this.setState({ clickY: e.target.value, clickError: null }),
+      clickError: s.clickError, clickErrClass: s.clickError ? 'err' : '', buttons: buttons, sendClick: () => this.sendClick(),
+      pwActions: pwActions, pwNavigate: s.pwAction === 'navigate', pwNeedsElement: s.pwAction === 'click' || s.pwAction === 'type', pwType: s.pwAction === 'type', pwPress: s.pwAction === 'press',
+      pwUrl: s.pwUrl, pwElement: s.pwElement, pwRef: s.pwRef, pwText: s.pwText, pwKey: s.pwKey,
+      onPwUrl: (e) => this.setState({ pwUrl: e.target.value }), onPwElement: (e) => this.setState({ pwElement: e.target.value }), onPwRef: (e) => this.setState({ pwRef: e.target.value }),
+      onPwText: (e) => this.setState({ pwText: e.target.value }), onPwKey: (e) => this.setState({ pwKey: e.target.value }),
+      pwTool: pwTool, runPw: () => this.runPw(), pwDisabled: pwDisabled, pwResult: s.pwResult, pwResultTool: s.pwResultTool,
+      pwInfo: mcp === 'running' ? 'Through Playwright MCP (bridge proxy /playwright-mcp) · isolated Chromium. Run Click after switching between the MCP and test browsers.' : 'Playwright MCP is ' + mcp + (mcp === 'crashed' ? ' (exit code 1, restart 2 pending)' : '') + '. Browser actions are unavailable.',
+      pwInfoBg: mcp === 'running' ? 'var(--md-sys-color-surface-container-high)' : 'var(--app-warning-container)', pwInfoFg: mcp === 'running' ? 'var(--md-sys-color-on-surface-variant)' : 'var(--app-on-warning-container)',
+      pending: !!s.pending, pendingSec: s.pending ? s.pending.left : '', pendingLabel: s.pending ? s.pending.label : '',
+      cancelPending: () => { clearInterval(this.countdown); this.setState({ pending: null }); this.snackbar('Cancelled'); },
+      recent: recent, noRecent: recent.length === 0,
+
+      dlgOpen: !!dlg, dlgNew: dlg === 'new', dlgMarker: dlg === 'marker', dlgTitle: dlgDef[0], dlgBody: dlgDef[1], dlgOkLabel: dlgDef[2], dlgOkClass: dlgDef[3], dlgOk: dlgDef[4],
+      closeDlg: () => this.setState({ dialog: null, newErr: null }),
+      newName: s.newName, newRun: s.newRun, onNewName: (e) => this.setState({ newName: e.target.value, newErr: null }), onNewRun: (e) => this.setState({ newRun: e.target.value }),
+      newErr: s.newErr, newErrClass: s.newErr ? 'err' : '',
+      markerLabel: s.markerLabel, onMarkerLabel: (e) => this.setState({ markerLabel: e.target.value }),
+      snack: s.snack
+    };
+  }
+}
+
+</script>
+<script>
+(function () {
+  var props = {"dark": false, "voiceConnected": true, "inputEnabled": true, "mcpState": "running", "simulateSpeech": true};
+  var q = new URLSearchParams(location.search);
+  Object.keys(props).forEach(function (k) {
+    if (!q.has(k)) return;
+    var v = q.get(k);
+    props[k] = typeof props[k] === 'boolean' ? (v === '1' || v === 'true') : v;
+  });
+  var handle = window.mountDC({ templateId: 'dc-template', component: Component, props: props, mount: document.getElementById('app') });
+
+  var form = document.querySelector('#mock-controls form');
+  Object.keys(props).forEach(function (k) {
+    var f = form.elements[k]; if (!f) return;
+    if (f.type === 'checkbox') f.checked = !!props[k]; else f.value = props[k];
+  });
+  form.addEventListener('change', function (e) {
+    var f = e.target, p = {};
+    p[f.name] = f.type === 'checkbox' ? f.checked : f.value;
+    if (f.name === 'dark') handle.component.setState({ dark: null });
+    handle.setProps(p);
+    var u = new URL(location.href);
+    u.searchParams.set(f.name, f.type === 'checkbox' ? (f.checked ? '1' : '0') : f.value);
+    history.replaceState(null, '', u);
+  });
+})();
+</script>
+</body>
+</html>

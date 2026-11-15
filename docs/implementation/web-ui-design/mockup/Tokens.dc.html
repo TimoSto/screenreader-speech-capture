@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speech Capture — MD3 tokens and components</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400;8..144,500;8..144,600&amp;family=Roboto+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+.srm{
+--md-sys-color-primary:#415F91;--md-sys-color-on-primary:#FFFFFF;--md-sys-color-primary-container:#D6E3FF;--md-sys-color-on-primary-container:#001B3E;
+--md-sys-color-secondary:#565F71;--md-sys-color-on-secondary:#FFFFFF;--md-sys-color-secondary-container:#DAE2F9;--md-sys-color-on-secondary-container:#131C2B;
+--md-sys-color-tertiary:#705575;--md-sys-color-on-tertiary:#FFFFFF;--md-sys-color-tertiary-container:#FAD8FD;--md-sys-color-on-tertiary-container:#28132E;
+--md-sys-color-error:#BA1A1A;--md-sys-color-on-error:#FFFFFF;--md-sys-color-error-container:#FFDAD6;--md-sys-color-on-error-container:#410002;
+--app-success:#2F6A1E;--app-on-success:#FFFFFF;--app-success-container:#B6F29A;--app-on-success-container:#062100;
+--app-warning:#7A5900;--app-on-warning:#FFFFFF;--app-warning-container:#FFDEA4;--app-on-warning-container:#261900;
+--md-sys-color-surface:#F9F9FF;--md-sys-color-on-surface:#191C20;--md-sys-color-on-surface-variant:#44474E;
+--md-sys-color-outline:#74777F;--md-sys-color-outline-variant:#C4C6D0;
+--md-sys-color-surface-container-lowest:#FFFFFF;--md-sys-color-surface-container-low:#F3F3FA;--md-sys-color-surface-container:#EDEDF4;--md-sys-color-surface-container-high:#E7E8EE;--md-sys-color-surface-container-highest:#E2E2E9;
+--md-sys-color-inverse-surface:#2E3036;--md-sys-color-inverse-on-surface:#F0F0F7;--md-sys-color-inverse-primary:#AAC7FF;
+--app-new-row:rgba(65,95,145,.10);--md-sys-color-scrim:rgba(0,0,0,.32);
+}
+.srm.dark{
+--md-sys-color-primary:#AAC7FF;--md-sys-color-on-primary:#0A305F;--md-sys-color-primary-container:#284777;--md-sys-color-on-primary-container:#D6E3FF;
+--md-sys-color-secondary:#BEC6DC;--md-sys-color-on-secondary:#283141;--md-sys-color-secondary-container:#3E4759;--md-sys-color-on-secondary-container:#DAE2F9;
+--md-sys-color-tertiary:#DDBCE0;--md-sys-color-on-tertiary:#3F2844;--md-sys-color-tertiary-container:#573E5C;--md-sys-color-on-tertiary-container:#FAD8FD;
+--md-sys-color-error:#FFB4AB;--md-sys-color-on-error:#690005;--md-sys-color-error-container:#93000A;--md-sys-color-on-error-container:#FFDAD6;
+--app-success:#9BD680;--app-on-success:#0B3900;--app-success-container:#185108;--app-on-success-container:#B6F29A;
+--app-warning:#F5BF48;--app-on-warning:#412D00;--app-warning-container:#5C4200;--app-on-warning-container:#FFDEA4;
+--md-sys-color-surface:#111318;--md-sys-color-on-surface:#E2E2E9;--md-sys-color-on-surface-variant:#C4C6D0;
+--md-sys-color-outline:#8E9099;--md-sys-color-outline-variant:#44474E;
+--md-sys-color-surface-container-lowest:#0C0E13;--md-sys-color-surface-container-low:#191C20;--md-sys-color-surface-container:#1D2024;--md-sys-color-surface-container-high:#282A2F;--md-sys-color-surface-container-highest:#33353A;
+--md-sys-color-inverse-surface:#E2E2E9;--md-sys-color-inverse-on-surface:#2E3036;--md-sys-color-inverse-primary:#415F91;
+--app-new-row:rgba(170,199,255,.12);--md-sys-color-scrim:rgba(0,0,0,.5);
+}
+.srm{font-family:'Roboto Flex',Roboto,system-ui,sans-serif;color:var(--md-sys-color-on-surface);background:var(--md-sys-color-surface);-webkit-font-smoothing:antialiased}
+.srm *{box-sizing:border-box}
+.mono{font-family:'Roboto Mono',ui-monospace,Consolas,monospace}
+.srm button{font-family:inherit}
+.btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 24px;border-radius:20px;border:0;font-size:14px;font-weight:500;letter-spacing:.1px;cursor:pointer;white-space:nowrap}
+.btn::after,.icon-btn::after,.chip::after,.nav-item::after,.seg-item::after,.rail-item .rail-ind::after,.list-btn::after,.status-btn::after{content:'';position:absolute;inset:0;border-radius:inherit;background:currentColor;opacity:0;transition:opacity .15s;pointer-events:none}
+.btn:hover::after,.icon-btn:hover::after,.chip:hover::after,.nav-item:hover::after,.seg-item:hover::after,.rail-item:hover .rail-ind::after,.list-btn:hover::after,.status-btn:hover::after{opacity:.08}
+.btn:active::after,.icon-btn:active::after,.chip:active::after,.nav-item:active::after,.seg-item:active::after,.list-btn:active::after{opacity:.12}
+.srm button:focus-visible,.srm input:focus-visible,.srm [tabindex]:focus-visible{outline:3px solid var(--md-sys-color-secondary);outline-offset:2px}
+.btn:disabled,.icon-btn:disabled,.chip:disabled,.seg-item:disabled,.list-btn:disabled{opacity:.38;cursor:not-allowed}
+.btn:disabled::after,.list-btn:disabled::after{display:none}
+.filled{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary)}
+.tonal{background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container)}
+.outlined{background:transparent;color:var(--md-sys-color-primary);border:1px solid var(--md-sys-color-outline)}
+.textbtn{background:transparent;color:var(--md-sys-color-primary);padding:0 12px}
+.danger{background:var(--md-sys-color-error);color:var(--md-sys-color-on-error)}
+.icon-btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;border:0;border-radius:20px;background:transparent;color:var(--md-sys-color-on-surface-variant);cursor:pointer;flex:none}
+.chip{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--md-sys-color-outline-variant);background:transparent;color:var(--md-sys-color-on-surface-variant);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
+.chip.on{background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);border-color:transparent}
+.nav-item{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 16px;border:0;border-radius:28px;text-align:left;cursor:pointer;color:var(--md-sys-color-on-surface-variant);background:transparent}
+.rail-item{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:transparent;color:var(--md-sys-color-on-surface-variant);cursor:pointer;font-size:12px;font-weight:500;padding:0;width:80px}
+.rail-ind{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;width:56px;height:32px;border-radius:16px}
+.seg{display:flex;border:1px solid var(--md-sys-color-outline);border-radius:20px;overflow:hidden;height:40px}
+.seg-item{position:relative;overflow:hidden;flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:6px;border:0;border-right:1px solid var(--md-sys-color-outline);background:transparent;color:var(--md-sys-color-on-surface);font-size:14px;font-weight:500;cursor:pointer;padding:0 8px;min-width:0}
+.seg-item:last-child{border-right:0}
+.seg-item.on{background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container)}
+.fld{position:relative;display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld label{position:absolute;top:-8px;left:12px;padding:0 4px;font-size:12px;line-height:16px;color:var(--md-sys-color-on-surface-variant);background:var(--fld-bg,var(--md-sys-color-surface));pointer-events:none}
+.inp{height:56px;width:100%;border:1px solid var(--md-sys-color-outline);border-radius:4px;padding:0 16px;font-size:16px;background:transparent;color:var(--md-sys-color-on-surface);font-family:inherit}
+.inp.sm{height:48px;font-size:14px}
+.inp:focus{outline:none;border:2px solid var(--md-sys-color-primary);padding:0 15px}
+.fld:focus-within label{color:var(--md-sys-color-primary)}
+.inp.err{border-color:var(--md-sys-color-error)}
+.fld .sup{font-size:12px;line-height:16px;color:var(--md-sys-color-on-surface-variant);padding:0 16px}
+.fld .sup.err{color:var(--md-sys-color-error)}
+.search{display:flex;align-items:center;gap:8px;height:48px;padding:0 4px 0 16px;border-radius:24px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);flex:1 1 220px;min-width:180px}
+.search input{flex:1;border:0;background:transparent;font-size:16px;color:var(--md-sys-color-on-surface);font-family:inherit;min-width:0;height:100%}
+.search input:focus{outline:none}
+.search:focus-within{outline:2px solid var(--md-sys-color-primary)}
+.switch{position:relative;width:52px;height:32px;border-radius:16px;border:2px solid var(--md-sys-color-outline);background:var(--md-sys-color-surface-container-highest);cursor:pointer;padding:0;flex:none}
+.switch .knob{position:absolute;top:6px;left:6px;width:16px;height:16px;border-radius:8px;background:var(--md-sys-color-outline);transition:all .15s}
+.switch.on{background:var(--md-sys-color-primary);border-color:var(--md-sys-color-primary)}
+.switch.on .knob{left:22px;top:2px;width:24px;height:24px;border-radius:12px;background:var(--md-sys-color-on-primary)}
+.list-btn{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 12px 8px 16px;border:1px solid var(--md-sys-color-outline-variant);border-radius:12px;background:var(--md-sys-color-surface-container-lowest);color:var(--md-sys-color-on-surface);cursor:pointer;text-align:left}
+.status-btn{position:relative;overflow:hidden;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:4px;border:0;border-radius:20px;background:transparent;color:inherit;cursor:pointer}
+.schip{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:8px;background:var(--md-sys-color-surface-container-lowest);border:1px solid var(--md-sys-color-outline-variant);font-size:13px;font-weight:500;color:var(--md-sys-color-on-surface);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:4px;flex:none}
+.live-dot{width:8px;height:8px;border-radius:4px;background:var(--app-success);animation:pulse 1.6s ease-in-out infinite;flex:none}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.logrow:hover{background:var(--md-sys-color-surface-container)}
+.trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scroll::-webkit-scrollbar{width:10px}.scroll::-webkit-scrollbar-thumb{background:var(--md-sys-color-outline-variant);border-radius:5px;border:2px solid transparent;background-clip:padding-box}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</helmet>
+<div class="srm" style="width: 1440px; min-height: 2600px; background: var(--md-sys-color-surface); padding: 72px 80px; display: flex; flex-direction: column; gap: 64px;">
+
+  <header style="display: flex; flex-direction: column; gap: 16px; max-width: 1000px;">
+    <span class="mono" style="font-size: 12px; letter-spacing: 1px; color: var(--md-sys-color-primary);">DESIGN SYSTEM · MATERIAL DESIGN 3 · v0.1</span>
+    <h1 style="margin: 0; font-size: 45px; line-height: 52px; font-weight: 400;">Speech Capture Monitor</h1>
+    <p style="margin: 0; font-size: 16px; line-height: 24px; color: var(--md-sys-color-on-surface-variant);">MD3 tokens and components for the bridge’s web UI. Seed color #415F91, Roboto Flex for UI, Roboto Mono for everything machine-made: timestamps, seq numbers, key names, endpoints.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 8px;">
+      <div style="padding: 20px; border-radius: 16px; background: var(--md-sys-color-surface-container-low);"><div style="font-size: 16px; font-weight: 500; margin-bottom: 6px;">Speech is the content</div><div style="font-size: 14px; line-height: 20px; color: var(--md-sys-color-on-surface-variant);">Spoken text gets the largest type in the log (15/22). Chrome around it stays quiet: mono 12 for metadata.</div></div>
+      <div style="padding: 20px; border-radius: 16px; background: var(--md-sys-color-surface-container-low);"><div style="font-size: 16px; font-weight: 500; margin-bottom: 6px;">State is color + words</div><div style="font-size: 14px; line-height: 20px; color: var(--md-sys-color-on-surface-variant);">Every status dot carries a label (“No voice”, “crashed”, “LIVE”). Colors that must be told apart also differ in lightness.</div></div>
+      <div style="padding: 20px; border-radius: 16px; background: var(--md-sys-color-surface-container-low);"><div style="font-size: 16px; font-weight: 500; margin-bottom: 6px;">No feedback loop</div><div style="font-size: 14px; line-height: 20px; color: var(--md-sys-color-on-surface-variant);">The log is not an aria-live region by default, so a screen reader on the VM doesn’t record its own reading of the UI.</div></div>
+    </div>
+  </header>
+
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <h2 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 400;">Color roles</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px;">
+      <sc-for list="{{schemes}}" as="sc" hint-placeholder-count="2">
+        <div style="border-radius: 24px; padding: 24px; background: {{sc.bg}}; color: {{sc.fg}}; border: 1px solid #C4C6D0;">
+          <div style="font-size: 16px; font-weight: 500; margin-bottom: 16px;">{{sc.name}}</div>
+          <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;">
+            <sc-for list="{{sc.swatches}}" as="w" hint-placeholder-count="20">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="height: 56px; border-radius: 12px; background: {{w.hex}}; border: 1px solid rgba(128,128,128,.25); display: flex; align-items: flex-end; padding: 6px 8px; color: {{w.on}}; font-size: 11px; font-weight: 500;">Aa</div>
+                <div style="font-size: 12px; line-height: 16px; font-weight: 500;">{{w.name}}</div>
+                <div class="mono" style="font-size: 11px; line-height: 14px; opacity: .75;">{{w.hex}}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); overflow: hidden;">
+      <div style="display: grid; grid-template-columns: 220px 120px minmax(0, 1fr); gap: 16px; padding: 12px 20px; background: var(--md-sys-color-surface-container); font-size: 12px; font-weight: 500; letter-spacing: .5px; color: var(--md-sys-color-on-surface-variant);"><span>ROLE</span><span>SAMPLE</span><span>USED FOR</span></div>
+      <sc-for list="{{usage}}" as="u" hint-placeholder-count="8">
+        <div style="display: grid; grid-template-columns: 220px 120px minmax(0, 1fr); gap: 16px; padding: 12px 20px; border-top: 1px solid var(--md-sys-color-outline-variant); align-items: center; font-size: 14px; line-height: 20px;">
+          <span class="mono" style="font-size: 13px;">{{u.role}}</span>
+          <span style="height: 28px; border-radius: 8px; background: {{u.bg}}; color: {{u.fg}}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500;">{{u.sample}}</span>
+          <span style="color: var(--md-sys-color-on-surface-variant);">{{u.use}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <h2 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 400;">Type scale</h2>
+    <div style="border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); overflow: hidden;">
+      <sc-for list="{{type}}" as="ty" hint-placeholder-count="9">
+        <div style="display: grid; grid-template-columns: 200px 200px minmax(0, 1fr); gap: 24px; padding: 16px 20px; border-bottom: 1px solid var(--md-sys-color-outline-variant); align-items: baseline;">
+          <span style="font-size: 14px; font-weight: 500;">{{ty.name}}</span>
+          <span class="mono" style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">{{ty.spec}}</span>
+          <span class="{{ty.cls}}" style="font-size: {{ty.size}}; line-height: {{ty.lh}}; font-weight: {{ty.weight}};">{{ty.sample}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px;">
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      <h2 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 400;">Shape</h2>
+      <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+        <sc-for list="{{shapes}}" as="sh" hint-placeholder-count="6">
+          <div style="display: flex; flex-direction: column; gap: 8px; align-items: center; width: 92px;">
+            <div style="width: 80px; height: 80px; background: var(--md-sys-color-primary-container); border-radius: {{sh.r}};"></div>
+            <span class="mono" style="font-size: 12px;">{{sh.label}}</span>
+            <span style="font-size: 11px; line-height: 14px; color: var(--md-sys-color-on-surface-variant); text-align: center;">{{sh.use}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      <h2 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 400;">Surfaces (tonal elevation)</h2>
+      <div style="display: flex; gap: 0; border-radius: 16px; overflow: hidden; border: 1px solid var(--md-sys-color-outline-variant);">
+        <sc-for list="{{surfaces}}" as="sf" hint-placeholder-count="5">
+          <div style="flex: 1; height: 120px; background: {{sf.bg}}; padding: 12px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px;">
+            <span class="mono" style="font-size: 11px;">{{sf.name}}</span>
+            <span style="font-size: 11px; color: var(--md-sys-color-on-surface-variant);">{{sf.use}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <p style="margin: 0; font-size: 13px; line-height: 18px; color: var(--md-sys-color-on-surface-variant);">Elevation is tonal, not shadowed. Only dialogs, the snackbar and the “n new” button get a shadow, because they float over the log.</p>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 32px;">
+    <h2 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 400;">Components</h2>
+
+    <div style="display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: center;">
+      <div><div style="font-size: 16px; font-weight: 500;">Buttons</div><div style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">40 px, full radius, label-large</div></div>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+        <button class="btn filled"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>Start session</button>
+        <button class="btn tonal">Jump to latest</button>
+        <button class="btn outlined">Export</button>
+        <button class="btn textbtn">Cancel</button>
+        <button class="btn danger">Wipe</button>
+        <button class="btn filled" disabled="disabled">Press keys</button>
+        <button class="icon-btn" aria-label="Actions panel (open)" aria-expanded="true" style="background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"></path></svg></button>
+        <button class="icon-btn" aria-label="Add marker"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg></button>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: center;">
+      <div><div style="font-size: 16px; font-weight: 500;">Status chips</div><div style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">top bar, one per service</div></div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <span class="schip"><span class="dot" style="background: var(--app-success);"></span>1 voice · windows-1252</span>
+        <span class="schip"><span class="dot" style="background: var(--md-sys-color-error);"></span>No voice</span>
+        <span class="schip"><span class="dot" style="background: var(--app-warning);"></span>MCP 0.0.85 · crashed</span>
+        <span class="schip"><span class="dot" style="background: var(--md-sys-color-outline);"></span>Input unavailable</span>
+        <span class="schip"><span class="live-dot"></span>Session #7</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 12px; background: var(--app-success-container); color: var(--app-on-success-container); font-size: 11px; font-weight: 600; letter-spacing: .5px;"><span class="live-dot"></span>LIVE</span>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start;">
+      <div><div style="font-size: 16px; font-weight: 500;">Sessions list</div><div style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">300 px pane, + in header, rows 60 px / radius 28, stop on the live row</div></div>
+      <div style="display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap;">
+        <nav aria-label="Sessions (specimen)" style="width: 300px; background: var(--md-sys-color-surface-container-low); border-radius: 16px; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 0 0 16px;">
+            <span style="font-size: 16px; line-height: 24px; font-weight: 500;">Sessions</span>
+            <button class="icon-btn" aria-label="Start new session" style="color: var(--md-sys-color-primary);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+          </div>
+          <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px;">
+          <li style="display: flex; align-items: center; border-radius: 28px; background: transparent; color: var(--md-sys-color-on-surface);">
+            <div class="nav-item" style="color: inherit; min-height: 60px; flex: 1 1 auto; min-width: 0; width: auto;"><span style="display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px;"><span class="trunc" style="font-size: 14px; line-height: 20px; font-weight: 500;">agent: audit checkout form</span><span class="mono trunc" style="font-size: 12px; line-height: 16px; opacity: .8; display: flex; align-items: center; gap: 6px;"><span class="live-dot"></span>#7 · agent-2026-11-12 · 4 m 12 s · 9</span></span></div>
+            <button class="icon-btn" aria-label="End session #7" title="End session" style="color: var(--md-sys-color-error); margin-right: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg></button>
+          </li>
+          <li style="display: flex; align-items: center; border-radius: 28px; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);">
+            <div class="nav-item" style="color: inherit; min-height: 60px; flex: 1 1 auto; min-width: 0; width: auto;"><span style="display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px;"><span class="trunc" style="font-size: 14px; line-height: 20px; font-weight: 500;">manual: explore header</span><span class="mono trunc" style="font-size: 12px; line-height: 16px; opacity: .8; display: flex; align-items: center; gap: 6px;">#6 · 14 s · 6</span></span></div>
+            
+          </li>
+          <li style="display: flex; align-items: center; border-radius: 28px; background: transparent; color: var(--md-sys-color-on-surface);">
+            <div class="nav-item" style="color: inherit; min-height: 60px; flex: 1 1 auto; min-width: 0; width: auto;"><span style="display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px;"><span class="trunc" style="font-size: 14px; line-height: 20px; font-weight: 500;">checkout › error summary is announced</span><span class="mono trunc" style="font-size: 12px; line-height: 16px; opacity: .8; display: flex; align-items: center; gap: 6px;">#5 · nightly-42 · 11 s · 6</span></span></div>
+            
+          </li>
+          </ul>
+        </nav>
+        <dl style="margin: 0; display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 10px 16px; font-size: 14px; line-height: 20px; max-width: 520px;">
+          <dt style="font-weight: 500;">Row</dt><dd style="margin: 0; color: var(--md-sys-color-on-surface-variant);">Name (label-large) over one mono meta line: <span class="mono">#id · run · duration · entries</span>. Newest first, no grouping.</dd>
+          <dt style="font-weight: 500;">Live</dt><dd style="margin: 0; color: var(--md-sys-color-on-surface-variant);">Pulsing success dot in the meta line plus an error-colored stop icon button (End session → confirm dialog). Only one session can be live.</dd>
+          <dt style="font-weight: 500;">Selected</dt><dd style="margin: 0; color: var(--md-sys-color-on-surface-variant);">secondary-container fill across the whole row, <span class="mono">aria-current="true"</span>. Selecting the live row keeps following new sessions; an older row stops following.</dd>
+          <dt style="font-weight: 500;">+</dt><dd style="margin: 0; color: var(--md-sys-color-on-surface-variant);">Primary-colored icon button → “Start a session” dialog (name, optional run).</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start;">
+      <div><div style="font-size: 16px; font-weight: 500;">Log rows</div><div style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">grid 112 · 64 · 1fr · 56</div></div>
+      <div style="border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface-container-lowest); overflow: hidden; max-width: 980px;">
+        <div style="margin: 8px 16px; padding: 8px 12px; border-radius: 8px; background: var(--app-warning-container); color: var(--app-on-warning-container); font-size: 12px;">Gap · entries before #223 were dropped from the capped buffer (truncated: true).</div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 14px 24px 6px;"><span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 12px; background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); font-size: 12px; font-weight: 500;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>Session #5 · checkout › error summary is announced</span><span style="flex: 1; height: 1px; background: var(--md-sys-color-primary-container);"></span><span class="mono" style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">14:38:41.112</span></div>
+        <div style="display: grid; grid-template-columns: 112px 64px minmax(0, 1fr) 56px; gap: 12px; align-items: baseline; padding: 7px 24px;"><span class="mono" style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">14:38:43.412</span><span class="mono" style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">+1.40s</span><span style="font-size: 15px; line-height: 22px;">Place order, button</span><span class="mono" style="font-size: 11px; color: var(--md-sys-color-outline); text-align: right;">#243</span></div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 6px 24px;"><span class="mono" style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); width: 112px;">14:38:44.112</span><span style="display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 6px; background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); font-size: 12px; font-weight: 500;"><span class="mono">click place order</span></span><span style="flex: 1; border-top: 1px dashed var(--md-sys-color-outline-variant);"></span><span class="mono" style="font-size: 11px; color: var(--md-sys-color-outline);">#244</span></div>
+        <div style="display: grid; grid-template-columns: 112px 64px minmax(0, 1fr) 56px; gap: 12px; align-items: baseline; padding: 7px 24px; background: var(--app-new-row);"><span class="mono" style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">14:38:44.372</span><span class="mono" style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">+0.96s</span><span style="font-size: 15px; line-height: 22px;">alert, There are 2 errors in this form</span><span class="mono" style="font-size: 11px; color: var(--md-sys-color-outline); text-align: right;">#245</span></div>
+        <div style="display: grid; grid-template-columns: 112px 64px minmax(0, 1fr) 56px; gap: 12px; padding: 4px 24px 12px; font-size: 11px; color: var(--md-sys-color-on-surface-variant);"><span>time</span><span>gap &gt; 3 s → tertiary</span><span>new rows tint for 1.6 s (--app-new-row)</span><span style="text-align: right;">seq</span></div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start;">
+      <div><div style="font-size: 16px; font-weight: 500;">Inputs</div><div style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">outlined field, chips, segmented, switch</div></div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 980px; --fld-bg: var(--md-sys-color-surface);">
+        <div class="fld" style="margin-top: 6px;"><label for="t-keys">Keys</label><input id="t-keys" class="inp mono" value="Insert+T"><span class="sup">One chord or a sequence separated by spaces.</span></div>
+        <div class="fld" style="margin-top: 6px;"><label for="t-keys2">Keys</label><input id="t-keys2" class="inp mono err" value="Insrt+T"><span class="sup err">Unknown key “Insrt” · 400 INVALID_REQUEST</span></div>
+        <label class="search"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span class="sr-only">Filter</span><input placeholder="Filter spoken text"></label>
+        <div class="seg"><button class="seg-item on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>Keys</button><button class="seg-item">Presets</button><button class="seg-item">Click</button><button class="seg-item">Playwright</button></div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;"><button class="chip on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>Hide markers</button><button class="chip"><span class="mono">.*</span> Regex</button><button class="chip">3 s</button></div>
+        <div style="display: flex; gap: 16px; align-items: center;"><button class="switch on" role="switch" aria-checked="true" aria-label="on"><span class="knob"></span></button><button class="switch" role="switch" aria-checked="false" aria-label="off"><span class="knob"></span></button><span style="font-size: 14px;">Announce new entries</span></div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start;">
+      <div><div style="font-size: 16px; font-weight: 500;">Feedback</div><div style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">banner, countdown, snackbar</div></div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 980px;">
+        <div style="display: flex; gap: 10px; padding: 12px; border-radius: 12px; background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); font-size: 13px; line-height: 18px;"><span>Native input unavailable: <span class="mono">409 INPUT_DISABLED</span> (robotjs not loaded).</span></div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px 8px 12px 16px; border-radius: 12px; background: var(--md-sys-color-inverse-surface); color: var(--md-sys-color-inverse-on-surface);"><span class="mono" style="font-size: 22px;">3</span><span style="flex: 1; font-size: 13px; line-height: 18px;">Sending <span class="mono">Insert+T</span>. Switch to the window under test.</span><button class="btn textbtn" style="color: var(--md-sys-color-inverse-primary);">Cancel</button></div>
+        <div style="display: flex; align-items: center; padding: 14px 16px; border-radius: 4px; background: var(--md-sys-color-inverse-surface); color: var(--md-sys-color-inverse-on-surface); font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,.3);">Session #8 started · POST /api/v1/sessions</div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 16px; max-width: 1100px;">
+    <h2 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 400;">Accessibility of the UI itself</h2>
+    <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 24px; color: var(--md-sys-color-on-surface-variant); display: flex; flex-direction: column; gap: 6px;">
+      <li>Landmarks: <span class="mono">nav</span> “Pages” (rail), <span class="mono">nav</span> “Sessions” (context pane), <span class="mono">main</span> (log), <span class="mono">aside</span> “Actions”. Headings h1 view title, h2 per pane.</li>
+      <li>Selected session = <span class="mono">aria-current="true"</span> plus secondary-container fill. Toggles are <span class="mono">aria-pressed</span> chips or <span class="mono">role="switch"</span>.</li>
+      <li>The log is <span class="mono">aria-live="off"</span> by default; “Announce new entries” turns it to polite for people watching from another machine.</li>
+      <li>Focus ring: 3 px secondary outline, 2 px offset, on every control. All text ≥ 4.5:1 on its container in both schemes.</li>
+      <li>Every action inserts a marker first (<span class="mono">ui: Insert+T</span>, <span class="mono">mcp: browser_click e42</span>), so speech is attributable without reading timestamps.</li>
+    </ul>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const sw = (name, hex, on) => ({ name: name, hex: hex, on: on });
+    const light = [
+      sw('primary', '#415F91', '#FFFFFF'), sw('on-primary', '#FFFFFF', '#415F91'), sw('primary-container', '#D6E3FF', '#001B3E'), sw('on-primary-container', '#001B3E', '#D6E3FF'),
+      sw('secondary', '#565F71', '#FFFFFF'), sw('secondary-container', '#DAE2F9', '#131C2B'), sw('tertiary', '#705575', '#FFFFFF'), sw('tertiary-container', '#FAD8FD', '#28132E'),
+      sw('error', '#BA1A1A', '#FFFFFF'), sw('error-container', '#FFDAD6', '#410002'), sw('success (ext.)', '#2F6A1E', '#FFFFFF'), sw('success-container', '#B6F29A', '#062100'),
+      sw('warning (ext.)', '#7A5900', '#FFFFFF'), sw('warning-container', '#FFDEA4', '#261900'), sw('outline', '#74777F', '#FFFFFF'), sw('outline-variant', '#C4C6D0', '#191C20'),
+      sw('surface', '#F9F9FF', '#191C20'), sw('surface-container', '#EDEDF4', '#191C20'), sw('surface-container-highest', '#E2E2E9', '#191C20'), sw('inverse-surface', '#2E3036', '#F0F0F7')
+    ];
+    const dark = [
+      sw('primary', '#AAC7FF', '#0A305F'), sw('on-primary', '#0A305F', '#AAC7FF'), sw('primary-container', '#284777', '#D6E3FF'), sw('on-primary-container', '#D6E3FF', '#284777'),
+      sw('secondary', '#BEC6DC', '#283141'), sw('secondary-container', '#3E4759', '#DAE2F9'), sw('tertiary', '#DDBCE0', '#3F2844'), sw('tertiary-container', '#573E5C', '#FAD8FD'),
+      sw('error', '#FFB4AB', '#690005'), sw('error-container', '#93000A', '#FFDAD6'), sw('success (ext.)', '#9BD680', '#0A3900'), sw('success-container', '#185108', '#B6F29A'),
+      sw('warning (ext.)', '#F5BF48', '#3F2E00'), sw('warning-container', '#5C4200', '#FFDEA4'), sw('outline', '#8E9099', '#111318'), sw('outline-variant', '#44474E', '#E2E2E9'),
+      sw('surface', '#111318', '#E2E2E9'), sw('surface-container', '#1D2024', '#E2E2E9'), sw('surface-container-highest', '#33353A', '#E2E2E9'), sw('inverse-surface', '#E2E2E9', '#2E3036')
+    ];
+    const u = (role, bg, fg, sample, use) => ({ role: role, bg: bg, fg: fg, sample: sample, use: use });
+    return {
+      schemes: [
+        { name: 'Light scheme', bg: '#F9F9FF', fg: '#191C20', swatches: light },
+        { name: 'Dark scheme', bg: '#111318', fg: '#E2E2E9', swatches: dark }
+      ],
+      usage: [
+        u('primary', 'var(--md-sys-color-primary)', 'var(--md-sys-color-on-primary)', 'Start', 'Main actions: + new session, press keys, run browser action. Stop on the live session uses error.'),
+        u('primary-container', 'var(--md-sys-color-primary-container)', 'var(--md-sys-color-on-primary-container)', 'Session #7', 'Session-start separator rows in the log, icon chip of the app logo area.'),
+        u('secondary-container', 'var(--md-sys-color-secondary-container)', 'var(--md-sys-color-on-secondary-container)', 'Selected', 'Selection: chosen session row, nav-rail indicator, on-state of chips, segments and the open actions toggle.'),
+        u('tertiary-container', 'var(--md-sys-color-tertiary-container)', 'var(--md-sys-color-on-tertiary-container)', 'marker', 'Markers in the timeline (ui: …, mcp: …, manual labels). Tertiary text marks long gaps (> 3 s).'),
+        u('success (extended)', 'var(--app-success-container)', 'var(--app-on-success-container)', 'LIVE', 'Live session badge, connected voice, running services. Always with a word.'),
+        u('warning (extended)', 'var(--app-warning-container)', 'var(--app-on-warning-container)', 'crashed', 'Service crashed / failed (status bar turns amber), truncated buffer gap rows.'),
+        u('error', 'var(--md-sys-color-error-container)', 'var(--md-sys-color-on-error-container)', 'No voice', 'No voice connected (status bar turns red), native input disabled, wipe, validation errors.'),
+        u('inverse-surface', 'var(--md-sys-color-inverse-surface)', 'var(--md-sys-color-inverse-on-surface)', 'Snackbar', 'Snackbar with the endpoint that was called; delayed-send countdown.')
+      ],
+      type: [
+        { name: 'Display small', spec: 'Roboto Flex 36/44 · 400', size: '36px', lh: '44px', weight: 400, cls: '', sample: 'Speech Capture' },
+        { name: 'Headline small', spec: '24/32 · 400', size: '24px', lh: '32px', weight: 400, cls: '', sample: 'Wipe everything?' },
+        { name: 'Title large', spec: '22/28 · 500', size: '22px', lh: '28px', weight: 500, cls: '', sample: 'agent: audit checkout form' },
+        { name: 'Title medium', spec: '16/24 · 500', size: '16px', lh: '24px', weight: 500, cls: '', sample: 'Sessions · Actions' },
+        { name: 'Log text', spec: '15/22 · 400 (custom)', size: '15px', lh: '22px', weight: 400, cls: '', sample: 'Postcode, edit, required, invalid entry, Enter a valid postcode' },
+        { name: 'Body medium', spec: '14/20 · 400', size: '14px', lh: '20px', weight: 400, cls: '', sample: 'New speech is recorded outside any session.' },
+        { name: 'Label large', spec: '14/20 · 500', size: '14px', lh: '20px', weight: 500, cls: '', sample: 'End session' },
+        { name: 'Label small', spec: '11/16 · 600 · +0.5', size: '11px', lh: '16px', weight: 600, cls: '', sample: 'LIVE · RECEIVED · SEQ' },
+        { name: 'Mono', spec: 'Roboto Mono 12/16 · 400', size: '12px', lh: '16px', weight: 400, cls: 'mono', sample: '15:05:07.412  +0.42s  #345  Insert+F7  POST /api/v1/input/keys' }
+      ],
+      shapes: [
+        { r: '4px', label: '4', use: 'text field' }, { r: '8px', label: '8', use: 'chips, gap rows' }, { r: '12px', label: '12', use: 'cards, banners' },
+        { r: '16px', label: '16', use: 'panes, side sheet' }, { r: '28px', label: '28', use: 'dialogs, nav items' }, { r: '40px', label: 'full', use: 'buttons, badges' }
+      ],
+      surfaces: [
+        { bg: 'var(--md-sys-color-surface)', name: 'surface', use: 'app background' },
+        { bg: 'var(--md-sys-color-surface-container-lowest)', name: 'lowest', use: 'log pane' },
+        { bg: 'var(--md-sys-color-surface-container-low)', name: 'low', use: 'sessions, actions panel' },
+        { bg: 'var(--md-sys-color-surface-container)', name: 'container', use: 'top bar' },
+        { bg: 'var(--md-sys-color-surface-container-high)', name: 'high', use: 'dialogs, search' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
