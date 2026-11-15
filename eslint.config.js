@@ -352,6 +352,8 @@ export default tseslint.config(
       // The web UI's build output (SvelteKit, adapter-node) and generated files.
       'packages/ui/build/**',
       '**/.svelte-kit/**',
+      // Design reference (mockups, tokens), not app code.
+      'docs/implementation/web-ui-design/**',
     ],
   },
   js.configs.recommended,
