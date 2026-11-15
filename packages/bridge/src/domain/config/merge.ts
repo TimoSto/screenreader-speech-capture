@@ -1,8 +1,7 @@
+import { checkDto, ConfigPatchSchema } from '@screenreader-speech-capture/shared';
 import { invalidField } from '../errors.js';
-import type { Check } from './checks.js';
 import { DEFAULT_CONFIG } from './defaults.js';
 import { configFields, fromFields } from './fields.js';
-import { SCHEMA } from './schema.js';
 import type { Config, ConfigPatch } from './types.js';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -10,37 +9,26 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Applies a partial configuration to `base` and validates the result.
+ * Applies a partial configuration to `base` and validates it against the shared
+ * `ConfigPatchSchema`, the only place that knows the rules.
  * Throws `INVALID_REQUEST` naming the first invalid or unknown field (`details.field`).
  */
 export function mergeConfig(base: Config, patch: unknown): Config {
   if (patch === undefined || patch === null) return base;
   if (!isPlainObject(patch)) throw invalidField('config', 'must be an object');
 
+  const checked = checkDto(ConfigPatchSchema, patch);
+  if (!checked.ok) throw invalidField(checked.field, checked.message);
+
   const result: Record<string, Record<string, unknown>> = {};
   for (const section of Object.keys(base) as (keyof Config)[]) {
     result[section] = { ...base[section] };
   }
-
-  for (const [section, values] of Object.entries(patch)) {
-    // `hasOwn`: a key like `valueOf` or `__proto__` must be unknown, not found on the prototype.
-    if (!Object.hasOwn(SCHEMA, section)) throw invalidField(section, 'unknown setting');
-    const sectionSchema = (SCHEMA as Record<string, Record<string, Check>>)[section]!;
-    if (values === undefined) continue;
-    if (!isPlainObject(values)) throw invalidField(section, 'must be an object');
-
-    for (const [key, value] of Object.entries(values)) {
-      const field = `${section}.${key}`;
-      if (!Object.hasOwn(sectionSchema, key)) throw invalidField(field, 'unknown setting');
-      const check = sectionSchema[key]!;
-      if (value === undefined) continue;
-      const problem = check(value);
-      if (problem !== undefined) throw invalidField(field, problem);
-      // Copied, so a later change to the caller's array can't change the config.
-      result[section]![key] = Array.isArray(value) ? [...(value as unknown[])] : value;
-    }
+  for (const [field, value] of configFields(checked.value as ConfigPatch)) {
+    const [section, key] = field.split('.') as [string, string];
+    // Copied, so a later change to the caller's array can't change the config.
+    result[section]![key] = Array.isArray(value) ? [...(value as unknown[])] : value;
   }
-
   return result as unknown as Config;
 }
 

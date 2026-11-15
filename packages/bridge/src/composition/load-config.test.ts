@@ -27,7 +27,7 @@ describe('loadConfig', () => {
     const error = await loadConfig(store, {}, sourceOf).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ConfigError);
     expect((error as Error).message).toBe(
-      'Invalid setting in the config file memory:config.json: tcp.port: must be an integer from 0 to 65535',
+      'Invalid setting in the config file memory:config.json: tcp.port: Invalid value: Expected >=0 but received -1',
     );
   });
 
