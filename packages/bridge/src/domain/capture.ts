@@ -26,8 +26,14 @@ export interface CaptureStatus {
  * adapters report through the `TrackCapture` port; nothing reads their internals.
  */
 export class CaptureState {
+  readonly #now: () => Date;
   #listener: ListenerState | null = null;
   readonly #connections = new Map<number, ConnectionInfo>();
+
+  /** @param now When a connection opens (the composition root passes the `Clock`). */
+  constructor(now: () => Date) {
+    this.#now = now;
+  }
 
   captureStatus(): CaptureStatus {
     return {
@@ -45,8 +51,8 @@ export class CaptureState {
     if (this.#listener) this.#listener = { ...this.#listener, listening: false };
   }
 
-  connectionOpened(id: number, connectedAt: Date): void {
-    this.#connections.set(id, { id, voice: null, connectedAt });
+  connectionOpened(id: number): void {
+    this.#connections.set(id, { id, voice: null, connectedAt: this.#now() });
   }
 
   voiceIdentified(id: number, voice: string): void {
