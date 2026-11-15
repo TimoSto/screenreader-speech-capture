@@ -56,8 +56,7 @@ and readers can tell them apart.
 - Two clients (for example two Playwright workers) can't share the screen reader: each new
   session ends the other one's. The bridge doesn't lock sessions, but it warns when a client
   ends or replaces another client's session ([Clients](http-api.md#clients)).
-- **Sessions replace clearing between tests.** The [fixture](client.md#playwright-fixture) *(planned, [M3](../ROADMAP.md#m3-playwright--mcp-))*
-  starts one session per test, and agents start one per task. Reads are scoped to the current session, so
+- **Sessions replace clearing between tests.** The [fixture](client.md#playwright-fixture) starts one session per test, and agents start one per task. Reads are scoped to the current session, so
   earlier sessions stay in the buffer and stay visible in the UI.
 - Sessions share the capped buffer: an ended session disappears from the session list once all
   its entries have been dropped. `DELETE /api/v1/speech` is a **global wipe** for manual use: it

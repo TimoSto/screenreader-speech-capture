@@ -18,13 +18,13 @@ const common: UserConfig = {
 export default defineConfig([
   {
     ...common,
-    entry: { index: 'src/index.ts', cli: 'src/bin/cli.ts' },
+    entry: { index: 'src/index.ts', playwright: 'src/playwright.ts', cli: 'src/bin/cli.ts' },
     dts: false,
   },
   {
     ...common,
-    // Type declarations for the library entry only (`exports.types`); the CLI is a bin and needs none.
-    entry: { index: 'src/index.ts' },
+    // Type declarations for the library and fixture entries (`exports.types`); the CLI is a bin and needs none.
+    entry: { index: 'src/index.ts', playwright: 'src/playwright.ts' },
     dts: { dtsOnly: true, tsc: { eager: true } },
     clean: false,
     // Fail the build when the package would be broken for consumers (missing types, bad exports).

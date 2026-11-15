@@ -59,8 +59,7 @@ flowchart LR
 
 - **Records speech** from NVDA or JAWS, one entry per spoken phrase, with timestamps.
 - **HTTP API + live stream** to read, wait for and clear the recorded speech, plus a **web UI** to watch them (UI planned, [M5](docs/ROADMAP.md#m5-web-ui-)).
-- **Test client**: a TypeScript library with a Playwright fixture (`waitForOutput('Submit, button')`,
-  fixture planned, [M3](docs/ROADMAP.md#m3-playwright--mcp-)) and a CLI for scripts and AI agents.
+- **Test client**: a TypeScript library with a Playwright fixture (`waitForOutput('Submit, button')`) and a CLI for scripts and AI agents.
 - **Remote browser** on the screen reader's machine through a Playwright server and Playwright MCP.
 - **Native input** for screen reader commands (`Insert+T`, browse mode `H`) that Playwright can't send
   (planned, [M4](docs/ROADMAP.md#m4-native-input-)).
@@ -84,8 +83,8 @@ screenreader-speech-capture
    `npx screenreader-speech-capture-client tail` (the web UI at <http://localhost:5151> comes with
    M5).
 
-In your test project (the Playwright fixture comes with M3; until then use the
-[library](docs/usage/client.md#library)):
+In your test project (see the [Playwright fixture](docs/usage/client.md#playwright-fixture) and the
+[example tests](examples/playwright)):
 
 ```ts
 import { test } from 'screenreader-speech-capture-client/playwright';

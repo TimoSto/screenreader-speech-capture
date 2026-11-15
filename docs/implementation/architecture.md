@@ -12,7 +12,7 @@ pnpm monorepo:
 packages/
   bridge/   Node/TS process: TCP listener, HTTP API, native input, process supervisor (hexagonal)
   ui/       SvelteKit app (adapter-static), served by the bridge (hexagonal-lite), planned (M5)
-  client/   npm lib + CLI (`screenreader-speech-capture-client`) + Playwright fixture (M3)
+  client/   npm lib + CLI (`screenreader-speech-capture-client`) + Playwright fixture
             + agent skill (M6), for tests and agents
   shared/   HTTP API contract (DTO types), used by bridge, UI and client
 ```
@@ -154,7 +154,7 @@ be required to build or start it:
 ## Client: hexagonal
 
 The client uses the bridge's layout and the same ESLint rules (see the dependency rule above). The
-CLI and the Playwright fixture (planned) are **driving adapters on the same in-ports as the library**, so they
+CLI and the Playwright fixture are **driving adapters on the same in-ports as the library**, so they
 can't drift from it (see [Test client](../usage/client.md)).
 
 ```

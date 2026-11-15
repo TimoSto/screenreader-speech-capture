@@ -39,9 +39,7 @@ sequenceDiagram
 
 ## A test with the Playwright fixture
 
-*(planned, [M3](../../ROADMAP.md#m3-playwright--mcp-))*
-
-The fixture connects through the bridge, brings the browser to the front, and wraps every test in a
+The fixture connects through the bridge, brings the browser to the front *(planned, [M4](../../ROADMAP.md#m4-native-input-))*, and wraps every test in a
 session. Details: [Playwright fixture](../client.md#playwright-fixture).
 
 ```mermaid

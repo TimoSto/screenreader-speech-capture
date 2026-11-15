@@ -10,7 +10,7 @@ to the bridge's HTTP API and contains:
 - a **TypeScript library** (`SpeechCaptureClient`) for Playwright or any other Node test runner.
   It ships its own type declarations; they refer to Node's types (`NodeJS.ProcessEnv`), so your
   project needs `@types/node`,
-- a **Playwright fixture** (`/playwright` subpath export) *(planned, [M3](../ROADMAP.md#m3-playwright--mcp-))*,
+- a **Playwright fixture** (`screenreader-speech-capture-client/playwright` subpath export, [example tests](../../examples/playwright)),
 - a **CLI** (`screenreader-speech-capture-client`) with the same functions, for AI agents and shell scripts,
 - an **agent skill** (see [Agent skill](agents.md#agent-skill)) *(planned, [M6](../ROADMAP.md#m6-agents-))*.
 
@@ -19,7 +19,7 @@ if the major version differs (see [Versioning](http-api.md#versioning)). The cli
 version doesn't have to match the bridge's.
 
 It only uses `fetch` (Node ≥ 20) and depends only on `packages/shared`. `@playwright/test` is an
-optional peer dependency, needed only for the fixture and `setFocus(page)` (both planned).
+optional peer dependency, needed only for the fixture and `setFocus(page)` (planned).
 
 ```bash
 pnpm add -D screenreader-speech-capture-client
@@ -86,7 +86,7 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 - A new client starts at `0`. `startSession(name)` starts a [session](speech-capture.md#sessions)
   and moves the cursor to the session's start (its `startSeq`), so everything after it belongs to
   the session. The
-  fixture *(planned, [M3](../ROADMAP.md#m3-playwright--mcp-))* does this before each test. Earlier sessions stay in the buffer for the
+  fixture does this before each test. Earlier sessions stay in the buffer for the
   [web UI](web-ui.md#context-pane).
 - `clear()` wipes the whole buffer and sets the cursor back to `0`. It is meant for manual use;
   tests and agents start a session instead.
@@ -124,7 +124,7 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `onSpeech(cb, { since?, includeMarkers?, onSession?, onClear?, onTruncated?, onError? })` | `() => void` | Subscribe to the live feed (see [Live feed](#live-feed)). `cb` gets every new speech entry as the bridge receives it. Returns an unsubscribe function. |
 | `status()` | `BridgeStatus` | Bridge health (TCP connections, Playwright/MCP state, versions). |
 | `waitForReady({ timeout? })` | `BridgeStatus` | Wait until the bridge answers and is `ready` (default `timeout` 120000 ms). Throws `BridgeNotReadyError` on timeout. |
-| `playwrightEndpoint()` | `string` | *(planned, [M3](../ROADMAP.md#m3-playwright--mcp-))* WebSocket URL of the bridge's Playwright server, for `browserType.connect()`. |
+| `playwrightEndpoint()` | `Promise<string>` | WebSocket URL of the bridge's Playwright server, for `browserType.connect()`. |
 
 ### Live feed
 
@@ -174,8 +174,6 @@ stop();
 
 ## Playwright fixture
 
-*(planned, [M3](../ROADMAP.md#m3-playwright--mcp-))*
-
 ```ts
 // tests/form.spec.ts
 import { test, expect } from 'screenreader-speech-capture-client/playwright';
@@ -190,9 +188,9 @@ test('submit button is announced', async ({ page, speech }) => {
   const { entries } = await speech.record(() => page.keyboard.press('Tab'));
   expect(entries.map((e) => e.text)).toContain('Name, edit, blank');
 
-  // Native input: a screen reader command (NVDA browse mode, next heading)
-  await speech.pressKeys('h');
-  await speech.waitForOutput(/heading, level 2/);
+  // Native input: a screen reader command (NVDA browse mode, next heading), planned in M4
+  // await speech.pressKeys('h');
+  // await speech.waitForOutput(/heading, level 2/);
 });
 ```
 
@@ -214,12 +212,12 @@ The fixture:
 - sets Playwright's `connectOptions.wsEndpoint` to the bridge's Playwright server
   (`ws://<bridge>/playwright`, [Remote Playwright & MCP](playwright-mcp.md)) and forces
   `headless: false`, so `page` opens visibly in the VM's desktop session where the screen reader runs,
-- calls `setFocus(page)` after the page is created (turn off with `speechCaptureFocus: false`),
+- calls `setFocus(page)` after the page is created (turn off with `speechCaptureFocus: false`) *(planned, [M4](../ROADMAP.md#m4-native-input-))*,
 - starts a [session](speech-capture.md#sessions) per test before it runs (`startSession`, named
   after the test's title path, with one `run` label per Playwright run) and ends it after the test.
   It doesn't clear the buffer, so earlier tests stay visible in the [web UI](web-ui.md#context-pane),
 - attaches the speech transcript of the test (its session) to the Playwright report (always, or only on failure,
-  set with `speechCaptureAttach: 'always' | 'on-failure' | 'off'`).
+  set with `speechCaptureAttach: 'always' | 'on-failure' | 'off'`, default `'always'`).
 
 > Tests that use the screen reader must run **serially** (`workers: 1`). There is only one screen
 > reader, and only one window can be in the foreground.
