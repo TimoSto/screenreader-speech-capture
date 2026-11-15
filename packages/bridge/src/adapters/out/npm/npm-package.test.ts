@@ -119,4 +119,17 @@ describe('ensureNpmPackage', () => {
     expect(existsSync(pkg.entry)).toBe(true);
     expect(await readdir(cacheRoot)).toEqual(['1.2.3']);
   });
+
+  it('removes temp folders of dead installs and keeps those of live ones', async () => {
+    const dead = path.join(cacheRoot, '1.2.3.tmp-111-5');
+    const live = path.join(cacheRoot, '1.2.3.tmp-222-5');
+    await mkdir(dead);
+    await mkdir(live);
+    const { run } = fakeNpm();
+
+    await ensureNpmPackage(options(run, { isAlive: (pid: number) => pid === 222 }));
+
+    expect(existsSync(dead)).toBe(false);
+    expect(existsSync(live)).toBe(true);
+  });
 });

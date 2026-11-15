@@ -18,6 +18,11 @@ export interface LifecycleOptions {
   timeoutMs?: number;
   /** Writes out buffered console output. Default: drains stdout and stderr. */
   flush?: () => Promise<void>;
+  /**
+   * Called right before the process exits without the bridge having stopped (watchdog, second
+   * signal), synchronously: the child processes would be left behind otherwise.
+   */
+  onForcedExit?: () => void;
 }
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -62,7 +67,7 @@ export async function runUntilStopped(
   proc: LifecycleProcess,
   options: LifecycleOptions = {},
 ): Promise<void> {
-  const { timeoutMs = SHUTDOWN_TIMEOUT_MS, flush = flushConsole } = options;
+  const { timeoutMs = SHUTDOWN_TIMEOUT_MS, flush = flushConsole, onForcedExit } = options;
   // Set once `start` resolves. The signal handlers below are installed before that.
   let bridge: StoppableBridge | undefined = undefined;
   /** A signal that arrived before the bridge had started. */
@@ -72,9 +77,22 @@ export async function runUntilStopped(
   let exitCode = 0;
   let watchdog: NodeJS.Timeout | undefined;
 
+  /** Ends the child processes the graceful stop didn't get to. */
+  const killLeftovers = () => {
+    try {
+      onForcedExit?.();
+    } catch {
+      // Exiting matters more.
+    }
+  };
+  const forceExit = (code: number) => {
+    killLeftovers();
+    proc.exit(code);
+  };
+
   const exit = (code: number) => {
     // A second exit (watchdog, second signal) while flushing doesn't wait again.
-    if (exiting) return proc.exit(code);
+    if (exiting) return forceExit(code);
     exiting = true;
     void flush()
       .catch(() => undefined)
@@ -89,7 +107,7 @@ export async function runUntilStopped(
     watchdog = setTimeout(() => {
       running.log.error(`shutdown did not finish within ${timeoutMs / 1000} s, exiting`);
       exiting = true;
-      proc.exit(1);
+      forceExit(1);
     }, timeoutMs).unref();
     running.stop(reason).then(
       () => exit(exitCode),
@@ -103,11 +121,15 @@ export async function runUntilStopped(
       if (bridge === undefined) {
         // Still starting: stop once started, or give up at the second signal.
         if (early === undefined) early = signal;
-        else exit(1);
+        else {
+          killLeftovers();
+          exit(1);
+        }
         return;
       }
       if (!stopping) return shutdown(bridge, signal);
       bridge.log.warn(`${signal} again, exiting without waiting`);
+      killLeftovers();
       exit(1);
     });
   }

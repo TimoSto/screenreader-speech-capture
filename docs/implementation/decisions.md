@@ -200,3 +200,19 @@ review suggested a source-neutral `capture: { sources: [...] }` model, so anothe
 It stays as it is: the SAPI socket voice is and will remain the only capture source, because it
 works the same for JAWS and NVDA without touching either. A source-neutral model would add an
 abstraction with one implementation. If a second source ever comes, that change starts here.
+
+## Child process trees are killed by the bridge, not the OS
+
+On Windows, the children of a killed process live on, so the browsers of a crashed Playwright
+server would stay behind. A Job Object (`KILL_ON_JOB_CLOSE`) would make the OS end the whole tree
+even if the bridge dies, but Node can't create one without a native addon, which the bridge
+doesn't ship (it installs nothing native, and the VM has no compiler).
+
+Instead the bridge does it itself: `taskkill /T /F` raced against a 5 s limit, then a look into
+the process table for descendants of the dead process (Windows keeps the parent pid of an orphan,
+and a creation time earlier than the parent's start rules out a reused pid), and a synchronous
+kill of every tracked tree right before a forced exit (watchdog, second Ctrl+C). What this can't
+cover is a bridge that is killed without a chance to run code (Task Manager, log off). The next
+start then refuses to use a port such an orphan still holds, instead of treating the orphan as its
+own service. If that case turns out to matter, a small helper process holding the Job Object is
+the way to close it.

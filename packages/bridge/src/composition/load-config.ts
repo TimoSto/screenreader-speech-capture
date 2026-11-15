@@ -1,5 +1,6 @@
 import type { ConfigStore } from '../application/ports/out/config-store.js';
 import {
+  assertDistinctPorts,
   DEFAULT_CONFIG,
   mergeConfig,
   validatePatch,
@@ -40,5 +41,10 @@ export async function loadConfig(
     field?.includes('.') ? `Invalid ${sourceOf(field as ConfigField)}` : 'Invalid setting',
   );
   const config = mergeConfig(mergeConfig(DEFAULT_CONFIG, file), overrides);
+  try {
+    assertDistinctPorts(config);
+  } catch (error) {
+    throw new ConfigError(`Invalid setting: ${(error as Error).message}`, { cause: error });
+  }
   return { config, file, overrides };
 }

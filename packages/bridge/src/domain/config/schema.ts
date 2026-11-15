@@ -2,6 +2,7 @@ import { CONFIG_LIMITS } from '@screenreader-speech-capture/shared';
 import {
   boolean,
   type Check,
+  childPort,
   encoding,
   hostList,
   integer,
@@ -23,8 +24,8 @@ export const SCHEMA: { readonly [S in keyof Config]: { readonly [K in keyof Conf
       maxLineBytes: integer(CONFIG_LIMITS.maxLineBytes.min, CONFIG_LIMITS.maxLineBytes.max),
     },
     http: { host: nonEmptyString, port, allowedHosts: hostList },
-    playwright: { enabled: boolean, port, version: nullableVersion },
-    mcp: { enabled: boolean, port },
+    playwright: { enabled: boolean, port: childPort, version: nullableVersion },
+    mcp: { enabled: boolean, port: childPort },
     buffer: { maxEntries: integer(CONFIG_LIMITS.maxEntries.min, CONFIG_LIMITS.maxEntries.max) },
     log: { level: oneOf(LOG_LEVELS), file: nullableString, consoleSpeech: boolean },
   };

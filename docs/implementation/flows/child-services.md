@@ -25,9 +25,10 @@ sequenceDiagram
 
     S->>S: state "starting", log "starting playwright 1.65.0 on 127.0.0.1:3000"
     S->>N: prepare(settings)
-    N->>N: npm install playwright@1.65.0 into a temp folder, rename when complete (once)
+    N->>N: remove stale temp folders; npm install playwright@1.65.0 into a temp folder (10 min limit, killed with its tree), rename when complete (once)
     N->>N: playwright install --no-shell chromium (downloads only if missing)
     N-->>S: command
+    S->>S: port already open? → crash "port 3000 is already in use", no spawn
     S->>P: spawn (own process group), output piped to the bridge log
     loop every 200 ms, up to 60 s
         S->>P: port 3000 open?
@@ -53,7 +54,7 @@ sequenceDiagram
     participant St as GET /status
 
     P--xS: exit code 1
-    S->>OS: kill the rest of its tree (browsers)
+    S->>OS: taskkill /T /F, then the orphans found in the process table (browsers)
     S->>S: nextAfterCrash(crashesInRow, ranForMs) → restart in 1 s
     S->>S: state "crashed", log "playwright exited with code 1, restart 1 in 1 s"
     St-->>St: state "crashed", exitCode 1, restarts 0

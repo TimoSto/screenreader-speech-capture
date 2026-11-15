@@ -1,5 +1,7 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
+import { once } from 'node:events';
+import net from 'node:net';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { eventually, freePort } from '../../../../test/helpers.js';
@@ -64,6 +66,36 @@ function alive(pid: number): boolean {
 }
 
 describe('ChildProcessSupervisor', () => {
+  it('start() resolves at once when the service is already running', async () => {
+    const { supervisor } = await setup(fake());
+    await supervisor.start();
+    await supervisor.start();
+    expect(supervisor.status().state).toBe('running');
+  });
+
+  it('does not start a child while something else holds the port', async () => {
+    const holder = net.createServer().listen(0, '127.0.0.1');
+    await once(holder, 'listening');
+    const { port } = holder.address() as net.AddressInfo;
+    const { supervisor, logger, output } = await setup(
+      () => Promise.resolve({ command: process.execPath, args: ['-e', 'console.log("spawned")'] }),
+      port,
+    );
+    try {
+      void supervisor.start();
+      await eventually(
+        () => logger.lines.some((line) => line.includes(`port ${port} is already in use`)),
+        Boolean,
+      );
+      // A spawned child would have printed this.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(output.lines).not.toContain('info spawned');
+      expect(supervisor.status().state).not.toBe('running');
+    } finally {
+      holder.close();
+    }
+  });
+
   it('is running once the port answers, with its output in the log', async () => {
     const { supervisor, output, logger } = await setup(fake());
     expect(supervisor.status()).toMatchObject({ state: 'stopped', version: '9.9.9' });

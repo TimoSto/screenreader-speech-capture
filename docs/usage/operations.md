@@ -37,15 +37,19 @@ console window (`SIGHUP`) and `SIGTERM`. The bridge log names the signal
    (they get `503`),
 2. stops the child services and **kills their whole process tree**. On Windows, killing a process
    does not kill its children, so without this the browsers started by the Playwright server would
-   stay open. The bridge uses `taskkill /T /F /PID <pid>`. On Linux and macOS each service runs in
-   its own process group, which gets `SIGTERM` and, 3 seconds later, `SIGKILL`,
+   stay open. The bridge uses `taskkill /T /F /PID <pid>`, limited to 5 seconds. After a
+   service has crashed, its children can't be reached through it any more, so the bridge also
+   looks them up in the process table (they still name the dead parent) and kills them. On Linux
+   and macOS each service runs in its own process group, which gets `SIGTERM` and, 3 seconds
+   later, `SIGKILL`,
 3. writes any buffered console output. The log file is written line by line as it goes, so it is
    always complete,
 4. exits with code `0` (or `1` if something failed on the way).
 
 If a shutdown step hangs, the bridge exits anyway after 10 seconds with code `1`. A second signal
 while it stops (Ctrl+C again) exits at once with code `1`. A signal that arrives while the bridge
-is still starting stops it as soon as it has started.
+is still starting stops it as soon as it has started. Both ways of exiting early first kill the
+child services' process trees, so the Playwright server's browsers don't stay behind.
 
 If the bridge crashes (an uncaught exception or unhandled promise rejection), the error and its
 stack go into the bridge log, and the bridge stops as above and exits with code `1`.
@@ -56,16 +60,22 @@ Limits on Windows:
   less than the 10-second limit above.
 - At log off and system shutdown, Windows ends console programs without a signal, so the bridge
   cannot stop gracefully. Nothing is lost from the log file (see step 3).
-- The child services are not tied to the bridge's process yet (a Windows job object). If the
-  bridge is killed without a chance to stop (Task Manager, log off), the Playwright server and its
-  browsers can stay behind. End them by hand or log off.
+- The child services are not tied to the bridge's process (no Windows job object, see
+  [decisions](../implementation/decisions.md#child-process-trees-are-killed-by-the-bridge-not-the-os)).
+  If the bridge is killed without a chance to stop (Task Manager, log off), the Playwright server
+  and its browsers can stay behind. End them by hand or log off; the next start refuses to use a
+  port they still hold and says so in the log.
 
 ## Child service crashes
 
 If the Playwright server or MCP exits unexpectedly:
 
 - the bridge kills what is left of its process tree and restarts it with a growing delay (1 s,
-  2 s, 4 s, … up to 30 s). A failed install counts as a crash too,
+  2 s, 4 s, … up to 30 s). A failed install counts as a crash too, and so does an install that
+  takes longer than 10 minutes (it is killed with everything it started),
+- a service never starts while something else already answers on its port (a leftover process of
+  an earlier run, another program). That counts as a crash, with the log line
+  `playwright: port 3000 is already in use`, instead of passing for a running service,
 - `status` shows `state: "crashed"`, the `exitCode` (`null` when it was killed by a signal or
   could not start) and `restarts` (restarts since the service was last started),
 - after **5 crashes in a row** (without 60 seconds of stable running in between), it stops trying.

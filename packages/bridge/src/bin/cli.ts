@@ -2,6 +2,7 @@
 import packageJson from '../../package.json' with { type: 'json' };
 import { ConfigError, startBridge } from '../main.js';
 import { flushConsole, runUntilStopped } from '../adapters/in/cli/lifecycle.js';
+import { killAllTreesNow } from '../adapters/out/process/process-tree.js';
 import { helpText, parseCli, UsageError } from '../adapters/in/cli/options.js';
 
 const fail = (message: string): never => {
@@ -38,6 +39,8 @@ try {
         ...(options.configFile === undefined ? {} : { configFile: options.configFile }),
       }),
     process,
+    // A forced exit must not leave the Playwright server's browsers behind.
+    { onForcedExit: () => killAllTreesNow() },
   );
 } catch (error) {
   if (error instanceof ConfigError) fail(error.message);
