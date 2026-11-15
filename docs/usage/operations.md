@@ -98,6 +98,9 @@ Bridge log details:
 - levels: `error`, `warn`, `info` (default), `debug`. `debug` also logs every received line and
   every HTTP request,
 - the file is rotated at 10 MB, and the last 5 files are kept.
+- console output is written by a separate thread, so a console that blocks (on Windows, while text is
+  selected in its window) can't stop the bridge. While it is blocked, up to 1 MiB of lines wait,
+  then more are dropped (the file keeps all of them) and one line tells how many.
 
 ### Speech text stays off the console
 

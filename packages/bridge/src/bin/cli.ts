@@ -2,6 +2,7 @@
 import packageJson from '../../package.json' with { type: 'json' };
 import { ConfigError, startBridge } from '../main.js';
 import { flushConsole, runUntilStopped } from '../adapters/in/cli/lifecycle.js';
+import { flushTerminal } from '../adapters/out/log/async-console.js';
 import { killAllTreesNow } from '../adapters/out/process/process-tree.js';
 import { helpText, parseCli, UsageError } from '../adapters/in/cli/options.js';
 
@@ -40,10 +41,17 @@ try {
       }),
     process,
     // A forced exit must not leave the Playwright server's browsers behind.
-    { onForcedExit: () => killAllTreesNow() },
+    {
+      onForcedExit: () => killAllTreesNow(),
+      flush: async () => {
+        await flushTerminal();
+        await flushConsole();
+      },
+    },
   );
 } catch (error) {
   if (error instanceof ConfigError) fail(error.message);
+  await flushTerminal();
   await flushConsole();
   process.exit(1);
 }
