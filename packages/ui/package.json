@@ -23,5 +23,11 @@
     "svelte-check": "4.7.8",
     "typescript": "6.0.3",
     "vite": "8.3.8"
+  },
+  "dependencies": {
+    "@fontsource-variable/roboto-flex": "5.3.0",
+    "@fontsource/material-symbols-outlined": "5.3.9",
+    "@fontsource/roboto-mono": "5.3.0",
+    "@material/web": "2.5.0"
   }
 }

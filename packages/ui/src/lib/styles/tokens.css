@@ -1,0 +1,284 @@
+/*
+ * Speech Capture web UI: Material Design 3 tokens.
+ * Seed #415F91. Names follow @material/web (--md-sys-*, --md-ref-*), so its components pick the theme up.
+ * --app-* tokens (success, warning, layout, mono font) are extensions that MD3 does not define.
+ * Theme: light by default, dark with prefers-color-scheme, forced with [data-theme="light"|"dark"] on <html>.
+ * Visual reference: mockup/monitor.html, mockup/design-system.html. Spec: DESIGN.md.
+ */
+
+:root {
+  color-scheme: light;
+  --md-sys-color-primary: #415f91;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #d6e3ff;
+  --md-sys-color-on-primary-container: #001b3e;
+  --md-sys-color-secondary: #565f71;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #dae2f9;
+  --md-sys-color-on-secondary-container: #131c2b;
+  --md-sys-color-tertiary: #705575;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #fad8fd;
+  --md-sys-color-on-tertiary-container: #28132e;
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
+  --app-success: #2f6a1e;
+  --app-on-success: #ffffff;
+  --app-success-container: #b6f29a;
+  --app-on-success-container: #062100;
+  --app-warning: #7a5900;
+  --app-on-warning: #ffffff;
+  --app-warning-container: #ffdea4;
+  --app-on-warning-container: #261900;
+  --md-sys-color-surface: #f9f9ff;
+  --md-sys-color-on-surface: #191c20;
+  --md-sys-color-on-surface-variant: #44474e;
+  --md-sys-color-outline: #74777f;
+  --md-sys-color-outline-variant: #c4c6d0;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #f3f3fa;
+  --md-sys-color-surface-container: #ededf4;
+  --md-sys-color-surface-container-high: #e7e8ee;
+  --md-sys-color-surface-container-highest: #e2e2e9;
+  --md-sys-color-inverse-surface: #2e3036;
+  --md-sys-color-inverse-on-surface: #f0f0f7;
+  --md-sys-color-inverse-primary: #aac7ff;
+  --app-new-row: rgba(65, 95, 145, 0.1);
+  --md-sys-color-scrim: rgba(0, 0, 0, 0.32);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --md-sys-color-primary: #aac7ff;
+    --md-sys-color-on-primary: #0a305f;
+    --md-sys-color-primary-container: #284777;
+    --md-sys-color-on-primary-container: #d6e3ff;
+    --md-sys-color-secondary: #bec6dc;
+    --md-sys-color-on-secondary: #283141;
+    --md-sys-color-secondary-container: #3e4759;
+    --md-sys-color-on-secondary-container: #dae2f9;
+    --md-sys-color-tertiary: #ddbce0;
+    --md-sys-color-on-tertiary: #3f2844;
+    --md-sys-color-tertiary-container: #573e5c;
+    --md-sys-color-on-tertiary-container: #fad8fd;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-on-error: #690005;
+    --md-sys-color-error-container: #93000a;
+    --md-sys-color-on-error-container: #ffdad6;
+    --app-success: #9bd680;
+    --app-on-success: #0b3900;
+    --app-success-container: #185108;
+    --app-on-success-container: #b6f29a;
+    --app-warning: #f5bf48;
+    --app-on-warning: #412d00;
+    --app-warning-container: #5c4200;
+    --app-on-warning-container: #ffdea4;
+    --md-sys-color-surface: #111318;
+    --md-sys-color-on-surface: #e2e2e9;
+    --md-sys-color-on-surface-variant: #c4c6d0;
+    --md-sys-color-outline: #8e9099;
+    --md-sys-color-outline-variant: #44474e;
+    --md-sys-color-surface-container-lowest: #0c0e13;
+    --md-sys-color-surface-container-low: #191c20;
+    --md-sys-color-surface-container: #1d2024;
+    --md-sys-color-surface-container-high: #282a2f;
+    --md-sys-color-surface-container-highest: #33353a;
+    --md-sys-color-inverse-surface: #e2e2e9;
+    --md-sys-color-inverse-on-surface: #2e3036;
+    --md-sys-color-inverse-primary: #415f91;
+    --app-new-row: rgba(170, 199, 255, 0.12);
+    --md-sys-color-scrim: rgba(0, 0, 0, 0.5);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --md-sys-color-primary: #aac7ff;
+  --md-sys-color-on-primary: #0a305f;
+  --md-sys-color-primary-container: #284777;
+  --md-sys-color-on-primary-container: #d6e3ff;
+  --md-sys-color-secondary: #bec6dc;
+  --md-sys-color-on-secondary: #283141;
+  --md-sys-color-secondary-container: #3e4759;
+  --md-sys-color-on-secondary-container: #dae2f9;
+  --md-sys-color-tertiary: #ddbce0;
+  --md-sys-color-on-tertiary: #3f2844;
+  --md-sys-color-tertiary-container: #573e5c;
+  --md-sys-color-on-tertiary-container: #fad8fd;
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #ffdad6;
+  --app-success: #9bd680;
+  --app-on-success: #0b3900;
+  --app-success-container: #185108;
+  --app-on-success-container: #b6f29a;
+  --app-warning: #f5bf48;
+  --app-on-warning: #412d00;
+  --app-warning-container: #5c4200;
+  --app-on-warning-container: #ffdea4;
+  --md-sys-color-surface: #111318;
+  --md-sys-color-on-surface: #e2e2e9;
+  --md-sys-color-on-surface-variant: #c4c6d0;
+  --md-sys-color-outline: #8e9099;
+  --md-sys-color-outline-variant: #44474e;
+  --md-sys-color-surface-container-lowest: #0c0e13;
+  --md-sys-color-surface-container-low: #191c20;
+  --md-sys-color-surface-container: #1d2024;
+  --md-sys-color-surface-container-high: #282a2f;
+  --md-sys-color-surface-container-highest: #33353a;
+  --md-sys-color-inverse-surface: #e2e2e9;
+  --md-sys-color-inverse-on-surface: #2e3036;
+  --md-sys-color-inverse-primary: #415f91;
+  --app-new-row: rgba(170, 199, 255, 0.12);
+  --md-sys-color-scrim: rgba(0, 0, 0, 0.5);
+}
+
+:root {
+  /* Typography. Self-host the fonts (e.g. @fontsource): the VM may have no internet.
+     Full MD3 type scale, per-property like @material/web (tracking can't go in the `font` shorthand).
+     Use e.g.: font: var(--md-sys-typescale-body-large-weight) var(--md-sys-typescale-body-large-size)/var(--md-sys-typescale-body-large-line-height) var(--md-sys-typescale-body-large-font);
+     letter-spacing: var(--md-sys-typescale-body-large-tracking); */
+  --md-ref-typeface-plain: 'Roboto Flex Variable', 'Roboto Flex', Roboto, system-ui, sans-serif;
+  --md-ref-typeface-brand: 'Roboto Flex Variable', 'Roboto Flex', Roboto, system-ui, sans-serif;
+  --md-ref-typeface-weight-regular: 400;
+  --md-ref-typeface-weight-medium: 500;
+  --md-ref-typeface-weight-bold: 700;
+  --md-sys-typescale-display-large-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-display-large-size: 57px;
+  --md-sys-typescale-display-large-line-height: 64px;
+  --md-sys-typescale-display-large-weight: 400;
+  --md-sys-typescale-display-large-tracking: -0.25px;
+  --md-sys-typescale-display-medium-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-display-medium-size: 45px;
+  --md-sys-typescale-display-medium-line-height: 52px;
+  --md-sys-typescale-display-medium-weight: 400;
+  --md-sys-typescale-display-medium-tracking: 0;
+  --md-sys-typescale-display-small-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-display-small-size: 36px;
+  --md-sys-typescale-display-small-line-height: 44px;
+  --md-sys-typescale-display-small-weight: 400;
+  --md-sys-typescale-display-small-tracking: 0;
+  --md-sys-typescale-headline-large-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-headline-large-size: 32px;
+  --md-sys-typescale-headline-large-line-height: 40px;
+  --md-sys-typescale-headline-large-weight: 400;
+  --md-sys-typescale-headline-large-tracking: 0;
+  --md-sys-typescale-headline-medium-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-headline-medium-size: 28px;
+  --md-sys-typescale-headline-medium-line-height: 36px;
+  --md-sys-typescale-headline-medium-weight: 400;
+  --md-sys-typescale-headline-medium-tracking: 0;
+  --md-sys-typescale-headline-small-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-headline-small-size: 24px;
+  --md-sys-typescale-headline-small-line-height: 32px;
+  --md-sys-typescale-headline-small-weight: 400;
+  --md-sys-typescale-headline-small-tracking: 0;
+  --md-sys-typescale-title-large-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-title-large-size: 22px;
+  --md-sys-typescale-title-large-line-height: 28px;
+  --md-sys-typescale-title-large-weight: 400;
+  --md-sys-typescale-title-large-tracking: 0;
+  --md-sys-typescale-title-medium-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-title-medium-size: 16px;
+  --md-sys-typescale-title-medium-line-height: 24px;
+  --md-sys-typescale-title-medium-weight: 500;
+  --md-sys-typescale-title-medium-tracking: 0.15px;
+  --md-sys-typescale-title-small-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-title-small-size: 14px;
+  --md-sys-typescale-title-small-line-height: 20px;
+  --md-sys-typescale-title-small-weight: 500;
+  --md-sys-typescale-title-small-tracking: 0.1px;
+  --md-sys-typescale-body-large-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-large-size: 16px;
+  --md-sys-typescale-body-large-line-height: 24px;
+  --md-sys-typescale-body-large-weight: 400;
+  --md-sys-typescale-body-large-tracking: 0.5px;
+  --md-sys-typescale-body-medium-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-medium-size: 14px;
+  --md-sys-typescale-body-medium-line-height: 20px;
+  --md-sys-typescale-body-medium-weight: 400;
+  --md-sys-typescale-body-medium-tracking: 0.25px;
+  --md-sys-typescale-body-small-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-small-size: 12px;
+  --md-sys-typescale-body-small-line-height: 16px;
+  --md-sys-typescale-body-small-weight: 400;
+  --md-sys-typescale-body-small-tracking: 0.4px;
+  --md-sys-typescale-label-large-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-large-size: 14px;
+  --md-sys-typescale-label-large-line-height: 20px;
+  --md-sys-typescale-label-large-weight: 500;
+  --md-sys-typescale-label-large-tracking: 0.1px;
+  --md-sys-typescale-label-medium-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-medium-size: 12px;
+  --md-sys-typescale-label-medium-line-height: 16px;
+  --md-sys-typescale-label-medium-weight: 500;
+  --md-sys-typescale-label-medium-tracking: 0.5px;
+  --md-sys-typescale-label-small-font: var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-small-size: 11px;
+  --md-sys-typescale-label-small-line-height: 16px;
+  --md-sys-typescale-label-small-weight: 500;
+  --md-sys-typescale-label-small-tracking: 0.5px;
+
+  /* App extensions: not MD3 roles. Mono for everything machine-made, the log text and mono as type styles. */
+  --app-font-mono: 'Roboto Mono', ui-monospace, Consolas, monospace;
+  --app-log-text-size: 15px;
+  --app-log-text-line-height: 22px;
+  --app-mono-size: 12px;
+  --app-mono-line-height: 16px;
+
+  /* Shape */
+  --md-sys-shape-corner-none: 0;
+  --md-sys-shape-corner-extra-small: 4px; /* text fields, snackbar */
+  --md-sys-shape-corner-small: 8px; /* chips, gap rows */
+  --md-sys-shape-corner-medium: 12px; /* cards, banners, list buttons */
+  --md-sys-shape-corner-large: 16px; /* panes, side sheet */
+  --md-sys-shape-corner-extra-large: 28px; /* dialogs, nav indicators */
+  --md-sys-shape-corner-full: 9999px;
+
+  /* State layers (opacity of the on-color overlay) and focus ring */
+  --md-sys-state-hover-state-layer-opacity: 0.08;
+  --md-sys-state-focus-state-layer-opacity: 0.12;
+  --md-sys-state-pressed-state-layer-opacity: 0.12;
+  --md-sys-state-dragged-state-layer-opacity: 0.16;
+  --md-sys-state-focus-indicator-thickness: 3px;
+  --md-sys-state-focus-indicator-outer-offset: 2px;
+  --app-disabled-content-opacity: 0.38; /* MD3: disabled content 38%, disabled container 12% */
+  --app-disabled-container-opacity: 0.12;
+
+  /* Motion */
+  --md-sys-motion-duration-short1: 50ms;
+  --md-sys-motion-duration-short2: 100ms;
+  --md-sys-motion-duration-short3: 150ms;
+  --md-sys-motion-duration-short4: 200ms;
+  --md-sys-motion-duration-medium1: 250ms;
+  --md-sys-motion-duration-medium2: 300ms;
+  --md-sys-motion-duration-medium3: 350ms;
+  --md-sys-motion-duration-medium4: 400ms;
+  --md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --md-sys-motion-easing-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+  --md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+
+  /* Elevation: tonal by default. Shadows only on dialogs, the snackbar and the "n new" button (levels 3 and 2). */
+  --md-sys-elevation-level0: 0 0 0 0 transparent;
+  --md-sys-elevation-level2: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 6px 2px rgb(0 0 0 / 0.15);
+  --md-sys-elevation-level3: 0 1px 3px rgb(0 0 0 / 0.3), 0 4px 8px 3px rgb(0 0 0 / 0.15);
+
+  /* Layout (app extensions). Window size classes: compact < 600, medium 600-839, expanded 840-1199, large >= 1200. */
+  --app-rail-width: 80px;
+  --app-sessions-width: 300px;
+  --app-actions-width: 360px;
+  --app-status-sheet-width: 400px;
+  --app-gutter: 12px;
+  --app-log-columns: 112px 64px minmax(0, 1fr) 56px; /* received · gap · text · seq */
+
+  /* Behavior */
+  --app-new-row-ms: 1600; /* new rows tinted with --app-new-row this long */
+  --app-long-gap-ms: 3000; /* gaps above this are shown in --md-sys-color-tertiary */
+}
