@@ -2,7 +2,6 @@ import net from 'node:net';
 import { afterEach, expect, it } from 'vitest';
 import { MemoryLogger } from '../../../../test/fakes.js';
 import type { CapturedSpeech } from '../../../application/ports/in/record-speech.js';
-import { CaptureService } from '../../../application/services/capture-service.js';
 import { CaptureState } from '../../../domain/capture.js';
 import { ListenError } from '../../shared/net/listen.js';
 import { TcpListener, type TcpSettings } from './tcp-listener.js';
@@ -22,10 +21,10 @@ afterEach(async () => {
 
 function listener() {
   const recorded: CapturedSpeech[] = [];
-  const state = new CaptureState();
+  const state = new CaptureState(() => new Date(0));
   const tcp = new TcpListener(
     { record: (speech) => void recorded.push(speech) },
-    new CaptureService({ state, clock: { now: () => new Date(0) } }),
+    state,
     new MemoryLogger(),
   );
   cleanup.push(() => tcp.stop());

@@ -23,6 +23,8 @@ measure the bridge's RSS (`ps -o rss`) before and after any change.
 - Client build time: `tsdown` generated declarations from `tsconfig.json`, which includes `test/`,
   so the dts step type-checked the tests too. `packages/client/tsconfig.build.json` (src only)
   halves the build (about 18 s to about 9 s). The generated `index.d.mts` is unchanged.
+- Pass-through services: `CaptureService` was the only pure forwarder and is gone. The other
+  services hold rules and stay, see [Decisions](decisions.md#services-stay-where-they-hold-a-rule).
 - Dead code and needless exports: removed `ConfigPatchDto` and the `export` of `readJson`,
   `MAX_BODY_BYTES`, `errorResponse` and 30 `*Deps` / `*Options` types used only in their own file.
 
@@ -41,12 +43,6 @@ measure the bridge's RSS (`ps -o rss`) before and after any change.
 
 ## Simplifications (moderate effort, tests need rewiring)
 
-7. **Pass-through services and in-ports.** `CaptureService`, `TranscriptService`,
-   `BridgeLifecycleService`, `ChildServicesService` and the in-ports `record-speech`,
-   `track-capture`, `lifecycle`, `child-services`, `get-status` only forward calls; several ports
-   exist only so an ESLint rule is satisfied. On the client, the same for `ClientConfigService` /
-   `ManageClientConfig`. Keep out-ports for `Clock` and `ConfigStore` (tests need them) and relax
-   the layer rules in `eslint.config.js`. Saves about 12-15 files and 400-600 lines.
 8. **Config validated twice.** The valibot schema in `shared` and the hand-written
    `domain/config/{checks,schema}.ts` in the bridge, held together by `schema-equivalence.test.ts`.
    Use the schema in the bridge (valibot is already bundled). About 90-120 lines.

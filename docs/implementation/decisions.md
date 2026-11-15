@@ -229,3 +229,13 @@ nested-repeat check was tried and dropped: it can't prove a pattern safe (`.*.*.
 so it only gave false confidence. A linear-time engine (`re2js`) would fix it, but adds a
 dependency and a different syntax to a developer tool whose callers write their own patterns.
 A slow pattern is the author's to fix.
+
+## Services stay where they hold a rule
+
+A service that only forwards calls has no reason to exist: `CaptureService` just passed each call
+to `CaptureState` and added the time, so `CaptureState` now takes a `() => Date` and is the
+`TrackCapture` implementation itself. The other services were reviewed and stay, because each holds
+a rule the composition root must not hold: `BridgeLifecycleService` (idempotent stop, shutdown
+order, error aggregation), `ChildServicesService` (what a config change does to each child
+service), `StatusService`, `SpeechService` (`RecordSpeech`) and the client's `ClientConfigService`
+(source precedence). The layer rules in `eslint.config.js` stay as they are.

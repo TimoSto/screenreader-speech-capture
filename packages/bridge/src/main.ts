@@ -12,7 +12,6 @@ import type { ManageSessions } from './application/ports/in/manage-sessions.js';
 import type { SpeechUseCases } from './application/ports/in/speech.js';
 import type { Logger } from './application/ports/out/logger.js';
 import { BridgeLifecycleService } from './application/services/bridge-lifecycle-service.js';
-import { CaptureService } from './application/services/capture-service.js';
 import { ChildServicesService } from './application/services/child-services-service.js';
 import { ConfigService } from './application/services/config-service.js';
 import { SessionService } from './application/services/session-service.js';
@@ -133,12 +132,8 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     logger: bridgeLogger,
   });
 
-  const captureState = new CaptureState();
-  const tcp = new TcpListener(
-    speech,
-    new CaptureService({ state: captureState, clock }),
-    log.for('speech-capture'),
-  );
+  const captureState = new CaptureState(() => clock.now());
+  const tcp = new TcpListener(speech, captureState, log.for('speech-capture'));
   const status = new StatusService({
     capture: captureState,
     log: speechLog,
