@@ -23,7 +23,7 @@ sequenceDiagram
     participant N as npm-package /<br/>playwright-installer
     participant P as Child process<br/>(playwright run-server / mcp cli.js)
 
-    S->>S: state "starting", log "starting playwright 1.65.0 on 127.0.0.1:3000"
+    S->>S: state "starting", log "starting playwright 1.65.0"
     S->>N: prepare(settings)
     N->>N: remove stale temp folders; npm install playwright@1.65.0 into a temp folder (10 min limit, killed with its tree), rename when complete (once)
     N->>N: playwright install --no-shell chromium (downloads only if missing)
@@ -33,7 +33,7 @@ sequenceDiagram
     loop every 200 ms, up to 60 s
         S->>P: port 3000 open?
     end
-    S->>S: state "running", log "running on ws://…/playwright"
+    S->>S: state "running", log "playwright running"
     alt prepare fails (offline, proxy)
         N-->>S: error → counts as a crash
     else port not open in time

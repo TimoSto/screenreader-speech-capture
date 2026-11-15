@@ -12,7 +12,6 @@ import {
   type ServiceStatus,
 } from '../../../domain/child-service.js';
 import { portOpen } from '../../shared/net/port-probe.js';
-import { describeListener } from '../../shared/net/reachable-urls.js';
 import { killTree, pipeLines, trackTree, treeSpawnOptions } from './process-tree.js';
 import type { Command, Prepare, ResolvedSettings } from './types.js';
 
@@ -22,10 +21,6 @@ interface ChildProcessSupervisorOptions {
   settings: ServiceSettings;
   defaultVersion: string;
   prepare: Prepare;
-  /** URL scheme clients use, for the `reachable at` log line (`ws` for the Playwright server). */
-  scheme: 'http' | 'ws';
-  /** Path clients use, appended to the URLs in that line, for example `/mcp`. Default none. */
-  path?: string;
   /** `[bridge]` log: starts, crashes, restarts. */
   logger: Logger;
   /** Log for the service's own output, under its prefix. */
@@ -122,9 +117,7 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
     const abort = new AbortController();
     this.abort = abort;
     this.setState('starting');
-    this.options.logger.info(
-      `starting ${this.options.name} ${settings.version} on ${settings.host}:${settings.port}`,
-    );
+    this.options.logger.info(`starting ${this.options.name} ${settings.version}`);
 
     this.options.prepare(settings, abort.signal).then(
       async (command) => {
@@ -189,10 +182,7 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
       if (open) {
         this.runningSince = Date.now();
         this.setState('running');
-        const { scheme, path } = this.options;
-        this.options.logger.info(
-          `${this.options.name} running on ${describeListener(scheme, settings.host, settings.port, path)}`,
-        );
+        this.options.logger.info(`${this.options.name} running`);
       } else {
         this.options.logger.error(
           `${this.options.name} did not open port ${settings.port} in time, killing it`,

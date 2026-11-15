@@ -37,7 +37,7 @@ function fake(...args: string[]): Prepare {
     });
 }
 
-async function setup(prepare: Prepare, port?: number, urlPath?: string, host = '0.0.0.0') {
+async function setup(prepare: Prepare, port?: number, host = '0.0.0.0') {
   const logger = new MemoryLogger();
   const output = new MemoryLogger();
   const supervisor = new ChildProcessSupervisor({
@@ -45,8 +45,6 @@ async function setup(prepare: Prepare, port?: number, urlPath?: string, host = '
     settings: { host, port: port ?? (await freePort()), version: null },
     defaultVersion: '9.9.9',
     prepare,
-    scheme: 'ws',
-    ...(urlPath === undefined ? {} : { path: urlPath }),
     logger,
     output,
     policy: FAST,
@@ -108,11 +106,8 @@ describe('ChildProcessSupervisor', () => {
       (lines) => lines.some((line) => line.startsWith('info Listening on')),
     );
     expect(output.lines).toContain('warn fake service warming up');
-    expect(logger.lines).toContainEqual(
-      expect.stringMatching(
-        /^info playwright running on 0\.0\.0\.0:\d+, reachable at (ws:\/\/[\d.]+:\d+, )*ws:\/\/localhost:\d+$/,
-      ),
-    );
+    expect(logger.lines).toContain('info playwright running');
+    expect(logger.lines).toContain('info starting playwright 9.9.9');
   });
 
   it('restarts after crashes and fails after 5 in a row', async () => {
@@ -200,19 +195,5 @@ describe('ChildProcessSupervisor', () => {
       (isAlive) => !isAlive,
     );
     expect(alive(grandchild)).toBe(false);
-  });
-
-  it('names its URL when it listens on one address', async () => {
-    const port = await freePort();
-    const { supervisor, logger } = await setup(fake(), port, undefined, '127.0.0.1');
-    await supervisor.start();
-    expect(logger.lines).toContain(`info playwright running on ws://127.0.0.1:${port}`);
-  });
-
-  it('appends its path to the URLs', async () => {
-    const port = await freePort();
-    const { supervisor, logger } = await setup(fake(), port, '/mcp', '127.0.0.1');
-    await supervisor.start();
-    expect(logger.lines).toContain(`info playwright running on ws://127.0.0.1:${port}/mcp`);
   });
 });

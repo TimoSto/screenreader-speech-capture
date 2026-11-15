@@ -1,6 +1,6 @@
 import type os from 'node:os';
 import { expect, it } from 'vitest';
-import { describeListener, reachableUrls } from './reachable-urls.js';
+import { describeAddress, describeListener, reachableUrls } from './reachable-urls.js';
 
 const info = (
   address: string,
@@ -47,4 +47,11 @@ it('describes a listener on one address by its URL, with the path', () => {
   expect(describeListener('http', '127.0.0.1', 8931, '/mcp', interfaces)).toBe(
     'http://127.0.0.1:8931/mcp',
   );
+});
+
+it('describes a schemeless address like a listener', () => {
+  expect(describeAddress('0.0.0.0', 4449, interfaces)).toBe(
+    '0.0.0.0:4449, reachable at 192.168.122.57:4449, 172.20.0.1:4449, localhost:4449',
+  );
+  expect(describeAddress('127.0.0.1', 4449, interfaces)).toBe('127.0.0.1:4449');
 });
