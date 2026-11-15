@@ -168,6 +168,119 @@ const perPackage = (layer, patterns, extra = {}) =>
     },
   }));
 
+// The web UI (packages/ui): a BFF plus a hexagon-lite client layout
+// (docs/implementation/architecture.md#the-web-ui-a-sveltekit-bff).
+// Imports are written relative or as `#lib/...`; both forms match these globs.
+const uiBase = [
+  {
+    group: [
+      '**/packages/bridge/**',
+      '**/packages/client/**',
+      'screenreader-speech-capture',
+      'screenreader-speech-capture/*',
+      'screenreader-speech-capture-client',
+      'screenreader-speech-capture-client/*',
+    ],
+    message: 'The UI talks to the bridge over HTTP. It shares only the contract in shared.',
+  },
+  {
+    group: [`${SHARED}/platform-paths`],
+    message: 'platform-paths is Node-only; the browser part of the UI must not import it.',
+  },
+];
+const uiCoreImports = {
+  regex: `^(?!\\.{1,2}/|#lib/core/|${SHARED}$)`,
+  message:
+    'lib/core is the UI model and its ports: only relative files, #lib/core and shared. No framework, no packages.',
+};
+const uiAdapters = {
+  group: ['**/lib/adapters/**', '**/adapters/**'],
+  message:
+    'Only the composition file (lib/composition.ts) knows the concrete UI adapters. Depend on the ports in lib/core.',
+};
+const uiStores = {
+  group: ['**/lib/stores/**', '**/stores/**'],
+  message: 'lib/core and lib/adapters do not know the stores that sit on top of them.',
+};
+const uiComponents = {
+  group: ['**/lib/components/**', '**/components/**', '**/*.svelte', '**/routes/**'],
+  message: 'Components and routes sit on top of the stores. Lower layers must not import them.',
+};
+const uiServer = {
+  group: ['**/lib/server/**', '**/server/**', '**/*.server.js', '**/*.server'],
+  message: 'lib/server is the BFF and runs on the server only. Browser code reaches it over HTTP.',
+};
+const uiServerOnly = {
+  group: ['**/lib/stores/**', '**/lib/components/**', '**/*.svelte', '**/lib/adapters/**'],
+  message: 'The BFF (server code) does not import the browser-side layers.',
+};
+const uiSvelteKit = {
+  group: ['svelte', 'svelte/*', '@sveltejs/*', '$app/*', '$env/*'],
+  message: 'lib/core is framework-free so it can be tested without Svelte or SvelteKit.',
+};
+
+/** Ambient I/O the browser side must reach only through an adapter (components: through a store). */
+const uiIoGlobals = ['fetch', 'EventSource', 'WebSocket', 'XMLHttpRequest'].map((name) => ({
+  name,
+  message: 'Components and stores do no I/O. Call a port; its adapter (lib/adapters) does the I/O.',
+}));
+/** @type {Record<string, [string, ...unknown[]]>} */
+const uiNoIo = { 'no-restricted-globals': ['error', ...uiIoGlobals] };
+/** @type {Record<string, [string, ...unknown[]]>} */
+const uiCoreGlobals = {
+  ...innerLayerGlobals,
+  'no-restricted-globals': [
+    ...innerLayerGlobals['no-restricted-globals'],
+    ...uiIoGlobals,
+    ...['window', 'document', 'navigator', 'location', 'localStorage', 'sessionStorage'].map(
+      (name) => ({
+        name,
+        message: 'lib/core is pure: browser APIs belong in an adapter behind a port.',
+      }),
+    ),
+  ],
+};
+
+/**
+ * One block per UI layer. `no-restricted-imports` of a later block replaces an earlier one, so every
+ * block states `uiBase` plus its own patterns.
+ * @param {string[]} files
+ * @param {object[]} patterns
+ * @param {Record<string, unknown>} [extra]
+ * @returns {import('eslint').Linter.Config}
+ */
+const uiLayer = (files, patterns, extra = {}) => ({
+  files,
+  ignores: ['**/*.test.ts'],
+  rules: { 'no-restricted-imports': ['error', { patterns: [...uiBase, ...patterns] }], ...extra },
+});
+
+/** @type {import('eslint').Linter.Config[]} */
+const uiLayers = [
+  // Anything else under the UI (hooks, composition.ts, ...): only the other-package rule.
+  uiLayer(['packages/ui/src/**/*.{ts,svelte}'], []),
+  uiLayer(
+    ['packages/ui/src/lib/core/**/*.ts'],
+    [uiCoreImports, uiAdapters, uiStores, uiComponents, uiServer, uiSvelteKit],
+    uiCoreGlobals,
+  ),
+  uiLayer(['packages/ui/src/lib/adapters/**/*.ts'], [uiStores, uiComponents, uiServer]),
+  uiLayer(['packages/ui/src/lib/stores/**/*.ts'], [uiAdapters, uiComponents, uiServer], uiNoIo),
+  uiLayer(
+    [
+      'packages/ui/src/lib/components/**/*.{ts,svelte}',
+      'packages/ui/src/routes/**/*.svelte',
+      'packages/ui/src/routes/**/+{page,layout}.ts',
+    ],
+    [uiAdapters, uiServer],
+    uiNoIo,
+  ),
+  uiLayer(
+    ['packages/ui/src/lib/server/**/*.ts', 'packages/ui/src/routes/**/*.server.ts'],
+    [uiServerOnly],
+  ),
+];
+
 /** @type {import('eslint').Linter.Config[]} */
 const architecture = [
   // Files outside the layers (main.ts, composition/, bin/): only the other-package rule.
@@ -176,36 +289,7 @@ const architecture = [
     ignores: ['**/*.test.ts'],
     rules: { 'no-restricted-imports': ['error', { patterns: [otherPackage[pkg]] }] },
   })),
-  {
-    // The web UI is a BFF: it reaches the bridge over HTTP, never through its code.
-    files: ['packages/ui/src/**/*.{ts,svelte}'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: [
-                '**/packages/bridge/**',
-                '**/packages/client/**',
-                'screenreader-speech-capture',
-                'screenreader-speech-capture/*',
-                'screenreader-speech-capture-client',
-                'screenreader-speech-capture-client/*',
-              ],
-              message:
-                'The UI talks to the bridge over HTTP. It shares only the contract in shared.',
-            },
-            {
-              group: [`${SHARED}/platform-paths`],
-              message:
-                'platform-paths is Node-only; the browser part of the UI must not import it.',
-            },
-          ],
-        },
-      ],
-    },
-  },
+  ...uiLayers,
   ...perPackage(
     'domain',
     [onlyRelativeAndShared, adapters, application, compositionRoot],

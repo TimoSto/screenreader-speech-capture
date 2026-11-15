@@ -84,6 +84,8 @@ stays free of Node built-ins. Domain/application also may not use the timer glob
 `new Date()` / `Date()`, `AbortSignal.timeout`, `process`, `fetch`, `performance`, `console` or `globalThis`
 (`innerLayerGlobals`): time and timers come through the `Clock` port. Test files (`*.test.ts`)
 are exempt. When adding a feature, add a port and
+
+`packages/ui` has its own layer rules (`uiLayers`: `lib/core` pure, `lib/adapters` the only place for `fetch`/SSE, stores and components never do I/O, `lib/server` is the BFF); see `docs/implementation/architecture.md#the-web-ui-a-sveltekit-bff`.
 wire it in the composition root (`main.ts` + `composition/`) rather than reaching across layers.
 
 Relative imports use `.js` extensions (ESM), and type-only imports must use `import type`
