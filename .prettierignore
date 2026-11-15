@@ -4,3 +4,4 @@ build/
 .svelte-kit/
 coverage/
 *.md
+docs/implementation/web-ui-design/
