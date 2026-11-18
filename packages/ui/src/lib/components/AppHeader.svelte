@@ -1,16 +1,22 @@
 <script lang="ts">
   import '@material/web/icon/icon.js';
   import '@material/web/iconbutton/icon-button.js';
+  import StatusChips from '#lib/components/StatusChips.svelte';
+  import StatusRefresh from '#lib/components/StatusRefresh.svelte';
+  import type { Chip } from '#lib/core/status.js';
   import type { Theme } from '#lib/core/theme.js';
 
   type Props = {
     host: string;
-    bridge: { version: string; apiVersion: string; state: string };
+    chips: Chip[];
+    announcement: string;
+    loading: boolean;
+    onRetry: () => void;
     theme: Theme;
     onToggleTheme: () => void;
   };
 
-  let { host, bridge, theme, onToggleTheme }: Props = $props();
+  let { host, chips, announcement, loading, onRetry, theme, onToggleTheme }: Props = $props();
 
   const label = $derived(theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
 </script>
@@ -18,10 +24,10 @@
 <header>
   <div class="title">
     <span class="name">Speech Capture</span>
-    <span class="meta"
-      >{host} · bridge {bridge.version} · API {bridge.apiVersion} · {bridge.state}</span
-    >
+    <span class="meta">{host}</span>
   </div>
+  <StatusChips {chips} {announcement} />
+  <StatusRefresh {loading} {onRetry} />
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <!-- md-icon-button wraps a real <button> in its shadow DOM, which handles keys and role. -->
   <md-icon-button aria-label={label} title={label} onclick={onToggleTheme}>
@@ -45,6 +51,10 @@
     flex-direction: column;
     min-width: 0;
     margin-right: auto;
+  }
+
+  header {
+    flex-wrap: wrap;
   }
 
   .name {

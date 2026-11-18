@@ -54,3 +54,9 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
 function describe(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
+
+/** The bridge API of this deployment (read per request, so no SvelteKit env module is needed). */
+export function bridgeApiFromEnv(fetchFn: Fetch): BridgeApi {
+  // The bridge sets SR_BRIDGE_API_URL to its own address when it mounts the UI.
+  return createBridgeApi(process.env.SR_BRIDGE_API_URL ?? DEFAULT_BRIDGE_URL, fetchFn);
+}

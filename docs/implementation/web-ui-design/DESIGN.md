@@ -53,7 +53,7 @@ API over loopback; core / adapters / stores / components layers.
 
 ```
 ┌──────┬─────────────────────────────────────────────────────────────────────────┐
-│ logo │ Speech Capture · host · versions     [status chips…]   status 1 s ago ☾ │ top app bar (status bar)
+│ logo │ Speech Capture · host · versions     [status chips…]   ⟳  ☾ │ top app bar (status bar)
 ├──────┴─────────────────────────────────────────────────────────────────────────┤
 │        [No-voice banner, only when no voice is connected]                     │
 ├──────┬────────────┬──────────────────────────────────────┬────────────────────┤
@@ -87,11 +87,15 @@ API over loopback; core / adapters / stores / components layers.
 
 - Logo tile (44 px, radius 14, `primary`), title (title-large), mono subline:
   `host:port · bridge <version> · API <apiVersion> · <state>`.
-- One **status button** with chips (`aria-label` summarises all of them; opens the status side
-  sheet): voices (`1 voice · windows-1252` / `No voice`), `Playwright <version>`,
-  `MCP <version>[ · crashed]`, `Input` / `Input unavailable` (see Actions), `Session #<id>` with live dot / `No session`.
-- Right: `status <n> s ago` (mono, refresh icon, tooltip "GET /api/v1/status every 2 s") and a
-  theme toggle.
+- Status chips (`ul` labelled "Bridge status"; each chip's `aria-label` carries the state in words):
+  `Playwright <version>`, `MCP <version>[ · crashed|failed]`, `Session #<id>` with live dot /
+  `No session` (neutral, hollow dot, before the first session). There is no voice (SAPI) chip and no Input chip: native
+  input unavailability shows only in the Actions panel. Without an answer from the bridge the
+  chips keep the last known values but turn neutral with a red dot. A service that is starting or
+  stopped also gets a red dot (not ready); `No session` stays grey.
+- Right: a refresh icon button (tooltip "GET /api/v1/status") and a theme toggle. The status is read once on
+  load and again only when the refresh button is clicked (no polling); a hidden `role="status"`
+  region speaks only problems.
 - Bar color: `error-container` when no voice has connected, `warning-container` when Playwright or
   MCP is `crashed`/`failed`, else `surface-container`.
 - No voice also shows a banner under the bar (`role="alert"`): what to do + "Open setup".
@@ -176,8 +180,7 @@ inserts a marker first…"). Segmented button with four tabs:
 - Native input unavailable: `GET /status` has no input flag, so the UI only learns it when a request
   answers `409 INPUT_DISABLED` (robotjs couldn't be loaded, for example not on Windows). From then
   on: an `error-container` note at the top of Keys / Presets / Click, their controls disabled, the
-  status chip says `Input unavailable`. Before the first input request the chip is neutral
-  (`Input`). Playwright is unaffected.
+  Actions panel stays disabled (there is no status chip for input). Playwright is unaffected.
 - MCP not running: the Playwright info row turns `warning-container` with the reason, and the run
   button is disabled.
 - **Delayed send:** an `inverse-surface` card with a big countdown, "Sending <keys>. Switch to the
@@ -210,7 +213,7 @@ sessions started from the UI are attributed.
 
 | UI | Bridge API (called by the BFF) |
 |---|---|
-| Status bar, status sheet | `GET /api/v1/status` every 2 s while the tab is visible, plus right after own actions |
+| Status bar, status sheet | `GET /api/v1/status` once on load, then on the refresh button |
 | Sessions list | `GET /api/v1/sessions` on load; then SSE `session` events add / update rows (start, end) |
 | + / Start | `POST /api/v1/sessions` `{ name, run? }`. If the answer has `replaced`, snackbar "Replaced session #n (`client`)" |
 | Stop / End session | `POST /api/v1/sessions/end` |
@@ -223,7 +226,7 @@ sessions started from the UI are attributed.
 | Playwright | Playwright MCP through the bridge proxy `http://127.0.0.1:<port>/playwright-mcp`, `tools/call` `browser_navigate` / `browser_click` / `browser_type` / `browser_press_key` / `browser_snapshot` (marker `mcp: <tool> …` first). `503` while MCP isn't running. |
 
 - "Live" means: the session's `endedAt` is `null`. It is kept current by the SSE `session` events;
-  the 2 s status poll (`session.current`) is the fallback when the stream is down.
+  the status refresh button (`session.current`) is the fallback when the stream is down.
 - Copy / export work on the visible (filtered) rows; export names the file
   `session-<id>.<json|jsonl|txt>`.
 
