@@ -29,25 +29,15 @@ const byId = (s: StatusDto | null, reachable = true) =>
   Object.fromEntries(deriveChips(s, reachable).map((chip) => [chip.id, chip]));
 
 describe('deriveChips', () => {
-  it('shows the SAPI port, green while the listener is ready, even without connections', () => {
+  it('shows the SAPI port as a neutral chip with a tooltip, whatever the listener state', () => {
     const s = status();
     s.tcp.connections = [];
-    expect(byId(s).sapi).toMatchObject({ text: 'SAPI · 4449', tone: 'ok' });
-    expect(byId(s).sapi?.description).toContain('ready for connections');
-  });
-
-  it('turns SAPI red when the listener is not listening', () => {
-    const s = status();
+    expect(byId(s).sapi).toMatchObject({ text: 'SAPI · 4449', tone: 'neutral', dot: 'none' });
+    expect(byId(s).sapi?.title).toBe(
+      'TCP listener the voice connects to (127.0.0.1:4449, windows-1252)',
+    );
     s.tcp.listening = false;
-    expect(byId(s).sapi).toMatchObject({ tone: 'error' });
-    expect(byId(s).sapi?.description).toContain('not listening');
-  });
-
-  it('keeps SAPI neutral while the bridge is still starting', () => {
-    const s = status();
-    s.tcp.listening = false;
-    s.bridge.state = 'starting';
-    expect(byId(s).sapi).toMatchObject({ tone: 'neutral', dot: 'hollow' });
+    expect(byId(s).sapi?.tone).toBe('neutral');
   });
 
   it('shows service versions, and crashed or failed as a warning', () => {
@@ -96,11 +86,8 @@ describe('announcement', () => {
 
   it('names the problems', () => {
     const s = status();
-    s.tcp.listening = false;
     s.mcp.state = 'failed';
-    expect(announcement(deriveChips(s, true), true)).toBe(
-      'SAPI · 4449, not listening. MCP 0.0.85, failed.',
-    );
+    expect(announcement(deriveChips(s, true), true)).toBe('MCP 0.0.85, failed.');
   });
 
   it('says when the bridge is unreachable', () => {

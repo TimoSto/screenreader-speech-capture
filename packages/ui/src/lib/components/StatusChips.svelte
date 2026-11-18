@@ -8,8 +8,8 @@
 
 <ul aria-label="Bridge status">
   {#each chips as chip (chip.id)}
-    <li class={chip.tone} aria-label={chip.description}>
-      <span class="dot {chip.dot}" aria-hidden="true"></span>
+    <li class={chip.tone} aria-label={chip.description} title={chip.title}>
+      {#if chip.dot !== 'none'}<span class="dot {chip.dot}" aria-hidden="true"></span>{/if}
       <span aria-hidden="true">{chip.text}</span>
     </li>
   {/each}

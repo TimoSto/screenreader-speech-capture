@@ -88,8 +88,8 @@ API over loopback; core / adapters / stores / components layers.
 - Logo tile (44 px, radius 14, `primary`), title (title-large), mono subline:
   `host:port · bridge <version> · API <apiVersion> · <state>`.
 - Status chips (`ul` labelled "Bridge status"; each chip's `aria-label` carries the state in words):
-  `SAPI · <tcp.port>` (green while the TCP listener is ready for the voice, red when it is not
-  listening; open connections don't count, the engine reconnects for every phrase),
+  `SAPI · <tcp.port>` (neutral, no dot: the TCP listener the voice connects to, address and encoding in the
+  tooltip; it is not a state, the engine only connects when it speaks),
   `Playwright <version>`, `MCP <version>[ · crashed|failed]`, `Session #<id>` with live dot /
   `No session` (neutral, hollow dot, before the first session). There is no Input chip: native
   input unavailability shows only in the Actions panel. Without an answer from the bridge the

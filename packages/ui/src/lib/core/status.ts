@@ -27,10 +27,12 @@ export type Chip = {
   /** What the chip shows. */
   text: string;
   tone: ChipTone;
-  /** A hollow dot means "nothing there yet"; a filled one means "there is state". */
-  dot: 'filled' | 'hollow';
+  /** A hollow dot means "nothing there yet", a filled one "there is state", none "just a fact". */
+  dot: 'filled' | 'hollow' | 'none';
   /** Spoken name of the state, so it is never colour alone. */
   description: string;
+  /** Tooltip with more detail, when there is any. */
+  title?: string;
 };
 
 export function deriveChips(status: StatusDto | null, reachable: boolean): Chip[] {
@@ -57,24 +59,13 @@ function neutral(id: ChipId, text: string): Chip {
 }
 
 /**
- * The state of the listener the voice connects to. Open connections don't count: the engine
- * reconnects for every phrase, so "no connection" is normal.
+ * Where the voice must connect. It is not a state: the listener is up whenever the bridge answers,
+ * and the engine connects only when it speaks, so there is nothing to show in colour.
  */
-function sapiChip({ tcp, bridge }: StatusDto): Chip {
+function sapiChip({ tcp }: StatusDto): Chip {
   const text = `SAPI · ${tcp.port}`;
-  if (tcp.listening) {
-    return {
-      id: 'sapi',
-      text,
-      tone: 'ok',
-      dot: 'filled',
-      description: `${text}, ready for connections`,
-    };
-  }
-  if (bridge.state === 'starting') {
-    return { id: 'sapi', text, tone: 'neutral', dot: 'hollow', description: `${text}, starting` };
-  }
-  return { id: 'sapi', text, tone: 'error', dot: 'filled', description: `${text}, not listening` };
+  const title = `TCP listener the voice connects to (${tcp.host}:${tcp.port}, ${tcp.encoding})`;
+  return { id: 'sapi', text, tone: 'neutral', dot: 'none', description: title, title };
 }
 
 function serviceChip(id: ChipId, name: string, service: ServiceStatusDto): Chip {
