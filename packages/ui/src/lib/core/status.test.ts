@@ -38,10 +38,13 @@ describe('deriveChips', () => {
     expect(byId(s).mcp?.text).toBe('MCP 0.0.85 · failed');
   });
 
-  it('keeps a starting or stopped service neutral', () => {
+  it('keeps a starting or stopped service neutral, with a red (down) dot', () => {
     const s = status();
     s.playwright.state = 'starting';
-    expect(byId(s).playwright).toMatchObject({ tone: 'neutral', dot: 'hollow' });
+    expect(byId(s).playwright).toMatchObject({ tone: 'neutral', dot: 'hollow', down: true });
+    s.playwright.state = 'stopped';
+    expect(byId(s).playwright?.down).toBe(true);
+    expect(byId(s).mcp?.down).toBeUndefined();
   });
 
   it('says "No session" before the first session, then the live id', () => {
@@ -58,7 +61,7 @@ describe('deriveChips', () => {
 
   it('greys every chip out when the bridge is unreachable', () => {
     const chips = deriveChips(status(), false);
-    expect(chips.every((chip) => chip.tone === 'neutral')).toBe(true);
+    expect(chips.every((chip) => chip.tone === 'neutral' && chip.down)).toBe(true);
     expect(chips.find((chip) => chip.id === 'mcp')?.text).toBe('MCP 0.0.85');
   });
 

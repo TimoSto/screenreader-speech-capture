@@ -8,7 +8,7 @@
 
 <ul aria-label="Bridge status">
   {#each chips as chip (chip.id)}
-    <li class={chip.tone} aria-label={chip.description}>
+    <li class={chip.tone} class:down={chip.down} aria-label={chip.description}>
       <span class="dot {chip.dot}" aria-hidden="true"></span>
       <span aria-hidden="true">{chip.text}</span>
     </li>
@@ -60,6 +60,10 @@
   li.neutral {
     --dot: var(--md-sys-color-outline);
     color: var(--md-sys-color-on-surface-variant);
+  }
+
+  li.down {
+    --dot: var(--md-sys-color-error);
   }
 
   .dot {

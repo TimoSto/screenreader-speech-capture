@@ -91,7 +91,8 @@ API over loopback; core / adapters / stores / components layers.
   `Playwright <version>`, `MCP <version>[ · crashed|failed]`, `Session #<id>` with live dot /
   `No session` (neutral, hollow dot, before the first session). There is no voice (SAPI) chip and no Input chip: native
   input unavailability shows only in the Actions panel. Without an answer from the bridge the
-  chips keep the last known values but turn neutral.
+  chips keep the last known values but turn neutral with a red dot. A service that is starting or
+  stopped also gets a red dot (not ready); `No session` stays grey.
 - Right: a refresh icon button (tooltip "GET /api/v1/status") and a theme toggle. The status is read once on
   load and again only when the refresh button is clicked (no polling); a hidden `role="status"`
   region speaks only problems.

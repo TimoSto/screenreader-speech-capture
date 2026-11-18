@@ -9,19 +9,11 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <!-- md-icon-button wraps a real <button> in its shadow DOM, which handles keys and role. -->
-<span class="refresh" title="Read GET /api/v1/status again">
-  <md-icon-button aria-label="Refresh status" onclick={onRetry}>
-    <md-icon class:spin={loading}>refresh</md-icon>
-  </md-icon-button>
-</span>
+<md-icon-button title="Refresh status" onclick={onRetry}>
+  <md-icon class:spin={loading}>refresh</md-icon>
+</md-icon-button>
 
 <style>
-  .refresh {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-
   md-icon-button {
     --md-icon-button-icon-color: var(--md-sys-color-on-surface-variant);
     --md-icon-button-hover-icon-color: var(--md-sys-color-on-surface);

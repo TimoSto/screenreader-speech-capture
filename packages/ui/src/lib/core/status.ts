@@ -17,6 +17,8 @@ export type Chip = {
   dot: 'filled' | 'hollow';
   /** Spoken name of the state, so it is never colour alone. */
   description: string;
+  /** Not connected or not ready: the dot is red while the chip itself stays neutral. */
+  down?: boolean;
 };
 
 export function deriveChips(status: StatusDto | null, reachable: boolean): Chip[] {
@@ -33,11 +35,20 @@ export function deriveChips(status: StatusDto | null, reachable: boolean): Chip[
     sessionChip(status),
   ];
   // The last known values stay visible, but they are no longer a statement about now.
-  return reachable ? chips : chips.map((chip) => ({ ...chip, tone: 'neutral' as const }));
+  return reachable
+    ? chips
+    : chips.map((chip) => ({ ...chip, tone: 'neutral' as const, down: true }));
 }
 
 function neutral(id: ChipId, text: string): Chip {
-  return { id, text, tone: 'neutral', dot: 'hollow', description: `${text}, state unknown` };
+  return {
+    id,
+    text,
+    tone: 'neutral',
+    dot: 'hollow',
+    description: `${text}, state unknown`,
+    down: true,
+  };
 }
 
 function serviceChip(id: ChipId, name: string, service: ServiceStatusDto): Chip {
@@ -55,9 +66,23 @@ function serviceChip(id: ChipId, name: string, service: ServiceStatusDto): Chip 
         description: `${base}, ${service.state}`,
       };
     case 'starting':
-      return { id, text: base, tone: 'neutral', dot: 'hollow', description: `${base}, starting` };
+      return {
+        id,
+        text: base,
+        tone: 'neutral',
+        dot: 'hollow',
+        description: `${base}, starting`,
+        down: true,
+      };
     case 'stopped':
-      return { id, text: base, tone: 'neutral', dot: 'hollow', description: `${base}, stopped` };
+      return {
+        id,
+        text: base,
+        tone: 'neutral',
+        dot: 'hollow',
+        description: `${base}, stopped`,
+        down: true,
+      };
   }
 }
 
