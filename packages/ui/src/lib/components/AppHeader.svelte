@@ -16,8 +16,7 @@
     onToggleTheme: () => void;
   };
 
-  let { host, chips, announcement, loading, onRetry, theme, onToggleTheme }: Props =
-    $props();
+  let { host, chips, announcement, loading, onRetry, theme, onToggleTheme }: Props = $props();
 
   const label = $derived(theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
 </script>
@@ -25,9 +24,7 @@
 <header>
   <div class="title">
     <span class="name">Speech Capture</span>
-    <span class="meta"
-      >{host}</span
-    >
+    <span class="meta">{host}</span>
   </div>
   <StatusChips {chips} {announcement} />
   <StatusRefresh {loading} {onRetry} />
