@@ -18,6 +18,11 @@ describe('AppHeader', () => {
     await expect.element(page.getByRole('list', { name: 'Bridge status' })).toBeInTheDocument();
   });
 
+  it('starts with the logo', async () => {
+    const { container } = await render(AppHeader, props());
+    expect(container.querySelector('header > .logo-slot .logo svg')).not.toBeNull();
+  });
+
   it('toggles the theme from its button', async () => {
     const onToggleTheme = vi.fn();
     await render(AppHeader, props({ onToggleTheme }));
