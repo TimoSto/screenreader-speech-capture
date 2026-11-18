@@ -29,7 +29,6 @@
 
 <AppHeader
   host={page.url.host}
-  bridge={status?.bridge ?? null}
   {chips}
   announcement={announcement(chips, statusStore.reachable)}
   loading={statusStore.loading}

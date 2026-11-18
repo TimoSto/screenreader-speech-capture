@@ -8,7 +8,6 @@
 
   type Props = {
     host: string;
-    bridge: { version: string; apiVersion: string; state: string } | null;
     chips: Chip[];
     announcement: string;
     loading: boolean;
@@ -17,7 +16,7 @@
     onToggleTheme: () => void;
   };
 
-  let { host, bridge, chips, announcement, loading, onRetry, theme, onToggleTheme }: Props =
+  let { host, chips, announcement, loading, onRetry, theme, onToggleTheme }: Props =
     $props();
 
   const label = $derived(theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
@@ -27,8 +26,7 @@
   <div class="title">
     <span class="name">Speech Capture</span>
     <span class="meta"
-      >{host}{#if bridge}
-        · bridge {bridge.version} · API {bridge.apiVersion} · {bridge.state}{/if}</span
+      >{host}</span
     >
   </div>
   <StatusChips {chips} {announcement} />
