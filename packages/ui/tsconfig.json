@@ -4,5 +4,11 @@
     "strict": true,
     "types": ["$app/types", "node"]
   },
-  "include": ["src", "vite.config.ts", "vitest.config.ts", "vitest.components.config.ts", "vitest.node.config.ts"]
+  "include": [
+    "src",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "vitest.components.config.ts",
+    "vitest.node.config.ts"
+  ]
 }
