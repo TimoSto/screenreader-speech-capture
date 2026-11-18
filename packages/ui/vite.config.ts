@@ -21,6 +21,8 @@ export default defineConfig(({ command, mode }) => {
             filename.split(/[/\\]/).includes('node_modules') ? undefined : true,
         },
         adapter: adapter(),
+        // The bridge serves the UI under /ui; the API lives at /api/v1.
+        paths: { base: '/ui' },
       }),
     ],
   };

@@ -44,6 +44,11 @@ export function createUiMount(dir: URL, logger: Logger): UiMount | undefined {
 
   return {
     handler: async (req, res) => {
+      // The app lives under /ui (its SvelteKit base path); the bare address leads there.
+      if (new URL(req.url ?? '/', 'http://localhost').pathname === '/') {
+        res.writeHead(302, { location: '/ui/' }).end();
+        return;
+      }
       let handler: NodeHandler;
       try {
         handler = await loaded;
