@@ -41,7 +41,7 @@ project and links into `docs/`.
   The robotjs adapter is tested with a fake robotjs module here, and with the real one only on Windows.
 - **Client:** library and CLI tested against a real bridge fed by `fake-speech`, covering
   the cursor, timeouts and exit codes. `setFocus` coordinate maths (`clickPoint`) is unit-tested.
-- **UI** *(planned, [M5](../ROADMAP.md#m5-web-ui-))*: component tests with fake port implementations. End-to-end tests against a bridge
+- **UI** *(partly done, [M5](../ROADMAP.md#m5-web-ui-))*: `lib/core` logic is unit-tested in node (`*.test.ts`). Components are tested in real Chromium with Vitest browser mode and `vitest-browser-svelte` (`*.svelte.test.ts` next to each component, in its own folder), because they use `@material/web` custom elements that jsdom does not run faithfully. They get plain props, no store or adapter. Install the browser once with `pnpm --filter @screenreader-speech-capture/ui exec playwright install chromium`. End-to-end tests against a bridge
   fed by `fake-speech`.
 - **Smoke test on a real VM:** NVDA + socket voice + Chrome, checking one focus announcement and one
   native screen reader command (`Insert+T`).

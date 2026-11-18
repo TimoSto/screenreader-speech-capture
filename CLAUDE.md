@@ -119,6 +119,7 @@ shows the ones in use).
 
 ### Tests
 
+- UI components (`packages/ui/src/lib/components/<Name>/`) have `*.svelte.test.ts` tests that run in Chromium via Vitest browser mode (project `ui-components`, `vitest.components.config.ts`); needs `playwright install chromium` once. Pure logic in `lib/core` uses plain node tests.
 - Unit tests sit next to the source (`src/**/*.test.ts`) and use in-memory fakes of driven ports
   (`packages/bridge/test/fakes.ts`).
 - Test bridges run with `playwright`/`mcp` disabled (`testOverrides`), so nothing is installed.
