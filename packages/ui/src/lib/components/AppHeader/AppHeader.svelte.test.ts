@@ -1,15 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
-import { deriveChips } from '#lib/core/status.js';
 import AppHeader from './AppHeader.svelte';
 
 const props = (patch: Partial<Parameters<typeof render<typeof AppHeader>>[1]> = {}) => ({
   host: '127.0.0.1:5151',
-  chips: deriveChips(null, false),
-  announcement: '',
-  loading: false,
-  onRetry: () => {},
   theme: 'light' as const,
   onToggleTheme: () => {},
   ...patch,
@@ -23,13 +18,10 @@ describe('AppHeader', () => {
     await expect.element(page.getByRole('list', { name: 'Bridge status' })).toBeInTheDocument();
   });
 
-  it('refreshes and toggles the theme from its buttons', async () => {
-    const onRetry = vi.fn();
+  it('toggles the theme from its button', async () => {
     const onToggleTheme = vi.fn();
-    await render(AppHeader, props({ onRetry, onToggleTheme }));
-    await page.getByTitle('Refresh status').click();
+    await render(AppHeader, props({ onToggleTheme }));
     await page.getByRole('button', { name: 'Switch to dark theme' }).click();
-    expect(onRetry).toHaveBeenCalledTimes(1);
     expect(onToggleTheme).toHaveBeenCalledTimes(1);
   });
 
