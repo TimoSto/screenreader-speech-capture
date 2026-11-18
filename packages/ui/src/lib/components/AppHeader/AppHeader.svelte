@@ -1,22 +1,16 @@
 <script lang="ts">
   import '@material/web/icon/icon.js';
   import '@material/web/iconbutton/icon-button.js';
-  import StatusChips from '#lib/components/StatusChips/StatusChips.svelte';
-  import StatusRefresh from '#lib/components/StatusRefresh/StatusRefresh.svelte';
-  import type { Chip } from '#lib/core/status.js';
+  import BridgeStatus from '#lib/components/BridgeStatus/BridgeStatus.svelte';
   import type { Theme } from '#lib/core/theme.js';
 
   type Props = {
     host: string;
-    chips: Chip[];
-    announcement: string;
-    loading: boolean;
-    onRetry: () => void;
     theme: Theme;
     onToggleTheme: () => void;
   };
 
-  let { host, chips, announcement, loading, onRetry, theme, onToggleTheme }: Props = $props();
+  let { host, theme, onToggleTheme }: Props = $props();
 
   const label = $derived(theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
 </script>
@@ -26,8 +20,7 @@
     <span class="name">Speech Capture</span>
     <span class="meta">{host}</span>
   </div>
-  <StatusChips {chips} {announcement} />
-  <StatusRefresh {loading} {onRetry} />
+  <BridgeStatus />
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <!-- md-icon-button wraps a real <button> in its shadow DOM, which handles keys and role. -->
   <md-icon-button aria-label={label} title={label} onclick={onToggleTheme}>
