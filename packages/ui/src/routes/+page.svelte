@@ -6,5 +6,9 @@
 
 <main>
   <h1>Screenreader speech capture</h1>
-  <p>Bridge {data.status.bridge.version} is {data.status.bridge.state}.</p>
+  {#if data.status}
+    <p>Bridge {data.status.bridge.version} is {data.status.bridge.state}.</p>
+  {:else}
+    <p>The bridge is not reachable.</p>
+  {/if}
 </main>

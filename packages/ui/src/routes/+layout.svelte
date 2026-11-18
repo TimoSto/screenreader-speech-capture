@@ -3,7 +3,8 @@
   import { page } from '$app/state';
   import favicon from '#lib/assets/favicon.svg';
   import AppHeader from '#lib/components/AppHeader.svelte';
-  import { themeStore } from '#lib/composition.js';
+  import { statusStore, themeStore } from '#lib/composition.js';
+  import { announcement, deriveChips } from '#lib/core/status.js';
   import '#lib/styles/fonts.css';
   import '#lib/styles/tokens.css';
   import '#lib/styles/global.css';
@@ -11,7 +12,14 @@
 
   let { data, children }: LayoutProps = $props();
 
-  onMount(() => themeStore.init());
+  // The server-rendered status fills in until the store has its own answer.
+  const status = $derived(statusStore.status ?? data.status);
+  const chips = $derived(deriveChips(status, statusStore.reachable));
+
+  onMount(() => {
+    themeStore.init();
+    return statusStore.init(data.status);
+  });
 </script>
 
 <svelte:head>
@@ -21,7 +29,12 @@
 
 <AppHeader
   host={page.url.host}
-  bridge={data.status.bridge}
+  bridge={status?.bridge ?? null}
+  {chips}
+  announcement={announcement(chips, statusStore.reachable)}
+  age={statusStore.age}
+  loading={statusStore.loading}
+  onRetry={() => void statusStore.retry()}
   theme={themeStore.current}
   onToggleTheme={() => themeStore.toggle()}
 />

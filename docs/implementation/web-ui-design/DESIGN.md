@@ -87,11 +87,16 @@ API over loopback; core / adapters / stores / components layers.
 
 - Logo tile (44 px, radius 14, `primary`), title (title-large), mono subline:
   `host:port · bridge <version> · API <apiVersion> · <state>`.
-- One **status button** with chips (`aria-label` summarises all of them; opens the status side
-  sheet): voices (`1 voice · windows-1252` / `No voice`), `Playwright <version>`,
-  `MCP <version>[ · crashed]`, `Input` / `Input unavailable` (see Actions), `Session #<id>` with live dot / `No session`.
-- Right: `status <n> s ago` (mono, refresh icon, tooltip "GET /api/v1/status every 2 s") and a
-  theme toggle.
+- Status chips (`ul` labelled "Bridge status"; each chip's `aria-label` carries the state in words):
+  `SAPI · <tcp.port>` (green while the TCP listener is ready for the voice, red when it is not
+  listening; open connections don't count, the engine reconnects for every phrase),
+  `Playwright <version>`, `MCP <version>[ · crashed|failed]`, `Session #<id>` with live dot /
+  `No session` (neutral, hollow dot, before the first session). There is no Input chip: native
+  input unavailability shows only in the Actions panel. Without an answer from the bridge the
+  chips keep the last known values but turn neutral.
+- Right: `status <n> s ago` (mono, refresh icon button = retry, tooltip "GET /api/v1/status every
+  2 s"; `bridge unreachable` while polls fail) and a theme toggle. The poll runs every 2 s while the
+  tab is visible, and a hidden `role="status"` region speaks only problems, never the regular poll.
 - Bar color: `error-container` when no voice has connected, `warning-container` when Playwright or
   MCP is `crashed`/`failed`, else `surface-container`.
 - No voice also shows a banner under the bar (`role="alert"`): what to do + "Open setup".
@@ -176,8 +181,7 @@ inserts a marker first…"). Segmented button with four tabs:
 - Native input unavailable: `GET /status` has no input flag, so the UI only learns it when a request
   answers `409 INPUT_DISABLED` (robotjs couldn't be loaded, for example not on Windows). From then
   on: an `error-container` note at the top of Keys / Presets / Click, their controls disabled, the
-  status chip says `Input unavailable`. Before the first input request the chip is neutral
-  (`Input`). Playwright is unaffected.
+  Actions panel stays disabled (there is no status chip for input). Playwright is unaffected.
 - MCP not running: the Playwright info row turns `warning-container` with the reason, and the run
   button is disabled.
 - **Delayed send:** an `inverse-surface` card with a big countdown, "Sending <keys>. Switch to the
