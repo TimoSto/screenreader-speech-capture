@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import favicon from '#lib/assets/favicon.svg';
-  import AppHeader from '#lib/components/AppHeader.svelte';
+  import AppHeader from '#lib/components/AppHeader/AppHeader.svelte';
   import { statusStore, themeStore } from '#lib/composition.js';
   import { announcement, deriveChips } from '#lib/core/status.js';
   import '#lib/styles/fonts.css';

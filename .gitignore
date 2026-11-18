@@ -17,3 +17,6 @@ coverage/
 # Playwright output
 test-results/
 playwright-report/
+
+# Vitest browser mode failure screenshots
+.vitest/

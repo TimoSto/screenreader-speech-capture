@@ -1,8 +1,8 @@
 <script lang="ts">
   import '@material/web/icon/icon.js';
   import '@material/web/iconbutton/icon-button.js';
-  import StatusChips from '#lib/components/StatusChips.svelte';
-  import StatusRefresh from '#lib/components/StatusRefresh.svelte';
+  import StatusChips from '#lib/components/StatusChips/StatusChips.svelte';
+  import StatusRefresh from '#lib/components/StatusRefresh/StatusRefresh.svelte';
   import type { Chip } from '#lib/core/status.js';
   import type { Theme } from '#lib/core/theme.js';
 

@@ -41,6 +41,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The UI's component tests run in real Chromium (Vitest browser mode).
+      - run: pnpm --filter @screenreader-speech-capture/ui exec playwright install --with-deps chromium
       - run: pnpm test
 
   build:
