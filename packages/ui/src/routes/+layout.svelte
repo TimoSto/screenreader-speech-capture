@@ -18,7 +18,7 @@
 
   onMount(() => {
     themeStore.init();
-    return statusStore.init(data.status);
+    statusStore.init(data.status);
   });
 </script>
 
@@ -32,7 +32,6 @@
   bridge={status?.bridge ?? null}
   {chips}
   announcement={announcement(chips, statusStore.reachable)}
-  age={statusStore.age}
   loading={statusStore.loading}
   onRetry={() => void statusStore.retry()}
   theme={themeStore.current}

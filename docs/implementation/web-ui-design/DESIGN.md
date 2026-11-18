@@ -53,7 +53,7 @@ API over loopback; core / adapters / stores / components layers.
 
 ```
 ┌──────┬─────────────────────────────────────────────────────────────────────────┐
-│ logo │ Speech Capture · host · versions     [status chips…]   status 1 s ago ☾ │ top app bar (status bar)
+│ logo │ Speech Capture · host · versions     [status chips…]   ⟳  ☾ │ top app bar (status bar)
 ├──────┴─────────────────────────────────────────────────────────────────────────┤
 │        [No-voice banner, only when no voice is connected]                     │
 ├──────┬────────────┬──────────────────────────────────────┬────────────────────┤
@@ -92,9 +92,9 @@ API over loopback; core / adapters / stores / components layers.
   `No session` (neutral, hollow dot, before the first session). There is no voice (SAPI) chip and no Input chip: native
   input unavailability shows only in the Actions panel. Without an answer from the bridge the
   chips keep the last known values but turn neutral.
-- Right: `status <n> s ago` (mono, refresh icon button = retry, tooltip "GET /api/v1/status every
-  2 s"; `bridge unreachable` while polls fail) and a theme toggle. The poll runs every 2 s while the
-  tab is visible, and a hidden `role="status"` region speaks only problems, never the regular poll.
+- Right: a refresh icon button (tooltip "GET /api/v1/status") and a theme toggle. The status is read once on
+  load and again only when the refresh button is clicked (no polling); a hidden `role="status"`
+  region speaks only problems.
 - Bar color: `error-container` when no voice has connected, `warning-container` when Playwright or
   MCP is `crashed`/`failed`, else `surface-container`.
 - No voice also shows a banner under the bar (`role="alert"`): what to do + "Open setup".
@@ -212,7 +212,7 @@ sessions started from the UI are attributed.
 
 | UI | Bridge API (called by the BFF) |
 |---|---|
-| Status bar, status sheet | `GET /api/v1/status` every 2 s while the tab is visible, plus right after own actions |
+| Status bar, status sheet | `GET /api/v1/status` once on load, then on the refresh button |
 | Sessions list | `GET /api/v1/sessions` on load; then SSE `session` events add / update rows (start, end) |
 | + / Start | `POST /api/v1/sessions` `{ name, run? }`. If the answer has `replaced`, snackbar "Replaced session #n (`client`)" |
 | Stop / End session | `POST /api/v1/sessions/end` |
@@ -225,7 +225,7 @@ sessions started from the UI are attributed.
 | Playwright | Playwright MCP through the bridge proxy `http://127.0.0.1:<port>/playwright-mcp`, `tools/call` `browser_navigate` / `browser_click` / `browser_type` / `browser_press_key` / `browser_snapshot` (marker `mcp: <tool> …` first). `503` while MCP isn't running. |
 
 - "Live" means: the session's `endedAt` is `null`. It is kept current by the SSE `session` events;
-  the 2 s status poll (`session.current`) is the fallback when the stream is down.
+  the status refresh button (`session.current`) is the fallback when the stream is down.
 - Copy / export work on the visible (filtered) rows; export names the file
   `session-<id>.<json|jsonl|txt>`.
 

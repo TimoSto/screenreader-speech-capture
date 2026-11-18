@@ -14,7 +14,7 @@
     </li>
   {/each}
 </ul>
-<!-- Only changes of a problem state speak; the regular poll leaves this text as it is. -->
+<!-- Only changes of a problem state speak; a refresh leaves this text as it is. -->
 <span class="sr-only" role="status">{announcement}</span>
 
 <style>

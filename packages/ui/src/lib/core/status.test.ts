@@ -1,6 +1,6 @@
 import type { StatusDto } from '@screenreader-speech-capture/shared';
 import { describe, expect, it } from 'vitest';
-import { announcement, deriveChips, formatAge } from './status.js';
+import { announcement, deriveChips } from './status.js';
 
 function status(patch: Partial<StatusDto> = {}): StatusDto {
   return {
@@ -81,17 +81,5 @@ describe('announcement', () => {
 
   it('says when the bridge is unreachable', () => {
     expect(announcement(deriveChips(status(), false), false)).toBe('Bridge unreachable.');
-  });
-});
-
-describe('formatAge', () => {
-  it('counts whole seconds', () => {
-    expect(formatAge(12_999, 10_000)).toBe('status 2 s ago');
-    expect(formatAge(10_000, 10_000)).toBe('status 0 s ago');
-  });
-
-  it('never goes negative and handles no answer yet', () => {
-    expect(formatAge(9_000, 10_000)).toBe('status 0 s ago');
-    expect(formatAge(9_000, null)).toBe('status unknown');
   });
 });

@@ -5,7 +5,7 @@ export const load: LayoutServerLoad = async ({ fetch }) => {
   try {
     return { status: await bridgeApiFromEnv(fetch).status() };
   } catch {
-    // The header stays and shows "bridge unreachable"; the status store keeps polling.
+    // The header stays and shows "bridge unreachable"; the refresh button retries.
     return { status: null };
   }
 };

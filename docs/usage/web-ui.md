@@ -46,8 +46,8 @@ Selecting the status bar opens the **status panel** with everything from
 - native input: whether the last action was refused with `INPUT_DISABLED`,
 - the current session and the number of sessions.
 
-The UI polls `GET /api/v1/status` every 2 s while the tab is visible, and right after its own
-actions (saving settings, starting a session). It needs no endpoint of its own.
+The UI reads `GET /api/v1/status` once on load and again when you click the refresh button in the
+status bar; it does not poll. It needs no endpoint of its own.
 
 ## Context pane
 

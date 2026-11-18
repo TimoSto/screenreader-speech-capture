@@ -1,22 +1,8 @@
 import type { ServiceStatusDto, StatusDto } from '@screenreader-speech-capture/shared';
 
-/** How often the header asks the bridge for its status (docs/implementation/web-ui-design/DESIGN.md). */
-export const STATUS_POLL_MS = 2000;
-
 /** Where the status comes from (the HTTP adapter asks the BFF, which asks the bridge). */
 export interface StatusApi {
   fetch(): Promise<StatusDto>;
-}
-
-/** Time, timers and tab visibility, so the poll loop can be tested without a browser. */
-export interface Ticker {
-  /** Milliseconds since the epoch. */
-  now(): number;
-  /** Call `fn` every `ms` until the returned function is called. */
-  every(ms: number, fn: () => void): () => void;
-  isVisible(): boolean;
-  /** Call `fn` whenever the tab becomes visible again. Returns the way to stop. */
-  onVisible(fn: () => void): () => void;
 }
 
 export type ChipId = 'playwright' | 'mcp' | 'session';
@@ -91,7 +77,7 @@ function sessionChip({ session }: StatusDto): Chip {
 
 /**
  * The words a screen reader gets when the state changes. Empty while everything is fine, so the
- * regular poll never speaks.
+ * regular refresh never speaks.
  */
 export function announcement(chips: Chip[], reachable: boolean): string {
   if (!reachable) return 'Bridge unreachable.';
@@ -99,11 +85,4 @@ export function announcement(chips: Chip[], reachable: boolean): string {
     .filter((chip) => chip.tone === 'error' || chip.tone === 'warning')
     .map((chip) => `${chip.description}.`)
     .join(' ');
-}
-
-/** "status 2 s ago", for the refresh button. */
-export function formatAge(nowMs: number, lastOkMs: number | null): string {
-  if (lastOkMs === null) return 'status unknown';
-  const seconds = Math.max(0, Math.floor((nowMs - lastOkMs) / 1000));
-  return `status ${seconds} s ago`;
 }
