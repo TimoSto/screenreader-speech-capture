@@ -31,3 +31,50 @@ textarea {
 .mono {
   font-family: var(--app-font-mono);
 }
+
+/* Icon placeholder. Until <md-icon> is defined (JS loaded) the server-rendered ligature name
+   ("refresh") would show as plain text, and until the icon font is loaded (the layout sets
+   data-icons-ready on <html>) it would be blank. Both phases show a shimmer in the same 24px box
+   the real icon uses, so nothing shifts. Undefined <md-icon-button>s get their 40px box too. */
+md-icon-button:not(:defined) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 40px;
+  block-size: 40px;
+}
+
+md-icon:not(:defined),
+html:not([data-icons-ready]) md-icon {
+  display: inline-flex;
+  inline-size: 24px;
+  block-size: 24px;
+  overflow: hidden;
+  border-radius: 50%;
+  color: transparent;
+  user-select: none;
+  background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--md-sys-color-surface) 60%, transparent),
+      transparent
+    )
+    0 0 / 200% 100% no-repeat var(--md-sys-color-surface-container-highest);
+  animation: icon-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes icon-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  md-icon:not(:defined),
+  html:not([data-icons-ready]) md-icon {
+    animation: none;
+  }
+}

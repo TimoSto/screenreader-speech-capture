@@ -3,9 +3,10 @@
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import favicon from '#lib/assets/favicon.svg';
+  import iconFont from '@fontsource/material-symbols-outlined/files/material-symbols-outlined-latin-400-normal.woff2?url';
   import AppHeader from '#lib/components/AppHeader/AppHeader.svelte';
   import NavRail from '#lib/components/NavRail/NavRail.svelte';
-  import { themeStore } from '#lib/composition.js';
+  import { markIconFontReady, themeStore } from '#lib/composition.js';
   import type { NavItem } from '#lib/core/navigation.js';
   import '#lib/styles/fonts.css';
   import '#lib/styles/tokens.css';
@@ -20,11 +21,15 @@
     { href: resolve('/setup'), label: 'Setup', icon: 'build' },
   ];
 
-  onMount(() => themeStore.init());
+  onMount(() => {
+    themeStore.init();
+    void markIconFontReady();
+  });
 </script>
 
 <svelte:head>
   <link rel="icon" href={favicon} />
+  <link rel="preload" as="font" type="font/woff2" href={iconFont} crossorigin="anonymous" />
   <meta name="color-scheme" content="light dark" />
 </svelte:head>
 
