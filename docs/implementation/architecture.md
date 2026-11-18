@@ -232,6 +232,8 @@ imports the UI).
 
 ### Serving the UI
 
+The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's status route `/ui/api/status`. The bridge's UI handler redirects the bare `/` to `/ui/`. Code builds URLs with `resolve()` from `$app/paths`.
+
 The build of `packages/ui` (`build/`, with `handler.js`) is copied to `packages/bridge/dist/ui` by the
 bridge's build (tsdown `copy`; the bridge depends on the UI in the workspace, so `pnpm build` builds
 the UI first) and ships in the package's `files`. It has no runtime dependencies: all UI
