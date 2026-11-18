@@ -19,7 +19,7 @@ export interface Ticker {
   onVisible(fn: () => void): () => void;
 }
 
-export type ChipId = 'sapi' | 'playwright' | 'mcp' | 'session';
+export type ChipId = 'playwright' | 'mcp' | 'session';
 export type ChipTone = 'ok' | 'error' | 'warning' | 'neutral';
 
 export type Chip = {
@@ -27,25 +27,21 @@ export type Chip = {
   /** What the chip shows. */
   text: string;
   tone: ChipTone;
-  /** A hollow dot means "nothing there yet", a filled one "there is state", none "just a fact". */
-  dot: 'filled' | 'hollow' | 'none';
+  /** A hollow dot means "nothing there yet"; a filled one means "there is state". */
+  dot: 'filled' | 'hollow';
   /** Spoken name of the state, so it is never colour alone. */
   description: string;
-  /** Tooltip with more detail, when there is any. */
-  title?: string;
 };
 
 export function deriveChips(status: StatusDto | null, reachable: boolean): Chip[] {
   if (status === null) {
     return [
-      neutral('sapi', 'SAPI'),
       neutral('playwright', 'Playwright'),
       neutral('mcp', 'MCP'),
       neutral('session', 'Session'),
     ];
   }
   const chips = [
-    sapiChip(status),
     serviceChip('playwright', 'Playwright', status.playwright),
     serviceChip('mcp', 'MCP', status.mcp),
     sessionChip(status),
@@ -56,16 +52,6 @@ export function deriveChips(status: StatusDto | null, reachable: boolean): Chip[
 
 function neutral(id: ChipId, text: string): Chip {
   return { id, text, tone: 'neutral', dot: 'hollow', description: `${text}, state unknown` };
-}
-
-/**
- * Where the voice must connect. It is not a state: the listener is up whenever the bridge answers,
- * and the engine connects only when it speaks, so there is nothing to show in colour.
- */
-function sapiChip({ tcp }: StatusDto): Chip {
-  const text = `SAPI · ${tcp.port}`;
-  const title = `TCP listener the voice connects to (${tcp.host}:${tcp.port}, ${tcp.encoding})`;
-  return { id: 'sapi', text, tone: 'neutral', dot: 'none', description: title, title };
 }
 
 function serviceChip(id: ChipId, name: string, service: ServiceStatusDto): Chip {

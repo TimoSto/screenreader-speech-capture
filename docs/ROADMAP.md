@@ -64,7 +64,7 @@ GitHub issues. This file only tracks milestones.
       its package ([the web UI](implementation/architecture.md#the-web-ui-a-sveltekit-bff))
 - [x] ESLint hexagon rules for `packages/ui` (components must not call `fetch`; the rule that the
       UI imports no bridge or client code exists)
-- [x] Status bar: SAPI / Playwright / MCP / session chips, 2 s poll through the BFF, retry button
+- [x] Status bar: Playwright / MCP / session chips, 2 s poll through the BFF, retry button
 - [ ] Layout and status panel (side sheet; polls `GET /status`, or an SSE `status` event instead
       of polling)
 - [ ] Context pane: sessions (grouped by run, follow current, new / end session)

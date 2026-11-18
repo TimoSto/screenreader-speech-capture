@@ -29,17 +29,6 @@ const byId = (s: StatusDto | null, reachable = true) =>
   Object.fromEntries(deriveChips(s, reachable).map((chip) => [chip.id, chip]));
 
 describe('deriveChips', () => {
-  it('shows the SAPI port as a neutral chip with a tooltip, whatever the listener state', () => {
-    const s = status();
-    s.tcp.connections = [];
-    expect(byId(s).sapi).toMatchObject({ text: 'SAPI · 4449', tone: 'neutral', dot: 'none' });
-    expect(byId(s).sapi?.title).toBe(
-      'TCP listener the voice connects to (127.0.0.1:4449, windows-1252)',
-    );
-    s.tcp.listening = false;
-    expect(byId(s).sapi?.tone).toBe('neutral');
-  });
-
   it('shows service versions, and crashed or failed as a warning', () => {
     const s = status();
     expect(byId(s).playwright).toMatchObject({ text: 'Playwright 1.65.0', tone: 'ok' });
@@ -70,12 +59,12 @@ describe('deriveChips', () => {
   it('greys every chip out when the bridge is unreachable', () => {
     const chips = deriveChips(status(), false);
     expect(chips.every((chip) => chip.tone === 'neutral')).toBe(true);
-    expect(chips.find((chip) => chip.id === 'sapi')?.text).toBe('SAPI · 4449');
+    expect(chips.find((chip) => chip.id === 'mcp')?.text).toBe('MCP 0.0.85');
   });
 
   it('has neutral placeholder chips before the first answer', () => {
     const chips = deriveChips(null, false);
-    expect(chips.map((chip) => chip.text)).toEqual(['SAPI', 'Playwright', 'MCP', 'Session']);
+    expect(chips.map((chip) => chip.text)).toEqual(['Playwright', 'MCP', 'Session']);
   });
 });
 
