@@ -2,4 +2,14 @@
 @import '@fontsource-variable/roboto-flex/opsz.css';
 @import '@fontsource/roboto-mono/400.css';
 @import '@fontsource/roboto-mono/500.css';
-@import '@fontsource/material-symbols-outlined/latin-400.css';
+
+/* Own @font-face instead of the fontsource CSS: `block` keeps the ligature name ("refresh")
+   invisible while the font loads, where fontsource's `swap` would show it as text. */
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-display: block;
+  font-weight: 400;
+  src: url('@fontsource/material-symbols-outlined/files/material-symbols-outlined-latin-400-normal.woff2')
+    format('woff2');
+}
