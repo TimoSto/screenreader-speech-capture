@@ -8,9 +8,9 @@
 
 <ul aria-label="Bridge status">
   {#each chips as chip (chip.id)}
-    <li class={chip.tone} class:down={chip.down} aria-label={chip.description}>
+    <li class={chip.tone} class:down={chip.down} aria-label={chip.description} title={chip.text}>
       <span class="dot {chip.dot}" aria-hidden="true"></span>
-      <span aria-hidden="true">{chip.text}</span>
+      <span aria-hidden="true" class="chip-label">{chip.text}</span>
     </li>
   {/each}
 </ul>
@@ -76,6 +76,13 @@
   }
   .dot.hollow {
     background: transparent;
+  }
+
+  /* On a narrow screen only the dot stays; the chip's aria-label still says what it is. */
+  @media (width < 800px) {
+    .chip-label {
+      display: none;
+    }
   }
 
   .sr-only {
