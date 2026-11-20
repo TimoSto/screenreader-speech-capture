@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionDto } from '@screenreader-speech-capture/shared';
-import { describeSession, formatDuration, selectedSessionId } from './sessions.js';
+import { describeSession, formatDuration, selectedScope } from './sessions.js';
 
 const session = (patch: Partial<SessionDto> = {}): SessionDto => ({
   id: 7,
@@ -51,20 +51,25 @@ describe('describeSession', () => {
   });
 });
 
-describe('selectedSessionId', () => {
+describe('selectedScope', () => {
   const sessions = [session({ id: 7 }), session({ id: 6, endedAt: '2026-11-12T09:01:00.000Z' })];
 
   it('takes the requested session if it exists', () => {
-    expect(selectedSessionId('6', sessions, 7)).toBe(6);
+    expect(selectedScope('6', sessions, 7)).toBe(6);
   });
 
   it('follows the current session without a request, or with one that is gone or invalid', () => {
-    expect(selectedSessionId(null, sessions, 7)).toBe(7);
-    expect(selectedSessionId('99', sessions, 7)).toBe(7);
-    expect(selectedSessionId('abc', sessions, 7)).toBe(7);
+    expect(selectedScope(null, sessions, 7)).toBe(7);
+    expect(selectedScope('99', sessions, 7)).toBe(7);
+    expect(selectedScope('abc', sessions, 7)).toBe(7);
   });
 
-  it('selects nothing when no session is current and none is requested', () => {
-    expect(selectedSessionId(null, sessions, null)).toBeNull();
+  it('selects the speech outside sessions when asked, also while a session is current', () => {
+    expect(selectedScope('none', sessions, 7)).toBe('none');
+  });
+
+  it('falls back to the speech outside sessions when no session is current', () => {
+    expect(selectedScope(null, sessions, null)).toBe('none');
+    expect(selectedScope('99', sessions, null)).toBe('none');
   });
 });

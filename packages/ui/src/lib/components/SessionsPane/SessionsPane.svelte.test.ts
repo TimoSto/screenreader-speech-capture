@@ -32,6 +32,7 @@ const now = Date.parse('2026-11-12T09:00:04.000Z');
 const props = (patch: Record<string, unknown> = {}) => ({
   sessions: [live, ended],
   currentId: 7,
+  outsideEntries: 0,
   selectedId: 7,
   now,
   onSelect: () => {},
@@ -169,6 +170,27 @@ describe('SessionsPane', () => {
     await page.getByTitle('End session 7').click();
     await expect.element(page.getByText('Drop session #7?')).toBeVisible();
     await expect.element(page.getByText(/has no entries, so ending it deletes it/)).toBeVisible();
+  });
+
+  it('pins an "Outside sessions" row with its entry count below the list', async () => {
+    const onSelect = vi.fn();
+    await render(SessionsPane, props({ outsideEntries: 12, onSelect }));
+    const row = page.getByRole('button', {
+      name: 'Outside sessions Speech captured while no session was running, 12 entries',
+    });
+    await expect.element(row).not.toHaveAttribute('aria-current');
+    await row.click();
+    expect(onSelect).toHaveBeenCalledWith('none');
+  });
+
+  it('hides the outside row while it is empty, unless it is the selected scope', async () => {
+    const screen = await render(SessionsPane, props());
+    expect(page.getByRole('button', { name: /Outside sessions/ }).elements()).toHaveLength(0);
+    await screen.rerender(props({ sessions: [], currentId: null, selectedId: 'none' }));
+    const row = page.getByRole('button', {
+      name: 'Outside sessions Speech captured while no session was running, 0 entries',
+    });
+    await expect.element(row).toHaveAttribute('aria-current', 'true');
   });
 
   it('has no accessibility violations', async () => {

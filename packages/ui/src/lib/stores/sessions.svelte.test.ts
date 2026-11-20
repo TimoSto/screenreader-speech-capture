@@ -39,6 +39,14 @@ afterEach(() => {
 });
 
 describe('createSessionsStore', () => {
+  it('keeps the number of entries outside any session', async () => {
+    const api = fakeApi({ sessions: [], currentId: null, outsideEntries: 5 });
+    const store = createSessionsStore(api);
+    const stop = store.init(null);
+    await vi.waitFor(() => expect(store.outsideEntries).toBe(5));
+    stop();
+  });
+
   it('shows the seed at once and then reads the list', async () => {
     const api = fakeApi({ sessions: [session(2), session(1)], currentId: 2 });
     const store = createSessionsStore(api);
