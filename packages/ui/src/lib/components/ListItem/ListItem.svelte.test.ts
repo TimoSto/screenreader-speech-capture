@@ -24,6 +24,18 @@ describe('ListItem', () => {
     await expect.element(button).not.toHaveAttribute('aria-current');
   });
 
+  it('has the corner radius of md-list-item (8px) on the row and on its select button', async () => {
+    await render(ListItem, { title: 'a', onSelect: () => {} });
+    expect(getComputedStyle(document.querySelector('li')!).borderRadius).toBe('8px');
+    expect(getComputedStyle(document.querySelector('.select')!).borderRadius).toBe('8px');
+  });
+
+  it('takes another corner radius through shape, on the row and its select button', async () => {
+    await render(ListItem, { title: 'a', shape: '28px', onSelect: () => {} });
+    expect(getComputedStyle(document.querySelector('li')!).borderRadius).toBe('28px');
+    expect(getComputedStyle(document.querySelector('.select')!).borderRadius).toBe('28px');
+  });
+
   it('calls onSelect when the row is clicked', async () => {
     const onSelect = vi.fn();
     await render(ListItem, { title: 'a', onSelect });

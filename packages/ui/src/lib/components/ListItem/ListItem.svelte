@@ -16,13 +16,26 @@
      * is read as it is.
      */
     description?: string;
+    /**
+     * The row's corner radius as a CSS value. Defaults to 8px, the radius of md-list-item's
+     * focus ring (md-list-item itself has no container shape).
+     */
+    shape?: string;
     onSelect: () => void;
   };
 
-  let { title, subtitle, trailing, selected = false, description, onSelect }: Props = $props();
+  let {
+    title,
+    subtitle,
+    trailing,
+    selected = false,
+    description,
+    shape,
+    onSelect,
+  }: Props = $props();
 </script>
 
-<li class:selected>
+<li class:selected style:--list-item-shape={shape}>
   <!-- One hover and press layer for the whole row, trailing actions included. -->
   <md-ripple aria-hidden="true"></md-ripple>
   <button
@@ -52,7 +65,7 @@
     display: flex;
     align-items: center;
     min-height: 60px;
-    border-radius: 28px;
+    border-radius: var(--list-item-shape, var(--md-sys-shape-corner-small, 8px));
     color: var(--md-sys-color-on-surface);
     /* The layer follows the text colour, so it shows on the selected row too. */
     --md-ripple-hover-color: currentColor;
@@ -74,7 +87,7 @@
     min-height: 60px;
     padding: 8px 16px;
     border: 0;
-    border-radius: 28px;
+    border-radius: inherit;
     background: transparent;
     color: inherit;
     font: inherit;

@@ -45,6 +45,7 @@
 <!-- Only the live session has an action; the others get no trailing space at all. -->
 <ListItem
   title={session.name}
+  shape="var(--md-sys-shape-corner-extra-large, 28px)"
   {subtitle}
   trailing={live ? stop : undefined}
   {selected}

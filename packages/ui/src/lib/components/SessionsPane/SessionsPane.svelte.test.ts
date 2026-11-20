@@ -60,6 +60,13 @@ describe('SessionsPane', () => {
       .not.toHaveAttribute('aria-current');
   });
 
+  it('keeps the session rows fully rounded (28px), unlike the 8px default of a list item', async () => {
+    await render(SessionsPane, props());
+    for (const row of document.querySelectorAll('ul > li')) {
+      expect(getComputedStyle(row).borderRadius).toBe('28px');
+    }
+  });
+
   it('labels the entry count in the visible meta line', async () => {
     await render(SessionsPane, props());
     const meta = [...document.querySelectorAll('.meta')].map((el) => el.textContent);
