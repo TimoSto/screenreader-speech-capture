@@ -31,7 +31,12 @@ describe('formatDuration', () => {
 describe('describeSession', () => {
   it('measures a live session up to now', () => {
     const meta = describeSession(session(), Date.parse('2026-11-12T09:00:12.000Z'));
-    expect(meta).toMatchObject({ id: '#7', run: 'nightly-42', duration: '12 s', entries: 3 });
+    expect(meta).toMatchObject({
+      id: '#7',
+      run: 'nightly-42',
+      duration: '12 s',
+      entries: '3 entries',
+    });
     expect(meta.spoken).toBe('Session 7, live, run nightly-42, 12 s, 3 entries');
   });
 
@@ -41,6 +46,7 @@ describe('describeSession', () => {
       Date.parse('2026-11-12T10:00:00.000Z'),
     );
     expect(meta.duration).toBe('3 min 12 s');
+    expect(meta.entries).toBe('1 entry');
     expect(meta.spoken).toBe('Session 7, 3 min 12 s, 1 entry');
   });
 });

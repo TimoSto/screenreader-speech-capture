@@ -28,7 +28,8 @@ export type SessionMeta = {
   id: string;
   run: string | null;
   duration: string;
-  entries: number;
+  /** `4 entries`, `1 entry` */
+  entries: string;
   /** The same facts as a sentence, for the screen reader. */
   spoken: string;
 };
@@ -38,18 +39,19 @@ export function describeSession(session: SessionDto, now: number): SessionMeta {
   const end = session.endedAt === null ? now : Date.parse(session.endedAt);
   const duration = formatDuration(end - Date.parse(session.startedAt));
   const live = session.endedAt === null;
+  const entries = `${session.entries} ${session.entries === 1 ? 'entry' : 'entries'}`;
   const parts = [
     `Session ${session.id}`,
     live ? 'live' : null,
     session.run === null ? null : `run ${session.run}`,
     duration,
-    `${session.entries} ${session.entries === 1 ? 'entry' : 'entries'}`,
+    entries,
   ];
   return {
     id: `#${session.id}`,
     run: session.run,
     duration,
-    entries: session.entries,
+    entries,
     spoken: parts.filter((part) => part !== null).join(', '),
   };
 }

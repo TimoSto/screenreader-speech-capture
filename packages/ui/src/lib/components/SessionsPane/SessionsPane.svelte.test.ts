@@ -60,6 +60,13 @@ describe('SessionsPane', () => {
       .not.toHaveAttribute('aria-current');
   });
 
+  it('labels the entry count in the visible meta line', async () => {
+    await render(SessionsPane, props());
+    const meta = [...document.querySelectorAll('.meta')].map((el) => el.textContent);
+    expect(meta[0]).toContain('4 entries');
+    expect(meta[1]).toContain('12 entries');
+  });
+
   it('puts the stop button only on the live session, beside its select button', async () => {
     await render(SessionsPane, props());
     expect(page.getByTitle('End session 7').elements()).toHaveLength(1);
