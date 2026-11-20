@@ -38,6 +38,11 @@ const UI_CLIENT = 'web-ui';
  */
 export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
   const root = baseUrl.replace(/\/+$/, '') + API_PREFIX;
+  // SvelteKit's `event.fetch` adds `Origin: <the UI's own origin>` to every call to another origin
+  // (`pnpm dev:ui`: http://localhost:5173). The bridge refuses a POST from any origin but its own
+  // (docs/usage/security.md#host-and-origin), so name the bridge itself: this is a server-side
+  // call, not a page of another site.
+  const origin = new URL(root).origin;
 
   async function call(method: 'GET' | 'POST', path: string, body?: unknown): Promise<unknown> {
     let response: Response;
@@ -46,6 +51,7 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
         method,
         headers: {
           accept: 'application/json',
+          origin,
           [CLIENT_HEADER]: UI_CLIENT,
           ...(body === undefined ? {} : { 'content-type': 'application/json' }),
         },

@@ -97,6 +97,8 @@ describe('createBridgeApi', () => {
       expect(seen?.headers).toMatchObject({
         'content-type': 'application/json',
         'x-sr-speech-client': 'web-ui',
+        // not SvelteKit's default (the UI's own origin), which the bridge refuses on a POST
+        origin: 'http://bridge',
       });
     });
 
