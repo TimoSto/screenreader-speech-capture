@@ -57,7 +57,13 @@
 </section>
 
 <StartSessionDialog open={startOpen} {onStart} onClose={() => (startOpen = false)} />
-<EndSessionDialog open={endOpen} sessionId={currentId} {onEnd} onClose={() => (endOpen = false)} />
+<EndSessionDialog
+  open={endOpen}
+  sessionId={currentId}
+  entries={sessions.find((session) => session.id === currentId)?.entries ?? null}
+  {onEnd}
+  onClose={() => (endOpen = false)}
+/>
 
 <style>
   section {
