@@ -120,7 +120,7 @@ describe('FetchBridgeApi requests', () => {
     const { fetch, calls } = fakeFetch(({ method }) =>
       method === 'POST'
         ? json({ ...sessionDto, client: 'me pid 1', replaced: other }, 201)
-        : json({ sessions: [], currentId: null }),
+        : json({ sessions: [], currentId: null, outsideEntries: 0 }),
     );
     const bridge = new FetchBridgeApi({
       baseUrl: () => Promise.resolve('http://vm:5151'),
@@ -142,7 +142,7 @@ describe('FetchBridgeApi requests', () => {
   it('maps clear, end session and the session list', async () => {
     const { fetch, calls } = fakeFetch(({ method }) =>
       method === 'GET'
-        ? json({ sessions: [sessionDto], currentId: 2 })
+        ? json({ sessions: [sessionDto], currentId: 2, outsideEntries: 0 })
         : new Response(null, { status: 204 }),
     );
     const bridge = api(fetch);

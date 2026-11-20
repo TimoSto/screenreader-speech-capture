@@ -34,11 +34,7 @@
 </svelte:head>
 
 <div class="app">
-  <AppHeader
-    host={page.url.host}
-    theme={themeStore.current}
-    onToggleTheme={() => themeStore.toggle()}
-  />
+  <AppHeader host={page.url.host} />
 
   <div class="body">
     <NavRail items={navItems} currentPath={page.url.pathname} />

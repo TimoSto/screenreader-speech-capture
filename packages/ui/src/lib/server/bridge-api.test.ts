@@ -77,9 +77,9 @@ describe('createBridgeApi', () => {
     it('lists the sessions', async () => {
       const api = createBridgeApi(
         'http://bridge',
-        fakeFetch(() => json({ sessions: [session], currentId: 7 })),
+        fakeFetch(() => json({ sessions: [session], currentId: 7, outsideEntries: 4 })),
       );
-      await expect(api.sessions()).resolves.toMatchObject({ currentId: 7 });
+      await expect(api.sessions()).resolves.toMatchObject({ currentId: 7, outsideEntries: 4 });
     });
 
     it('starts a session with a JSON body and names itself as the client', async () => {
