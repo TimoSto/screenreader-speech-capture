@@ -27,7 +27,7 @@
   nav {
     flex: none;
     width: var(--app-rail-width);
-    padding: 12px 0;
+    padding: var(--app-gutter) 0;
     background: var(--md-sys-color-surface);
   }
 

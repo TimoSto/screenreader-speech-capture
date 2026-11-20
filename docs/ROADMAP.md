@@ -68,7 +68,7 @@ GitHub issues. This file only tracks milestones.
 - [x] Navigation rail (Monitor `/ui/`, Settings `/ui/settings`, Setup `/ui/setup`; text-only pages so far)
 - [ ] Layout and status panel (side sheet; polls `GET /status`, or an SSE `status` event instead
       of polling)
-- [ ] Context pane: sessions (grouped by run, follow current, new / end session)
+- [x] Context pane: sessions (newest first, follow the current one, new / end session dialogs, selection in `?session=`; the list is polled every 3 s until the UI has an SSE feed)
 - [ ] Live log per session (follow, filter, markers, export, wipe)
 - [ ] Actions panel: keys, presets, click, delayed send (needs M4)
 - [x] Explicit light / dark toggle in the top bar (`data-theme` on `<html>`, choice remembered in
