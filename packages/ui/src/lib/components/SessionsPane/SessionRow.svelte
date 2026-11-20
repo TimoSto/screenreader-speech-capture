@@ -54,9 +54,16 @@
 />
 
 <style>
+  /* One line. The run name and then the entry count shrink with an ellipsis; the rest stays whole. */
   .meta {
     display: flex;
     align-items: center;
+    min-width: 0;
+  }
+
+  .meta > span {
+    flex: none;
+    white-space: nowrap;
   }
 
   .meta > :not(:last-child)::after {
@@ -67,7 +74,10 @@
     content: none;
   }
 
-  .meta > .run {
+  .meta > .run,
+  .meta > span:last-child {
+    flex: 0 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
   }
