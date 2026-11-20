@@ -59,4 +59,55 @@ describe('createBridgeApi', () => {
     );
     await expect(api.status()).rejects.toMatchObject({ status: 502 });
   });
+
+  describe('sessions', () => {
+    const session = {
+      id: 7,
+      name: 'checkout test',
+      run: null,
+      client: 'web-ui',
+      startedAt: '2026-01-01T00:00:00.000Z',
+      endedAt: null,
+      startSeq: 0,
+      firstSeq: null,
+      lastSeq: null,
+      entries: 0,
+    };
+
+    it('lists the sessions', async () => {
+      const api = createBridgeApi(
+        'http://bridge',
+        fakeFetch(() => json({ sessions: [session], currentId: 7 })),
+      );
+      await expect(api.sessions()).resolves.toMatchObject({ currentId: 7 });
+    });
+
+    it('starts a session with a JSON body and names itself as the client', async () => {
+      let seen: RequestInit | undefined;
+      let requested = '';
+      const api = createBridgeApi('http://bridge', (input, init) => {
+        requested = new Request(input).url;
+        seen = init;
+        return Promise.resolve(json({ ...session, replaced: null }, 201));
+      });
+      await api.startSession({ name: 'checkout test', run: 'nightly-42' });
+      expect(requested).toBe('http://bridge/api/v1/sessions');
+      expect(seen?.method).toBe('POST');
+      expect(seen?.body).toBe('{"name":"checkout test","run":"nightly-42"}');
+      expect(seen?.headers).toMatchObject({
+        'content-type': 'application/json',
+        'x-sr-speech-client': 'web-ui',
+      });
+    });
+
+    it('ends the current session and accepts the empty 204 answer', async () => {
+      let requested = '';
+      const api = createBridgeApi('http://bridge', (input) => {
+        requested = new Request(input).url;
+        return Promise.resolve(new Response(null, { status: 204 }));
+      });
+      await expect(api.endSession()).resolves.toBeUndefined();
+      expect(requested).toBe('http://bridge/api/v1/sessions/end');
+    });
+  });
 });

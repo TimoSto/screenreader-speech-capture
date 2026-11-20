@@ -1,0 +1,95 @@
+/* eslint-disable @typescript-eslint/unbound-method -- `vi.fn` spies on the fake API are asserted on directly */
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { SessionDto } from '@screenreader-speech-capture/shared';
+import type { SessionsApi } from '#lib/core/sessions.js';
+import { createSessionsStore } from './sessions.svelte.js';
+
+const session = (id: number, endedAt: string | null = null): SessionDto => ({
+  id,
+  name: `session ${id}`,
+  run: null,
+  client: null,
+  startedAt: '2026-11-12T09:00:00.000Z',
+  endedAt,
+  startSeq: 0,
+  firstSeq: null,
+  lastSeq: null,
+  entries: 0,
+});
+
+function fakeApi(initial: { sessions: SessionDto[]; currentId: number | null }) {
+  let state = initial;
+  const api: SessionsApi = {
+    list: vi.fn(() => Promise.resolve(state)),
+    start: vi.fn((name: string) => {
+      const started = session(state.sessions.length + 1);
+      state = { sessions: [started, ...state.sessions], currentId: started.id };
+      return Promise.resolve({ ...started, name, replaced: null });
+    }),
+    end: vi.fn(() => {
+      state = { ...state, currentId: null };
+      return Promise.resolve();
+    }),
+  };
+  return api;
+}
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe('createSessionsStore', () => {
+  it('shows the seed at once and then reads the list', async () => {
+    const api = fakeApi({ sessions: [session(2), session(1)], currentId: 2 });
+    const store = createSessionsStore(api);
+    const stop = store.init({ sessions: [session(1)], currentId: 1 });
+    expect(store.currentId).toBe(1);
+    await vi.waitFor(() => expect(store.currentId).toBe(2));
+    expect(store.sessions.map((s) => s.id)).toEqual([2, 1]);
+    stop();
+  });
+
+  it('keeps the last list when the bridge cannot be reached', async () => {
+    const api = fakeApi({ sessions: [session(1)], currentId: 1 });
+    vi.mocked(api.list).mockRejectedValue(new Error('down'));
+    const store = createSessionsStore(api);
+    const stop = store.init({ sessions: [session(1)], currentId: 1 });
+    await vi.waitFor(() => expect(store.reachable).toBe(false));
+    expect(store.sessions).toHaveLength(1);
+    stop();
+  });
+
+  it('reads again after a start and after an end', async () => {
+    const api = fakeApi({ sessions: [], currentId: null });
+    const store = createSessionsStore(api);
+    const stop = store.init(null);
+    await store.start('checkout test', null);
+    expect(api.start).toHaveBeenCalledWith('checkout test', null);
+    expect(store.currentId).toBe(1);
+    await store.end();
+    expect(store.currentId).toBeNull();
+    stop();
+  });
+
+  it('lets a failed start reject with the bridge message and changes nothing', async () => {
+    const api = fakeApi({ sessions: [], currentId: null });
+    vi.mocked(api.start).mockRejectedValue(new Error('name too long'));
+    const store = createSessionsStore(api);
+    await expect(store.start('x', null)).rejects.toThrow('name too long');
+    expect(store.sessions).toEqual([]);
+  });
+
+  it('ticks now only while a session is live and stops on dispose', () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    const api = fakeApi({ sessions: [session(1)], currentId: 1 });
+    const store = createSessionsStore(api);
+    const stop = store.init({ sessions: [session(1)], currentId: 1 });
+    const before = store.now;
+    vi.advanceTimersByTime(1000);
+    expect(store.now).toBeGreaterThan(before);
+    stop();
+    const stopped = store.now;
+    vi.advanceTimersByTime(5000);
+    expect(store.now).toBe(stopped);
+  });
+});

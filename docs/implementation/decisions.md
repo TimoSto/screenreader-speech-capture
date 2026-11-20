@@ -271,3 +271,14 @@ load function is caught by SvelteKit, not the bridge); and the UI needs the brid
 which is true whenever the bridge runs. Considered and rejected: static files with the browser calling
 the API (no place for server-side logic or later authentication), a separate port (more configuration
 and a second origin), and a supervised child process (heavier than needed for a handler).
+
+## The UI builds its own lists instead of using `md-list`
+
+`md-list` renders a `<ul>` in its shadow DOM and `md-list-item` an `<li>`, so the accessibility tree
+becomes `md-list > ul > md-list-item > li`, which axe rejects and which can't be fixed from outside.
+`md-list-item` is also the one interactive element of its row, but the sessions pane needs a select
+button and a stop button side by side (an interactive element inside another is invalid). So lists are
+plain `ul > li` with `button`s styled with the theme tokens (like the navigation rail); Material Web
+stays for icon buttons, dialogs and text fields. Icon buttons carry `aria-label` and a `title`; the
+axe check in `SessionsPane.svelte.test.ts` turns off `label-content-name-mismatch`, which flags the
+icon ligature text (`add`, `stop`) as a visible label.
