@@ -31,7 +31,7 @@ event of \`GET /speech/stream\` and the replay of a \`Last-Event-ID\` above ever
 removed \`restartRequired\` again (an exception to "minor versions only add", since no client
 existed): \`PUT /config\` now only saves, a setting takes effect on the next start, and \`GET\`
 shows the settings in use. 1.14 added native input (\`POST /input/click\`, \`POST /input/keys\`) and
-the \`INPUT_DISABLED\` error code again.
+the \`INPUT_DISABLED\` error code again. 1.15 added \`outsideEntries\` to \`GET /sessions\`.
 
 Every error has the same body (\`ErrorBody\`). Clients must handle unknown error codes as errors
 of their HTTP status.
@@ -452,7 +452,8 @@ so a web page can't add markers cross-origin without a CORS preflight. At most 1
       operationId: 'listSessions',
       summary: 'List the sessions',
       description:
-        'The current session and the ended ones that still have entries in the buffer, newest first.',
+        'The current session and the ended ones that still have entries in the buffer, newest first, ' +
+        'and the number of entries outside any session (`outsideEntries`, since API 1.15).',
       responses: {
         '200': {
           description: 'The sessions.',

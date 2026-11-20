@@ -20,6 +20,8 @@ export interface SessionList {
   /** The current session and the ended ones with entries in the buffer, newest first. */
   sessions: SessionSummary[];
   currentId: number | null;
+  /** Entries in the buffer that were recorded outside any session. */
+  outsideEntries: number;
 }
 
 /** Sessions group the speech of one test or agent task (docs/usage/speech-capture.md#sessions). */

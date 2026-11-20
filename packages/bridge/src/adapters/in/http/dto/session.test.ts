@@ -22,10 +22,11 @@ describe('session DTOs', () => {
     expect(toSessionDto(session(AT)).endedAt).toBe(AT_ISO);
   });
 
-  it('maps the list with the current id', () => {
-    expect(toSessionListDto({ sessions: [session()], currentId: 1 })).toEqual({
+  it('maps the list with the current id and the entries outside sessions', () => {
+    expect(toSessionListDto({ sessions: [session()], currentId: 1, outsideEntries: 3 })).toEqual({
       sessions: [toSessionDto(session())],
       currentId: 1,
+      outsideEntries: 3,
     });
   });
 });

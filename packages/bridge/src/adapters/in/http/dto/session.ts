@@ -34,6 +34,10 @@ export function toStartSessionResponseDto({
   return { ...toSessionDto(session), replaced: replaced && toSessionDto(replaced) };
 }
 
-export function toSessionListDto({ sessions, currentId }: SessionList): SessionListDto {
-  return { sessions: sessions.map(toSessionDto), currentId };
+export function toSessionListDto({
+  sessions,
+  currentId,
+  outsideEntries,
+}: SessionList): SessionListDto {
+  return { sessions: sessions.map(toSessionDto), currentId, outsideEntries };
 }

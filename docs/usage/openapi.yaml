@@ -2,7 +2,7 @@
 openapi: 3.1.0
 info:
   title: screenreader-speech-capture bridge API
-  version: '1.14'
+  version: '1.15'
   summary: Capture what a screen reader says and read it over HTTP.
   description: |
     REST + Server-Sent Events API of the bridge. `info.version` is the API version that
@@ -26,7 +26,7 @@ info:
     removed `restartRequired` again (an exception to "minor versions only add", since no client
     existed): `PUT /config` now only saves, a setting takes effect on the next start, and `GET`
     shows the settings in use. 1.14 added native input (`POST /input/click`, `POST /input/keys`) and
-    the `INPUT_DISABLED` error code again.
+    the `INPUT_DISABLED` error code again. 1.15 added `outsideEntries` to `GET /sessions`.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -330,7 +330,7 @@ paths:
         - sessions
       operationId: listSessions
       summary: List the sessions
-      description: The current session and the ended ones that still have entries in the buffer, newest first.
+      description: The current session and the ended ones that still have entries in the buffer, newest first, and the number of entries outside any session (`outsideEntries`, since API 1.15).
       responses:
         '200':
           description: The sessions.
@@ -823,10 +823,15 @@ components:
             - type: integer
               minimum: 1
             - type: 'null'
+        outsideEntries:
+          type: integer
+          minimum: 0
+          description: Entries in the buffer that were recorded outside any session (`session=none`). Added in API 1.15.
       required:
         - sessions
         - currentId
-      description: '`GET /sessions`: the current session and the ended ones with entries in the buffer, newest first.'
+        - outsideEntries
+      description: '`GET /sessions`: the current session and the ended ones with entries in the buffer, newest first, and how many entries lie outside any session.'
     StartSessionRequest:
       type: object
       properties:
