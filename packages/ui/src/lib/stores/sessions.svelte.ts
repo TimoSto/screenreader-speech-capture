@@ -9,6 +9,7 @@ export function createSessionsStore(api: SessionsApi) {
   let sessions = $state<SessionDto[]>([]);
   let currentId = $state<number | null>(null);
   let reachable = $state(true);
+  let loaded = $state(false);
   let now = $state(Date.now());
   let inFlight: Promise<void> | null = null;
 
@@ -16,6 +17,7 @@ export function createSessionsStore(api: SessionsApi) {
     sessions = list.sessions;
     currentId = list.currentId;
     now = Date.now();
+    loaded = true;
   }
 
   function read(): Promise<void> {
@@ -47,6 +49,10 @@ export function createSessionsStore(api: SessionsApi) {
     },
     get currentId() {
       return currentId;
+    },
+    /** Whether a list has been applied yet; until then the page shows what the server rendered. */
+    get loaded() {
+      return loaded;
     },
     get reachable() {
       return reachable;

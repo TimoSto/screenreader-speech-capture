@@ -49,6 +49,23 @@ describe('createSessionsStore', () => {
     stop();
   });
 
+  it('is loaded once a list is applied, and not after a failed first read', async () => {
+    const api = fakeApi({ sessions: [session(1)], currentId: 1 });
+    const store = createSessionsStore(api);
+    expect(store.loaded).toBe(false);
+    const stop = store.init(null);
+    await vi.waitFor(() => expect(store.loaded).toBe(true));
+    stop();
+
+    const down = fakeApi({ sessions: [], currentId: null });
+    vi.mocked(down.list).mockRejectedValue(new Error('down'));
+    const failed = createSessionsStore(down);
+    const stopFailed = failed.init(null);
+    await vi.waitFor(() => expect(failed.reachable).toBe(false));
+    expect(failed.loaded).toBe(false);
+    stopFailed();
+  });
+
   it('keeps the last list when the bridge cannot be reached', async () => {
     const api = fakeApi({ sessions: [session(1)], currentId: 1 });
     vi.mocked(api.list).mockRejectedValue(new Error('down'));

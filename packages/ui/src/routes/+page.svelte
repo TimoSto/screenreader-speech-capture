@@ -10,19 +10,25 @@
 
   let { data }: PageProps = $props();
 
+  // Until the store has read the list, show what the server rendered (`+page.server.ts`), so the
+  // server's HTML already has the sessions. The store is shared by all requests: it is never
+  // filled on the server.
+  const list = $derived(
+    sessionsStore.loaded
+      ? { sessions: sessionsStore.sessions, currentId: sessionsStore.currentId }
+      : (data.sessions ?? { sessions: [], currentId: null }),
+  );
+  const now = $derived(sessionsStore.loaded ? sessionsStore.now : data.now);
+
   // The URL names the selected session; without it the pane follows the current one.
   const selectedId = $derived(
-    selectedSessionId(
-      page.url.searchParams.get('session'),
-      sessionsStore.sessions,
-      sessionsStore.currentId,
-    ),
+    selectedSessionId(page.url.searchParams.get('session'), list.sessions, list.currentId),
   );
 
   onMount(() => sessionsStore.init(data.sessions));
 
   function select(id: number | null): Promise<void> {
-    const live = id === null || id === sessionsStore.currentId;
+    const live = id === null || id === list.currentId;
     // eslint-disable-next-line svelte/no-navigation-without-resolve
     return goto(live ? resolve('/') : `${resolve('/')}?session=${id}`, { reset: false });
   }
@@ -36,10 +42,10 @@
 <div class="monitor">
   <aside>
     <SessionsPane
-      sessions={sessionsStore.sessions}
-      currentId={sessionsStore.currentId}
+      sessions={list.sessions}
+      currentId={list.currentId}
       {selectedId}
-      now={sessionsStore.now}
+      {now}
       onSelect={(id: number) => void select(id)}
       onStart={start}
       onEnd={() => sessionsStore.end()}
