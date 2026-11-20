@@ -145,7 +145,7 @@
   /* The buttons stack; the section's 12px padding and the 72px strip keep the first one at the
      same x (and y) as when expanded. */
   section.collapsed {
-    align-items: center;
+    align-items: flex-start;
   }
 
   .collapsed header {
