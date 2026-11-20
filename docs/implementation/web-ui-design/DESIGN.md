@@ -125,8 +125,12 @@ Just a list:
 - The selection is in the URL (`?session=7`).
 - Following: selecting the live session keeps following, so a new session is selected when it
   starts. Selecting an ended session stops following. There is no switch for it.
-- Entries outside any session (`sessionId: null`) are not shown. "All" and "Outside sessions" are
-  dropped on purpose.
+- **Outside sessions:** one row pinned below the list (not part of the newest-first order, no
+  radius change): title "Outside sessions", mono meta line with the entry count (`outsideEntries`
+  of `GET /sessions`). It selects the entries with `sessionId: null` (`?session=none`, always
+  spelled out in the URL). It is hidden while the count is 0, unless it is the selected scope. With
+  no current session and no `?session=`, the pane falls back to it, so the log is never empty
+  because nothing is selected. There is no "All" row.
 - A session disappears once its entries leave the buffer. Empty list: "No sessions in the buffer.
   Start one with +."
 
@@ -215,9 +219,11 @@ sessions started from the UI are attributed.
 |---|---|
 | Status bar, status sheet | `GET /api/v1/status` once on load, then on the refresh button |
 | Sessions list | `GET /api/v1/sessions` on load; then SSE `session` events add / update rows (start, end) |
+| Outside sessions row | `outsideEntries` of the same `GET /api/v1/sessions` (since API 1.15) |
 | + / Start | `POST /api/v1/sessions` `{ name, run? }`. If the answer has `replaced`, snackbar "Replaced session #n (`client`)" |
 | Stop / End session | `POST /api/v1/sessions/end` |
 | Log of a session | `GET /api/v1/speech?session=<id>&since=<startSeq - 1>` (page with `hasMore`), then `GET /api/v1/speech/stream?session=<id>`, relayed to the browser by a BFF streaming route |
+| Log outside sessions | The same with `session=none` and `since=0` (no `startSeq`) |
 | Reconnect | SSE `Last-Event-ID`; the stream's first `position` event tells where it starts; `truncated` event or `truncated: true` → gap row |
 | Add marker | `POST /api/v1/markers` `{ label }` |
 | Wipe | `DELETE /api/v1/speech` |
@@ -247,8 +253,8 @@ sessions started from the UI are attributed.
 ## Changes from web-ui.md
 
 - Sessions pane reduced to a plain list: no current-session card, no "Follow current session"
-  switch (following is implicit), no grouping by `run` (run is in the meta line), no "All" /
-  "Outside sessions" (entries outside sessions are not shown).
+  switch (following is implicit), no grouping by `run` (run is in the meta line), no "All". The
+  "Outside sessions" row of web-ui.md stays, pinned below the list, with the entry count.
 - Actions moved from below the log into a toggleable panel on the right of the log pane.
 - New **Playwright** tab in the Actions panel.
 
