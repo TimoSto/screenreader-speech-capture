@@ -46,7 +46,7 @@ describe('SessionService', () => {
       entries: 0,
     });
     expect(published).toEqual([{ type: 'session', session }]);
-    expect(sessions.list()).toEqual({ sessions: [session], currentId: 1 });
+    expect(sessions.list()).toEqual({ sessions: [session], currentId: 1, outsideEntries: 0 });
   });
 
   it('ends the previous session first, publishing both, with the ended one counted', () => {
@@ -80,7 +80,7 @@ describe('SessionService', () => {
       session: { id: 1, endedAt: expect.any(Date) as Date },
     });
     // Ended without entries: nothing left to list.
-    expect(sessions.list()).toEqual({ sessions: [], currentId: null });
+    expect(sessions.list()).toEqual({ sessions: [], currentId: null, outsideEntries: 0 });
   });
 
   it.each([

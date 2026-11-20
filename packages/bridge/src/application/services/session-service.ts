@@ -11,7 +11,10 @@ import type { Logger } from '../ports/out/logger.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 
 interface SessionServiceDeps {
-  log: Pick<SpeechLog, 'startSession' | 'endSession' | 'sessions' | 'currentSession'>;
+  log: Pick<
+    SpeechLog,
+    'startSession' | 'endSession' | 'sessions' | 'currentSession' | 'outsideEntries'
+  >;
   events: SpeechEventBus;
   clock: Pick<Clock, 'now'>;
   logger: Logger;
@@ -62,6 +65,7 @@ export class SessionService implements ManageSessions {
     return {
       sessions: this.deps.log.sessions(),
       currentId: this.deps.log.currentSession()?.id ?? null,
+      outsideEntries: this.deps.log.outsideEntries(),
     };
   }
 }
