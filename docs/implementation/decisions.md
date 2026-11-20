@@ -282,3 +282,10 @@ plain `ul > li` with `button`s styled with the theme tokens (like the navigation
 stays for icon buttons, dialogs and text fields. Icon buttons carry `aria-label` and a `title`; the
 axe check in `SessionsPane.svelte.test.ts` turns off `label-content-name-mismatch`, which flags the
 icon ligature text (`add`, `stop`) as a visible label.
+
+## The UI's server build is self-contained
+
+`adapter-node` leaves a package's `dependencies` external, but the bridge ships `dist/ui` without a
+`node_modules` (a global install only has the bridge's own dependencies). So `packages/ui/vite.config.ts`
+bundles what the server code imports (`ssr.noExternal`), and `packages/bridge/tsdown.config.ts` fails the
+build when a bare import is left in `ui/build/server`.

@@ -13,6 +13,9 @@ export default defineConfig(({ command, mode }) => {
     if (env.SR_BRIDGE_API_URL) process.env.SR_BRIDGE_API_URL ??= env.SR_BRIDGE_API_URL;
   }
   return {
+    // The bridge ships `dist/ui` without a `node_modules`, so the server build must be
+    // self-contained. adapter-node leaves `dependencies` external; bundle the ones the SSR code imports.
+    ssr: { noExternal: ['@material/web'] },
     plugins: [
       sveltekit({
         compilerOptions: {
