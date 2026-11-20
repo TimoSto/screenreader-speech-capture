@@ -41,6 +41,13 @@ const props = (patch: Record<string, unknown> = {}) => ({
   ...patch,
 });
 
+/** `md-icon-button` moves `aria-expanded` from its host to the real `<button>` in its shadow root. */
+const innerExpanded = (title: string): string | null | undefined =>
+  document
+    .querySelector(`md-icon-button[title="${title}"]`)
+    ?.shadowRoot?.querySelector('button')
+    ?.getAttribute('aria-expanded');
+
 describe('SessionsPane collapsing', () => {
   it('has no collapse button without a handler', async () => {
     await render(SessionsPane, props());
@@ -51,19 +58,28 @@ describe('SessionsPane collapsing', () => {
     const onToggleCollapse = vi.fn();
     await render(SessionsPane, props({ onToggleCollapse }));
     const button = page.getByTitle('Collapse sessions');
-    await expect.element(button).toHaveAttribute('aria-expanded', 'true');
+    await expect.poll(() => innerExpanded('Collapse sessions')).toBe('true');
     await button.click();
     expect(onToggleCollapse).toHaveBeenCalledOnce();
   });
 
   it('keeps only the buttons while collapsed', async () => {
     await render(SessionsPane, props({ collapsed: true, onToggleCollapse: () => {} }));
-    await expect
-      .element(page.getByTitle('Expand sessions'))
-      .toHaveAttribute('aria-expanded', 'false');
+    await expect.poll(() => innerExpanded('Expand sessions')).toBe('false');
     await expect.element(page.getByTitle('End session 7')).toBeVisible();
     expect(document.querySelector('ul')).toBeNull();
     expect(document.querySelector('section[aria-labelledby]')).not.toBeNull();
+  });
+
+  it('keeps the collapse button where it is when the pane collapses', async () => {
+    const rect = () =>
+      document.querySelector('md-icon-button.collapse')?.getBoundingClientRect() ?? null;
+    const screen = await render(SessionsPane, props({ onToggleCollapse: () => {} }));
+    const expanded = rect();
+    await screen.rerender({ collapsed: true });
+    const collapsed = rect();
+    expect(expanded).not.toBeNull();
+    expect([collapsed?.left, collapsed?.top]).toEqual([expanded?.left, expanded?.top]);
   });
 
   it('has no axe violations while collapsed', async () => {
@@ -71,8 +87,11 @@ describe('SessionsPane collapsing', () => {
       SessionsPane,
       props({ collapsed: true, onToggleCollapse: () => {} }),
     );
-    const results = await axe.run(container);
-    expect(results.violations).toEqual([]);
+    // An icon button's ligature text is a glyph, not a visible label (see the axe test below).
+    const results = await axe.run(container, {
+      rules: { 'label-content-name-mismatch': { enabled: false } },
+    });
+    expect(results.violations.map((violation) => violation.id)).toEqual([]);
   });
 });
 

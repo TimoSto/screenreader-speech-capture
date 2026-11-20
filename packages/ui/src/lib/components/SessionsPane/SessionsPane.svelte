@@ -55,30 +55,29 @@
 
 <section aria-labelledby="sessions-heading" class:collapsed>
   <header>
-    <h2 id="sessions-heading" class:visually-hidden={collapsed}>Sessions</h2>
-    <div class="actions">
+    <!-- First, so it stays where it is when the pane collapses and the buttons stack. -->
+    {#if onToggleCollapse}
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
       <md-icon-button
-        class={currentId === null ? 'start' : 'stop'}
-        title={toggleLabel}
-        aria-label={toggleLabel}
-        onclick={() => (currentId === null ? (startOpen = true) : (endOpen = true))}
+        class="collapse"
+        title={collapseLabel}
+        aria-label={collapseLabel}
+        aria-expanded={!collapsed}
+        onclick={onToggleCollapse}
       >
-        <md-icon aria-hidden="true">{currentId === null ? 'play_arrow' : 'stop'}</md-icon>
+        <md-icon aria-hidden="true">{collapsed ? 'left_panel_open' : 'left_panel_close'}</md-icon>
       </md-icon-button>
-      {#if onToggleCollapse}
-        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <md-icon-button
-          class="collapse"
-          title={collapseLabel}
-          aria-label={collapseLabel}
-          aria-expanded={!collapsed}
-          onclick={onToggleCollapse}
-        >
-          <md-icon aria-hidden="true">{collapsed ? 'left_panel_open' : 'left_panel_close'}</md-icon>
-        </md-icon-button>
-      {/if}
-    </div>
+    {/if}
+    <h2 id="sessions-heading" class:visually-hidden={collapsed}>Sessions</h2>
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <md-icon-button
+      class={currentId === null ? 'start' : 'stop'}
+      title={toggleLabel}
+      aria-label={toggleLabel}
+      onclick={() => (currentId === null ? (startOpen = true) : (endOpen = true))}
+    >
+      <md-icon aria-hidden="true">{currentId === null ? 'play_arrow' : 'stop'}</md-icon>
+    </md-icon-button>
   </header>
 
   {#if collapsed}
@@ -140,27 +139,18 @@
     flex: none;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0 4px 8px 16px;
+    padding: 0 4px 8px 0;
   }
 
+  /* The buttons stack; the section's 12px padding and the 72px strip keep the first one at the
+     same x (and y) as when expanded. */
   section.collapsed {
-    padding-inline: 4px;
     align-items: center;
   }
 
   .collapsed header {
-    padding: 0;
-  }
-
-  .collapsed .actions {
     flex-direction: column;
-  }
-
-  .actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    padding: 0;
   }
 
   .visually-hidden {
@@ -173,7 +163,8 @@
   }
 
   h2 {
-    margin: 0;
+    flex: 1;
+    margin: 0 0 0 8px;
     font-size: var(--md-sys-typescale-title-medium-size, 16px);
     font-weight: 500;
   }
