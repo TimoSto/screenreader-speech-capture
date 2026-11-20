@@ -79,6 +79,12 @@
 </md-dialog>
 
 <style>
+  md-dialog {
+    --md-dialog-container-color: var(--md-sys-color-surface-container-high);
+    --md-dialog-headline-color: var(--md-sys-color-on-surface);
+    --md-dialog-supporting-text-color: var(--md-sys-color-on-surface-variant);
+  }
+
   form {
     display: flex;
     flex-direction: column;
