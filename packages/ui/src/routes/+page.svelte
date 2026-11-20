@@ -4,7 +4,7 @@
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import SessionsPane from '#lib/components/SessionsPane/SessionsPane.svelte';
-  import { sessionsStore } from '#lib/composition.js';
+  import { sessionsPaneStore, sessionsStore } from '#lib/composition.js';
   import { selectedScope, type SessionScope } from '#lib/core/sessions.js';
   import type { PageProps } from './$types';
 
@@ -30,7 +30,10 @@
     selectedScope(page.url.searchParams.get('session'), list.sessions, list.currentId),
   );
 
-  onMount(() => sessionsStore.init(data.sessions));
+  onMount(() => {
+    sessionsPaneStore.init();
+    return sessionsStore.init(data.sessions);
+  });
 
   function select(id: SessionScope | null): Promise<void> {
     // `none` is always spelled out: with a session current, a clean URL would follow that session.
@@ -46,8 +49,10 @@
 </script>
 
 <div class="monitor">
-  <aside>
+  <aside class:collapsed={sessionsPaneStore.collapsed}>
     <SessionsPane
+      collapsed={sessionsPaneStore.collapsed}
+      onToggleCollapse={() => sessionsPaneStore.toggle()}
       sessions={list.sessions}
       currentId={list.currentId}
       outsideEntries={list.outsideEntries}
@@ -83,6 +88,17 @@
     flex: none;
     width: var(--app-sessions-width);
     min-height: 0;
+    transition: width 200ms ease;
+  }
+
+  aside.collapsed {
+    width: var(--app-sessions-collapsed-width);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    aside {
+      transition: none;
+    }
   }
 
   .log {

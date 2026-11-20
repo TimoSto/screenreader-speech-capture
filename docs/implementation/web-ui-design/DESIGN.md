@@ -123,6 +123,13 @@ Just a list:
   icon button at the end of the row → "End session #n?" dialog. The stop button is a sibling of
   the row's select button, not inside it.
 - The selection is in the URL (`?session=7`).
+- **Collapsing:** a **left_panel_close** icon button left of the "Sessions" title (`aria-expanded`,
+  label "Collapse sessions" / "Expand sessions") shrinks the pane to a 72 px strip. The strip keeps
+  only the two buttons, stacked with the collapse button on top, so it stays at the same x/y as
+  when expanded, and a session can still be started or ended; the heading stays
+  for screen readers (visually hidden) and the list is removed. The choice is remembered in
+  `localStorage` (`sr-sessions-collapsed`) and applied after hydration. No per-session items in
+  the strip: a session has no short identifier worth showing.
 - Following: selecting the live session keeps following, so a new session is selected when it
   starts. Selecting an ended session stops following. There is no switch for it.
 - **Outside sessions:** one row pinned below the list (not part of the newest-first order, no

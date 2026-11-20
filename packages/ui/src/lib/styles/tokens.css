@@ -273,6 +273,7 @@
   /* Layout (app extensions). Window size classes: compact < 600, medium 600-839, expanded 840-1199, large >= 1200. */
   --app-rail-width: 80px;
   --app-sessions-width: 300px;
+  --app-sessions-collapsed-width: 72px;
   --app-actions-width: 360px;
   --app-status-sheet-width: 400px;
   --app-gutter: 12px;
