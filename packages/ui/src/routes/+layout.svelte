@@ -33,28 +33,42 @@
   <meta name="color-scheme" content="light dark" />
 </svelte:head>
 
-<AppHeader
-  host={page.url.host}
-  theme={themeStore.current}
-  onToggleTheme={() => themeStore.toggle()}
-/>
+<div class="app">
+  <AppHeader
+    host={page.url.host}
+    theme={themeStore.current}
+    onToggleTheme={() => themeStore.toggle()}
+  />
 
-<div class="body">
-  <NavRail items={navItems} currentPath={page.url.pathname} />
-  <main>
-    {@render children()}
-  </main>
+  <div class="body">
+    <NavRail items={navItems} currentPath={page.url.pathname} />
+    <main>
+      {@render children()}
+    </main>
+  </div>
 </div>
 
 <style>
+  /* The window height is fixed, so a page can fill what is left below the header (which grows
+     when its chips wrap). */
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+  }
+
   .body {
     display: flex;
-    align-items: flex-start;
+    flex: 1;
+    align-items: stretch;
+    min-height: 0;
   }
 
   main {
     flex: 1;
     min-width: 0;
+    min-height: 0;
     padding: 0 16px;
+    overflow: auto;
   }
 </style>

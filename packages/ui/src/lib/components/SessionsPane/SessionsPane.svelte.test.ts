@@ -75,6 +75,26 @@ describe('SessionsPane', () => {
     for (const row of rows) expect(row.firstElementChild?.localName).toBe('md-ripple');
   });
 
+  it('fills the height it is given and scrolls the list, not the heading', async () => {
+    const many = Array.from({ length: 20 }, (_, index) =>
+      session({ id: 20 - index, name: `session ${20 - index}` }),
+    );
+    const screen = await render(SessionsPane, props({ sessions: many, currentId: null }), {
+      baseElement: document.body,
+    });
+    const container = screen.container;
+    container.style.height = '400px';
+    const pane = container.querySelector('section')!;
+    const list = container.querySelector('ul')!;
+    expect(pane.getBoundingClientRect().height).toBe(400);
+    expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
+    const heading = container.querySelector('h2')!.getBoundingClientRect();
+    expect(heading.bottom).toBeLessThan(list.getBoundingClientRect().top);
+    expect(pane.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+      container.getBoundingClientRect().bottom,
+    );
+  });
+
   it('selects the clicked session', async () => {
     const onSelect = vi.fn();
     await render(SessionsPane, props({ onSelect }));

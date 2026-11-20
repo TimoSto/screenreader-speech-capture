@@ -62,12 +62,17 @@
 <style>
   section {
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
     padding: 16px 12px;
     border-radius: 28px;
     background: var(--md-sys-color-surface-container-low);
   }
 
   header {
+    flex: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -88,8 +93,11 @@
 
   ul {
     display: flex;
+    flex: 1;
     flex-direction: column;
     gap: 4px;
+    min-height: 0;
+    overflow-y: auto;
     margin: 0;
     padding: 0;
     list-style: none;

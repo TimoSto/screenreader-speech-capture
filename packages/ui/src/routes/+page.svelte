@@ -62,15 +62,20 @@
 </div>
 
 <style>
+  /* The same gap above as below, and the one the rail keeps above its active item, so the pane
+     starts level with it. */
   .monitor {
     display: flex;
     gap: 16px;
-    align-items: flex-start;
+    align-items: stretch;
+    height: 100%;
+    padding: var(--app-gutter) 0;
   }
 
   aside {
     flex: none;
-    width: 300px;
+    width: var(--app-sessions-width);
+    min-height: 0;
   }
 
   .log {
