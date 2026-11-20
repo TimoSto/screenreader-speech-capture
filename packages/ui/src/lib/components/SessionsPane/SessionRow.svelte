@@ -1,6 +1,7 @@
 <script lang="ts">
   import '@material/web/icon/icon.js';
   import '@material/web/iconbutton/icon-button.js';
+  import '@material/web/ripple/ripple.js';
   import { describeSession } from '#lib/core/sessions.js';
   import type { SessionDto } from '@screenreader-speech-capture/shared';
 
@@ -20,6 +21,8 @@
 </script>
 
 <li class:selected>
+  <!-- One hover and press layer for the whole row, stop button included. -->
+  <md-ripple aria-hidden="true"></md-ripple>
   <button
     type="button"
     class="select"
@@ -53,11 +56,15 @@
 
 <style>
   li {
+    position: relative;
     display: flex;
     align-items: center;
     min-height: 60px;
     border-radius: 28px;
     color: var(--md-sys-color-on-surface);
+    /* The layer follows the text colour, so it shows on the selected row too. */
+    --md-ripple-hover-color: currentColor;
+    --md-ripple-pressed-color: currentColor;
   }
 
   li.selected {
@@ -82,10 +89,6 @@
     text-align: left;
     cursor: pointer;
     justify-content: center;
-  }
-
-  .select:hover {
-    background: color-mix(in srgb, currentColor 8%, transparent);
   }
 
   .name {

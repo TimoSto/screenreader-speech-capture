@@ -68,6 +68,13 @@ describe('SessionsPane', () => {
     expect(document.querySelectorAll('button button, button md-icon-button')).toHaveLength(0);
   });
 
+  it('puts one ripple under every row, before the buttons, so it covers the stop button too', async () => {
+    await render(SessionsPane, props());
+    const rows = document.querySelectorAll('ul > li');
+    expect(rows).toHaveLength(2);
+    for (const row of rows) expect(row.firstElementChild?.localName).toBe('md-ripple');
+  });
+
   it('selects the clicked session', async () => {
     const onSelect = vi.fn();
     await render(SessionsPane, props({ onSelect }));
