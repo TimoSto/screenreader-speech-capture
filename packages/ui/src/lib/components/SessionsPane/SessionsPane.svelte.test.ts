@@ -41,10 +41,10 @@ const props = (patch: Record<string, unknown> = {}) => ({
 });
 
 describe('SessionsPane', () => {
-  it('shows the heading, the add button and one row per session', async () => {
+  it('shows the heading, the start/stop button and one row per session', async () => {
     await render(SessionsPane, props());
     await expect.element(page.getByRole('heading', { name: 'Sessions' })).toBeInTheDocument();
-    await expect.element(page.getByTitle('Start a session')).toBeVisible();
+    await expect.element(page.getByTitle('End session 7')).toBeVisible();
     const list = page.getByRole('list', { name: 'Sessions' });
     expect(list.getByRole('listitem').elements()).toHaveLength(2);
   });
@@ -74,15 +74,19 @@ describe('SessionsPane', () => {
     expect(meta[1]).toContain('12 entries');
   });
 
-  it('puts the stop button only on the live session, beside its select button', async () => {
-    await render(SessionsPane, props());
-    expect(page.getByTitle('End session 7').elements()).toHaveLength(1);
-    expect(page.getByTitle('End session 6').elements()).toHaveLength(0);
-    // no interactive element inside another one
-    expect(document.querySelectorAll('button button, button md-icon-button')).toHaveLength(0);
+  it('toggles the header button between play and stop with the live session', async () => {
+    await render(SessionsPane, props({ currentId: null }));
+    expect(page.getByTitle('Start a session').elements()).toHaveLength(1);
+    expect(page.getByTitle('End session 7').elements()).toHaveLength(0);
+    expect(document.querySelector('header md-icon')?.textContent).toBe('play_arrow');
   });
 
-  it('puts one ripple under every row, before the buttons, so it covers the stop button too', async () => {
+  it('has no button inside a row besides the select button', async () => {
+    await render(SessionsPane, props());
+    expect(document.querySelectorAll('ul md-icon-button, button button')).toHaveLength(0);
+  });
+
+  it('puts one ripple under every row, before the buttons', async () => {
     await render(SessionsPane, props());
     const rows = document.querySelectorAll('ul > li');
     expect(rows).toHaveLength(2);
@@ -119,13 +123,13 @@ describe('SessionsPane', () => {
   it('shows the empty state', async () => {
     await render(SessionsPane, props({ sessions: [], currentId: null, selectedId: null }));
     await expect
-      .element(page.getByText('No sessions in the buffer. Start one with +.'))
+      .element(page.getByText('No sessions in the buffer. Start one with the play button.'))
       .toBeVisible();
   });
 
   it('starts a session from the dialog with a trimmed name and no empty run', async () => {
     const onStart = vi.fn(() => Promise.resolve());
-    await render(SessionsPane, props({ onStart }));
+    await render(SessionsPane, props({ onStart, currentId: null }));
     await page.getByTitle('Start a session').click();
     await page.getByLabelText('Name').fill('  checkout test  ');
     await page.getByRole('button', { name: 'Start', exact: true }).click();
@@ -134,7 +138,7 @@ describe('SessionsPane', () => {
 
   it('asks for a name instead of starting without one', async () => {
     const onStart = vi.fn(() => Promise.resolve());
-    await render(SessionsPane, props({ onStart }));
+    await render(SessionsPane, props({ onStart, currentId: null }));
     await page.getByTitle('Start a session').click();
     await page.getByRole('button', { name: 'Start', exact: true }).click();
     await expect.element(page.getByText('Enter a name.')).toBeVisible();
@@ -143,7 +147,7 @@ describe('SessionsPane', () => {
 
   it('shows the bridge message when starting fails', async () => {
     const onStart = vi.fn(() => Promise.reject(new Error('The bridge is not reachable')));
-    await render(SessionsPane, props({ onStart }));
+    await render(SessionsPane, props({ onStart, currentId: null }));
     await page.getByTitle('Start a session').click();
     await page.getByLabelText('Name').fill('x');
     await page.getByRole('button', { name: 'Start', exact: true }).click();
@@ -169,7 +173,7 @@ describe('SessionsPane', () => {
 
   it('has no accessibility violations', async () => {
     const screen = await render(SessionsPane, props());
-    // An icon button's ligature text ("add") is a glyph, not a visible label, so the
+    // An icon button's ligature text ("play_arrow") is a glyph, not a visible label, so the
     // label-in-name rule would flag every icon button for the wrong reason.
     const results = await axe.run(screen.container, {
       rules: { 'label-content-name-mismatch': { enabled: false } },

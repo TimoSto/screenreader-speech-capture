@@ -22,6 +22,8 @@
 
   let startOpen = $state(false);
   let endOpen = $state(false);
+
+  const toggleLabel = $derived(currentId === null ? 'Start a session' : `End session ${currentId}`);
 </script>
 
 <section aria-labelledby="sessions-heading">
@@ -29,17 +31,17 @@
     <h2 id="sessions-heading">Sessions</h2>
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <md-icon-button
-      class="add"
-      title="Start a session"
-      aria-label="Start a session"
-      onclick={() => (startOpen = true)}
+      class={currentId === null ? 'start' : 'stop'}
+      title={toggleLabel}
+      aria-label={toggleLabel}
+      onclick={() => (currentId === null ? (startOpen = true) : (endOpen = true))}
     >
-      <md-icon aria-hidden="true">add</md-icon>
+      <md-icon aria-hidden="true">{currentId === null ? 'play_arrow' : 'stop'}</md-icon>
     </md-icon-button>
   </header>
 
   {#if sessions.length === 0}
-    <p class="empty">No sessions in the buffer. Start one with +.</p>
+    <p class="empty">No sessions in the buffer. Start one with the play button.</p>
   {:else}
     <ul aria-labelledby="sessions-heading">
       {#each sessions as session (session.id)}
@@ -49,7 +51,6 @@
           live={session.id === currentId}
           selected={session.id === selectedId}
           onSelect={() => onSelect(session.id)}
-          onStop={() => (endOpen = true)}
         />
       {/each}
     </ul>
@@ -91,10 +92,16 @@
     font-weight: 500;
   }
 
-  .add {
+  .start {
     --md-icon-button-icon-color: var(--md-sys-color-primary);
     --md-icon-button-hover-icon-color: var(--md-sys-color-primary);
     --md-icon-button-focus-icon-color: var(--md-sys-color-primary);
+  }
+
+  .stop {
+    --md-icon-button-icon-color: var(--md-sys-color-error);
+    --md-icon-button-hover-icon-color: var(--md-sys-color-error);
+    --md-icon-button-focus-icon-color: var(--md-sys-color-error);
   }
 
   ul {
