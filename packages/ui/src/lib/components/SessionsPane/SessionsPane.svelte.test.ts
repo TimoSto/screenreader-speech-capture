@@ -41,6 +41,41 @@ const props = (patch: Record<string, unknown> = {}) => ({
   ...patch,
 });
 
+describe('SessionsPane collapsing', () => {
+  it('has no collapse button without a handler', async () => {
+    await render(SessionsPane, props());
+    expect(page.getByTitle('Collapse sessions').elements()).toHaveLength(0);
+  });
+
+  it('asks to collapse, and says it is expanded', async () => {
+    const onToggleCollapse = vi.fn();
+    await render(SessionsPane, props({ onToggleCollapse }));
+    const button = page.getByTitle('Collapse sessions');
+    await expect.element(button).toHaveAttribute('aria-expanded', 'true');
+    await button.click();
+    expect(onToggleCollapse).toHaveBeenCalledOnce();
+  });
+
+  it('keeps only the buttons while collapsed', async () => {
+    await render(SessionsPane, props({ collapsed: true, onToggleCollapse: () => {} }));
+    await expect
+      .element(page.getByTitle('Expand sessions'))
+      .toHaveAttribute('aria-expanded', 'false');
+    await expect.element(page.getByTitle('End session 7')).toBeVisible();
+    expect(document.querySelector('ul')).toBeNull();
+    expect(document.querySelector('section[aria-labelledby]')).not.toBeNull();
+  });
+
+  it('has no axe violations while collapsed', async () => {
+    const { container } = await render(
+      SessionsPane,
+      props({ collapsed: true, onToggleCollapse: () => {} }),
+    );
+    const results = await axe.run(container);
+    expect(results.violations).toEqual([]);
+  });
+});
+
 describe('SessionsPane', () => {
   it('shows the heading, the start/stop button and one row per session', async () => {
     await render(SessionsPane, props());

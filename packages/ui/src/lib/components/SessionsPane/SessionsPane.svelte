@@ -18,18 +18,33 @@
     selectedId: SessionScope;
     /** Epoch ms, for the duration of the live session. */
     now: number;
+    /** Only the header buttons show; the list and the heading are hidden. */
+    collapsed?: boolean;
+    onToggleCollapse?: () => void;
     onSelect: (id: SessionScope) => void;
     onStart: (name: string, run: string | null) => Promise<void>;
     onEnd: () => Promise<void>;
   };
 
-  let { sessions, currentId, outsideEntries, selectedId, now, onSelect, onStart, onEnd }: Props =
-    $props();
+  let {
+    sessions,
+    currentId,
+    outsideEntries,
+    selectedId,
+    now,
+    collapsed = false,
+    onToggleCollapse,
+    onSelect,
+    onStart,
+    onEnd,
+  }: Props = $props();
 
   let startOpen = $state(false);
   let endOpen = $state(false);
 
   const toggleLabel = $derived(currentId === null ? 'Start a session' : `End session ${currentId}`);
+
+  const collapseLabel = $derived(collapsed ? 'Expand sessions' : 'Collapse sessions');
 
   const entries = $derived(outsideEntries === 1 ? '1 entry' : `${outsideEntries} entries`);
 </script>
@@ -38,21 +53,37 @@
   <span>{entries}</span>
 {/snippet}
 
-<section aria-labelledby="sessions-heading">
+<section aria-labelledby="sessions-heading" class:collapsed>
   <header>
-    <h2 id="sessions-heading">Sessions</h2>
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <md-icon-button
-      class={currentId === null ? 'start' : 'stop'}
-      title={toggleLabel}
-      aria-label={toggleLabel}
-      onclick={() => (currentId === null ? (startOpen = true) : (endOpen = true))}
-    >
-      <md-icon aria-hidden="true">{currentId === null ? 'play_arrow' : 'stop'}</md-icon>
-    </md-icon-button>
+    <h2 id="sessions-heading" class:visually-hidden={collapsed}>Sessions</h2>
+    <div class="actions">
+      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+      <md-icon-button
+        class={currentId === null ? 'start' : 'stop'}
+        title={toggleLabel}
+        aria-label={toggleLabel}
+        onclick={() => (currentId === null ? (startOpen = true) : (endOpen = true))}
+      >
+        <md-icon aria-hidden="true">{currentId === null ? 'play_arrow' : 'stop'}</md-icon>
+      </md-icon-button>
+      {#if onToggleCollapse}
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <md-icon-button
+          class="collapse"
+          title={collapseLabel}
+          aria-label={collapseLabel}
+          aria-expanded={!collapsed}
+          onclick={onToggleCollapse}
+        >
+          <md-icon aria-hidden="true">{collapsed ? 'left_panel_open' : 'left_panel_close'}</md-icon>
+        </md-icon-button>
+      {/if}
+    </div>
   </header>
 
-  {#if sessions.length === 0}
+  {#if collapsed}
+    <!-- Only the header shows while collapsed. -->
+  {:else if sessions.length === 0}
     <p class="empty">No sessions in the buffer. Start one with the play button.</p>
   {:else}
     <ul aria-labelledby="sessions-heading">
@@ -70,7 +101,7 @@
 
   <!-- Pinned below the list: not a session, so it stays out of the newest-first order. Hidden while
        there is nothing to see, unless it is what the log shows (no session is current). -->
-  {#if outsideEntries > 0 || selectedId === OUTSIDE_SESSIONS}
+  {#if !collapsed && (outsideEntries > 0 || selectedId === OUTSIDE_SESSIONS)}
     <ul class="outside" aria-label="Outside sessions">
       <ListItem
         title="Outside sessions"
@@ -111,6 +142,34 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 4px 8px 16px;
+  }
+
+  section.collapsed {
+    padding-inline: 4px;
+    align-items: center;
+  }
+
+  .collapsed header {
+    padding: 0;
+  }
+
+  .collapsed .actions {
+    flex-direction: column;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   h2 {

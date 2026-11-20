@@ -64,6 +64,8 @@ and agent tasks apart.
   hand turns following off.
 - **New session** starts a session with a name you enter (`POST /api/v1/sessions`), for exploring
   a page by hand. **End session** ends the current one.
+- The **collapse** button shrinks the pane to a narrow strip with only the start/end button, and
+  gives the room to the log. The browser remembers the choice.
 - A session whose entries all left the capped buffer disappears from the list. A gap row in the
   log shows when the selected session lost its oldest entries.
 
