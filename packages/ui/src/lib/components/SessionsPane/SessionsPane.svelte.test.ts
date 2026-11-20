@@ -160,6 +160,13 @@ describe('SessionsPane', () => {
     await vi.waitFor(() => expect(onEnd).toHaveBeenCalledTimes(1));
   });
 
+  it('says an empty live session is dropped when it ends', async () => {
+    await render(SessionsPane, props({ sessions: [{ ...live, entries: 0 }, ended] }));
+    await page.getByTitle('End session 7').click();
+    await expect.element(page.getByText('Drop session #7?')).toBeVisible();
+    await expect.element(page.getByText(/has no entries, so ending it deletes it/)).toBeVisible();
+  });
+
   it('has no accessibility violations', async () => {
     const screen = await render(SessionsPane, props());
     // An icon button's ligature text ("add") is a glyph, not a visible label, so the
