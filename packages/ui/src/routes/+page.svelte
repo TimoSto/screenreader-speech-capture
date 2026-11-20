@@ -5,7 +5,7 @@
   import { page } from '$app/state';
   import SessionsPane from '#lib/components/SessionsPane/SessionsPane.svelte';
   import { sessionsStore } from '#lib/composition.js';
-  import { selectedSessionId } from '#lib/core/sessions.js';
+  import { selectedScope, type SessionScope } from '#lib/core/sessions.js';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -15,22 +15,28 @@
   // filled on the server.
   const list = $derived(
     sessionsStore.loaded
-      ? { sessions: sessionsStore.sessions, currentId: sessionsStore.currentId }
-      : (data.sessions ?? { sessions: [], currentId: null }),
+      ? {
+          sessions: sessionsStore.sessions,
+          currentId: sessionsStore.currentId,
+          outsideEntries: sessionsStore.outsideEntries,
+        }
+      : (data.sessions ?? { sessions: [], currentId: null, outsideEntries: 0 }),
   );
   const now = $derived(sessionsStore.loaded ? sessionsStore.now : data.now);
 
-  // The URL names the selected session; without it the pane follows the current one.
+  // The URL names the selected session (or `none`, the speech outside any session); without it the
+  // pane follows the current session, and with no current session it shows the speech outside.
   const selectedId = $derived(
-    selectedSessionId(page.url.searchParams.get('session'), list.sessions, list.currentId),
+    selectedScope(page.url.searchParams.get('session'), list.sessions, list.currentId),
   );
 
   onMount(() => sessionsStore.init(data.sessions));
 
-  function select(id: number | null): Promise<void> {
-    const live = id === null || id === list.currentId;
+  function select(id: SessionScope | null): Promise<void> {
+    // `none` is always spelled out: with a session current, a clean URL would follow that session.
+    const clean = id === null || id === list.currentId;
     // eslint-disable-next-line svelte/no-navigation-without-resolve
-    return goto(live ? resolve('/') : `${resolve('/')}?session=${id}`, { reset: false });
+    return goto(clean ? resolve('/') : `${resolve('/')}?session=${id}`, { reset: false });
   }
 
   async function start(name: string, run: string | null): Promise<void> {
@@ -44,9 +50,10 @@
     <SessionsPane
       sessions={list.sessions}
       currentId={list.currentId}
+      outsideEntries={list.outsideEntries}
       {selectedId}
       {now}
-      onSelect={(id: number) => void select(id)}
+      onSelect={(id: SessionScope) => void select(id)}
       onStart={start}
       onEnd={() => sessionsStore.end()}
     />

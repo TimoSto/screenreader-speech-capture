@@ -44,7 +44,11 @@ const cases: [string, DtoSchema, unknown][] = [
     StartSessionResponseSchema,
     toStartSessionResponseDto({ session: session(), replaced: session(new Date()) }),
   ],
-  ['session list', SessionListSchema, toSessionListDto({ sessions: [session()], currentId: 1 })],
+  [
+    'session list',
+    SessionListSchema,
+    toSessionListDto({ sessions: [session()], currentId: 1, outsideEntries: 3 }),
+  ],
   ['status', StatusSchema, toStatusDto(status(session()))],
   ['status without a session', StatusSchema, toStatusDto(status(null))],
   ['config', ConfigSchema, toConfigDto(DEFAULT_CONFIG)],

@@ -104,9 +104,17 @@ export const SessionListSchema = v.pipe(
   v.object({
     sessions: v.array(SessionSchema),
     currentId: v.nullable(integer(1)),
+    outsideEntries: v.pipe(
+      integer(0),
+      v.description(
+        'Entries in the buffer that were recorded outside any session (`session=none`). ' +
+          'Added in API 1.15.',
+      ),
+    ),
   }),
   v.description(
-    '`GET /sessions`: the current session and the ended ones with entries in the buffer, newest first.',
+    '`GET /sessions`: the current session and the ended ones with entries in the buffer, newest first, ' +
+      'and how many entries lie outside any session.',
   ),
 );
 

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method -- `vi.fn` spies on the fake API are asserted on directly */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { SessionDto } from '@screenreader-speech-capture/shared';
+import type { SessionDto, SessionListDto } from '@screenreader-speech-capture/shared';
 import type { SessionsApi } from '#lib/core/sessions.js';
 import { createSessionsStore } from './sessions.svelte.js';
 
@@ -17,13 +17,13 @@ const session = (id: number, endedAt: string | null = null): SessionDto => ({
   entries: 0,
 });
 
-function fakeApi(initial: { sessions: SessionDto[]; currentId: number | null }) {
-  let state = initial;
+function fakeApi(initial: Omit<SessionListDto, 'outsideEntries'> & { outsideEntries?: number }) {
+  let state: SessionListDto = { outsideEntries: 0, ...initial };
   const api: SessionsApi = {
     list: vi.fn(() => Promise.resolve(state)),
     start: vi.fn((name: string) => {
       const started = session(state.sessions.length + 1);
-      state = { sessions: [started, ...state.sessions], currentId: started.id };
+      state = { ...state, sessions: [started, ...state.sessions], currentId: started.id };
       return Promise.resolve({ ...started, name, replaced: null });
     }),
     end: vi.fn(() => {
@@ -39,10 +39,18 @@ afterEach(() => {
 });
 
 describe('createSessionsStore', () => {
+  it('keeps the number of entries outside any session', async () => {
+    const api = fakeApi({ sessions: [], currentId: null, outsideEntries: 5 });
+    const store = createSessionsStore(api);
+    const stop = store.init(null);
+    await vi.waitFor(() => expect(store.outsideEntries).toBe(5));
+    stop();
+  });
+
   it('shows the seed at once and then reads the list', async () => {
     const api = fakeApi({ sessions: [session(2), session(1)], currentId: 2 });
     const store = createSessionsStore(api);
-    const stop = store.init({ sessions: [session(1)], currentId: 1 });
+    const stop = store.init({ sessions: [session(1)], currentId: 1, outsideEntries: 0 });
     expect(store.currentId).toBe(1);
     await vi.waitFor(() => expect(store.currentId).toBe(2));
     expect(store.sessions.map((s) => s.id)).toEqual([2, 1]);
@@ -70,7 +78,7 @@ describe('createSessionsStore', () => {
     const api = fakeApi({ sessions: [session(1)], currentId: 1 });
     vi.mocked(api.list).mockRejectedValue(new Error('down'));
     const store = createSessionsStore(api);
-    const stop = store.init({ sessions: [session(1)], currentId: 1 });
+    const stop = store.init({ sessions: [session(1)], currentId: 1, outsideEntries: 0 });
     await vi.waitFor(() => expect(store.reachable).toBe(false));
     expect(store.sessions).toHaveLength(1);
     stop();
@@ -100,7 +108,7 @@ describe('createSessionsStore', () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
     const api = fakeApi({ sessions: [session(1)], currentId: 1 });
     const store = createSessionsStore(api);
-    const stop = store.init({ sessions: [session(1)], currentId: 1 });
+    const stop = store.init({ sessions: [session(1)], currentId: 1, outsideEntries: 0 });
     const before = store.now;
     vi.advanceTimersByTime(1000);
     expect(store.now).toBeGreaterThan(before);

@@ -56,16 +56,23 @@ export function describeSession(session: SessionDto, now: number): SessionMeta {
   };
 }
 
+/** What the log shows: a session by id, or `'none'` for the speech outside any session. */
+export type SessionScope = number | 'none';
+
+/** The URL value that selects the speech outside any session (the bridge's `session=none`). */
+export const OUTSIDE_SESSIONS = 'none';
+
 /**
- * The session a pane shows: the one named in the URL if it still exists, otherwise the current
- * one (following), otherwise none.
+ * The scope a pane shows: `none` if the URL asks for it, the session named in the URL if it still
+ * exists, otherwise the current one (following), otherwise the speech outside any session.
  */
-export function selectedSessionId(
+export function selectedScope(
   requested: string | null,
   sessions: SessionDto[],
   currentId: number | null,
-): number | null {
+): SessionScope {
+  if (requested === OUTSIDE_SESSIONS) return OUTSIDE_SESSIONS;
   const id = requested === null || !/^\d+$/.test(requested) ? null : Number(requested);
   if (id !== null && sessions.some((session) => session.id === id)) return id;
-  return currentId;
+  return currentId ?? OUTSIDE_SESSIONS;
 }

@@ -8,6 +8,7 @@ const REFRESH_MS = 3000;
 export function createSessionsStore(api: SessionsApi) {
   let sessions = $state<SessionDto[]>([]);
   let currentId = $state<number | null>(null);
+  let outsideEntries = $state(0);
   let reachable = $state(true);
   let loaded = $state(false);
   let now = $state(Date.now());
@@ -16,6 +17,7 @@ export function createSessionsStore(api: SessionsApi) {
   function apply(list: SessionListDto): void {
     sessions = list.sessions;
     currentId = list.currentId;
+    outsideEntries = list.outsideEntries;
     now = Date.now();
     loaded = true;
   }
@@ -49,6 +51,10 @@ export function createSessionsStore(api: SessionsApi) {
     },
     get currentId() {
       return currentId;
+    },
+    /** Entries in the buffer recorded outside any session. */
+    get outsideEntries() {
+      return outsideEntries;
     },
     /** Whether a list has been applied yet; until then the page shows what the server rendered. */
     get loaded() {

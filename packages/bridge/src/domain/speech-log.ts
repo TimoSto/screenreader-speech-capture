@@ -142,6 +142,11 @@ export class SpeechLog {
     return this.#currentId === null ? null : (this.#sessions.get(this.#currentId) ?? null);
   }
 
+  /** How many entries in the buffer were recorded outside any session. */
+  outsideEntries(): number {
+    return this.#bySession.get(null)?.size ?? 0;
+  }
+
   /** The current session and the ended ones with entries in the buffer, newest first. */
   sessions(): SessionSummary[] {
     return [...this.#sessions.values()]

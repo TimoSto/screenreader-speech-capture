@@ -183,6 +183,21 @@ describe('SpeechLog', () => {
       expect(log.page(0, 100, a.id)).toEqual({ entries: [], truncated: true, hasMore: false });
     });
 
+    it('counts the entries outside sessions that are still in the buffer', () => {
+      const log = new SpeechLog(3);
+      expect(log.outsideEntries()).toBe(0);
+      log.append(draft('o1'));
+      start(log, 'a');
+      log.append(draft('a1'));
+      log.endSession(at(1));
+      log.append(draft('o2'));
+      expect(log.outsideEntries()).toBe(2);
+      log.append(draft('o3')); // over the cap: o1 is dropped
+      expect(log.outsideEntries()).toBe(2);
+      log.clear();
+      expect(log.outsideEntries()).toBe(0);
+    });
+
     it('pages the entries outside sessions, truncated only when one of them was dropped', () => {
       const log = new SpeechLog(3);
       start(log, 'a');
