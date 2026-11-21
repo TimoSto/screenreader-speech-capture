@@ -32,7 +32,7 @@ removed \`restartRequired\` again (an exception to "minor versions only add", si
 existed): \`PUT /config\` now only saves, a setting takes effect on the next start, and \`GET\`
 shows the settings in use. 1.14 added native input (\`POST /input/click\`, \`POST /input/keys\`) and
 the \`INPUT_DISABLED\` error code again. 1.15 added \`outsideEntries\` to \`GET /sessions\`. 1.16 added \`DELETE /sessions\`. 1.17 added the \`session\` parameter of \`DELETE /speech\` and the
-\`sessionId\` in the \`data\` of a scoped \`clear\` event.
+\`sessionId\` in the \`data\` of a scoped \`clear\` event. 1.18 added \`POST /restart\`.
 
 Every error has the same body (\`ErrorBody\`). Clients must handle unknown error codes as errors
 of their HTTP status.
@@ -412,6 +412,23 @@ so a web page can't add markers cross-origin without a CORS preflight. At most 1
         },
         '400': {
           $ref: '#/components/responses/InvalidRequest',
+        },
+      },
+    },
+  },
+  '/restart': {
+    post: {
+      tags: ['bridge'],
+      operationId: 'restart',
+      summary: 'Restart the bridge',
+      description: `Stops the bridge and starts a new copy with the same arguments, so changed settings take effect (\`docs/usage/operations.md#restarting-the-bridge\`). The answer is sent first, then the bridge stops: open connections end, and the speech and sessions in memory are lost. Poll \`GET /status\` until the new bridge answers. A second request while the bridge stops changes nothing.
+`,
+      responses: {
+        '202': {
+          description: 'The restart starts after this answer.',
+        },
+        '503': {
+          $ref: '#/components/responses/ServiceUnavailable',
         },
       },
     },

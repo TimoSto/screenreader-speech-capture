@@ -59,6 +59,7 @@ curl -X PUT $VM/api/v1/config -H 'content-type: application/json' -d '{"buffer":
   flags or environment variables. If the file can't be written, nothing changes.
 - Updates run one at a time, and every setting that differs from the one in use is logged under
   `[config]` as `tcp.port: 4449 → 4450 on the next start`.
+- `POST /api/v1/restart` restarts the bridge so the saved settings take effect ([Restarting the bridge](operations.md#restarting-the-bridge)).
 - A flag or variable still wins on the next start. The log warns: `[config] WARN tcp.port: saved
   to …\config.json, but --tcp-port overrides it on the next start`.
 

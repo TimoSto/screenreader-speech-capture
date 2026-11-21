@@ -23,6 +23,11 @@ interface LifecycleOptions {
    * signal), synchronously: the child processes would be left behind otherwise.
    */
   onForcedExit?: () => void;
+  /**
+   * Starts a new copy of the process. Called after a requested restart, once the bridge stopped
+   * and before the exit. Without it `start` gets no restart function.
+   */
+  respawn?: () => void;
 }
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -54,6 +59,8 @@ function describeError(error: unknown): string {
  *
  * - on a shutdown signal. A second signal exits at once.
  * - on an uncaught exception or unhandled rejection, which is logged with its stack. Exit code 1.
+ * - on a restart request (`start` gets the function): stops the same way, then calls `respawn`
+ *   and exits with 0. If `respawn` throws, it is logged and the exit code is 1.
  * - if the shutdown takes longer than `timeoutMs`, it exits anyway with code 1.
  *
  * The exit code is 0 unless something failed. Console output is flushed before exiting.
@@ -63,16 +70,17 @@ function describeError(error: unknown): string {
  * like `start`.
  */
 export async function runUntilStopped(
-  start: () => Promise<StoppableBridge>,
+  start: (requestRestart?: () => void) => Promise<StoppableBridge>,
   proc: LifecycleProcess,
   options: LifecycleOptions = {},
 ): Promise<void> {
-  const { timeoutMs = SHUTDOWN_TIMEOUT_MS, flush = flushConsole, onForcedExit } = options;
+  const { timeoutMs = SHUTDOWN_TIMEOUT_MS, flush = flushConsole, onForcedExit, respawn } = options;
   // Set once `start` resolves. The signal handlers below are installed before that.
   let bridge: StoppableBridge | undefined = undefined;
   /** A signal that arrived before the bridge had started. */
   let early: string | undefined;
   let stopping = false;
+  let restarting = false;
   let exiting = false;
   let exitCode = 0;
   let watchdog: NodeJS.Timeout | undefined;
@@ -110,7 +118,17 @@ export async function runUntilStopped(
       forceExit(1);
     }, timeoutMs).unref();
     running.stop(reason).then(
-      () => exit(exitCode),
+      () => {
+        if (restarting && exitCode === 0) {
+          try {
+            respawn?.();
+          } catch (error) {
+            running.log.error(`could not start the new bridge: ${describeError(error)}`);
+            exitCode = 1;
+          }
+        }
+        exit(exitCode);
+      },
       // stop() has logged what failed.
       () => exit(1),
     );
@@ -134,7 +152,15 @@ export async function runUntilStopped(
     });
   }
 
-  bridge = await start();
+  const requestRestart =
+    respawn === undefined
+      ? undefined
+      : () => {
+          if (bridge === undefined || stopping) return;
+          restarting = true;
+          shutdown(bridge, 'restart');
+        };
+  bridge = await start(requestRestart);
   const running = bridge;
 
   const crash = (what: string) => (error: unknown) => {

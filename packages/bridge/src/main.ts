@@ -16,6 +16,7 @@ import { BridgeLifecycleService } from './application/services/bridge-lifecycle-
 import { ChildServicesService } from './application/services/child-services-service.js';
 import { ConfigService } from './application/services/config-service.js';
 import { NativeInputService } from './application/services/native-input-service.js';
+import { RestartService } from './application/services/restart-service.js';
 import { SessionService } from './application/services/session-service.js';
 import { SpeechService } from './application/services/speech-service.js';
 import { StatusService } from './application/services/status-service.js';
@@ -45,6 +46,11 @@ interface BridgeOptions {
   overrideSources?: ReadonlyMap<ConfigField, string>;
   /** The config file. Default: the default location. */
   configFile?: string;
+  /**
+   * Starts a restart: the caller stops the bridge and starts a new copy
+   * (docs/usage/operations.md#restarting-the-bridge). Without it `POST /restart` answers 503.
+   */
+  requestRestart?: () => void;
   /** Replacements for tests. Production code leaves it out. */
   testSeams?: TestSeams;
 }
@@ -161,6 +167,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     config: configService,
     sessions,
     input,
+    restart: new RestartService({ trigger: options.requestRestart, logger: bridgeLogger }),
     logger: log.for('http-api'),
     hostnames: [hostname()],
     proxies: proxyRoutes(childServices),
