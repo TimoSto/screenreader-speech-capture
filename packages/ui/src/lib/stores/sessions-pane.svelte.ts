@@ -1,7 +1,7 @@
 import type { SessionsPaneStorage } from '#lib/core/sessions-pane.js';
 
 export function createSessionsPaneStore(storage: SessionsPaneStorage) {
-  let collapsed = $state(false);
+  let collapsed = $state(true);
   return {
     get collapsed() {
       return collapsed;
