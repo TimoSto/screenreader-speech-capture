@@ -257,6 +257,12 @@ the speech store, which the monitor page re-opens whenever the selected scope ch
   `BridgeApi.clearSpeech` (`DELETE /api/v1/speech?session=<id|none>`). `canClearSpeech` shows the button
   for the live scopes only. Nothing is removed locally: the scope's SSE feed gets the bridge's scoped
   `clear` event and empties the table; the page then re-reads the sessions list for the counts.
+- **Bridge settings**: `HttpConfigApi` (the `ConfigApi` port) reads `GET /ui/api/config`, which answers
+  `{ active, saved, overrides }` from three bridge calls (`BridgeApi.config('active'|'saved')`,
+  `configOverrides`), and saves with `PUT /ui/api/config` (`BridgeApi.updateConfig`, `PUT /api/v1/config`).
+  A refused setting keeps the bridge's `details.field` as `error.field` (`App.Error`), which the adapter turns
+  into a `SettingRejected`. The config store keeps the state and `pending` (`pendingFields`: the saved
+  settings that differ from what runs); the page and `TcpPortSetting` only show it.
 - **Delete session**: `HttpSessionsApi.delete` sends `DELETE /ui/api/sessions/<id>`, which calls
   `BridgeApi.deleteSession` (`DELETE /api/v1/sessions?session=<id>`). `canDeleteSession` shows the
   button only for an ended session; the page picks the next scope with `scopeAfterDelete` before the
@@ -264,7 +270,7 @@ the speech store, which the monitor page re-opens whenever the selected scope ch
 
 ### Serving the UI
 
-The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's routes under `/ui/api/` (`status`, `sessions`, `sessions/<id>`, `speech`, `speech/stream`, `markers`). The bridge's UI handler redirects the bare `/` to `/ui/`. Code builds URLs with `resolve()` from `$app/paths`.
+The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's routes under `/ui/api/` (`status`, `sessions`, `sessions/<id>`, `speech`, `speech/stream`, `markers`, `config`). The bridge's UI handler redirects the bare `/` to `/ui/`. Code builds URLs with `resolve()` from `$app/paths`.
 
 The build of `packages/ui` (`build/`, with `handler.js`) is copied to `packages/bridge/dist/ui` by the
 bridge's build (tsdown `copy`; the bridge depends on the UI in the workspace, so `pnpm build` builds

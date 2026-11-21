@@ -4,11 +4,16 @@ import {
   API_PREFIX,
   CLIENT_HEADER,
   checkDto,
+  ConfigOverridesSchema,
+  ConfigSchema,
   SessionListSchema,
   SpeechEntrySchema,
   SpeechListSchema,
   StartSessionResponseSchema,
   StatusSchema,
+  type ConfigDto,
+  type ConfigOverridesDto,
+  type ConfigPatchDto,
   type DtoOf,
   type DtoSchema,
   type SessionListDto,
@@ -35,6 +40,15 @@ export interface BridgeApi {
   deleteSession(id: number): Promise<void>;
   /** Clears the speech of the current session or of `none` (`session`: an id or `none`); it keeps running. */
   clearSpeech(session: string): Promise<void>;
+  /** The configuration in use (`active`) or the one the next start will use (`saved`). */
+  config(view: 'active' | 'saved'): Promise<ConfigDto>;
+  /** The settings a flag or environment variable sets: the config file can't change them. */
+  configOverrides(): Promise<ConfigOverridesDto>;
+  /**
+   * Saves a partial config for the next start and answers with the saved config. Rejects with the
+   * bridge's status and message, plus `field` (`tcp.port`) when the bridge names one.
+   */
+  updateConfig(patch: ConfigPatchDto): Promise<ConfigDto>;
   /** Inserts a marker; the bridge files it under the current session (or outside any). */
   addMarker(label: string): Promise<SpeechEntryDto>;
   /** One page of a scope's entries with `seq > since`, oldest first (`session`: an id or `none`). */
@@ -66,7 +80,7 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
   const origin = new URL(root).origin;
 
   async function call(
-    method: 'GET' | 'POST' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     path: string,
     body?: unknown,
   ): Promise<unknown> {
@@ -88,16 +102,17 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
     const answer: unknown = await response.json().catch(() => undefined);
     if (!response.ok) {
       const apiError = checkDto(AnyErrorBodySchema, answer);
-      error(
-        response.status,
-        apiError.ok ? apiError.value.error.message : `The bridge answered ${response.status}`,
-      );
+      if (!apiError.ok) error(response.status, `The bridge answered ${response.status}`);
+      const { message, details } = apiError.value.error;
+      const field = details?.field;
+      if (typeof field === 'string') error(response.status, { message, field });
+      error(response.status, message);
     }
     return answer;
   }
 
   async function read<S extends DtoSchema>(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'PUT',
     path: string,
     schema: S,
     body?: unknown,
@@ -122,6 +137,9 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
     clearSpeech: async (session) => {
       await call('DELETE', `/speech?session=${encodeURIComponent(session)}`);
     },
+    config: (view) => read('GET', `/config?view=${view}`, ConfigSchema),
+    configOverrides: () => read('GET', '/config/overrides', ConfigOverridesSchema),
+    updateConfig: (patch) => read('PUT', '/config', ConfigSchema, patch),
     addMarker: (label) => read('POST', '/markers', SpeechEntrySchema, { label }),
     speech: (session, since, limit) => {
       const query = new URLSearchParams({ since: String(since), limit: String(limit) });

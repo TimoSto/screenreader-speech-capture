@@ -1,7 +1,13 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import type { Theme } from '#lib/core/theme.js';
-  import { themeStore } from '#lib/composition.js';
+  import { configStore, themeStore } from '#lib/composition.js';
+  import TcpPortSetting from '#lib/components/TcpPortSetting/TcpPortSetting.svelte';
   import ThemeSetting from '#lib/components/ThemeSetting/ThemeSetting.svelte';
+
+  onMount(() => {
+    void configStore.refresh();
+  });
 </script>
 
 <svelte:head>
@@ -13,6 +19,26 @@
 <div class="page">
   <div class="pane">
     <h1 class="visually-hidden">Settings</h1>
+
+    <section aria-labelledby="capture-heading">
+      <h2 id="capture-heading">Speech capture</h2>
+      <p class="scope">Saved on the bridge. A change takes effect when the bridge is restarted.</p>
+      {#if configStore.active !== null && configStore.saved !== null}
+        <TcpPortSetting
+          active={configStore.active.tcp.port}
+          saved={configStore.saved.tcp.port}
+          overriddenBy={configStore.overrides['tcp.port'] ?? null}
+          onSave={(port: number) => configStore.save({ tcp: { port } })}
+        />
+      {:else if !configStore.reachable}
+        <p class="scope" role="alert">
+          The bridge is not reachable, so its settings can't be read.
+          <button type="button" onclick={() => void configStore.refresh()}>Try again</button>
+        </p>
+      {:else}
+        <p class="scope">Reading the bridge settings…</p>
+      {/if}
+    </section>
 
     <section aria-labelledby="appearance-heading">
       <h2 id="appearance-heading">Appearance</h2>
@@ -43,6 +69,19 @@
 
   section {
     max-width: 720px;
+  }
+
+  section + section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--md-sys-color-outline-variant);
+  }
+
+  .scope {
+    margin: 0 0 12px;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 13px;
+    line-height: 18px;
   }
 
   h2 {

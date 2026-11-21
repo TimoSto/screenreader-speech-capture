@@ -2,7 +2,11 @@
 // for information about these interfaces
 declare global {
   namespace App {
-    // interface Error {}
+    /** `field` names the setting a rejected config update is about (`tcp.port`). */
+    interface Error {
+      message: string;
+      field?: string;
+    }
     // interface Locals {}
     // interface PageData {}
     // interface PageState {}
