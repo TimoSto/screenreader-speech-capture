@@ -73,6 +73,8 @@
   }
 
   li.selected {
+    outline: var(--app-border-width) solid var(--md-sys-color-outline);
+    outline-offset: calc(var(--app-border-width) * -1);
     background: var(--md-sys-color-secondary-container);
     color: var(--md-sys-color-on-secondary-container);
   }

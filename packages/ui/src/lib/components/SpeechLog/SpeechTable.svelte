@@ -118,9 +118,20 @@
     animation: fade-new calc(var(--app-new-row-ms) * 1ms) ease-out;
   }
 
+  /* High-contrast themes: a left edge marks the new row too (the tint alone is a weak cue). */
+  tr.fresh td:first-child {
+    animation: fade-new-edge calc(var(--app-new-row-ms) * 1ms) ease-out;
+  }
+
   @keyframes fade-new {
     from {
       background: var(--app-new-row);
+    }
+  }
+
+  @keyframes fade-new-edge {
+    from {
+      box-shadow: inset calc(var(--app-border-width) * 2) 0 0 var(--md-sys-color-primary);
     }
   }
 

@@ -1,16 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { parseTheme, toggleTheme } from './theme.js';
+import { THEMES, parseTheme } from './theme.js';
 
 describe('theme', () => {
-  it('toggles between light and dark', () => {
-    expect(toggleTheme('light')).toBe('dark');
-    expect(toggleTheme('dark')).toBe('light');
+  it('parses every known theme', () => {
+    for (const { value } of THEMES) expect(parseTheme(value)).toBe(value);
+    expect(THEMES.map((t) => t.value)).toEqual([
+      'light',
+      'dark',
+      'high-contrast',
+      'dark-high-contrast',
+    ]);
   });
 
-  it('parses only the two known themes', () => {
-    expect(parseTheme('dark')).toBe('dark');
-    expect(parseTheme('light')).toBe('light');
+  it('rejects anything else', () => {
     expect(parseTheme('auto')).toBeNull();
+    expect(parseTheme('High-Contrast')).toBeNull();
     expect(parseTheme(null)).toBeNull();
   });
 });

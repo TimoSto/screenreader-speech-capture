@@ -8,8 +8,9 @@
     <script>
       // Apply the saved theme before the first paint (no flash). Light is the default.
       try {
-        document.documentElement.dataset.theme =
-          localStorage.getItem('sr-theme') === 'dark' ? 'dark' : 'light';
+        var themes = ['light', 'dark', 'high-contrast', 'dark-high-contrast'];
+        var saved = localStorage.getItem('sr-theme');
+        document.documentElement.dataset.theme = themes.indexOf(saved) >= 0 ? saved : 'light';
       } catch {}
     </script>
     %sveltekit.head%
