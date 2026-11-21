@@ -111,6 +111,16 @@ describe('createSessionsStore', () => {
     stop();
   });
 
+  it('reads the list again on refresh', async () => {
+    const api = fakeApi({ sessions: [], currentId: null });
+    const store = createSessionsStore(api);
+    const stop = store.init(null);
+    await vi.waitFor(() => expect(api.list).toHaveBeenCalledTimes(1));
+    await store.refresh();
+    expect(api.list).toHaveBeenCalledTimes(2);
+    stop();
+  });
+
   it('lets a failed start reject with the bridge message and changes nothing', async () => {
     const api = fakeApi({ sessions: [], currentId: null });
     vi.mocked(api.start).mockRejectedValue(new Error('name too long'));

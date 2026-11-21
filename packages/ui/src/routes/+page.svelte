@@ -7,7 +7,13 @@
   import SessionsPane from '#lib/components/SessionsPane/SessionsPane.svelte';
   import { sessionsPaneStore, sessionsStore, speechStore } from '#lib/composition.js';
   import { scopeAfterDelete, selectedScope, type SessionScope } from '#lib/core/sessions.js';
-  import { canAddMarker, canDeleteSession, isLiveScope, logHeading } from '#lib/core/speech.js';
+  import {
+    canAddMarker,
+    canClearSpeech,
+    canDeleteSession,
+    isLiveScope,
+    logHeading,
+  } from '#lib/core/speech.js';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -34,6 +40,7 @@
 
   const heading = $derived(logHeading(selectedId, list.sessions));
   const canMark = $derived(canAddMarker(selectedId, list.currentId));
+  const canClear = $derived(canClearSpeech(selectedId, list.currentId));
   const canDelete = $derived(canDeleteSession(selectedId, list.currentId));
 
   onMount(() => {
@@ -65,6 +72,12 @@
     if (ended !== null && !list.sessions.some((session) => session.id === ended)) {
       await select(null);
     }
+  }
+
+  async function clear(): Promise<void> {
+    await speechStore.clear(selectedId);
+    // The table empties through the feed; the counts in the list don't wait for the next poll.
+    await sessionsStore.refresh();
   }
 
   async function remove(): Promise<void> {
@@ -104,6 +117,8 @@
       connection={speechStore.connection}
       {canMark}
       onAddMarker={(label: string) => speechStore.addMarker(label)}
+      {canClear}
+      onClear={clear}
       {canDelete}
       onDelete={remove}
     />

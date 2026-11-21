@@ -1,14 +1,26 @@
+import type { SessionScope } from '#lib/core/sessions.js';
 import type { SpeechApi } from '#lib/core/speech.js';
 
-/** Changes the speech through the UI's own markers route (`url` includes the base path). */
+/** Changes the speech through the UI's own markers and speech routes (the urls include the base path). */
 export class HttpSpeechApi implements SpeechApi {
-  constructor(private readonly url: string) {}
+  constructor(
+    private readonly markersUrl: string,
+    private readonly speechUrl: string,
+  ) {}
 
   async addMarker(label: string): Promise<void> {
-    const response = await fetch(this.url, {
+    const response = await fetch(this.markersUrl, {
       method: 'POST',
       headers: { accept: 'application/json', 'content-type': 'application/json' },
       body: JSON.stringify({ label }),
+    });
+    if (!response.ok) throw new Error(await errorMessage(response));
+  }
+
+  async clear(scope: SessionScope): Promise<void> {
+    const response = await fetch(`${this.speechUrl}?session=${encodeURIComponent(String(scope))}`, {
+      method: 'DELETE',
+      headers: { accept: 'application/json' },
     });
     if (!response.ok) throw new Error(await errorMessage(response));
   }

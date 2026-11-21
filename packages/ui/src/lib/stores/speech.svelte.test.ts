@@ -35,13 +35,18 @@ function fakes() {
     },
   };
   const labels: string[] = [];
+  const cleared: SessionScope[] = [];
   const api: SpeechApi = {
     addMarker(label) {
       labels.push(label);
       return label === 'bad' ? Promise.reject(new Error('refused')) : Promise.resolve();
     },
+    clear(scope) {
+      cleared.push(scope);
+      return scope === 4 ? Promise.reject(new Error('refused')) : Promise.resolve();
+    },
   };
-  return { feed, api, opened, labels };
+  return { feed, api, opened, labels, cleared };
 }
 
 describe('createSpeechStore', () => {
@@ -137,6 +142,19 @@ describe('createSpeechStore', () => {
     await store.addMarker('step 3');
     expect(labels).toEqual(['step 3']);
     expect(store.entries).toEqual([]);
+  });
+
+  it('clears a scope through the api and leaves the table to the feed', async () => {
+    const { feed, api, cleared, opened } = fakes();
+    const store = createSpeechStore(feed, api);
+    store.open(3, true);
+    opened[0].handlers.onEntry(entry(1));
+    await store.clear(3);
+    expect(cleared).toEqual([3]);
+    expect(store.entries).toHaveLength(1);
+    opened[0].handlers.onClear();
+    expect(store.entries).toEqual([]);
+    await expect(store.clear(4)).rejects.toThrow('refused');
   });
 
   it('passes on the reason a marker was refused', async () => {

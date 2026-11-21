@@ -26,3 +26,13 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
   );
   return json(await bridgeApiFromEnv(fetch).speech(session, since, limit));
 };
+
+/** Clears the speech of the current session or of `none` (`?session=<id|none>`); it keeps running. */
+export const DELETE: RequestHandler = async ({ url, fetch }) => {
+  const session = url.searchParams.get('session');
+  if (session === null || (session !== 'none' && !/^[1-9]\d*$/.test(session))) {
+    error(400, 'session must be a session id or "none"');
+  }
+  await bridgeApiFromEnv(fetch).clearSpeech(session);
+  return new Response(null, { status: 204 });
+};

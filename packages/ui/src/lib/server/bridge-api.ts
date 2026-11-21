@@ -33,6 +33,8 @@ export interface BridgeApi {
   endSession(): Promise<void>;
   /** Deletes an ended session and its speech (the bridge refuses the current one). */
   deleteSession(id: number): Promise<void>;
+  /** Clears the speech of the current session or of `none` (`session`: an id or `none`); it keeps running. */
+  clearSpeech(session: string): Promise<void>;
   /** Inserts a marker; the bridge files it under the current session (or outside any). */
   addMarker(label: string): Promise<SpeechEntryDto>;
   /** One page of a scope's entries with `seq > since`, oldest first (`session`: an id or `none`). */
@@ -116,6 +118,9 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
     },
     deleteSession: async (id) => {
       await call('DELETE', `/sessions?session=${id}`);
+    },
+    clearSpeech: async (session) => {
+      await call('DELETE', `/speech?session=${encodeURIComponent(session)}`);
     },
     addMarker: (label) => read('POST', '/markers', SpeechEntrySchema, { label }),
     speech: (session, since, limit) => {

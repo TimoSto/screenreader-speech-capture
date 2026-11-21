@@ -83,6 +83,10 @@ export function createSessionsStore(api: SessionsApi) {
         clearInterval(refresh);
       };
     },
+    /** Reads the list now, for a change made elsewhere (the speech of a scope was cleared). */
+    refresh(): Promise<void> {
+      return refreshAfterChange();
+    },
     /** Starts a session, which ends the previous one. Rejects with the bridge's message. */
     async start(name: string, run: string | null): Promise<SessionDto> {
       const started = await api.start(name, run);

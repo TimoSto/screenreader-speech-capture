@@ -92,6 +92,11 @@ The main area. It shows the entries of the selected session, oldest first, newes
   session when none is current, so the button is only shown in the current session and in "Outside
   sessions" while no session is current. It is hidden in an ended session, and in "Outside sessions"
   while a session is live.
+- **Clear speech** (the sweep button next to it, in the current session and in "Outside sessions")
+  asks to confirm, then removes that scope's entries and markers from the bridge
+  (`DELETE /api/v1/speech?session=<id|none>`, see [Sessions](speech-capture.md#sessions)). The
+  session keeps running, now empty, and the table follows the bridge's `clear` event. The button is
+  disabled while the log is empty, and is not shown in an ended session (delete it instead).
 - **Delete session** (the bin button in the log's header, only in an ended session) asks to confirm,
   then removes the session and its speech from the bridge (`DELETE /api/v1/sessions?session=<id>`,
   see [Sessions](speech-capture.md#sessions)) and selects the next older session, or the next newer

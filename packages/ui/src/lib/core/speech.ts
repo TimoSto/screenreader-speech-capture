@@ -33,6 +33,11 @@ export interface SpeechFeed {
 export interface SpeechApi {
   /** Inserts a marker; the entry reaches the table through the feed. */
   addMarker(label: string): Promise<void>;
+  /**
+   * Clears the speech of `scope` (the current session or the speech outside sessions); the session
+   * keeps running and the table empties through the feed. Rejects with the bridge's message.
+   */
+  clear(scope: SessionScope): Promise<void>;
 }
 
 /**
@@ -41,6 +46,14 @@ export interface SpeechApi {
  */
 export function canAddMarker(scope: SessionScope, currentId: number | null): boolean {
   return currentId === null ? scope === 'none' : scope === currentId;
+}
+
+/**
+ * Whether the log can clear `scope`: the current session or the speech outside sessions, the scopes
+ * that can still receive speech. An ended session can only be deleted.
+ */
+export function canClearSpeech(scope: SessionScope, currentId: number | null): boolean {
+  return isLiveScope(scope, currentId);
 }
 
 /** Whether the log can delete `scope`: an ended session, never the current one or the outside log. */

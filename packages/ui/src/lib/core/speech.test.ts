@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SessionDto } from '@screenreader-speech-capture/shared';
 import {
   canAddMarker,
+  canClearSpeech,
   canDeleteSession,
   formatReceivedTime,
   isLiveScope,
@@ -87,5 +88,18 @@ describe('canDeleteSession', () => {
     expect(canDeleteSession(3, 3)).toBe(false);
     expect(canDeleteSession('none', null)).toBe(false);
     expect(canDeleteSession('none', 3)).toBe(false);
+  });
+});
+
+describe('canClearSpeech', () => {
+  it('is offered for the current session and the speech outside sessions', () => {
+    expect(canClearSpeech(3, 3)).toBe(true);
+    expect(canClearSpeech('none', null)).toBe(true);
+    expect(canClearSpeech('none', 3)).toBe(true);
+  });
+
+  it('is not offered for an ended session', () => {
+    expect(canClearSpeech(2, 3)).toBe(false);
+    expect(canClearSpeech(2, null)).toBe(false);
   });
 });
