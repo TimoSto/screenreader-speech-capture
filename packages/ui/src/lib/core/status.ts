@@ -5,7 +5,7 @@ export interface StatusApi {
   fetch(): Promise<StatusDto>;
 }
 
-export type ChipId = 'playwright' | 'mcp' | 'session';
+export type ChipId = 'playwright' | 'mcp' | 'bridge';
 export type ChipTone = 'ok' | 'error' | 'warning' | 'neutral';
 
 export type Chip = {
@@ -21,37 +21,30 @@ export type Chip = {
   down?: boolean;
 };
 
+/**
+ * Only what needs a look: a service that is not running (not enabled) has no chip, and the session
+ * is the sessions pane's business. An unreachable bridge is a chip of its own.
+ */
 export function deriveChips(status: StatusDto | null, reachable: boolean): Chip[] {
-  if (status === null) {
+  if (!reachable) {
     return [
-      neutral('playwright', 'Playwright'),
-      neutral('mcp', 'MCP'),
-      neutral('session', 'Session'),
+      {
+        id: 'bridge',
+        text: 'Bridge unreachable',
+        tone: 'error',
+        dot: 'filled',
+        description: 'Bridge unreachable',
+      },
     ];
   }
-  const chips = [
+  if (status === null) return [];
+  return [
     serviceChip('playwright', 'Playwright', status.playwright),
     serviceChip('mcp', 'MCP', status.mcp),
-    sessionChip(status),
-  ];
-  // The last known values stay visible, but they are no longer a statement about now.
-  return reachable
-    ? chips
-    : chips.map((chip) => ({ ...chip, tone: 'neutral' as const, down: true }));
+  ].filter((chip): chip is Chip => chip !== null);
 }
 
-function neutral(id: ChipId, text: string): Chip {
-  return {
-    id,
-    text,
-    tone: 'neutral',
-    dot: 'hollow',
-    description: `${text}, state unknown`,
-    down: true,
-  };
-}
-
-function serviceChip(id: ChipId, name: string, service: ServiceStatusDto): Chip {
+function serviceChip(id: ChipId, name: string, service: ServiceStatusDto): Chip | null {
   const base = `${name} ${service.version}`;
   switch (service.state) {
     case 'running':
@@ -75,29 +68,8 @@ function serviceChip(id: ChipId, name: string, service: ServiceStatusDto): Chip 
         down: true,
       };
     case 'stopped':
-      return {
-        id,
-        text: base,
-        tone: 'neutral',
-        dot: 'hollow',
-        description: `${base}, stopped`,
-        down: true,
-      };
+      return null;
   }
-}
-
-function sessionChip({ session }: StatusDto): Chip {
-  if (session.current === null) {
-    return {
-      id: 'session',
-      text: 'No session',
-      tone: 'neutral',
-      dot: 'hollow',
-      description: 'No session is running',
-    };
-  }
-  const text = `Session #${session.current.id}`;
-  return { id: 'session', text, tone: 'ok', dot: 'filled', description: `${text}, live` };
 }
 
 /**

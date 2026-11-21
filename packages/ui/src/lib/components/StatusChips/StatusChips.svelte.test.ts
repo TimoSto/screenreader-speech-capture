@@ -20,20 +20,13 @@ const chips: Chip[] = [
     description: 'MCP 0.0.85, stopped',
     down: true,
   },
-  {
-    id: 'session',
-    text: 'No session',
-    tone: 'neutral',
-    dot: 'hollow',
-    description: 'No session is running',
-  },
 ];
 
 describe('StatusChips', () => {
   it('lists one chip per entry, named by its description', async () => {
     await render(StatusChips, { chips, announcement: '' });
     await expect.element(page.getByRole('list', { name: 'Bridge status' })).toBeInTheDocument();
-    await expect.element(page.getByRole('listitem')).toHaveLength(3);
+    await expect.element(page.getByRole('listitem')).toHaveLength(2);
     await expect
       .element(page.getByRole('listitem', { name: 'MCP 0.0.85, stopped' }))
       .toBeInTheDocument();
@@ -48,7 +41,7 @@ describe('StatusChips', () => {
       .element(page.getByRole('listitem', { name: 'MCP 0.0.85, stopped' }))
       .toHaveClass('down');
     await expect
-      .element(page.getByRole('listitem', { name: 'No session is running' }))
+      .element(page.getByRole('listitem', { name: 'Playwright 1.65.0, running' }))
       .not.toHaveClass('down');
   });
 
@@ -57,5 +50,10 @@ describe('StatusChips', () => {
     await expect.element(page.getByRole('status')).toHaveTextContent('');
     await screen.rerender({ chips, announcement: 'MCP 0.0.85, failed.' });
     await expect.element(page.getByRole('status')).toHaveTextContent('MCP 0.0.85, failed.');
+  });
+
+  it('renders no list without chips', async () => {
+    await render(StatusChips, { chips: [], announcement: '' });
+    await expect.element(page.getByRole('list')).not.toBeInTheDocument();
   });
 });
