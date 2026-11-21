@@ -1,5 +1,5 @@
 import axe from 'axe-core';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import type { SpeechEntryDto } from '@screenreader-speech-capture/shared';
@@ -25,6 +25,11 @@ const props = (patch: Record<string, unknown> = {}) => ({
 });
 
 describe('SpeechLog', () => {
+  // Wide enough that the seq column is shown (it is hidden in a log narrower than 520px).
+  beforeEach(async () => {
+    await page.viewport(900, 700);
+  });
+
   it('shows the heading and one row per entry with received, text and seq', async () => {
     await render(SpeechLog, props());
     await expect
@@ -60,12 +65,16 @@ describe('SpeechLog', () => {
 
   it('says so while the stream reconnects', async () => {
     await render(SpeechLog, props({ connection: 'reconnecting' }));
-    await expect.element(page.getByRole('status')).toHaveTextContent('reconnecting');
+    await expect
+      .element(page.getByRole('status'))
+      .toHaveTextContent('Connection lost, reconnecting…');
   });
 
   it('says so when the speech could not be loaded', async () => {
     await render(SpeechLog, props({ entries: [], connection: 'failed' }));
-    await expect.element(page.getByRole('alert')).toHaveTextContent('could not be loaded');
+    await expect
+      .element(page.getByRole('alert'))
+      .toHaveTextContent('The speech could not be loaded.');
   });
 
   it('explains an ended session without entries', async () => {
@@ -79,5 +88,16 @@ describe('SpeechLog', () => {
       rules: { 'label-content-name-mismatch': { enabled: false } },
     });
     expect(results.violations.map((violation) => violation.id)).toEqual([]);
+  });
+});
+
+describe('SpeechLog in a narrow window', () => {
+  it('hides the seq column', async () => {
+    await page.viewport(400, 700);
+    await render(SpeechLog, props());
+    const headers = page.getByRole('columnheader').elements();
+    await expect
+      .poll(() => headers.filter((h) => getComputedStyle(h).display !== 'none').length)
+      .toBe(2);
   });
 });
