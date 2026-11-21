@@ -15,8 +15,8 @@ function fakeStorage(initial: boolean | null): SessionsPaneStorage & { saved: bo
 }
 
 describe('createSessionsPaneStore', () => {
-  it('starts expanded', () => {
-    expect(createSessionsPaneStore(fakeStorage(true)).collapsed).toBe(false);
+  it('starts collapsed', () => {
+    expect(createSessionsPaneStore(fakeStorage(true)).collapsed).toBe(true);
   });
 
   it('picks up the saved choice on init', () => {
@@ -35,10 +35,10 @@ describe('createSessionsPaneStore', () => {
     const storage = fakeStorage(null);
     const store = createSessionsPaneStore(storage);
     store.toggle();
-    expect(store.collapsed).toBe(true);
-    expect(storage.saved).toBe(true);
-    store.toggle();
+    expect(store.collapsed).toBe(false);
     expect(storage.saved).toBe(false);
+    store.toggle();
+    expect(storage.saved).toBe(true);
   });
 });
 
