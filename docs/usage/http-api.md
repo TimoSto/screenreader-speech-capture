@@ -65,6 +65,7 @@ with every run.
 | `POST /api/v1/markers` `{ "label": "step 3" }` | Insert a marker into the timeline (shown in the UI, returned in lists). Requires `content-type: application/json` (a web page can't send that cross-origin without a CORS preflight). Returns `201` with the new entry. |
 | `POST /api/v1/sessions` `{ "name": "checkout test", "run": "nightly-42" }` | Start a [session](speech-capture.md#sessions): it becomes current and the previous one ends. `name` is required, `run` optional (both trimmed, not empty, at most 1000 characters). Requires `content-type: application/json`. Returns `201` with the new `Session`; its `startSeq` is the `since` that reads it from its start. If another client's session was current (see [Clients](#clients)), it is not refused: the bridge logs a warning and the answer has that session in `replaced` (otherwise `null`, since API 1.10). |
 | `POST /api/v1/sessions/end` | End the current session (`204`). Entries after this have `sessionId: null`. Does nothing if no session is current. Ending another client's session is logged as a warning. |
+| `DELETE /api/v1/sessions?session=<id>` | Delete an ended session and its entries (`204`, since API 1.16). `400` for the current session (end it first) and for `current` or `none`, `404` for an id never given out. A session that is already gone is not an error. Sends no event. |
 | `GET /api/v1/sessions` | `{ "sessions": [...], "currentId": 7, "outsideEntries": 12 }`: the sessions that still have entries in the buffer, plus the current one, newest first. `currentId` is `null` when no session is current. `outsideEntries` counts the entries in the buffer outside any session, the ones `session=none` reads (since API 1.15). |
 | `POST /api/v1/input/click` `{ "x": 640, "y": 12, "button": "left" }` | Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
 | `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | Native key presses: one chord, or a sequence with `delayMs` between them. |
@@ -123,6 +124,7 @@ curl "$VM/api/v1/speech?session=current"
 curl "$VM/api/v1/speech/wait?contains=Submit%2C%20button&timeoutMs=5000"
 curl -N $VM/api/v1/speech/stream
 curl -X POST $VM/api/v1/sessions/end
+curl -X DELETE "$VM/api/v1/sessions?session=7"   # delete one ended session
 curl -X DELETE $VM/api/v1/speech   # wipe everything
 curl -X POST $VM/api/v1/input/keys -H 'content-type: application/json' -d '{"keys":"Insert+T"}'
 ```

@@ -1,6 +1,13 @@
 import type { ManageSessions } from '../../../../application/ports/in/manage-sessions.js';
 import { toSessionListDto, toStartSessionResponseDto } from '../dto/session.js';
-import { clientHeader, jsonBody, nullableStringField, stringField } from '../request.js';
+import { invalidField } from '../../../../domain/errors.js';
+import {
+  clientHeader,
+  jsonBody,
+  nullableStringField,
+  sessionParam,
+  stringField,
+} from '../request.js';
 import { sendJson, sendNoContent } from '../response.js';
 import type { Router } from '../router.js';
 
@@ -8,7 +15,7 @@ interface SessionRoutesDeps {
   sessions: ManageSessions;
 }
 
-/** `POST /sessions`, `POST /sessions/end`, `GET /sessions` (docs/usage/http-api.md#endpoints). */
+/** `POST /sessions`, `POST /sessions/end`, `DELETE /sessions`, `GET /sessions` (docs/usage/http-api.md#endpoints). */
 export function sessionRoutes(router: Router, { sessions }: SessionRoutesDeps): void {
   router
     .add('POST', '/sessions', async ({ req, res }) => {
@@ -20,6 +27,14 @@ export function sessionRoutes(router: Router, { sessions }: SessionRoutesDeps): 
     })
     .add('POST', '/sessions/end', ({ req, res }) => {
       sessions.end(clientHeader(req));
+      sendNoContent(res);
+    })
+    .add('DELETE', '/sessions', ({ res, url }) => {
+      const session = sessionParam(url);
+      if (typeof session !== 'number') {
+        throw invalidField('session', 'must be the id of an ended session');
+      }
+      sessions.delete(session);
       sendNoContent(res);
     })
     .add('GET', '/sessions', ({ res }) => sendJson(res, 200, toSessionListDto(sessions.list())));

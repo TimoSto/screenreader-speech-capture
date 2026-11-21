@@ -138,6 +138,27 @@ export class SpeechLog {
     return summarize(ended, stats);
   }
 
+  /**
+   * Removes an ended session and its entries from the buffer. `INVALID_REQUEST` for the current
+   * session (end it first), `NOT_FOUND` for an id never given out. An ended session that was
+   * already forgotten (its entries all dropped) is gone already: nothing to do.
+   */
+  deleteSession(id: number): void {
+    if (!Number.isSafeInteger(id) || id < 1) {
+      throw invalidField('session', 'must be a session id');
+    }
+    if (id > this.#lastSessionId) {
+      throw new AppError('NOT_FOUND', `Session ${id} does not exist`, { session: id });
+    }
+    if (id === this.#currentId) {
+      throw invalidField('session', 'the current session cannot be deleted, end it first');
+    }
+    this.#entries.removeWhere((entry) => entry.sessionId === id);
+    this.#bySession.delete(id);
+    this.#droppedBySession.delete(id);
+    this.#sessions.delete(id);
+  }
+
   currentSession(): Session | null {
     return this.#currentId === null ? null : (this.#sessions.get(this.#currentId) ?? null);
   }

@@ -64,6 +64,12 @@ export class SeqQueue<T extends Sequenced> {
     return { items: items.slice(low, low + limit), hasMore: true };
   }
 
+  /** Removes every item the predicate accepts, wherever it sits. Keeps the order. O(n). */
+  removeWhere(predicate: (item: T) => boolean): void {
+    this.#items = this.#items.slice(this.#head).filter((item) => !predicate(item));
+    this.#head = 0;
+  }
+
   clear(): void {
     this.#items = [];
     this.#head = 0;

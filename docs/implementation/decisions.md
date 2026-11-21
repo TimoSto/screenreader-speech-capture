@@ -146,6 +146,14 @@ session, and returns the replaced session from `POST /sessions`. A lease that ex
 come later if parallel workers become a real use case.
 
 
+## Deleting a session is a 400 for the current one, and sends no event
+
+`DELETE /sessions?session=<id>` refuses the current session and `none` with `INVALID_REQUEST`
+(`details.field = session`) instead of a new `CONFLICT` code: it is a bad request for that
+parameter, and a new error code would break clients that only know the existing ones. It publishes
+no event: the UI polls `GET /sessions`, and a live feed has no deleted-session state to keep.
+Entries of the deleted session leave the buffer, so reads without a filter no longer show them.
+
 ## The SSE replay follows the reader
 
 A stream opened with `Last-Event-ID` replays the buffered entries in pages, pausing whenever the

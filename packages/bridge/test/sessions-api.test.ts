@@ -257,4 +257,41 @@ describe('Sessions API', () => {
     expect(list).toMatchObject({ currentId: 2, sessions: [{ id: 2, entries: 0 }] });
     expect(await texts(bridge, 'session=1')).toEqual([]);
   });
+
+  describe('DELETE /sessions', () => {
+    const del = (bridge: Bridge, query: string) =>
+      fetch(api(bridge, `/sessions${query}`), { method: 'DELETE' });
+
+    it('deletes an ended session and its entries, keeping the rest', async () => {
+      const bridge = await start();
+      await say(bridge, 'outside');
+      await startSession(bridge, { name: 'a' });
+      await say(bridge, 'a1');
+      await startSession(bridge, { name: 'b' });
+      await say(bridge, 'b1');
+      expect((await del(bridge, '?session=1')).status).toBe(204);
+      expect(await texts(bridge, '')).toEqual(['outside', 'b1']);
+      const list = await json<SessionListDto>(await fetch(api(bridge, '/sessions')));
+      expect(list).toMatchObject({ currentId: 2, outsideEntries: 1, sessions: [{ id: 2 }] });
+      expect((await del(bridge, '?session=1')).status).toBe(204);
+    });
+
+    it('refuses the current session, current, none and a missing session', async () => {
+      const bridge = await start();
+      await startSession(bridge, { name: 'a' });
+      for (const query of ['?session=1', '?session=current', '?session=none', '']) {
+        const response = await del(bridge, query);
+        expect(response.status).toBe(400);
+        expect((await json<ErrorBodyDto>(response)).error).toMatchObject({
+          code: 'INVALID_REQUEST',
+          details: { field: 'session' },
+        });
+      }
+    });
+
+    it('answers 404 for an id never given out', async () => {
+      const bridge = await start();
+      expect((await del(bridge, '?session=9')).status).toBe(404);
+    });
+  });
 });

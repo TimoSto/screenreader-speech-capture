@@ -46,4 +46,15 @@ describe('SeqQueue', () => {
     queue.clear();
     expect(queue.after(0).items).toEqual([]);
   });
+
+  it('removes items from the middle and keeps finding the rest', () => {
+    const queue = queueOf(1, 2, 3, 4, 5);
+    queue.shift();
+    queue.removeWhere((item) => item.seq % 2 === 1);
+    expect(seqs(queue.after(0).items)).toEqual([2, 4]);
+    expect(queue.size).toBe(2);
+    expect(queue.first()?.seq).toBe(2);
+    queue.removeWhere(() => true);
+    expect(queue.size).toBe(0);
+  });
 });
