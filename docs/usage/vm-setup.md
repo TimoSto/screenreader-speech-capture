@@ -108,6 +108,23 @@ Install a **pinned version** globally (`npm i -g screenreader-speech-capture@x.y
 using `npx` at log on. At log on the network may not be ready yet, and `npx` would pick up new
 versions without notice.
 
+#### The `install-scripts` warning
+
+Recent npm versions print this when you install globally:
+
+```text
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   @jitsi/robotjs@0.6.24 (install: node-gyp-build)
+```
+
+It is expected and harmless. `@jitsi/robotjs` is the only dependency with an install script
+(`node-gyp-build`); Playwright and `@playwright/mcp` have none, so they don't show up. npm only
+warns that a future version will block such scripts by default. The script still runs, and the
+package ships prebuilt Windows binaries that load either way, so native input works. To silence
+the warning, allow the script: `npm i -g --allow-scripts=@jitsi/robotjs screenreader-speech-capture@x.y.z`
+(once) or `npm config set allow-scripts=@jitsi/robotjs --location=user` (for all global installs).
+The bridge's own Playwright install runs with `--ignore-scripts` and prints nothing.
+
 Set up the VM like this:
 
 - log on automatically, turn off the screen lock and the screen saver, so the session stays
