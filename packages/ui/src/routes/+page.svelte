@@ -36,15 +36,24 @@
   });
 
   function select(id: SessionScope | null): Promise<void> {
-    // `none` is always spelled out: with a session current, a clean URL would follow that session.
-    const clean = id === null || id === list.currentId;
+    // Always spelled out, even for the current session: a clean URL only follows the current
+    // session, so it would jump to the speech outside once that session ends.
     // eslint-disable-next-line svelte/no-navigation-without-resolve
-    return goto(clean ? resolve('/') : `${resolve('/')}?session=${id}`, { reset: false });
+    return goto(id === null ? resolve('/') : `${resolve('/')}?session=${id}`, { reset: false });
+  }
+
+  async function end(): Promise<void> {
+    const ended = list.currentId;
+    await sessionsStore.end();
+    // A session without entries is dropped by the bridge: don't leave its id in the URL.
+    if (ended !== null && !list.sessions.some((session) => session.id === ended)) {
+      await select(null);
+    }
   }
 
   async function start(name: string, run: string | null): Promise<void> {
-    await sessionsStore.start(name, run);
-    await select(null); // the new session is current: follow it
+    const started = await sessionsStore.start(name, run);
+    await select(started.id); // pinned in the URL, so it stays selected after it ends
   }
 </script>
 
@@ -60,7 +69,7 @@
       {now}
       onSelect={(id: SessionScope) => void select(id)}
       onStart={start}
-      onEnd={() => sessionsStore.end()}
+      onEnd={end}
     />
   </aside>
   <div class="log">
