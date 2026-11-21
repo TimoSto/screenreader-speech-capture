@@ -116,6 +116,76 @@ describe('createBridgeApi', () => {
     });
   });
 
+  describe('config', () => {
+    const config = {
+      tcp: { host: '127.0.0.1', port: 4449, encoding: 'windows-1252', maxLineBytes: 65536 },
+      http: { host: '127.0.0.1', port: 5151, allowedHosts: [] },
+      playwright: { enabled: true, port: 3000, version: null },
+      mcp: { enabled: true, port: 8931 },
+      buffer: { maxEntries: 10000 },
+      log: { level: 'info', file: null, consoleSpeech: false },
+    };
+
+    it('reads the active and the saved view and the overrides', async () => {
+      const requested: string[] = [];
+      const api = createBridgeApi('http://bridge', (input) => {
+        const url = new Request(input).url;
+        requested.push(url);
+        return Promise.resolve(
+          json(url.endsWith('/overrides') ? { overrides: { 'tcp.port': '--tcp-port' } } : config),
+        );
+      });
+      await api.config('active');
+      await api.config('saved');
+      await expect(api.configOverrides()).resolves.toEqual({
+        overrides: { 'tcp.port': '--tcp-port' },
+      });
+      expect(requested).toEqual([
+        'http://bridge/api/v1/config?view=active',
+        'http://bridge/api/v1/config?view=saved',
+        'http://bridge/api/v1/config/overrides',
+      ]);
+    });
+
+    it('saves a patch with a PUT and answers with the saved config', async () => {
+      let seen: RequestInit | undefined;
+      const api = createBridgeApi('http://bridge', (_input, init) => {
+        seen = init;
+        return Promise.resolve(json({ ...config, tcp: { ...config.tcp, port: 4450 } }));
+      });
+      const saved = await api.updateConfig({ tcp: { port: 4450 } });
+      expect(saved.tcp.port).toBe(4450);
+      expect(seen?.method).toBe('PUT');
+      expect(seen?.body).toBe('{"tcp":{"port":4450}}');
+      expect(seen?.headers).toMatchObject({
+        'content-type': 'application/json',
+        origin: 'http://bridge',
+      });
+    });
+
+    it('keeps the setting a rejected update names', async () => {
+      const api = createBridgeApi(
+        'http://bridge',
+        fakeFetch(() =>
+          json(
+            {
+              error: {
+                code: 'INVALID_REQUEST',
+                message: 'tcp.port: the port is already in use',
+                details: { field: 'tcp.port' },
+              },
+            },
+            400,
+          ),
+        ),
+      );
+      await expect(api.updateConfig({ tcp: { port: 80 } })).rejects.toMatchObject({
+        status: 400,
+        body: { message: 'tcp.port: the port is already in use', field: 'tcp.port' },
+      });
+    });
+  });
+
   it('deletes a session with a DELETE and accepts the empty 204 answer', async () => {
     let seen: { url: string; method: string | undefined } | undefined;
     const api = createBridgeApi('http://bridge', (input, init) => {

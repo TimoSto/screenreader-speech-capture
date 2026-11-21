@@ -147,15 +147,28 @@ white, or white on black, with 2px outlines and a thicker focus ring). The choic
 kept in this browser's `localStorage`; the bridge doesn't know about it. The UI starts light and ignores
 the system's `prefers-color-scheme`.
 
-### Bridge settings *(planned, [M5](../ROADMAP.md))*
+### Speech capture
 
-A form for the [configuration](configuration.md): ports, hosts, encoding, buffer size, log file,
-Playwright version, and native input on/off.
+Settings saved on the bridge, so unlike the theme they are not kept in the browser and apply only
+when the bridge is restarted. So far one field, the **TCP port** the [socket voice](vm-setup.md#socket-voice-setup)
+sends to (default 4449). Enter saves, or the **Save** button; **Revert** puts the saved port back.
 
-- Input is validated in the browser first, then saved with `PUT /api/v1/config`. Errors from the
-  bridge are shown next to the field.
-- Every setting takes effect on the next start of the bridge. A field whose saved value differs
-  from the one in `GET /config` shows a "restart the bridge" hint.
+- A port is checked in the browser first (a whole number from 1 to 65535), then saved with
+  `PUT /api/v1/config {"tcp":{"port":…}}`. An error from the bridge, for example a port that is
+  already used, is shown under the field.
+- The field shows what is saved. "In use" is what the bridge listens on now (`GET /config`). When
+  the saved port differs, a notice says to restart the bridge, and that the voice on the VM sends to
+  a fixed port, so a voice for the new port has to be added (`text-to-socket-engine-add-voice`)
+  and selected. The notice survives a reload: the page compares `GET /config` with
+  `GET /config?view=saved`.
+- A port set by a flag or variable (`--tcp-port`, `GET /config/overrides`) shows the flag and can't be
+  edited: it wins over the config file on every start.
+
+### More bridge settings *(planned, [M5](../ROADMAP.md))*
+
+A form for the rest of the [configuration](configuration.md): other ports, hosts, encoding, buffer
+size, log file, Playwright version, and native input on/off, with the same pattern as the TCP port.
+
 - **Services:** the state and version of the Playwright server and MCP (from `status`). They are
   switched on and off with their `enabled` setting; there are no start / stop buttons.
 

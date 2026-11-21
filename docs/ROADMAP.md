@@ -79,7 +79,8 @@ GitHub issues. This file only tracks milestones.
 - [x] Color theme setting on the Settings page: light, dark, high contrast, dark high contrast
       (`data-theme` on `<html>`, choice remembered in `localStorage`). The UI starts light and
       ignores `prefers-color-scheme`
-- [ ] Settings (validation, services)
+- [x] Settings: TCP port field (saved on the bridge, "restart necessary" notice, read-only when a flag sets it)
+- [ ] Settings: the other bridge settings (validation, services)
 - [ ] Setup page with check button
 - [ ] Accessibility of the UI itself (no feedback loop)
 

@@ -110,8 +110,23 @@ input (result of the last input request), Sessions. Same data as `GET /api/v1/st
 
 ### Navigation rail
 
-Monitor, Settings, Setup. Active item: 56×32 `secondary-container` indicator. Settings and Setup
-are not designed yet (see `docs/web-ui.md` for their content).
+Monitor, Settings, Setup. Active item: 56×32 `secondary-container` indicator. Setup is not designed
+yet (see `docs/web-ui.md` for its content).
+
+### Settings: bridge settings
+
+One section per topic in the single pane, separated by a divider. "Appearance" is stored in this
+browser and applies at once; "Speech capture" is stored on the bridge and applies after a restart,
+which its hint line says ("Saved on the bridge. A change takes effect when the bridge is
+restarted."). A bridge setting is a Material outlined text field (`inputmode="numeric"` for a port,
+not `type=number`: no spinner, no scroll-wheel changes) with an explicit **Save** (filled) and
+**Revert** (text) button, never autosave: a half-typed `44` must not be saved, and a save has a
+consequence. Save is disabled until the value differs from the saved one. The browser check
+(`error-text` on the field) and the bridge's refusal (`role="alert"` under the field, the field keeps
+the typed value) are separate. A saved-but-not-applied setting shows a `--app-warning-container`
+notice in an always-present `role="status"` region, so it is announced when it appears; it states
+the consequence for the VM (the voice has the port built in). A setting a flag or variable sets
+shows the flag and no buttons.
 
 ### Sessions pane
 
@@ -287,6 +302,6 @@ sessions started from the UI are attributed.
    a client of the versioned API only. The mockup is agnostic.
 2. **Input availability:** without an input flag in `/status`, the Actions panel can't show
    "unavailable" before the first try. Worth adding `input.available` back to the status DTO?
-3. **Setup page** is not designed yet. Settings is designed only for the color theme
-   (`mockup/settings.html`); the bridge config form is not.
+3. **Setup page** is not designed yet. The Settings mockup (`mockup/settings.html`) shows only the
+   color theme; the TCP port field follows the notes above and was built straight from them.
 4. **Narrow screens** (drawer + modal Actions sheet) are only described, not drawn.
