@@ -37,5 +37,10 @@ export interface ManageSessions {
    * is logged as a warning.
    */
   end(client?: string | null): void;
+  /**
+   * Deletes an ended session and its speech. Rejects with `INVALID_REQUEST` for the current
+   * session, `NOT_FOUND` for an id never given out. Publishes no event.
+   */
+  delete(id: number): void;
   list(): SessionList;
 }

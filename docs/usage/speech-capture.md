@@ -61,6 +61,8 @@ and readers can tell them apart.
 - Sessions share the capped buffer: an ended session disappears from the session list once all
   its entries have been dropped. `DELETE /api/v1/speech` is a **global wipe** for manual use: it
   removes all entries and all ended sessions. The current session stays current, empty.
+- `DELETE /api/v1/sessions?session=<id>` deletes one ended session with its entries. The current
+  session and the entries outside sessions can't be deleted this way.
 - Sessions live in memory only, like the buffer.
 
 Endpoints: [HTTP API](http-api.md#endpoints).

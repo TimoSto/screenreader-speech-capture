@@ -13,7 +13,12 @@ import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
 interface SessionServiceDeps {
   log: Pick<
     SpeechLog,
-    'startSession' | 'endSession' | 'sessions' | 'currentSession' | 'outsideEntries'
+    | 'startSession'
+    | 'endSession'
+    | 'deleteSession'
+    | 'sessions'
+    | 'currentSession'
+    | 'outsideEntries'
   >;
   events: SpeechEventBus;
   clock: Pick<Clock, 'now'>;
@@ -59,6 +64,11 @@ export class SessionService implements ManageSessions {
     if (ended.client !== owner) {
       this.deps.logger.warn(`client ${owner ?? 'unknown'} ended ${describe(ended)}`);
     }
+  }
+
+  delete(id: number): void {
+    this.deps.log.deleteSession(id);
+    this.deps.logger.info(`deleted session ${id}`);
   }
 
   list(): SessionList {

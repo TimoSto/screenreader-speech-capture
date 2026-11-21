@@ -31,7 +31,7 @@ event of \`GET /speech/stream\` and the replay of a \`Last-Event-ID\` above ever
 removed \`restartRequired\` again (an exception to "minor versions only add", since no client
 existed): \`PUT /config\` now only saves, a setting takes effect on the next start, and \`GET\`
 shows the settings in use. 1.14 added native input (\`POST /input/click\`, \`POST /input/keys\`) and
-the \`INPUT_DISABLED\` error code again. 1.15 added \`outsideEntries\` to \`GET /sessions\`.
+the \`INPUT_DISABLED\` error code again. 1.15 added \`outsideEntries\` to \`GET /sessions\`. 1.16 added \`DELETE /sessions\`.
 
 Every error has the same body (\`ErrorBody\`). Clients must handle unknown error codes as errors
 of their HTTP status.
@@ -447,6 +447,36 @@ so a web page can't add markers cross-origin without a CORS preflight. At most 1
     },
   },
   '/sessions': {
+    delete: {
+      tags: ['sessions'],
+      operationId: 'deleteSession',
+      summary: 'Delete an ended session',
+      description:
+        'Removes an ended session and its entries from the buffer (since API 1.16). The current session cannot be deleted: end it first (`INVALID_REQUEST`), and neither can `none` (the entries outside sessions; use `DELETE /speech` to wipe everything). A session that is already gone (its entries were all dropped) is not an error. Publishes no event.',
+      parameters: [
+        {
+          name: 'session',
+          in: 'query',
+          required: true,
+          description: 'The `id` of the ended session to delete.',
+          schema: {
+            type: 'integer',
+            minimum: 1,
+          },
+        },
+      ],
+      responses: {
+        '204': {
+          description: 'Deleted.',
+        },
+        '400': {
+          $ref: '#/components/responses/InvalidRequest',
+        },
+        '404': {
+          $ref: '#/components/responses/SessionNotFound',
+        },
+      },
+    },
     get: {
       tags: ['sessions'],
       operationId: 'listSessions',

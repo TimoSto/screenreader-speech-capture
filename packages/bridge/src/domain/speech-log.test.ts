@@ -260,6 +260,37 @@ describe('SpeechLog', () => {
     });
   });
 
+  describe('deleteSession', () => {
+    it('removes an ended session and its entries from every read', () => {
+      const log = new SpeechLog(10);
+      log.append(draft('out'));
+      start(log, 'a');
+      log.append(draft('a1'));
+      start(log, 'b');
+      log.append(draft('b1'));
+      log.deleteSession(1);
+      expect(texts(log, 0)).toEqual(['out', 'b1']);
+      expect(texts(log, 0, 100, 1)).toEqual([]);
+      expect(log.stats().size).toBe(2);
+      expect(names(log)).toEqual(['b']);
+      expect(log.outsideEntries()).toBe(1);
+    });
+
+    it('refuses the current session, is a no-op for a forgotten one, 404 for an unknown id', () => {
+      const log = new SpeechLog(10);
+      start(log, 'a');
+      expect(() => log.deleteSession(1)).toThrow(
+        expect.objectContaining({ code: 'INVALID_REQUEST' }),
+      );
+      log.endSession(at(1));
+      expect(() => log.deleteSession(1)).not.toThrow();
+      expect(() => log.deleteSession(2)).toThrow(expect.objectContaining({ code: 'NOT_FOUND' }));
+      expect(() => log.deleteSession(0)).toThrow(
+        expect.objectContaining({ code: 'INVALID_REQUEST' }),
+      );
+    });
+  });
+
   describe('resolveFilter', () => {
     it('is undefined without a filter', () => {
       expect(new SpeechLog(1).resolveFilter(undefined)).toBeUndefined();
