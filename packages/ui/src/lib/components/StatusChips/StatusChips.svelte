@@ -6,14 +6,16 @@
   let { chips, announcement }: Props = $props();
 </script>
 
-<ul aria-label="Bridge status">
-  {#each chips as chip (chip.id)}
-    <li class={chip.tone} class:down={chip.down} aria-label={chip.description} title={chip.text}>
-      <span class="dot {chip.dot}" aria-hidden="true"></span>
-      <span aria-hidden="true" class="chip-label">{chip.text}</span>
-    </li>
-  {/each}
-</ul>
+{#if chips.length > 0}
+  <ul aria-label="Bridge status">
+    {#each chips as chip (chip.id)}
+      <li class={chip.tone} class:down={chip.down} aria-label={chip.description} title={chip.text}>
+        <span class="dot {chip.dot}" aria-hidden="true"></span>
+        <span aria-hidden="true" class="chip-label">{chip.text}</span>
+      </li>
+    {/each}
+  </ul>
+{/if}
 <!-- Only changes of a problem state speak; a refresh leaves this text as it is. -->
 <span class="sr-only" role="status">{announcement}</span>
 

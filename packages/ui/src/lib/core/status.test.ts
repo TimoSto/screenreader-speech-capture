@@ -38,36 +38,29 @@ describe('deriveChips', () => {
     expect(byId(s).mcp?.text).toBe('MCP 0.0.85 · failed');
   });
 
-  it('keeps a starting or stopped service neutral, with a red (down) dot', () => {
+  it('keeps a starting service neutral, with a red (down) dot', () => {
     const s = status();
     s.playwright.state = 'starting';
     expect(byId(s).playwright).toMatchObject({ tone: 'neutral', dot: 'hollow', down: true });
-    s.playwright.state = 'stopped';
-    expect(byId(s).playwright?.down).toBe(true);
     expect(byId(s).mcp?.down).toBeUndefined();
   });
 
-  it('says "No session" before the first session, then the live id', () => {
-    expect(byId(status()).session).toMatchObject({
-      text: 'No session',
-      tone: 'neutral',
-      dot: 'hollow',
-    });
-    const live = status({
-      session: { current: { id: 7 }, count: 1 } as StatusDto['session'],
-    });
-    expect(byId(live).session).toMatchObject({ text: 'Session #7', tone: 'ok', dot: 'filled' });
+  it('has no chip for a stopped service, and none for the session', () => {
+    const s = status({ session: { current: { id: 7 }, count: 1 } as StatusDto['session'] });
+    s.mcp.state = 'stopped';
+    expect(Object.keys(byId(s))).toEqual(['playwright']);
+    s.playwright.state = 'stopped';
+    expect(deriveChips(s, true)).toEqual([]);
   });
 
-  it('greys every chip out when the bridge is unreachable', () => {
-    const chips = deriveChips(status(), false);
-    expect(chips.every((chip) => chip.tone === 'neutral' && chip.down)).toBe(true);
-    expect(chips.find((chip) => chip.id === 'mcp')?.text).toBe('MCP 0.0.85');
+  it('shows one error chip when the bridge is unreachable', () => {
+    expect(deriveChips(status(), false)).toEqual([
+      expect.objectContaining({ id: 'bridge', text: 'Bridge unreachable', tone: 'error' }),
+    ]);
   });
 
-  it('has neutral placeholder chips before the first answer', () => {
-    const chips = deriveChips(null, false);
-    expect(chips.map((chip) => chip.text)).toEqual(['Playwright', 'MCP', 'Session']);
+  it('has no chips before the first answer', () => {
+    expect(deriveChips(null, true)).toEqual([]);
   });
 });
 

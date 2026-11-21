@@ -16,4 +16,7 @@
 </script>
 
 <StatusChips {chips} announcement={announcement(chips, statusStore.reachable)} />
-<StatusRefresh loading={statusStore.loading} onRetry={() => void statusStore.retry()} />
+<!-- Status is read once, so the retry only shows when there is something to recover from. -->
+{#if !statusStore.reachable}
+  <StatusRefresh loading={statusStore.loading} onRetry={() => void statusStore.retry()} />
+{/if}
