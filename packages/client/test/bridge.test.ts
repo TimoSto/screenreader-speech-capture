@@ -209,6 +209,23 @@ describe('sessions', () => {
     await expect(sr.deleteSession(99)).rejects.toMatchObject({ status: 404 });
   });
 
+  it('clear({ session }) clears the current session or the outside speech, not an ended one', async () => {
+    const { say, client } = await bridge();
+    const sr = client();
+    await say('outside');
+    await sr.waitForOutput('outside');
+    const session = await sr.startSession('a');
+    await say('a1');
+    await sr.waitForOutput('a1');
+    await sr.clear({ session: 'current' });
+    expect(await sr.getText({ since: 0 })).toBe('outside');
+    expect((await sr.sessions()).currentId).toBe(session.id);
+    await sr.clear({ session: 'none' });
+    expect(await sr.getText({ since: 0 })).toBe('');
+    await sr.startSession('b');
+    await expect(sr.clear({ session: session.id })).rejects.toMatchObject({ status: 400 });
+  });
+
   it('onSpeech reports sessions over SSE', async () => {
     const { client } = await bridge();
     const sr = client();

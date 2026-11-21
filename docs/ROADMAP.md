@@ -41,7 +41,7 @@ GitHub issues. This file only tracks milestones.
       entries, `session` filter on speech / wait / stream, SSE `session` event, `session` in status
       (API 1.3)
 - [x] Client + CLI sessions: `startSession` / `endSession` / `deleteSession` / `sessions`, `onSession`, CLI
-      `session start|end|delete|list`, CLI reads scoped to the current session
+      `session start|end|delete|list`, `clear [--session|--outside]`, CLI reads scoped to the current session
 - [x] Playwright fixture (`connectOptions`, `headless: false`, one session per test instead of
       clearing, transcript attachment) as the client's `./playwright` subpath export
       (`@playwright/test` an optional peer dependency, external in the bundle)

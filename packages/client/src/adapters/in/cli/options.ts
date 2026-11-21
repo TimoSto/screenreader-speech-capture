@@ -26,6 +26,7 @@ export const OPTIONS = {
   run: { type: 'string' },
   session: { type: 'string' },
   all: { type: 'boolean' },
+  outside: { type: 'boolean' },
   x: { type: 'string' },
   y: { type: 'string' },
   button: { type: 'string' },

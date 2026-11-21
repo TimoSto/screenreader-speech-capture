@@ -112,17 +112,35 @@ export const session: Command = {
 };
 
 const CLEAR: HelpLine = {
-  usage: 'clear',
-  description: ['Wipe the whole speech buffer, all sessions (for manual use)'],
+  usage: 'clear [--session <id|current> | --outside]',
+  description: [
+    'Wipe the whole speech buffer, all sessions (for manual use); --session clears only the',
+    'current session (it keeps running), --outside only the speech outside sessions',
+  ],
 };
 
 export const clear: Command = {
-  options: [],
+  options: ['session', 'outside'],
   help: [CLEAR],
-  async run(args, { speech, out }) {
+  async run(args, { values, speech, out }) {
     expectArgs(args, 0, CLEAR.usage);
-    await speech().clear();
-    out('clear', { cleared: true }, 'Speech buffer cleared.');
+    if (values.session !== undefined && values.outside) {
+      throw new UsageError('Use either --session or --outside.');
+    }
+    if (values.outside) {
+      await speech().clear({ session: 'none' });
+      out('clear', { cleared: true }, 'Speech outside sessions cleared.');
+    } else if (values.session === 'current') {
+      await speech().clear({ session: 'current' });
+      out('clear', { cleared: true }, 'Speech of the current session cleared.');
+    } else if (values.session !== undefined) {
+      const id = optionalInt(values, 'session', 1);
+      await speech().clear({ session: id });
+      out('clear', { cleared: true }, `Speech of session ${id} cleared.`);
+    } else {
+      await speech().clear();
+      out('clear', { cleared: true }, 'Speech buffer cleared.');
+    }
     return EXIT.ok;
   },
 };

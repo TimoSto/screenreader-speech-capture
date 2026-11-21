@@ -42,6 +42,24 @@ describe('cursor', () => {
     expect(await sr.waitForOutput('new')).toMatchObject({ seq: 2 });
   });
 
+  it('clear({ session }) clears one scope, keeps the session and the cursor', async () => {
+    const { api, sr } = setup();
+    api.speak('outside');
+    await sr.startSession('one');
+    api.speak('in one');
+    await sr.waitForOutput('in one');
+    const cursor = sr.cursor();
+    await sr.clear({ session: 'current' });
+    expect(api.calls).toContain('clear current');
+    expect(sr.cursor()).toBe(cursor);
+    expect(await sr.getText({ since: 0 })).toBe('outside');
+    expect((await sr.sessions()).currentId).toBe(1);
+    await sr.clear({ session: 'none' });
+    expect(await sr.getText({ since: 0 })).toBe('');
+    await sr.startSession('two');
+    await expect(sr.clear({ session: 1 })).rejects.toMatchObject({ status: 400 });
+  });
+
   it('setCursor checks the value; getSpeech and getText default to the cursor', async () => {
     const { api, sr } = setup();
     api.speak('a', 'b', 'c');

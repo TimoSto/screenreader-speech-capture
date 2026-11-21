@@ -94,8 +94,9 @@ export class FetchBridgeApi implements BridgeApi {
     };
   }
 
-  async clear(): Promise<void> {
-    await this.request('DELETE', '/speech');
+  async clear(session?: SessionRef | 'none'): Promise<void> {
+    const query = session === undefined ? '' : `?session=${encodeURIComponent(String(session))}`;
+    await this.request('DELETE', `/speech${query}`);
   }
 
   async mark(label: string): Promise<SpeechEntry> {
