@@ -98,9 +98,9 @@
     </ul>
   {/if}
 
-  <!-- Pinned below the list: not a session, so it stays out of the newest-first order. Hidden while
-       there is nothing to see, unless it is what the log shows (no session is current). -->
-  {#if !collapsed && (outsideEntries > 0 || selectedId === OUTSIDE_SESSIONS)}
+  <!-- Pinned below the list: not a session, so it stays out of the newest-first order. Always shown
+       while expanded, so it doesn't vanish when a session starts. -->
+  {#if !collapsed}
     <ul class="outside" aria-label="Outside sessions">
       <ListItem
         title="Outside sessions"

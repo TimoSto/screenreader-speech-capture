@@ -143,7 +143,7 @@ describe('SessionsPane', () => {
 
   it('puts one ripple under every row, before the buttons', async () => {
     await render(SessionsPane, props());
-    const rows = document.querySelectorAll('ul > li');
+    const rows = document.querySelectorAll('ul:not(.outside) > li');
     expect(rows).toHaveLength(2);
     for (const row of rows) expect(row.firstElementChild?.localName).toBe('md-ripple');
   });
@@ -237,14 +237,19 @@ describe('SessionsPane', () => {
     expect(onSelect).toHaveBeenCalledWith('none');
   });
 
-  it('hides the outside row while it is empty, unless it is the selected scope', async () => {
+  it('keeps the outside row visible while empty, selected only when it is the scope', async () => {
     const screen = await render(SessionsPane, props());
-    expect(page.getByRole('button', { name: /Outside sessions/ }).elements()).toHaveLength(0);
-    await screen.rerender(props({ sessions: [], currentId: null, selectedId: 'none' }));
     const row = page.getByRole('button', {
       name: 'Outside sessions Speech captured while no session was running, 0 entries',
     });
+    await expect.element(row).not.toHaveAttribute('aria-current');
+    await screen.rerender(props({ sessions: [], currentId: null, selectedId: 'none' }));
     await expect.element(row).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('hides the outside row while collapsed', async () => {
+    await render(SessionsPane, props({ collapsed: true, outsideEntries: 3 }));
+    expect(page.getByRole('button', { name: /Outside sessions/ }).elements()).toHaveLength(0);
   });
 
   it('has no accessibility violations', async () => {
