@@ -3,7 +3,6 @@ import packageJson from '../../package.json' with { type: 'json' };
 import { ConfigError, startBridge } from '../main.js';
 import { flushConsole, runUntilStopped } from '../adapters/in/cli/lifecycle.js';
 import { flushTerminal } from '../adapters/out/log/async-console.js';
-import { canRespawn, respawnSelf } from '../adapters/out/process/self-respawner.js';
 import { killAllTreesNow } from '../adapters/out/process/process-tree.js';
 import { helpText, parseCli, UsageError } from '../adapters/in/cli/options.js';
 
@@ -33,9 +32,8 @@ if (options.version) {
 // log exists, so it goes to stderr.
 try {
   await runUntilStopped(
-    (requestRestart) =>
+    () =>
       startBridge({
-        ...(requestRestart === undefined ? {} : { requestRestart }),
         version: packageJson.version,
         overrides: options.overrides,
         overrideSources: options.sources,
@@ -45,7 +43,6 @@ try {
     // A forced exit must not leave the Playwright server's browsers behind.
     {
       onForcedExit: () => killAllTreesNow(),
-      ...(canRespawn(process) ? { respawn: () => respawnSelf() } : {}),
       flush: async () => {
         await flushTerminal();
         await flushConsole();
