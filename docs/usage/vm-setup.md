@@ -56,6 +56,24 @@ form **`voice=<id>`**, so the bridge can tell it apart from speech (see
 [Speech capture](speech-capture.md)). The bridge stores `<id>` as `voice` on each
 speech entry, which tells you which voice it came from when several are in use.
 
+### A German voice
+
+`add-voice` always registers a voice as English (en-US, language `409`). For a German voice, register
+it on the **bridge's port** and then change its language attribute (run both in an elevated prompt):
+
+```powershell
+text-to-socket-engine-add-voice voiceDe "Text To Socket DE" 127.0.0.1 4449 voice=voiceDe
+reg add "HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens\voiceDe\Attributes" /v Language /d 407 /f
+```
+
+- The port must be the one the bridge listens on (`tcp.port`, default `4449`). A different port
+  sends nothing, silently: the bridge only listens on one port.
+- `407` is the hex language id of German (Germany). Restart the screen reader afterwards.
+- Whether NVDA or JAWS use the language to filter or switch voices isn't verified; selecting the
+  voice by hand works regardless.
+- The package ships 32-bit and 64-bit DLLs. If the voice only shows in a 32-bit screen reader, also set
+  the value under `HKLM\SOFTWARE\WOW6432Node\Microsoft\Speech\Voices\Tokens\voiceDe\Attributes`.
+
 > **Voice not listed?** See [Troubleshooting](troubleshooting.md#speech).
 
 ## Screen reader setup
