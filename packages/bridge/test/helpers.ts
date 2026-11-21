@@ -63,16 +63,15 @@ afterEach(async () => {
  */
 export async function start(
   patch: unknown = {},
-  options: { store?: MemoryConfigStore; requestRestart?: () => void } & Pick<
+  options: { store?: MemoryConfigStore } & Pick<
     TestSeams,
     'sinks' | 'ssePingMs' | 'playwrightLaunch' | 'mcpLaunch' | 'clock' | 'inputInjector' | 'uiDir'
   > = {},
 ): Promise<Bridge> {
-  const { store, sinks, requestRestart, ...rest } = options;
+  const { store, sinks, ...rest } = options;
   const bridge = await startBridge({
     version: '0.0.0-test',
     overrides: testOverrides(patch),
-    ...(requestRestart === undefined ? {} : { requestRestart }),
     testSeams: {
       configStore: store ?? new MemoryConfigStore(),
       sinks: sinks ?? [],

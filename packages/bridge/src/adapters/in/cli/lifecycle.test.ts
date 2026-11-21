@@ -38,86 +38,23 @@ let proc: FakeProcess;
 let bridge: FakeBridge;
 let flushes: number;
 
-let requestRestart: (() => void) | undefined;
-
-async function run(platform: NodeJS.Platform = 'linux', respawn?: () => void) {
+async function run(platform: NodeJS.Platform = 'linux') {
   proc = new FakeProcess(platform);
   bridge = new FakeBridge();
   flushes = 0;
-  requestRestart = undefined;
-  await runUntilStopped(
-    (restart) => {
-      requestRestart = restart;
-      return Promise.resolve(bridge);
+  await runUntilStopped(() => Promise.resolve(bridge), proc, {
+    timeoutMs: 10_000,
+    flush: () => {
+      flushes++;
+      return Promise.resolve();
     },
-    proc,
-    {
-      ...(respawn === undefined ? {} : { respawn }),
-      timeoutMs: 10_000,
-      flush: () => {
-        flushes++;
-        return Promise.resolve();
-      },
-    },
-  );
+  });
 }
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe('runUntilStopped', () => {
-  it('gives start no restart function without respawn', async () => {
-    await run();
-    expect(requestRestart).toBeUndefined();
-  });
-
-  it('stops, respawns after the stop and exits with 0 on a restart request', async () => {
-    const order: string[] = [];
-    await run('linux', () => order.push(`respawn after ${bridge.reasons.length} stop`));
-    requestRestart?.();
-    expect(bridge.reasons).toEqual(['restart']);
-    expect(order).toEqual([]);
-
-    bridge.stopped();
-    await vi.runOnlyPendingTimersAsync();
-    expect(order).toEqual(['respawn after 1 stop']);
-    expect(proc.exits).toEqual([0]);
-  });
-
-  it('ignores a second restart request', async () => {
-    await run('linux', () => undefined);
-    requestRestart?.();
-    requestRestart?.();
-    expect(bridge.reasons).toEqual(['restart']);
-  });
-
-  it('does not respawn when stopping fails, or on a plain signal', async () => {
-    const respawn = vi.fn();
-    await run('linux', respawn);
-    requestRestart?.();
-    bridge.failed();
-    await vi.runOnlyPendingTimersAsync();
-    expect(proc.exits).toEqual([1]);
-
-    await run('linux', respawn);
-    proc.emit('SIGTERM');
-    bridge.stopped();
-    await vi.runOnlyPendingTimersAsync();
-    expect(respawn).not.toHaveBeenCalled();
-    expect(proc.exits).toEqual([0]);
-  });
-
-  it('logs a failed respawn and exits with 1', async () => {
-    await run('linux', () => {
-      throw new Error('no node');
-    });
-    requestRestart?.();
-    bridge.stopped();
-    await vi.runOnlyPendingTimersAsync();
-    expect(bridge.log.lines.join('\n')).toContain('could not start the new bridge');
-    expect(proc.exits).toEqual([1]);
-  });
-
   it('stops on SIGTERM, flushes and exits with 0', async () => {
     await run();
     proc.emit('SIGTERM');

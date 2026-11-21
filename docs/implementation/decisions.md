@@ -69,21 +69,6 @@ a list of exceptions.
 The API version went from 1.12 to 1.13 although `restartRequired` was removed, against the rule
 that minor versions only add: no client existed yet, so it didn't need `/api/v2`.
 
-## The bridge restarts itself by respawning
-
-Settings still apply on the next start. To make that start one click, `POST /restart` stops the
-bridge as on a signal, then starts a detached copy of the same command line and exits
-(`adapters/out/process/self-respawner.ts`, driven by `runUntilStopped`). Considered:
-
-- **In-process restart** (`startBridge` again): keeps the PID, but module-level state (process-tree
-  tracking, the console worker) and the crash handlers are bound to the first run.
-- **Exit code plus a supervisor:** the most robust, but every VM needs a wrapper. Task Scheduler and
-  the Startup folder, the documented ways to start it, don't restart a process.
-
-Respawning needs no setup and starts from clean process state. It is only offered where the entry
-is a bundled file, and `SR_SPEECH_NO_RESPAWN` turns it off. The new copy starts after the old one
-closed its listeners, so there is no bind retry.
-
 ## `seq` keeps rising across restarts
 
 The first entry of a bridge run gets the run's start time in milliseconds as its `seq`, and every
