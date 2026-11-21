@@ -188,6 +188,20 @@ Rules:
 
 ## Restarting the bridge
 
+`POST /api/v1/restart` restarts the bridge by itself, so
+saved [settings](configuration.md#changing-settings) take effect. The bridge answers `202`, then
+shuts down as described in [Shutdown](#shutdown), and only after that starts a detached copy of
+itself with the same flags and environment and exits with 0. The copy runs in the same user
+session, which the screen reader and native input need, and it binds the ports the old one just
+freed. The process id changes. Poll `GET /api/v1/status` until it answers again.
+
+It works for the installed bridge (`node cli.mjs`, `npm i -g`). It answers `503` when the bridge
+runs from source (`pnpm dev`, which restarts on every change anyway) or when the environment
+variable `SR_SPEECH_NO_RESPAWN` is set (for example when a supervisor restarts the bridge). If the
+shutdown fails, the bridge exits with 1 and doesn't start a new copy.
+
+What a restart means for the data:
+
 Speech entries and [sessions](speech-capture.md#sessions) live in memory, so a restart empties the
 buffer and the session list. `seq` keeps rising ([HTTP API](http-api.md#data-model)), so clients
 that kept a cursor or a live feed go on with the new run's speech. Session ids start again at 1:

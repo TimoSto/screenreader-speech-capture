@@ -70,6 +70,7 @@ with every run.
 | `POST /api/v1/input/click` `{ "x": 640, "y": 12, "button": "left" }` | Native mouse click at screen coordinates (physical pixels). See [Native input](native-input.md). |
 | `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | Native key presses: one chord, or a sequence with `delayMs` between them. |
 | `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. `PUT` takes any subset as `application/json`, saves it to the config file and answers with the configuration the next start will use; `GET` answers with the one in use. A saved setting takes effect on the next start of the bridge. See [Changing settings](configuration.md#changing-settings). |
+| `POST /api/v1/restart` | Restart the bridge so saved settings take effect (`202`, since API 1.18): the answer is sent, then the bridge stops and starts a new copy of itself. `503` when this bridge can't do that (see [Restarting the bridge](operations.md#restarting-the-bridge)). Poll `GET /status` until the new bridge answers. |
 | `GET /api/v1/status` | Bridge and API version, when the bridge started (`startedAt`), state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, current session. |
 
 `GET /api/v1/status` example:
