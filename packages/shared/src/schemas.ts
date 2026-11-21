@@ -1,6 +1,7 @@
 import type { GenericSchema } from 'valibot';
 import {
   AllowedHostsSchema,
+  ConfigOverridesSchema,
   ConfigPatchSchema,
   ConfigSchema,
   McpConfigPatchSchema,
@@ -41,6 +42,7 @@ export const API_SCHEMAS: Record<string, GenericSchema> = {
   Status: StatusSchema,
   Config: ConfigSchema,
   ConfigPatch: ConfigPatchSchema,
+  ConfigOverrides: ConfigOverridesSchema,
   ServiceStatus: ServiceStatusSchema,
   ServiceConfigPatch: ServiceConfigPatchSchema,
   ServiceConfig: ServiceConfigSchema,

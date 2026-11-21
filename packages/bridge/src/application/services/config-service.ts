@@ -51,6 +51,14 @@ export class ConfigService implements ManageConfig {
     return this.active;
   }
 
+  getSaved(): Config {
+    return this.saved;
+  }
+
+  overrides(): Readonly<Record<string, string>> {
+    return Object.fromEntries(this.deps.pinned ?? []);
+  }
+
   update(patch: unknown): Promise<Config> {
     // One at a time: a second update starts from the result of the first.
     const result = this.queue.then(() => this.apply(patch));

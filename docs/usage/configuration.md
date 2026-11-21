@@ -59,6 +59,7 @@ curl -X PUT $VM/api/v1/config -H 'content-type: application/json' -d '{"buffer":
   flags or environment variables. If the file can't be written, nothing changes.
 - Updates run one at a time, and every setting that differs from the one in use is logged under
   `[config]` as `tcp.port: 4449 → 4450 on the next start`.
+- `GET /api/v1/config?view=saved` reads what the next start will use (the answer of `PUT`, also after a reload), and `GET /api/v1/config/overrides` lists the settings a flag or variable sets, which the file can't change. A setting that differs between `GET` and `GET ?view=saved` is waiting for a restart.
 - A flag or variable still wins on the next start. The log warns: `[config] WARN tcp.port: saved
   to …\config.json, but --tcp-port overrides it on the next start`.
 

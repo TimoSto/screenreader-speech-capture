@@ -83,6 +83,22 @@ export const ConfigSchema = v.pipe(
 /** The bridge configuration (docs/usage/configuration.md). */
 export type ConfigDto = v.InferOutput<typeof ConfigSchema>;
 
+export const ConfigOverridesSchema = v.pipe(
+  v.object({
+    overrides: v.pipe(
+      v.record(v.string(), v.string()),
+      v.description(
+        'Settings a flag or environment variable sets at startup, by their dotted path ' +
+          '(`tcp.port`), with what sets each (`--tcp-port` or `SR_SPEECH_TCP_PORT`). They win ' +
+          'over the config file on every start, so a saved value of them has no effect.',
+      ),
+    ),
+  }),
+  v.description('The settings the config file cannot change (`GET /config/overrides`).'),
+);
+
+export type ConfigOverridesDto = v.InferOutput<typeof ConfigOverridesSchema>;
+
 /** A section with every setting optional and no others allowed. */
 const patchOf = <T extends v.ObjectEntries>(entries: T) =>
   v.strictObject(
