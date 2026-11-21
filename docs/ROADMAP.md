@@ -69,6 +69,7 @@ GitHub issues. This file only tracks milestones.
 - [ ] Layout and status panel (side sheet; polls `GET /status`, or an SSE `status` event instead
       of polling)
 - [x] Context pane: sessions (newest first, follow the current one, new / end session dialogs, selection in `?session=`; the list is still polled every 3 s; the speech table has an SSE feed, the list could use its `session` events)
+- [x] Clear the speech of the current session or of "Outside sessions" from the log's toolbar (confirm dialog, the session keeps running)
 - [x] Delete an ended session from the log's toolbar (confirm dialog, then the next session is selected)
 - [x] Speech table per session: `#id name` heading, received / spoken text / seq columns, follows new
       rows. A live scope (current session, outside sessions) replays the buffer and follows the SSE

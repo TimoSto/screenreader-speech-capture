@@ -23,6 +23,8 @@ const props = (patch: Record<string, unknown> = {}) => ({
   connection: 'live' as const,
   canMark: true,
   onAddMarker: () => Promise.resolve(),
+  canClear: false,
+  onClear: () => Promise.resolve(),
   canDelete: false,
   onDelete: () => Promise.resolve(),
   ...patch,
@@ -68,6 +70,35 @@ describe('SpeechLog', () => {
     await render(SpeechLog, props({ canMark: false }));
     expect(document.querySelector('[role="toolbar"]')).toBeNull();
     expect(page.getByRole('button', { name: 'Add marker' }).elements()).toHaveLength(0);
+  });
+
+  it('offers to clear only where asked, and not an empty log', async () => {
+    await render(SpeechLog, props({ canMark: false }));
+    expect(page.getByRole('button', { name: 'Clear speech' }).elements()).toHaveLength(0);
+  });
+
+  it('disables clearing without entries', async () => {
+    await render(SpeechLog, props({ canMark: false, canClear: true, entries: [] }));
+    await expect.element(page.getByRole('button', { name: 'Clear speech' })).toBeDisabled();
+  });
+
+  it('clears the speech only after the dialog is confirmed', async () => {
+    const onClear = vi.fn(() => Promise.resolve());
+    await render(SpeechLog, props({ canMark: false, canClear: true, onClear }));
+    await page.getByRole('button', { name: 'Clear speech' }).click();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    expect(onClear).not.toHaveBeenCalled();
+    await page.getByRole('button', { name: 'Clear speech' }).click();
+    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    await vi.waitFor(() => expect(onClear).toHaveBeenCalledOnce());
+  });
+
+  it('shows the message when the speech cannot be cleared', async () => {
+    const onClear = vi.fn(() => Promise.reject(new Error('The bridge is not reachable')));
+    await render(SpeechLog, props({ canMark: false, canClear: true, onClear }));
+    await page.getByRole('button', { name: 'Clear speech' }).click();
+    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    await expect.element(page.getByRole('alert')).toHaveTextContent('The bridge is not reachable');
   });
 
   it('offers to delete only an ended session, and asks first', async () => {

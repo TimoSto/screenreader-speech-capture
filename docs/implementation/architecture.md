@@ -253,6 +253,10 @@ the speech store, which the monitor page re-opens whenever the selected scope ch
   calls `BridgeApi.addMarker` (`POST /api/v1/markers`). Nothing is added to the table locally: the
   entry comes back through the feed.
 
+- **Clear speech**: `HttpSpeechApi.clear` sends `DELETE /ui/api/speech?session=<id|none>`, which calls
+  `BridgeApi.clearSpeech` (`DELETE /api/v1/speech?session=<id|none>`). `canClearSpeech` shows the button
+  for the live scopes only. Nothing is removed locally: the scope's SSE feed gets the bridge's scoped
+  `clear` event and empties the table; the page then re-reads the sessions list for the counts.
 - **Delete session**: `HttpSessionsApi.delete` sends `DELETE /ui/api/sessions/<id>`, which calls
   `BridgeApi.deleteSession` (`DELETE /api/v1/sessions?session=<id>`). `canDeleteSession` shows the
   button only for an ended session; the page picks the next scope with `scopeAfterDelete` before the

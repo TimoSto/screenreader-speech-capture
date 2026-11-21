@@ -18,7 +18,7 @@ export const statusStore = createStatusStore(new HttpStatusApi(resolve('/api/sta
 export const sessionsStore = createSessionsStore(new HttpSessionsApi(resolve('/api/sessions')));
 export const speechStore = createSpeechStore(
   new SseSpeechFeed(resolve('/api/speech/stream'), resolve('/api/speech')),
-  new HttpSpeechApi(resolve('/api/markers')),
+  new HttpSpeechApi(resolve('/api/markers'), resolve('/api/speech')),
 );
 export const sessionsPaneStore = createSessionsPaneStore(new BrowserSessionsPaneStorage());
 

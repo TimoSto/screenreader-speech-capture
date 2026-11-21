@@ -57,6 +57,11 @@ export function createSpeechStore(feed: SpeechFeed, api: SpeechApi) {
       return stop;
     },
 
+    /** Rejects with the reason; the table empties through the feed (the bridge's `clear` event). */
+    clear(scope: SessionScope): Promise<void> {
+      return api.clear(scope);
+    },
+
     /** Rejects with the reason; the new entry arrives through the feed, so nothing is added here. */
     addMarker(label: string): Promise<void> {
       return api.addMarker(label);
