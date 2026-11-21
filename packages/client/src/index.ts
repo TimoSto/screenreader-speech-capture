@@ -13,6 +13,7 @@ export type {
   SetResult,
 } from './application/ports/in/manage-client-config.js';
 export type {
+  ClearOptions,
   GetSpeechOptions,
   GetTextOptions,
   OnSpeechOptions,

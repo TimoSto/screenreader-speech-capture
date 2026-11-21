@@ -11,6 +11,7 @@ import type { SessionList, SessionRef, StartedSession } from '../../domain/sessi
 import { isSpeech, type SpeechEntry } from '../../domain/speech-entry.js';
 import { advanceSequence, toMatcher, type SpeechMatch } from '../../domain/text-match.js';
 import type {
+  ClearOptions,
   GetSpeechOptions,
   GetTextOptions,
   OnSpeechOptions,
@@ -122,8 +123,13 @@ export class SpeechCaptureService implements SpeechCapture {
     return entries.map((e) => e.text).join(options.separator ?? '\n');
   }
 
-  async clear(): Promise<void> {
+  async clear(options: ClearOptions = {}): Promise<void> {
     await this.compatible();
+    if (options.session !== undefined) {
+      // One scope: the session goes on and the cursor stays, `seq` only rises.
+      await this.deps.api.clear(options.session);
+      return;
+    }
     await this.deps.api.clear();
     // seq survives a clear, so everything in the buffer from now on is newer than the clear.
     this.#moveTo(0);

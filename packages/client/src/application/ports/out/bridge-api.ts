@@ -28,7 +28,11 @@ export interface BridgeApi {
   status(): Promise<BridgeStatus>;
   /** Entries and markers with `seq > since`, oldest first; with `session`, only its entries. */
   listSpeech(query: { since: number; limit?: number; session?: SessionRef }): Promise<SpeechPage>;
-  clear(): Promise<void>;
+  /**
+   * `DELETE /api/v1/speech`: wipes everything. With `session` (API 1.17), only the entries and
+   * markers of the current session (its id or `current`) or of `none`; the session keeps running.
+   */
+  clear(session?: SessionRef | 'none'): Promise<void>;
   mark(label: string): Promise<SpeechEntry>;
   /** `POST /api/v1/sessions` (API 1.3): the new session is current, the previous one ends. */
   startSession(request: { name: string; run?: string | undefined }): Promise<StartedSession>;

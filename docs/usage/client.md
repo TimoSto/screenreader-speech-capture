@@ -113,7 +113,7 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `endSession()` | `void` | End the current session. Speech after this belongs to no session. |
 | `deleteSession(id)` | `void` | Delete an ended session and its speech from the bridge (needs API 1.16). Rejects with `BridgeHttpError` for the current session (`INVALID_REQUEST`) or an id the bridge never gave out (`NOT_FOUND`). The cursor stays where it is. |
 | `sessions()` | `{ sessions, currentId }` | The sessions still in the buffer plus the current one, newest first. |
-| `clear()` | `void` | Wipe the whole buffer (all sessions) and reset the cursor. For manual use. |
+| `clear({ session? })` | `void` | Wipe the whole buffer (all sessions) and reset the cursor. For manual use. With `session` (`'current'`, the current session's id, or `'none'` for the speech outside sessions; needs API 1.17) it clears only that scope: the session keeps running and the cursor stays. Rejects with `BridgeHttpError` for an ended session (`INVALID_REQUEST`) or `'current'` with none current (`NOT_FOUND`). |
 | `waitForOutput(match, { timeout?, since?, normalize?, session? })` | `SpeechEntry` | Wait until a speech entry after the cursor (or `since`) matches, then move the cursor past it. `match` is a `string` (substring), a `RegExp` or a predicate `(u) => boolean`. `normalize: true` ignores case and extra whitespace. `session` (an `id` or `'current'`) only matches that session's entries; `'current'` is the session current when the wait starts, even if another one starts meanwhile. Markers never match. Waits read the buffer, then follow the [live feed](#live-feed): no polling. Throws `SpeechTimeoutError` (with the speech seen so far in `entries`) on timeout. Default `timeout`: 5000 ms. |
 | `waitForSequence(matches[], { timeout?, since?, normalize?, session? })` | `SpeechEntry[]` | Wait until the matches occur in this order (other entries may come in between). Moves the cursor past the last match. Throws `SpeechTimeoutError` like `waitForOutput`. |
 | `waitForSilence({ quietFor?, timeout? })` | `void` | Wait until nothing new has been spoken for `quietFor` ms (default 500), counted from the call. Throws `SpeechTimeoutError` if speech goes on until `timeout` (default 10000 ms). Useful before asserting on "everything that was said". |
@@ -254,6 +254,8 @@ npx screenreader-speech-capture-client session end
 npx screenreader-speech-capture-client session delete <id>   # an ended session and its speech
 npx screenreader-speech-capture-client session list
 npx screenreader-speech-capture-client clear                 # wipes everything, all sessions
+npx screenreader-speech-capture-client clear --session current   # only the current session's speech; it keeps running
+npx screenreader-speech-capture-client clear --outside        # only the speech outside sessions
 npx screenreader-speech-capture-client speech [--since <seq>] [--limit <n>] [--include-markers] [--session <id> | --all]
 npx screenreader-speech-capture-client text [--since <seq>] [--separator <s>] [--session <id> | --all]
 npx screenreader-speech-capture-client wait "Submit, button" [--regex] [--normalize] [--timeout 5000] [--since <seq>] [--session <id> | --all]

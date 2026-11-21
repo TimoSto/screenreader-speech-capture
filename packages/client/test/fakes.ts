@@ -124,10 +124,29 @@ export class FakeBridgeApi implements BridgeApi {
     });
   }
 
-  clear(): Promise<void> {
-    this.calls.push('clear');
+  clear(session?: SessionRef | 'none'): Promise<void> {
+    this.calls.push(session === undefined ? 'clear' : `clear ${String(session)}`);
     const failure = this.fail();
     if (failure) return failure;
+    if (session !== undefined) {
+      const id = session === 'none' ? null : session === 'current' ? this.current?.id : session;
+      if (id === undefined) {
+        return Promise.reject(new BridgeHttpError(404, 'NOT_FOUND', 'No session is current'));
+      }
+      if (id !== null && id !== this.current?.id) {
+        return Promise.reject(
+          new BridgeHttpError(400, 'INVALID_REQUEST', 'only the current session'),
+        );
+      }
+      this.entries = this.entries.filter((e) => e.sessionId !== id);
+      if (this.current && id === this.current.id) {
+        this.current.entries = 0;
+        this.current.firstSeq = null;
+        this.current.lastSeq = null;
+      }
+      this.emit({ type: 'clear' });
+      return Promise.resolve();
+    }
     this.entries = [];
     this.droppedUpToSeq = 0;
     this.emit({ type: 'clear' });

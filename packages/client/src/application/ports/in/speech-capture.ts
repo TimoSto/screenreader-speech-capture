@@ -3,6 +3,14 @@ import type { Session, SessionList, SessionRef, StartedSession } from '../../../
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import type { SpeechMatch } from '../../../domain/text-match.js';
 
+export interface ClearOptions {
+  /**
+   * Clear only this scope: the current session (its id or `'current'`) or `'none'` (the speech
+   * outside any session). The session keeps running. Needs bridge API 1.17.
+   */
+  session?: SessionRef | 'none' | undefined;
+}
+
 export interface GetSpeechOptions {
   /** Only entries with `seq > since`. Default: the cursor. */
   since?: number | undefined;
@@ -113,8 +121,13 @@ export interface SpeechCapture {
   getSpeech(options?: GetSpeechOptions): Promise<SpeechEntry[]>;
   /** All speech after the cursor (or `since`), joined into one string. */
   getText(options?: GetTextOptions): Promise<string>;
-  /** Clears the bridge's buffer (all sessions) and resets the cursor. For manual use. */
-  clear(): Promise<void>;
+  /**
+   * Clears the bridge's buffer (all sessions) and resets the cursor. For manual use. With
+   * `session`, clears only that scope instead (the current session, or `'none'`): the session keeps
+   * running and the cursor stays. Rejects with `BridgeHttpError` for an ended session
+   * (`INVALID_REQUEST`) or `'current'` with none current (`NOT_FOUND`).
+   */
+  clear(options?: ClearOptions): Promise<void>;
   /**
    * Starts a session (docs/usage/speech-capture.md#sessions): it becomes current and the previous
    * one ends. Moves the cursor to the session's start, so the next reads and waits only see its

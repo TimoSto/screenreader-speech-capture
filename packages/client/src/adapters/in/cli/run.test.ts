@@ -207,6 +207,30 @@ describe('speech commands', () => {
     expect(late.stderr).toContain('not ready within 600 ms: state is stopping');
   });
 
+  it('clear --session and --outside clear one scope and keep the session running', async () => {
+    const fake = fakeSpeech();
+    fake.api.speak('outside');
+    await cli(['session', 'start', 'one'], fake);
+    fake.api.speak('in one');
+    expect((await cli(['clear', '--session', 'current'], fake)).stdout).toBe(
+      'Speech of the current session cleared.\n',
+    );
+    expect((await cli(['text', '--all'], fake)).stdout).toBe('outside\n');
+    expect(JSON.parse((await cli(['clear', '--outside', '--json'], fake)).stdout)).toEqual({
+      cleared: true,
+    });
+    expect((await cli(['text', '--all'], fake)).stdout).toBe('\n');
+    expect(fake.api.calls).toEqual(expect.arrayContaining(['clear current', 'clear none']));
+    expect((await cli(['session', 'list'], fake)).stdout).toContain('#1 one: current');
+    expect((await cli(['clear', '--session', '1'], fake)).stdout).toBe(
+      'Speech of session 1 cleared.\n',
+    );
+    expect((await run(['clear', '--session', '1', '--outside'], undefined, fake)).code).toBe(
+      EXIT.usage,
+    );
+    expect((await run(['clear', '--session', 'x'], undefined, fake)).code).toBe(EXIT.usage);
+  });
+
   it('clear, mark, speech and text; --since takes a marker seq', async () => {
     const fake = fakeSpeech();
     fake.api.speak('old');

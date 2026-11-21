@@ -8,6 +8,7 @@ import { clientConfigFile } from './adapters/out/fs-config/paths.js';
 import { FetchBridgeApi } from './adapters/out/http/fetch-bridge-api.js';
 import type { ManageClientConfig } from './application/ports/in/manage-client-config.js';
 import type {
+  ClearOptions,
   GetSpeechOptions,
   GetTextOptions,
   OnSpeechOptions,
@@ -117,8 +118,8 @@ export class SpeechCaptureClient implements SpeechCapture, NativeInput {
     return this.#service.getText(options);
   }
 
-  clear(): Promise<void> {
-    return this.#service.clear();
+  clear(options?: ClearOptions): Promise<void> {
+    return this.#service.clear(options);
   }
 
   startSession(name: string, options?: StartSessionOptions): Promise<StartedSession> {
