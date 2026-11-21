@@ -62,6 +62,7 @@
     void save();
   }}
 >
+  <!-- svelte-ignore a11y_no_static_element_interactions -- a text field, the keydown is for Enter -->
   <md-outlined-text-field
     label="TCP port"
     inputmode="numeric"
