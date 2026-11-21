@@ -97,7 +97,7 @@ describe('live feed', () => {
     await vi.waitFor(() => expect(api.openStreams).toBe(1));
     api.speak('a', 'b');
     await vi.waitFor(() => expect(log).toEqual(['1 a', '2 b']));
-    api.restart();
+    api.newRun();
     api.speak('x', 'y');
     await vi.waitFor(() => expect(log).toEqual(['1 a', '2 b', '1001 x', '1002 y']));
     expect(api.calls.filter((c) => c.startsWith('stream'))).toEqual(['stream null', 'stream 2']);

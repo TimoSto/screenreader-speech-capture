@@ -99,6 +99,10 @@ export class FetchBridgeApi implements BridgeApi {
     await this.request('DELETE', `/speech${query}`);
   }
 
+  async restart(): Promise<void> {
+    await this.request('POST', '/restart');
+  }
+
   async mark(label: string): Promise<SpeechEntry> {
     const body: MarkerRequestDto = { label };
     return toEntry(await this.json(SpeechEntrySchema, 'POST', '/markers', { body }));

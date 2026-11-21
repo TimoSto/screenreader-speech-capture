@@ -170,15 +170,33 @@ export class SpeechCaptureService implements SpeechCapture {
   }
 
   async waitForReady(options: ReadyOptions = {}): Promise<BridgeStatus> {
-    const { clock } = this.deps;
+    return this.#waitUntil(options.timeout ?? DEFAULTS.readyTimeout, () => true);
+  }
+
+  async restart(options: ReadyOptions = {}): Promise<BridgeStatus> {
     const timeout = options.timeout ?? DEFAULTS.readyTimeout;
+    const { startedAt } = (await this.status()).bridge;
+    await this.deps.api.restart();
+    // The old run answers until it stops, so only a run with another start time counts.
+    const status = await this.#waitUntil(timeout, (s) => s.bridge.startedAt !== startedAt);
+    this.setCursor(0);
+    return status;
+  }
+
+  /** Polls `status` until the bridge is `ready` and `accept` agrees. */
+  async #waitUntil(
+    timeout: number,
+    accept: (status: BridgeStatus) => boolean,
+  ): Promise<BridgeStatus> {
+    const { clock } = this.deps;
     const deadline = clock.now() + timeout;
     let last: string;
     for (;;) {
       try {
         const status = await this.status();
-        if (status.bridge.state === 'ready') return status;
-        last = `state is ${status.bridge.state}`;
+        if (status.bridge.state !== 'ready') last = `state is ${status.bridge.state}`;
+        else if (accept(status)) return status;
+        else last = 'the old run still answers';
       } catch (error) {
         const starting = error instanceof BridgeHttpError && error.status === 503;
         if (!(error instanceof BridgeUnreachableError) && !starting) throw error;

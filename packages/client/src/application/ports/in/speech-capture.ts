@@ -147,6 +147,15 @@ export interface SpeechCapture {
   sessions(): Promise<SessionList>;
   /** Inserts a marker. Its `seq` can be used as `since`. */
   mark(label: string): Promise<SpeechEntry>;
+  /**
+   * Restarts the bridge so saved settings take effect (`POST /api/v1/restart`, needs bridge API
+   * 1.18; docs/usage/operations.md#restarting-the-bridge) and waits until the new run is `ready`.
+   * Speech and sessions in the bridge's memory are lost, and the cursor is reset, since the new
+   * run starts empty (`seq` keeps rising). Rejects with `BridgeHttpError` `SERVICE_UNAVAILABLE`
+   * when the bridge can't restart itself, and with `BridgeNotReadyError` if the new run isn't
+   * ready within `timeout`.
+   */
+  restart(options?: ReadyOptions): Promise<BridgeStatus>;
   /** Bridge health and versions. */
   status(): Promise<BridgeStatus>;
   /**

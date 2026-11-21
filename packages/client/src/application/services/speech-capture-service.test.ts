@@ -511,7 +511,7 @@ describe('bridge restart', () => {
     const { api, clock, sr } = setup();
     api.speak('a', 'b', 'c');
     await sr.waitForOutput('c');
-    api.restart();
+    api.newRun();
     return { api, clock, sr };
   }
 
@@ -527,7 +527,7 @@ describe('bridge restart', () => {
     api.speak('a');
     await sr.waitForOutput('a');
     clock.at(100, () => {
-      api.restart();
+      api.newRun();
       api.speak('later');
     });
     expect(await sr.waitForOutput('later')).toMatchObject({ seq: 1001, text: 'later' });
@@ -567,6 +567,38 @@ describe('version check', () => {
     api.apiVersion = '1.0';
     await sr.clear();
     expect(api.calls).toContain('clear');
+  });
+});
+
+describe('restart', () => {
+  it('asks the bridge, waits for the new run and resets the cursor', async () => {
+    const { api, sr } = setup();
+    api.speak('one');
+    await sr.waitForOutput('one');
+    expect(sr.cursor()).toBeGreaterThan(0);
+    api.staleStatuses = 2;
+    const status = await sr.restart();
+    expect(status.bridge.startedAt).toBe(api.startedAt);
+    expect(status.bridge.state).toBe('ready');
+    expect(sr.cursor()).toBe(0);
+    expect(api.calls.filter((c) => c === 'restart')).toHaveLength(1);
+    // The old run answered twice before the new one did.
+    expect(api.calls.filter((c) => c === 'status').length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('times out when only the old run answers', async () => {
+    const { api, sr } = setup();
+    api.staleStatuses = Infinity;
+    await expect(sr.restart({ timeout: 1000 })).rejects.toThrow(
+      new BridgeNotReadyError('The bridge was not ready within 1000 ms: the old run still answers'),
+    );
+  });
+
+  it('passes on a refusal and does not wait', async () => {
+    const { api, sr } = setup();
+    const refuse = new BridgeHttpError(503, 'SERVICE_UNAVAILABLE', 'cannot restart itself');
+    api.refuseRestart = refuse;
+    await expect(sr.restart()).rejects.toBe(refuse);
   });
 });
 

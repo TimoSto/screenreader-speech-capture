@@ -33,6 +33,8 @@ export interface BridgeApi {
    * markers of the current session (its id or `current`) or of `none`; the session keeps running.
    */
   clear(session?: SessionRef | 'none'): Promise<void>;
+  /** `POST /api/v1/restart` (API 1.18): the bridge answers, then stops and starts again. */
+  restart(): Promise<void>;
   mark(label: string): Promise<SpeechEntry>;
   /** `POST /api/v1/sessions` (API 1.3): the new session is current, the previous one ends. */
   startSession(request: { name: string; run?: string | undefined }): Promise<StartedSession>;

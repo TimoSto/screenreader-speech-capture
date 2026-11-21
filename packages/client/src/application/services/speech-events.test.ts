@@ -37,7 +37,7 @@ describe('speechEvents', () => {
     const retries: Error[] = [];
     const { log, stop } = collect(deps, { since: 0, onRetry: (e) => retries.push(e) });
     await vi.waitFor(() => expect(log).toEqual(['1 a']));
-    api.restart();
+    api.newRun();
     api.speak('x');
     await vi.waitFor(() => expect(log).toEqual(['1 a', '1001 x']));
     expect(api.calls.filter((c) => c.startsWith('stream'))).toEqual(['stream 0', 'stream 1']);

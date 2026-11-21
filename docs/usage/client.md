@@ -124,6 +124,7 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `pressKeys(keys, { delayMs? })` | `void` | Native key presses, for screen reader commands (`'Insert+T'`, `['h', 'h']`). |
 | `onSpeech(cb, { since?, includeMarkers?, onSession?, onClear?, onTruncated?, onError? })` | `() => void` | Subscribe to the live feed (see [Live feed](#live-feed)). `cb` gets every new speech entry as the bridge receives it. Returns an unsubscribe function. |
 | `status()` | `BridgeStatus` | Bridge health (TCP connections, Playwright/MCP state, versions). |
+| `restart({ timeout? })` | `BridgeStatus` | Restart the bridge so saved settings take effect (`POST /api/v1/restart`, needs bridge API 1.18, see [Restarting the bridge](operations.md#restarting-the-bridge)) and wait until the new run is `ready` (default `timeout` 120000 ms). The bridge's speech and sessions are lost, and the cursor is reset to 0. Throws `BridgeHttpError` (`SERVICE_UNAVAILABLE`) when the bridge can't restart itself, `BridgeNotReadyError` on timeout. |
 | `waitForReady({ timeout? })` | `BridgeStatus` | Wait until the bridge answers and is `ready` (default `timeout` 120000 ms). Throws `BridgeNotReadyError` on timeout. |
 | `playwrightEndpoint()` | `Promise<string>` | WebSocket URL of the bridge's Playwright server, for `browserType.connect()`. |
 
@@ -167,7 +168,7 @@ stop();
 |---|---|
 | `SpeechTruncatedError` | `getSpeech` / `getText` without `allowTruncated`: some of the speech asked for was dropped because the bridge's buffer was full. `entries` holds what is left; the message suggests raising `buffer.maxEntries`. |
 | `SpeechTimeoutError` | A wait ended without a match. `entries` holds the speech seen while waiting. `truncated: true` if speech the wait should have looked at was dropped because the bridge's buffer was full: the match may have been among it. The message then says so and suggests raising `buffer.maxEntries`. |
-| `BridgeNotReadyError` | `waitForReady` timed out. |
+| `BridgeNotReadyError` | `waitForReady` or `restart` timed out. |
 | `BridgeUnreachableError` | No connection to the bridge (wrong URL, bridge not running, network). |
 | `BridgeHttpError` | The bridge answered with an [error](http-api.md#errors): `status`, `code`, `details`. |
 | `IncompatibleBridgeError` | The bridge has another major API version (see [Versioning](http-api.md#versioning)). |
@@ -249,6 +250,7 @@ Use `mark` and `--since` to look at a smaller range.
 ```bash
 npx screenreader-speech-capture-client config set url http://my-test-vm:5151   # once, see Bridge URL
 npx screenreader-speech-capture-client status [--wait-ready] [--timeout 120000]
+npx screenreader-speech-capture-client restart [--timeout 120000]   # restart the bridge, wait until it is ready again
 npx screenreader-speech-capture-client session start "checkout flow" [--run <label>]   # prints the session id
 npx screenreader-speech-capture-client session end
 npx screenreader-speech-capture-client session delete <id>   # an ended session and its speech
@@ -271,7 +273,7 @@ Exit codes, so agents can branch on them without parsing output:
 | Code | Meaning |
 |---|---|
 | `0` | Success (for `wait`: match found) |
-| `1` | Timeout / no match (also `status --wait-ready` and `wait-silence`) |
+| `1` | Timeout / no match (also `status --wait-ready`, `restart` and `wait-silence`) |
 | `2` | Bridge not reachable, HTTP error, or incompatible bridge version |
 | `3` | Invalid usage or invalid client config |
 

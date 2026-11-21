@@ -146,6 +146,10 @@ export class SpeechCaptureClient implements SpeechCapture, NativeInput {
     return this.#service.status();
   }
 
+  restart(options?: ReadyOptions): Promise<BridgeStatus> {
+    return this.#service.restart(options);
+  }
+
   waitForReady(options?: ReadyOptions): Promise<BridgeStatus> {
     return this.#service.waitForReady(options);
   }

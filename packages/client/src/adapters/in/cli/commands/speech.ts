@@ -38,6 +38,25 @@ export const status: Command = {
   },
 };
 
+const RESTART: HelpLine = {
+  usage: 'restart [--timeout <ms>]',
+  description: [
+    'Restart the bridge so saved settings take effect, and wait until the new run is ready',
+    '(default timeout 120000). Speech and sessions in its memory are lost',
+  ],
+};
+
+export const restart: Command = {
+  options: ['timeout'],
+  help: [RESTART],
+  async run(args, { values, speech, out }) {
+    expectArgs(args, 0, RESTART.usage);
+    const result = await speech().restart({ timeout: optionalInt(values, 'timeout', 0) });
+    out('restart', result, `Bridge restarted. ${formatStatus(result)}`);
+    return EXIT.ok;
+  },
+};
+
 const SESSION_START: HelpLine = {
   usage: 'session start <name> [--run <label>]',
   description: ['Start a session (the previous one ends) and print its id'],

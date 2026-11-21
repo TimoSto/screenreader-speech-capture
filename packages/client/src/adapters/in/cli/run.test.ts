@@ -207,6 +207,20 @@ describe('speech commands', () => {
     expect(late.stderr).toContain('not ready within 600 ms: state is stopping');
   });
 
+  it('restart asks the bridge and prints the new run; a refusal exits with the HTTP error', async () => {
+    const fake = fakeSpeech();
+    fake.api.staleStatuses = 1;
+    const done = await cli(['restart'], fake);
+    expect(done.code).toBe(EXIT.ok);
+    expect(done.stdout).toContain('Bridge restarted.');
+    expect(fake.api.calls).toContain('restart');
+
+    fake.api.refuseRestart = new BridgeHttpError(503, 'SERVICE_UNAVAILABLE', 'cannot restart');
+    const refused = await cli(['restart'], fake);
+    expect(refused.code).not.toBe(EXIT.ok);
+    expect(refused.stderr).toContain('cannot restart');
+  });
+
   it('clear --session and --outside clear one scope and keep the session running', async () => {
     const fake = fakeSpeech();
     fake.api.speak('outside');

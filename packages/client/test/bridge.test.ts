@@ -277,6 +277,14 @@ describe('onSpeech', () => {
     expect(errors).toEqual([]);
   });
 
+  it('restart passes on the 503 of a bridge that cannot restart itself', async () => {
+    const { client } = await bridge();
+    await expect(client().restart()).rejects.toMatchObject({
+      status: 503,
+      code: 'SERVICE_UNAVAILABLE',
+    });
+  });
+
   it('follows a restarted bridge: seq keeps rising, so nothing is lost or reported', async () => {
     // The real clock: `seq` starts at the start time, as in production.
     const clock = new SystemClock();

@@ -84,6 +84,13 @@ export class FakeBridgeApi implements BridgeApi {
   private current: Session | undefined;
   apiVersion = '1.4';
   state: BridgeStatus['bridge']['state'] = 'ready';
+  /** When this bridge run started; `restart` moves it. */
+  startedAt = new Date(0).toISOString();
+  /** After a restart, this many `status` calls still answer as the old run. */
+  staleStatuses = 0;
+  /** Makes `restart` reject, as a bridge that can't restart itself does. */
+  refuseRestart: Error | undefined;
+  private oldStartedAt: string | undefined;
   /** Page size the fake uses, whatever `limit` asks for, to test paging. */
   pageSize = Infinity;
   readonly calls: string[] = [];
@@ -96,8 +103,22 @@ export class FakeBridgeApi implements BridgeApi {
     for (const text of texts) this.add('speech', text);
   }
 
+  restart(): Promise<void> {
+    this.calls.push('restart');
+    if (this.refuseRestart) return Promise.reject(this.refuseRestart);
+    const failure = this.fail();
+    if (failure) return failure;
+    this.oldStartedAt = this.startedAt;
+    this.startedAt = new Date(Date.parse(this.startedAt) + 1000).toISOString();
+    this.newRun();
+    return Promise.resolve();
+  }
+
   status(): Promise<BridgeStatus> {
     this.calls.push('status');
+    if (this.oldStartedAt !== undefined && this.staleStatuses-- > 0) {
+      return Promise.resolve(this.snapshot(this.oldStartedAt));
+    }
     return this.fail() ?? Promise.resolve(this.snapshot());
   }
 
@@ -308,7 +329,7 @@ export class FakeBridgeApi implements BridgeApi {
    * A new bridge run: `seq` goes on from 1001 (the real bridge starts it at its start time),
    * session ids start again at 1, the buffer is empty, open feeds drop.
    */
-  restart(): void {
+  newRun(): void {
     this.seq = 1000;
     this.entries = [];
     this.allSessions.length = 0;
@@ -350,13 +371,13 @@ export class FakeBridgeApi implements BridgeApi {
     return error ? Promise.reject(error) : undefined;
   }
 
-  private snapshot(): BridgeStatus {
+  private snapshot(startedAt = this.startedAt): BridgeStatus {
     return {
       bridge: {
         version: '0.0.0',
         apiVersion: this.apiVersion,
         state: this.state,
-        startedAt: new Date(0).toISOString(),
+        startedAt,
       },
       tcp: {
         listening: true,
