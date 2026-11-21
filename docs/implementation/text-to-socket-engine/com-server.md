@@ -6,6 +6,44 @@ known to COM; it does **not** make it a voice. That is the job of [voice registr
 
 Source: `TextToSocketEngine.cpp`, `.def`, `.idl`, `ttsengobj.h`, `ttsengobj.rgs`.
 
+## Background: DLL and COM
+
+**tl;dr:** A DLL is code loaded into a process at runtime. COM is the standard that lets one
+program create and use an object from a DLL knowing only its ID and interface.
+
+**DLL (Dynamic-Link Library).** A file of compiled code (`.dll`) that a program loads at runtime
+instead of having the code built in. It lists exported functions, which the loader finds by name.
+Many programs can share one DLL. It runs **inside the process that loaded it**; it is not a
+separate program.
+
+**COM (Component Object Model).** Microsoft's binary standard for objects that other programs can
+use without knowing how they were written:
+
+- **Interfaces:** a fixed table of function pointers, such as `ISpTTSEngine` with `Speak` and
+  `GetOutputFormat`. Callers use only the interface, never the class.
+- **GUIDs:** every class (CLSID) and interface (IID) has a unique ID.
+- **Registry lookup:** `HKCR\CLSID\{guid}\InprocServer32` holds the path of the DLL that implements
+  the class. A caller does `CoCreateInstance(CLSID)`. Windows reads the registry, loads that DLL,
+  calls its exported `DllGetClassObject` and returns an object. The caller needs no header, link
+  or file path.
+
+```mermaid
+flowchart LR
+    A["JAWS: CoCreateInstance(CLSID)"] --> B["Registry: CLSID → DLL path"]
+    B --> C["Windows loads TextToSocketEngine.dll"]
+    C --> D["DllGetClassObject → CTTSEngObj"]
+    D --> E["JAWS calls ISpTTSEngine::Speak"]
+```
+
+In this engine:
+
+- `regsvr32` calls the DLL's `DllRegisterServer`, which writes the CLSID → path registry entry
+  ([below](#what-regsvr32-writes)).
+- SAPI finds the voice's CLSID in the voice token and creates our class that way, then calls
+  `Speak` through the interface. Our code runs inside the screen reader's process.
+- ATL, the C++ template library the engine uses, generates most of the COM boilerplate: reference
+  counting, class factory and registration.
+
 ## Exports
 
 **tl;dr:** Four standard COM exports, marked `PRIVATE` so no import library is made, and two helper
