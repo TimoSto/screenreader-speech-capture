@@ -160,6 +160,38 @@ describe.each(buses)('followLog on %s', (_, createBus) => {
     expect(seen).toEqual(['a1', 'clear']);
   });
 
+  it('passes a scoped clear only to feeds of that scope, and to unfiltered ones', () => {
+    const { log, say, seen, follow, events, speech } = setup();
+    log.startSession({ name: 'a', run: null, client: null, startedAt: new Date() });
+    say('a1');
+    log.startSession({ name: 'b', run: null, client: null, startedAt: new Date() });
+    const ofA: string[] = [];
+    const ofB: string[] = [];
+    const outside: string[] = [];
+    const all = seen;
+    follow(0, {}, 1);
+    const watch = (into: string[], sessionId: number | null) =>
+      followLog(
+        { log, events },
+        { since: null, sessionId },
+        (event) => event.type === 'clear' && into.push(`clear ${String(event.sessionId)}`),
+      );
+    watch(ofA, 1);
+    watch(ofB, 2);
+    watch(outside, null);
+    followLog({ log, events }, { since: null, sessionId: undefined }, (event) => {
+      if (event.type === 'clear') all.push(`all ${String(event.sessionId)}`);
+    });
+    speech.clear(2);
+    speech.clear('none');
+    events.flush();
+    expect(ofB).toEqual(['clear 2']);
+    expect(ofA).toEqual([]);
+    expect(outside).toEqual(['clear null']);
+    expect(all).toContain('all 2');
+    expect(all).toContain('all null');
+  });
+
   it('delivers nothing after stop, also not what a late bus still held', () => {
     const { say, seen, follow, events } = setup();
     const stop = follow(null);

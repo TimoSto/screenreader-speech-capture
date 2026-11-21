@@ -31,8 +31,8 @@ export type WatchListener = (event: WatchEvent) => void;
 
 export interface WatchOptions {
   /**
-   * Only this session's `entry` events (`none`: only those outside sessions; `clear` and
-   * `session` events always come). `current` is resolved when the watch starts.
+   * Only this session's `entry` events (`none`: only those outside sessions; `session`
+   * events always come, and `clear` unless it only cleared another scope). `current` is resolved when the watch starts.
    */
   session?: SessionFilter | undefined;
   /**
@@ -67,8 +67,14 @@ export interface SpeechUseCases {
    * event comes again if entries were dropped while the replay was paused.
    */
   watch(since: number | null, listener: WatchListener, options?: WatchOptions): () => void;
-  /** Wipes the buffer and the ended sessions. `seq` keeps counting. */
-  clear(): void;
+  /**
+   * Without `session`, wipes the buffer and the ended sessions. With one, drops only the entries
+   * and markers of the current session (`current` or its id) or of `none`, and the session stays
+   * current: `INVALID_REQUEST` for an ended session, `NOT_FOUND` for `current` with none current
+   * or an id never given out. Publishes a `clear` event (with `sessionId` for a scope). `seq`
+   * keeps counting.
+   */
+  clear(session?: SessionFilter): void;
   /** Inserts a marker. `INVALID_REQUEST` for an empty or too long label. */
   addMarker(label: string): SpeechEntry;
 }

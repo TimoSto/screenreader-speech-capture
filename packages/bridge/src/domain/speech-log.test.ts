@@ -260,6 +260,46 @@ describe('SpeechLog', () => {
     });
   });
 
+  describe('clearScope', () => {
+    it('empties the current session and keeps it current', () => {
+      const log = new SpeechLog(10);
+      log.append(draft('out'));
+      start(log, 'a');
+      log.append(draft('a1'));
+      log.append(draft('a2'));
+      expect(log.clearScope('current')).toBe(1);
+      expect(texts(log, 0)).toEqual(['out']);
+      expect(log.currentSession()).toMatchObject({ id: 1 });
+      expect(log.sessions()).toMatchObject([{ id: 1, entries: 0, firstSeq: null, lastSeq: null }]);
+      log.append(draft('a3'));
+      expect(texts(log, 0, 100, 1)).toEqual(['a3']);
+      expect(log.headSeq).toBe(4);
+    });
+
+    it('empties the entries outside sessions, also while a session is current', () => {
+      const log = new SpeechLog(10);
+      log.append(draft('out'));
+      start(log, 'a');
+      log.append(draft('a1'));
+      expect(log.clearScope('none')).toBeNull();
+      expect(texts(log, 0)).toEqual(['a1']);
+      expect(log.outsideEntries()).toBe(0);
+    });
+
+    it('refuses an ended session, and has no current or unknown session to clear', () => {
+      const log = new SpeechLog(10);
+      expect(() => log.clearScope('current')).toThrow(
+        expect.objectContaining({ code: 'NOT_FOUND' }),
+      );
+      start(log, 'a');
+      log.append(draft('a1'));
+      start(log, 'b');
+      expect(() => log.clearScope(1)).toThrow(expect.objectContaining({ code: 'INVALID_REQUEST' }));
+      expect(() => log.clearScope(9)).toThrow(expect.objectContaining({ code: 'NOT_FOUND' }));
+      expect(texts(log, 0)).toEqual(['a1']);
+    });
+  });
+
   describe('deleteSession', () => {
     it('removes an ended session and its entries from every read', () => {
       const log = new SpeechLog(10);

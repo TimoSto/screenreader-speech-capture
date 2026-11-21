@@ -63,6 +63,9 @@ and readers can tell them apart.
   removes all entries and all ended sessions. The current session stays current, empty.
 - `DELETE /api/v1/sessions?session=<id>` deletes one ended session with its entries. The current
   session and the entries outside sessions can't be deleted this way.
+- `DELETE /api/v1/speech?session=current` (or the current session's id, or `none`) clears the speech
+  of that scope only and keeps the session running, empty. Ended sessions can't be cleared, delete
+  them instead.
 - Sessions live in memory only, like the buffer.
 
 Endpoints: [HTTP API](http-api.md#endpoints).

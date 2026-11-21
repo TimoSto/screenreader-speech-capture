@@ -92,6 +92,27 @@ export class SpeechLog {
     return { entries: items, truncated: since < droppedUpToSeq, hasMore };
   }
 
+  /**
+   * Removes the entries (and markers) of the current session or of the entries outside sessions
+   * (`none`), and returns that scope's id (`null`: outside). The session stays current. `NOT_FOUND`
+   * for `current` with none current or an id never given out, `INVALID_REQUEST` for an ended
+   * session (delete it with `deleteSession` instead). `seq` keeps counting.
+   */
+  clearScope(filter: SessionFilter): number | null {
+    const scope = this.resolveFilter(filter);
+    if (scope === undefined) throw invalidField('session', 'must be a session id, current or none');
+    if (scope !== null && scope !== this.#currentId) {
+      throw invalidField(
+        'session',
+        'only the current session can be cleared, delete this one instead',
+      );
+    }
+    this.#entries.removeWhere((entry) => entry.sessionId === scope);
+    this.#bySession.delete(scope);
+    this.#droppedBySession.delete(scope);
+    return scope;
+  }
+
   /** Removes all entries and the ended sessions. The current session stays current. */
   clear(): void {
     this.#entries.clear();

@@ -39,8 +39,8 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
       });
       sendJson(res, 200, toSpeechListDto(page));
     })
-    .add('DELETE', '/speech', ({ res }) => {
-      speech.clear();
+    .add('DELETE', '/speech', ({ res, url }) => {
+      speech.clear(sessionParam(url));
       sendNoContent(res);
     })
     .add('POST', '/markers', async ({ req, res }) => {

@@ -154,6 +154,17 @@ parameter, and a new error code would break clients that only know the existing 
 no event: the UI polls `GET /sessions`, and a live feed has no deleted-session state to keep.
 Entries of the deleted session leave the buffer, so reads without a filter no longer show them.
 
+## Clearing one scope is `DELETE /speech?session=`
+
+The thing removed is the speech, not the session, so the scoped clear is the existing `DELETE
+/speech` with the `session` filter every read already takes (without it: the global wipe, as
+before). `DELETE /sessions/{id}` would clash with deleting a session, `POST /sessions/{id}/clear`
+can't name `none`, and the router has no path parameters. Only the current session and `none` can
+be cleared: an ended session is deleted instead (`INVALID_REQUEST`). The `clear` event keeps its
+name and carries the scope in its data (`sessionId`, absent for a global clear): feeds of other
+scopes don't receive it, an unfiltered feed can drop just that scope's rows, and old clients that
+ignore the data still reset, which is safe.
+
 ## The SSE replay follows the reader
 
 A stream opened with `Last-Event-ID` replays the buffered entries in pages, pausing whenever the
