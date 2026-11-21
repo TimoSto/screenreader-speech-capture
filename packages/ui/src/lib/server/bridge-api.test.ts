@@ -148,4 +148,26 @@ describe('createBridgeApi', () => {
     expect(new URL(requested).searchParams.toString()).toBe('since=10&limit=500&session=4');
     expect(list.hasMore).toBe(false);
   });
+
+  it('posts a marker and returns the entry', async () => {
+    const entry = {
+      seq: 7,
+      kind: 'marker',
+      text: 'step 3',
+      receivedAt: '2026-01-01T00:00:00.000Z',
+      source: 'api',
+      voice: null,
+      connectionId: null,
+      sessionId: null,
+    };
+    let seen: { url: string; body: unknown } | undefined;
+    const api = createBridgeApi('http://bridge', (input, init) => {
+      const sent = init?.body;
+      seen = { url: urlOf(input), body: JSON.parse(typeof sent === 'string' ? sent : '') };
+      return Promise.resolve(json(entry, 201));
+    });
+    const added = await api.addMarker('step 3');
+    expect(seen).toEqual({ url: 'http://bridge/api/v1/markers', body: { label: 'step 3' } });
+    expect(added.seq).toBe(7);
+  });
 });

@@ -1,6 +1,7 @@
 import { resolve } from '$app/paths';
 import { BrowserThemeStorage } from '#lib/adapters/browser-theme-storage.js';
 import { markIconFontReady } from '#lib/adapters/icon-font.js';
+import { HttpSpeechApi } from '#lib/adapters/http-speech-api.js';
 import { HttpSessionsApi } from '#lib/adapters/http-sessions-api.js';
 import { SseSpeechFeed } from '#lib/adapters/sse-speech-feed.js';
 import { HttpStatusApi } from '#lib/adapters/http-status-api.js';
@@ -17,6 +18,7 @@ export const statusStore = createStatusStore(new HttpStatusApi(resolve('/api/sta
 export const sessionsStore = createSessionsStore(new HttpSessionsApi(resolve('/api/sessions')));
 export const speechStore = createSpeechStore(
   new SseSpeechFeed(resolve('/api/speech/stream'), resolve('/api/speech')),
+  new HttpSpeechApi(resolve('/api/markers')),
 );
 export const sessionsPaneStore = createSessionsPaneStore(new BrowserSessionsPaneStorage());
 

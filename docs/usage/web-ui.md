@@ -87,11 +87,15 @@ The main area. It shows the entries of the selected session, oldest first, newes
 - **Follow** scrolls to new entries automatically. Scrolling up pauses it, and a "Jump to latest"
   button resumes it.
 - The log keeps the newest 5000 rows of the selected scope.
+- **Add marker** (the bookmark button in the log's header) asks for a label and inserts a marker row
+  (`POST /api/v1/markers`). The bridge files a marker under the current session, or outside any
+  session when none is current, so the button is only shown in the current session and in "Outside
+  sessions" while no session is current. It is hidden in an ended session, and in "Outside sessions"
+  while a session is live.
 
 Planned, not implemented yet *(planned, [M5](../ROADMAP.md#m5-web-ui-))*:
 
 - **Search / filter** by text (substring or regex) and by voice. Markers can be hidden.
-- **Add marker** (with a label) goes into the current session.
 - **Copy** the visible text, or **export** it (the selected session, or all) as JSON / JSONL /
   plain text.
 - **Wipe everything** (`DELETE /api/v1/speech`, with a confirmation that names how many sessions

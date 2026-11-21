@@ -143,7 +143,8 @@ Just a list:
 
 ### Log pane
 
-> **As built so far (speech table):** the heading is `#id name` with no subline, there is no toolbar,
+> **As built so far (speech table):** the heading is `#id name` with no subline, the toolbar only has
+> Add marker (shown in the current session, and in "Outside sessions" while no session is current),
 > no filter row and no `GAP` column (columns: Received, Spoken text, Seq, a real `<table>`), no footer
 > except a "reconnecting" / "jump to latest" strip. An ended session is read once instead of
 > streamed. Everything else below is still the design.

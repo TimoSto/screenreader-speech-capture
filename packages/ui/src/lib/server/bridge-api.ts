@@ -5,12 +5,14 @@ import {
   CLIENT_HEADER,
   checkDto,
   SessionListSchema,
+  SpeechEntrySchema,
   SpeechListSchema,
   StartSessionResponseSchema,
   StatusSchema,
   type DtoOf,
   type DtoSchema,
   type SessionListDto,
+  type SpeechEntryDto,
   type SpeechListDto,
   type StartSessionRequestDto,
   type StartSessionResponseDto,
@@ -29,6 +31,8 @@ export interface BridgeApi {
   startSession(request: StartSessionRequestDto): Promise<StartSessionResponseDto>;
   /** Ends the current session; does nothing if none is current. */
   endSession(): Promise<void>;
+  /** Inserts a marker; the bridge files it under the current session (or outside any). */
+  addMarker(label: string): Promise<SpeechEntryDto>;
   /** One page of a scope's entries with `seq > since`, oldest first (`session`: an id or `none`). */
   speech(session: string | null, since: number, limit: number): Promise<SpeechListDto>;
   /**
@@ -104,6 +108,7 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
     endSession: async () => {
       await call('POST', '/sessions/end');
     },
+    addMarker: (label) => read('POST', '/markers', SpeechEntrySchema, { label }),
     speech: (session, since, limit) => {
       const query = new URLSearchParams({ since: String(since), limit: String(limit) });
       if (session !== null) query.set('session', session);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionDto } from '@screenreader-speech-capture/shared';
-import { formatReceivedTime, isLiveScope, logHeading } from './speech';
+import { canAddMarker, formatReceivedTime, isLiveScope, logHeading } from './speech';
 
 const session = (id: number, name: string): SessionDto => ({
   id,
@@ -49,5 +49,24 @@ describe('isLiveScope', () => {
   it('is not live for an ended session', () => {
     expect(isLiveScope(2, 3)).toBe(false);
     expect(isLiveScope(2, null)).toBe(false);
+  });
+});
+
+describe('canAddMarker', () => {
+  it('is offered in the current session', () => {
+    expect(canAddMarker(3, 3)).toBe(true);
+  });
+
+  it('is offered outside sessions while no session is current', () => {
+    expect(canAddMarker('none', null)).toBe(true);
+  });
+
+  it('is not offered outside sessions while a session is current (the marker would land in it)', () => {
+    expect(canAddMarker('none', 3)).toBe(false);
+  });
+
+  it('is not offered in an ended session', () => {
+    expect(canAddMarker(2, 3)).toBe(false);
+    expect(canAddMarker(2, null)).toBe(false);
   });
 });

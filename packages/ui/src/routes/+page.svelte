@@ -7,7 +7,7 @@
   import SessionsPane from '#lib/components/SessionsPane/SessionsPane.svelte';
   import { sessionsPaneStore, sessionsStore, speechStore } from '#lib/composition.js';
   import { selectedScope, type SessionScope } from '#lib/core/sessions.js';
-  import { isLiveScope, logHeading } from '#lib/core/speech.js';
+  import { canAddMarker, isLiveScope, logHeading } from '#lib/core/speech.js';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -33,6 +33,7 @@
   );
 
   const heading = $derived(logHeading(selectedId, list.sessions));
+  const canMark = $derived(canAddMarker(selectedId, list.currentId));
 
   onMount(() => {
     sessionsPaneStore.init();
@@ -87,7 +88,13 @@
     />
   </aside>
   <div class="log">
-    <SpeechLog {heading} entries={speechStore.entries} connection={speechStore.connection} />
+    <SpeechLog
+      {heading}
+      entries={speechStore.entries}
+      connection={speechStore.connection}
+      {canMark}
+      onAddMarker={(label: string) => speechStore.addMarker(label)}
+    />
   </div>
 </div>
 

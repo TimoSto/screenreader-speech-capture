@@ -29,6 +29,20 @@ export interface SpeechFeed {
   open(scope: SessionScope, live: boolean, handlers: SpeechFeedHandlers): () => void;
 }
 
+/** What the log changes through the BFF. */
+export interface SpeechApi {
+  /** Inserts a marker; the entry reaches the table through the feed. */
+  addMarker(label: string): Promise<void>;
+}
+
+/**
+ * Whether a marker added now shows up in `scope`. The bridge files a marker under the current
+ * session, or outside any session when none is current: it has no way to name another scope.
+ */
+export function canAddMarker(scope: SessionScope, currentId: number | null): boolean {
+  return currentId === null ? scope === 'none' : scope === currentId;
+}
+
 /** Whether new speech can still arrive in `scope`. */
 export function isLiveScope(scope: SessionScope, currentId: number | null): boolean {
   return scope === 'none' || scope === currentId;
