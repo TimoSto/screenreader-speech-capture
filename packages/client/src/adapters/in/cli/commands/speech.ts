@@ -43,6 +43,10 @@ const SESSION_START: HelpLine = {
   description: ['Start a session (the previous one ends) and print its id'],
 };
 const SESSION_END: HelpLine = { usage: 'session end', description: ['End the current session'] };
+const SESSION_DELETE: HelpLine = {
+  usage: 'session delete <id>',
+  description: ['Delete an ended session and its speech'],
+};
 const SESSION_LIST: HelpLine = {
   usage: 'session list',
   description: ['The sessions in the buffer, newest first'],
@@ -50,7 +54,7 @@ const SESSION_LIST: HelpLine = {
 
 export const session: Command = {
   options: ['run'],
-  help: [SESSION_START, SESSION_END, SESSION_LIST],
+  help: [SESSION_START, SESSION_END, SESSION_DELETE, SESSION_LIST],
   async run(args, { values, speech, out, io }) {
     const [action, ...rest] = args;
     if (action !== 'start' && values.run !== undefined) {
@@ -77,6 +81,16 @@ export const session: Command = {
         await speech().endSession();
         out('session end', { ended: true }, 'Session ended.');
         return EXIT.ok;
+      case 'delete': {
+        const [raw] = expectArgs(rest, 1, SESSION_DELETE.usage);
+        const id = Number(raw);
+        if (!/^\d+$/.test(raw) || !Number.isSafeInteger(id) || id < 1) {
+          throw new UsageError(`The session id must be an integer >= 1, got "${raw}".`);
+        }
+        await speech().deleteSession(id);
+        out('session delete', { deleted: true }, `Session ${id} deleted.`);
+        return EXIT.ok;
+      }
       case 'list': {
         expectArgs(rest, 0, SESSION_LIST.usage);
         const list = await speech().sessions();
@@ -90,9 +104,9 @@ export const session: Command = {
         return EXIT.ok;
       }
       case undefined:
-        throw new UsageError('Missing session action: start, end or list.');
+        throw new UsageError('Missing session action: start, end, delete or list.');
       default:
-        throw new UsageError(`Unknown session action "${action}": use start, end or list.`);
+        throw new UsageError(`Unknown session action "${action}": use start, end, delete or list.`);
     }
   },
 };

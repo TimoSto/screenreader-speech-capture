@@ -40,8 +40,8 @@ GitHub issues. This file only tracks milestones.
 - [x] Sessions API: `POST /sessions`, `POST /sessions/end`, `GET /sessions`, `sessionId` on
       entries, `session` filter on speech / wait / stream, SSE `session` event, `session` in status
       (API 1.3)
-- [x] Client + CLI sessions: `startSession` / `endSession` / `sessions`, `onSession`, CLI
-      `session start|end|list`, CLI reads scoped to the current session
+- [x] Client + CLI sessions: `startSession` / `endSession` / `deleteSession` / `sessions`, `onSession`, CLI
+      `session start|end|delete|list`, CLI reads scoped to the current session
 - [x] Playwright fixture (`connectOptions`, `headless: false`, one session per test instead of
       clearing, transcript attachment) as the client's `./playwright` subpath export
       (`@playwright/test` an optional peer dependency, external in the bundle)
@@ -69,6 +69,7 @@ GitHub issues. This file only tracks milestones.
 - [ ] Layout and status panel (side sheet; polls `GET /status`, or an SSE `status` event instead
       of polling)
 - [x] Context pane: sessions (newest first, follow the current one, new / end session dialogs, selection in `?session=`; the list is still polled every 3 s; the speech table has an SSE feed, the list could use its `session` events)
+- [x] Delete an ended session from the log's toolbar (confirm dialog, then the next session is selected)
 - [x] Speech table per session: `#id name` heading, received / spoken text / seq columns, follows new
       rows. A live scope (current session, outside sessions) replays the buffer and follows the SSE
       stream through a BFF relay; an ended session is read once, page by page

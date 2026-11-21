@@ -23,6 +23,8 @@ const props = (patch: Record<string, unknown> = {}) => ({
   connection: 'live' as const,
   canMark: true,
   onAddMarker: () => Promise.resolve(),
+  canDelete: false,
+  onDelete: () => Promise.resolve(),
   ...patch,
 });
 
@@ -66,6 +68,28 @@ describe('SpeechLog', () => {
     await render(SpeechLog, props({ canMark: false }));
     expect(document.querySelector('[role="toolbar"]')).toBeNull();
     expect(page.getByRole('button', { name: 'Add marker' }).elements()).toHaveLength(0);
+  });
+
+  it('offers to delete only an ended session, and asks first', async () => {
+    await render(SpeechLog, props({ canMark: false }));
+    expect(page.getByRole('button', { name: 'Delete session' }).elements()).toHaveLength(0);
+  });
+
+  it('deletes the session after the dialog is confirmed', async () => {
+    const onDelete = vi.fn(() => Promise.resolve());
+    await render(SpeechLog, props({ canMark: false, canDelete: true, onDelete }));
+    await page.getByRole('button', { name: 'Delete session' }).click();
+    expect(onDelete).not.toHaveBeenCalled();
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await vi.waitFor(() => expect(onDelete).toHaveBeenCalledOnce());
+  });
+
+  it('shows the message when the session cannot be deleted', async () => {
+    const onDelete = vi.fn(() => Promise.reject(new Error('The bridge is not reachable')));
+    await render(SpeechLog, props({ canMark: false, canDelete: true, onDelete }));
+    await page.getByRole('button', { name: 'Delete session' }).click();
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect.element(page.getByRole('alert')).toHaveTextContent('The bridge is not reachable');
   });
 
   it('adds a marker from the dialog with a trimmed label', async () => {

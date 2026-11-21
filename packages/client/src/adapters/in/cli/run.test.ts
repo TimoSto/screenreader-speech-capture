@@ -320,6 +320,20 @@ describe('speech commands', () => {
     expect((await cli(['status'], fake)).stdout).toContain('session none current, 2 in the buffer');
   });
 
+  it('session delete removes an ended session and refuses bad ids', async () => {
+    const fake = fakeSpeech();
+    await cli(['session', 'start', 'one'], fake);
+    await cli(['session', 'start', 'two'], fake);
+    expect((await cli(['session', 'delete', '1'], fake)).stdout).toBe('Session 1 deleted.\n');
+    await cli(['session', 'start', 'three'], fake);
+    expect(JSON.parse((await cli(['session', 'delete', '2', '--json'], fake)).stdout)).toEqual({
+      deleted: true,
+    });
+    expect((await cli(['session', 'list'], fake)).stdout).toBe('#3 three: current, 0 entries\n');
+    expect((await run(['session', 'delete', 'x'], undefined, fake)).code).toBe(EXIT.usage);
+    expect((await run(['session', 'delete', '3'], undefined, fake)).code).not.toBe(EXIT.ok);
+  });
+
   it('speech, text and wait read the current session; --session and --all pick others', async () => {
     const fake = fakeSpeech();
     fake.api.speak('before');

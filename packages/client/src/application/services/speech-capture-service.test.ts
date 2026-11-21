@@ -442,6 +442,18 @@ describe('sessions', () => {
     expect(api.calls).toEqual(['status', 'start one', 'start two', 'end', 'sessions']);
   });
 
+  it('deleteSession deletes an ended session and keeps the cursor', async () => {
+    const { api, sr } = setup();
+    await sr.startSession('one');
+    await sr.startSession('two');
+    const cursor = sr.cursor();
+    await sr.deleteSession(1);
+    expect((await sr.sessions()).sessions.map((s) => s.name)).toEqual(['two']);
+    expect(sr.cursor()).toBe(cursor);
+    expect(api.calls).toEqual(['status', 'start one', 'start two', 'delete 1', 'sessions']);
+    await expect(sr.deleteSession(2)).rejects.toMatchObject({ status: 400 });
+  });
+
   it('a wait in a session only matches that session', async () => {
     const { api, sr } = setup();
     await sr.startSession('one');

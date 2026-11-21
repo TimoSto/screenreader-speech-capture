@@ -124,6 +124,12 @@ export interface SpeechCapture {
   startSession(name: string, options?: StartSessionOptions): Promise<StartedSession>;
   /** Ends the current session. Speech after this belongs to no session. */
   endSession(): Promise<void>;
+  /**
+   * Deletes an ended session and its speech from the bridge's buffer (needs bridge API 1.16).
+   * Rejects with `BridgeHttpError` (`INVALID_REQUEST`) for the current session and `NOT_FOUND` for
+   * an id the bridge never gave out. The cursor stays where it is.
+   */
+  deleteSession(id: number): Promise<void>;
   /** The sessions still in the buffer plus the current one, newest first. */
   sessions(): Promise<SessionList>;
   /** Inserts a marker. Its `seq` can be used as `since`. */

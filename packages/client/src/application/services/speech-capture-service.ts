@@ -142,6 +142,11 @@ export class SpeechCaptureService implements SpeechCapture {
     await this.deps.api.endSession();
   }
 
+  async deleteSession(id: number): Promise<void> {
+    await this.compatible();
+    await this.deps.api.deleteSession(id);
+  }
+
   async sessions(): Promise<SessionList> {
     await this.compatible();
     return this.deps.api.listSessions();

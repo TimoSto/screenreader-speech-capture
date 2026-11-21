@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionDto } from '@screenreader-speech-capture/shared';
-import { canAddMarker, formatReceivedTime, isLiveScope, logHeading } from './speech';
+import {
+  canAddMarker,
+  canDeleteSession,
+  formatReceivedTime,
+  isLiveScope,
+  logHeading,
+} from './speech';
 
 const session = (id: number, name: string): SessionDto => ({
   id,
@@ -68,5 +74,18 @@ describe('canAddMarker', () => {
   it('is not offered in an ended session', () => {
     expect(canAddMarker(2, 3)).toBe(false);
     expect(canAddMarker(2, null)).toBe(false);
+  });
+});
+
+describe('canDeleteSession', () => {
+  it('is offered for an ended session', () => {
+    expect(canDeleteSession(2, 3)).toBe(true);
+    expect(canDeleteSession(2, null)).toBe(true);
+  });
+
+  it('is not offered for the current session or the speech outside sessions', () => {
+    expect(canDeleteSession(3, 3)).toBe(false);
+    expect(canDeleteSession('none', null)).toBe(false);
+    expect(canDeleteSession('none', 3)).toBe(false);
   });
 });

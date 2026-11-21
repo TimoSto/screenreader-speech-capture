@@ -195,6 +195,20 @@ describe('sessions', () => {
     await expect(sr.getSpeech({ session: 'current' })).rejects.toMatchObject({ status: 404 });
   });
 
+  it('deleteSession deletes an ended session, not the current one', async () => {
+    const { say, client } = await bridge();
+    const sr = client();
+    const first = await sr.startSession('a');
+    await say('a1');
+    await sr.waitForOutput('a1');
+    await expect(sr.deleteSession(first.id)).rejects.toMatchObject({ status: 400 });
+    await sr.startSession('b');
+    await sr.deleteSession(first.id);
+    expect((await sr.sessions()).sessions.map((s) => s.name)).toEqual(['b']);
+    expect(await sr.getText({ since: 0 })).toBe('');
+    await expect(sr.deleteSession(99)).rejects.toMatchObject({ status: 404 });
+  });
+
   it('onSpeech reports sessions over SSE', async () => {
     const { client } = await bridge();
     const sr = client();

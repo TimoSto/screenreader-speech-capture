@@ -144,7 +144,8 @@ Just a list:
 ### Log pane
 
 > **As built so far (speech table):** the heading is `#id name` with no subline, the toolbar only has
-> Add marker (shown in the current session, and in "Outside sessions" while no session is current),
+> Add marker (shown in the current session, and in "Outside sessions" while no session is current)
+> and Delete session (only in an ended session),
 > no filter row and no `GAP` column (columns: Received, Spoken text, Seq, a real `<table>`), no footer
 > except a "reconnecting" / "jump to latest" strip. An ended session is read once instead of
 > streamed. Everything else below is still the design.
@@ -213,6 +214,7 @@ inserts a marker first…"). Segmented button with four tabs:
 | End session #n? | Later speech gets `sessionId: null` | End session |
 | Wipe everything? | Counts of entries and ended sessions; current session stays, empty | Wipe (`error`) |
 | Add marker | Label | Add |
+| Delete session | `#id name` and its speech are removed, cannot be undone | Delete |
 
 Server validation errors show under the field (`details.field`).
 
@@ -239,6 +241,7 @@ sessions started from the UI are attributed.
 | Log outside sessions | The same with `session=none` and `since=0` (no `startSeq`) |
 | Reconnect | SSE `Last-Event-ID`; the stream's first `position` event tells where it starts; `truncated` event or `truncated: true` → gap row |
 | Add marker | `POST /api/v1/markers` `{ label }` |
+| Delete session | `DELETE /api/v1/sessions?session=<id>` (ended sessions only) |
 | Wipe | `DELETE /api/v1/speech` |
 | Keys / Presets | `POST /api/v1/input/keys` `{ keys, delayMs }` (marker `ui: <keys>` first) |
 | Click | `POST /api/v1/input/click` `{ x, y, button }` (marker `ui: click x,y button` first) |

@@ -111,6 +111,7 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `getText({ since?, separator?, session?, allowTruncated? })` | `string` | All speech since `since` (default: the cursor), joined into one string (`separator` default `'\n'`). Handy for snapshot assertions. Throws `SpeechTruncatedError` like `getSpeech`. |
 | `startSession(name, { run? })` | `Session` + `replaced` | Start a [session](speech-capture.md#sessions) (the previous one ends) and move the cursor to its start. `run` groups sessions, for example of one test run. `replaced` is the session of another client it ended (`null` if none): a sign that two clients share the screen reader. The CLI prints a warning for it. |
 | `endSession()` | `void` | End the current session. Speech after this belongs to no session. |
+| `deleteSession(id)` | `void` | Delete an ended session and its speech from the bridge (needs API 1.16). Rejects with `BridgeHttpError` for the current session (`INVALID_REQUEST`) or an id the bridge never gave out (`NOT_FOUND`). The cursor stays where it is. |
 | `sessions()` | `{ sessions, currentId }` | The sessions still in the buffer plus the current one, newest first. |
 | `clear()` | `void` | Wipe the whole buffer (all sessions) and reset the cursor. For manual use. |
 | `waitForOutput(match, { timeout?, since?, normalize?, session? })` | `SpeechEntry` | Wait until a speech entry after the cursor (or `since`) matches, then move the cursor past it. `match` is a `string` (substring), a `RegExp` or a predicate `(u) => boolean`. `normalize: true` ignores case and extra whitespace. `session` (an `id` or `'current'`) only matches that session's entries; `'current'` is the session current when the wait starts, even if another one starts meanwhile. Markers never match. Waits read the buffer, then follow the [live feed](#live-feed): no polling. Throws `SpeechTimeoutError` (with the speech seen so far in `entries`) on timeout. Default `timeout`: 5000 ms. |
@@ -250,6 +251,7 @@ npx screenreader-speech-capture-client config set url http://my-test-vm:5151   #
 npx screenreader-speech-capture-client status [--wait-ready] [--timeout 120000]
 npx screenreader-speech-capture-client session start "checkout flow" [--run <label>]   # prints the session id
 npx screenreader-speech-capture-client session end
+npx screenreader-speech-capture-client session delete <id>   # an ended session and its speech
 npx screenreader-speech-capture-client session list
 npx screenreader-speech-capture-client clear                 # wipes everything, all sessions
 npx screenreader-speech-capture-client speech [--since <seq>] [--limit <n>] [--include-markers] [--session <id> | --all]

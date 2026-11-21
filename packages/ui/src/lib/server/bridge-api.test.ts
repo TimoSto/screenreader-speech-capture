@@ -116,6 +116,16 @@ describe('createBridgeApi', () => {
     });
   });
 
+  it('deletes a session with a DELETE and accepts the empty 204 answer', async () => {
+    let seen: { url: string; method: string | undefined } | undefined;
+    const api = createBridgeApi('http://bridge', (input, init) => {
+      seen = { url: urlOf(input), method: init?.method };
+      return Promise.resolve(new Response(null, { status: 204 }));
+    });
+    await expect(api.deleteSession(4)).resolves.toBeUndefined();
+    expect(seen).toEqual({ url: 'http://bridge/api/v1/sessions?session=4', method: 'DELETE' });
+  });
+
   it('passes the session and Last-Event-ID to the stream and returns its body', async () => {
     let seen: { url: string; headers: Headers } | undefined;
     const api = createBridgeApi('http://bridge', (input, init) => {

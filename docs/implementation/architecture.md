@@ -253,9 +253,14 @@ the speech store, which the monitor page re-opens whenever the selected scope ch
   calls `BridgeApi.addMarker` (`POST /api/v1/markers`). Nothing is added to the table locally: the
   entry comes back through the feed.
 
+- **Delete session**: `HttpSessionsApi.delete` sends `DELETE /ui/api/sessions/<id>`, which calls
+  `BridgeApi.deleteSession` (`DELETE /api/v1/sessions?session=<id>`). `canDeleteSession` shows the
+  button only for an ended session; the page picks the next scope with `scopeAfterDelete` before the
+  list is read again.
+
 ### Serving the UI
 
-The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's routes under `/ui/api/` (`status`, `sessions`, `speech`, `speech/stream`, `markers`). The bridge's UI handler redirects the bare `/` to `/ui/`. Code builds URLs with `resolve()` from `$app/paths`.
+The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's routes under `/ui/api/` (`status`, `sessions`, `sessions/<id>`, `speech`, `speech/stream`, `markers`). The bridge's UI handler redirects the bare `/` to `/ui/`. Code builds URLs with `resolve()` from `$app/paths`.
 
 The build of `packages/ui` (`build/`, with `handler.js`) is copied to `packages/bridge/dist/ui` by the
 bridge's build (tsdown `copy`; the bridge depends on the UI in the workspace, so `pnpm build` builds

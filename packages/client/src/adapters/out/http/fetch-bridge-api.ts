@@ -116,6 +116,10 @@ export class FetchBridgeApi implements BridgeApi {
     await this.request('POST', '/sessions/end');
   }
 
+  async deleteSession(id: number): Promise<void> {
+    await this.request('DELETE', `/sessions?session=${String(id)}`);
+  }
+
   async click(request: ScreenPoint & { button?: MouseButton | undefined }): Promise<void> {
     const body: ClickRequestDto = {
       x: request.x,
