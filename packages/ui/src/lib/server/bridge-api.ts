@@ -5,11 +5,13 @@ import {
   CLIENT_HEADER,
   checkDto,
   SessionListSchema,
+  SpeechListSchema,
   StartSessionResponseSchema,
   StatusSchema,
   type DtoOf,
   type DtoSchema,
   type SessionListDto,
+  type SpeechListDto,
   type StartSessionRequestDto,
   type StartSessionResponseDto,
   type StatusDto,
@@ -27,6 +29,17 @@ export interface BridgeApi {
   startSession(request: StartSessionRequestDto): Promise<StartSessionResponseDto>;
   /** Ends the current session; does nothing if none is current. */
   endSession(): Promise<void>;
+  /** One page of a scope's entries with `seq > since`, oldest first (`session`: an id or `none`). */
+  speech(session: string | null, since: number, limit: number): Promise<SpeechListDto>;
+  /**
+   * Opens the bridge's SSE stream (`session`: an id or `none`). The body is passed on as it is,
+   * so `Last-Event-ID` replays and every event name reach the browser untouched.
+   */
+  openSpeechStream(
+    session: string | null,
+    lastEventId: string | null,
+    signal: AbortSignal,
+  ): Promise<Response>;
 }
 
 /** Named in the bridge's logs when this UI ends or replaces another client's session. */
@@ -90,6 +103,35 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
     startSession: (request) => read('POST', '/sessions', StartSessionResponseSchema, request),
     endSession: async () => {
       await call('POST', '/sessions/end');
+    },
+    speech: (session, since, limit) => {
+      const query = new URLSearchParams({ since: String(since), limit: String(limit) });
+      if (session !== null) query.set('session', session);
+      return read('GET', `/speech?${query}`, SpeechListSchema);
+    },
+    openSpeechStream: async (session, lastEventId, signal) => {
+      const query = session === null ? '' : `?session=${encodeURIComponent(session)}`;
+      let response: Response;
+      try {
+        response = await fetchFn(`${root}/speech/stream${query}`, {
+          headers: {
+            accept: 'text/event-stream',
+            origin,
+            [CLIENT_HEADER]: UI_CLIENT,
+            ...(lastEventId === null ? {} : { 'last-event-id': lastEventId }),
+          },
+          signal,
+        });
+      } catch (cause) {
+        error(502, `The bridge is not reachable: ${describe(cause)}`);
+      }
+      if (!response.ok || response.body === null) {
+        error(
+          response.status === 200 ? 502 : response.status,
+          'The speech stream is not available',
+        );
+      }
+      return response;
     },
   };
 }

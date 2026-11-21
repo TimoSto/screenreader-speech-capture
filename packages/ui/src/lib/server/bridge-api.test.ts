@@ -21,6 +21,9 @@ function fakeFetch(respond: (url: string) => Response | Promise<Response>): type
   return (input) => Promise.resolve(respond(input instanceof Request ? input.url : String(input)));
 }
 
+const urlOf = (input: Parameters<typeof fetch>[0]): string =>
+  input instanceof Request ? input.url : input instanceof URL ? input.href : input;
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
@@ -111,5 +114,38 @@ describe('createBridgeApi', () => {
       await expect(api.endSession()).resolves.toBeUndefined();
       expect(requested).toBe('http://bridge/api/v1/sessions/end');
     });
+  });
+
+  it('passes the session and Last-Event-ID to the stream and returns its body', async () => {
+    let seen: { url: string; headers: Headers } | undefined;
+    const api = createBridgeApi('http://bridge', (input, init) => {
+      seen = { url: urlOf(input), headers: new Headers(init?.headers) };
+      return Promise.resolve(new Response('id: 1\n\n', { status: 200 }));
+    });
+    const response = await api.openSpeechStream('none', '41', new AbortController().signal);
+    expect(seen?.url).toBe('http://bridge/api/v1/speech/stream?session=none');
+    expect(seen?.headers.get('last-event-id')).toBe('41');
+    expect(await response.text()).toBe('id: 1\n\n');
+  });
+
+  it('answers 502 when the stream cannot be opened', async () => {
+    const api = createBridgeApi('http://bridge', () => Promise.reject(new Error('ECONNREFUSED')));
+    await expect(
+      api.openSpeechStream(null, null, new AbortController().signal),
+    ).rejects.toMatchObject({ status: 502 });
+  });
+
+  it('reads a page of a session with since and limit', async () => {
+    let requested = '';
+    const api = createBridgeApi(
+      'http://bridge',
+      fakeFetch((url) => {
+        requested = url;
+        return json({ entries: [], truncated: false, hasMore: false });
+      }),
+    );
+    const list = await api.speech('4', 10, 500);
+    expect(new URL(requested).searchParams.toString()).toBe('since=10&limit=500&session=4');
+    expect(list.hasMore).toBe(false);
   });
 });

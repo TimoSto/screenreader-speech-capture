@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
+  import SpeechLog from '#lib/components/SpeechLog/SpeechLog.svelte';
   import SessionsPane from '#lib/components/SessionsPane/SessionsPane.svelte';
-  import { sessionsPaneStore, sessionsStore } from '#lib/composition.js';
+  import { sessionsPaneStore, sessionsStore, speechStore } from '#lib/composition.js';
   import { selectedScope, type SessionScope } from '#lib/core/sessions.js';
+  import { isLiveScope, logHeading } from '#lib/core/speech.js';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -30,10 +32,22 @@
     selectedScope(page.url.searchParams.get('session'), list.sessions, list.currentId),
   );
 
+  const heading = $derived(logHeading(selectedId, list.sessions));
+
   onMount(() => {
     sessionsPaneStore.init();
     return sessionsStore.init(data.sessions);
   });
+
+  // The log follows the selected scope; it only runs in the browser (effects never run on the
+  // server). Whether the scope is live is read once, when it opens: a session that ends while it
+  // is shown keeps what it has, and is read as an ended one the next time it is selected.
+  $effect(() =>
+    speechStore.open(
+      selectedId,
+      untrack(() => isLiveScope(selectedId, list.currentId)),
+    ),
+  );
 
   function select(id: SessionScope | null): Promise<void> {
     // Always spelled out, even for the current session: a clean URL only follows the current
@@ -73,12 +87,7 @@
     />
   </aside>
   <div class="log">
-    <h1>Monitor</h1>
-    {#if data.status}
-      <p>Bridge {data.status.bridge.version} is {data.status.bridge.state}.</p>
-    {:else}
-      <p>The bridge is not reachable.</p>
-    {/if}
+    <SpeechLog {heading} entries={speechStore.entries} connection={speechStore.connection} />
   </div>
 </div>
 
@@ -113,5 +122,6 @@
   .log {
     flex: 1;
     min-width: 0;
+    min-height: 0;
   }
 </style>
