@@ -37,6 +37,7 @@ Common problems, what causes them and how to fix them. Start with
 | Nothing works after an RDP session | The disconnected RDP session has no active desktop: no input, no foreground window. | Use the hypervisor console or VNC. Don't leave the VM on a disconnected RDP session ([Running on the VM](vm-setup.md#running-on-the-vm)). |
 | Screen reader commands (`H`, `Insert+T`) do nothing | They were sent with Playwright (`page.keyboard`), which the screen reader never sees. | Use `pressKeys()` / CLI `press` ([Native input](native-input.md)). |
 | `pressKeys` / `click` returns `409 INPUT_DISABLED` | The bridge couldn't load `@jitsi/robotjs`. | Native input only works on Windows. `error.message` and the `[native-input]` line of the bridge log name the reason. |
+| `npm warn install-scripts … @jitsi/robotjs` while installing | npm flags the package's `node-gyp-build` install script. | Harmless; native input works. See [the warning](vm-setup.md#the-install-scripts-warning). |
 | Native clicks land in the wrong place | Display scaling, browser zoom, or several monitors. | See the caveats in [Native input](native-input.md). |
 | Native input does nothing at all | The bridge runs elevated or as a service, or the screen is locked. | Run non-elevated in the logged-in, unlocked user session. |
 
