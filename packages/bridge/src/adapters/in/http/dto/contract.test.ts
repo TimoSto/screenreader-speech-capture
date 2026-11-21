@@ -2,6 +2,7 @@
 // packages/shared), which the client checks every answer against.
 import {
   checkDto,
+  ConfigOverridesSchema,
   ConfigSchema,
   type DtoSchema,
   SessionListSchema,
@@ -15,7 +16,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { entry, session, status } from '../../../../../test/dto-fixtures.js';
 import { DEFAULT_CONFIG } from '../../../../domain/config/index.js';
-import { toConfigDto } from './config.js';
+import { toConfigDto, toConfigOverridesDto } from './config.js';
 import { toSessionDto, toSessionListDto, toStartSessionResponseDto } from './session.js';
 import { toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from './speech.js';
 import { toStatusDto } from './status.js';
@@ -52,6 +53,7 @@ const cases: [string, DtoSchema, unknown][] = [
   ['status', StatusSchema, toStatusDto(status(session()))],
   ['status without a session', StatusSchema, toStatusDto(status(null))],
   ['config', ConfigSchema, toConfigDto(DEFAULT_CONFIG)],
+  ['config overrides', ConfigOverridesSchema, toConfigOverridesDto({ 'tcp.port': '--tcp-port' })],
 ];
 
 describe('HTTP answers match the API contract', () => {

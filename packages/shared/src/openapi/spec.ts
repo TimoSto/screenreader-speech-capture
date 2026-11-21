@@ -32,7 +32,8 @@ removed \`restartRequired\` again (an exception to "minor versions only add", si
 existed): \`PUT /config\` now only saves, a setting takes effect on the next start, and \`GET\`
 shows the settings in use. 1.14 added native input (\`POST /input/click\`, \`POST /input/keys\`) and
 the \`INPUT_DISABLED\` error code again. 1.15 added \`outsideEntries\` to \`GET /sessions\`. 1.16 added \`DELETE /sessions\`. 1.17 added the \`session\` parameter of \`DELETE /speech\` and the
-\`sessionId\` in the \`data\` of a scoped \`clear\` event.
+\`sessionId\` in the \`data\` of a scoped \`clear\` event. 1.18 added the \`view\` parameter of \`GET /config\`
+and \`GET /config/overrides\`.
 
 Every error has the same body (\`ErrorBody\`). Clients must handle unknown error codes as errors
 of their HTTP status.
@@ -607,14 +608,50 @@ session in \`replaced\`.
       },
     },
   },
+  '/config/overrides': {
+    get: {
+      tags: ['bridge'],
+      operationId: 'getConfigOverrides',
+      summary: 'The settings a flag or variable sets',
+      description: `The settings that a flag or an environment variable sets at startup, with what sets each
+(since 1.18). They win over the config file on every start, so changing them with \`PUT /config\`
+has no effect until the flag or variable is removed. A UI shows these fields as read-only.
+`,
+      responses: {
+        '200': {
+          description: 'The overridden settings, empty if there are none.',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/ConfigOverrides',
+              },
+              example: {
+                overrides: {
+                  'tcp.port': '--tcp-port',
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
   '/config': {
     get: {
       tags: ['bridge'],
       operationId: 'getConfig',
-      summary: 'The active configuration',
-      description: `Defaults, then the config file, then flags and environment variables, as in use. It does
-not change while the bridge runs.
+      summary: 'The active or the saved configuration',
+      description: `By default the active configuration: defaults, then the config file, then flags and
+environment variables, as in use. It does not change while the bridge runs. \`view=saved\` answers
+with the configuration the next start will use, as \`PUT\` does (since 1.18): the active one with
+every update since the start on top. A setting that differs between the two needs a restart; one
+listed by \`GET /config/overrides\` is still overridden then.
 `,
+      parameters: [
+        {
+          $ref: '#/components/parameters/ConfigView',
+        },
+      ],
       responses: {
         '200': {
           description: 'The configuration.',
@@ -625,6 +662,9 @@ not change while the bridge runs.
               },
             },
           },
+        },
+        '400': {
+          $ref: '#/components/responses/InvalidRequest',
         },
       },
     },
@@ -723,6 +763,18 @@ entries recorded outside any session (\`sessionId: null\`, since 1.5).
           enum: ['current', 'none'],
         },
       ],
+    },
+  },
+  ConfigView: {
+    name: 'view',
+    in: 'query',
+    description: `\`active\` (default): the configuration in use. \`saved\`: the configuration the next start
+will use (since 1.18).
+`,
+    schema: {
+      type: 'string',
+      enum: ['active', 'saved'],
+      default: 'active',
     },
   },
   Client: {

@@ -1,4 +1,9 @@
-import type { ConfigDto, ErrorBodyDto, StatusDto } from '@screenreader-speech-capture/shared';
+import type {
+  ConfigDto,
+  ConfigOverridesDto,
+  ErrorBodyDto,
+  StatusDto,
+} from '@screenreader-speech-capture/shared';
 import { describe, expect, it } from 'vitest';
 import { MemoryConfigStore } from './fakes.js';
 import { eventually, send, start } from './helpers.js';
@@ -74,6 +79,36 @@ describe('PUT /api/v1/config', () => {
     expect(after.tcp.encoding).toBe('utf-8');
     expect(after.buffer.maxEntries).toBe(5);
     expect((await put(next, after)).status).toBe(200);
+  });
+
+  it('GET ?view=saved shows what the next start will use, GET alone what runs', async () => {
+    const bridge = await start({}, { store: new MemoryConfigStore() });
+    const before = await json<ConfigDto>(await fetch(api(bridge, '/config?view=saved')));
+    expect(before).toEqual(await json<ConfigDto>(await fetch(api(bridge, '/config'))));
+
+    await put(bridge, { buffer: { maxEntries: 5 } });
+    // Still there after "a reload": the saved view needs no PUT.
+    const saved = await json<ConfigDto>(await fetch(api(bridge, '/config?view=saved')));
+    expect(saved.buffer.maxEntries).toBe(5);
+    const active = await json<ConfigDto>(await fetch(api(bridge, '/config?view=active')));
+    expect(active.buffer.maxEntries).toBe(10000);
+  });
+
+  it('rejects an unknown view', async () => {
+    const bridge = await start();
+    const response = await fetch(api(bridge, '/config?view=next'));
+    expect(response.status).toBe(400);
+    expect((await json<ErrorBodyDto>(response)).error.details).toEqual({ field: 'view' });
+  });
+
+  it('GET /config/overrides names the settings a flag or variable sets', async () => {
+    const bridge = await start({ log: { level: 'info' } });
+    const body = await json<ConfigOverridesDto>(await fetch(api(bridge, '/config/overrides')));
+    expect(body.overrides['log.level']).toBe('a flag or environment variable');
+    // The ports a test passes like flags are overrides too.
+    expect(Object.keys(body.overrides)).toContain('tcp.port');
+    // A setting nobody pins is not listed.
+    expect(body.overrides['buffer.maxEntries']).toBeUndefined();
   });
 
   it('warns when a flag or env var will override the saved setting on the next start', async () => {

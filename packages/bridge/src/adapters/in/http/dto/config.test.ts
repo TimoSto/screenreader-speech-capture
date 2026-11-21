@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, type Config } from '../../../../domain/config/index.js';
-import { toConfigDto } from './config.js';
+import { toConfigDto, toConfigOverridesDto } from './config.js';
 
 describe('toConfigDto', () => {
   it('maps every setting', () => {
@@ -13,5 +13,12 @@ describe('toConfigDto', () => {
       http: { ...DEFAULT_CONFIG.http, token: 'secret' },
     } as Config;
     expect(toConfigDto(withSecret).http).toEqual(DEFAULT_CONFIG.http);
+  });
+
+  it('copies the overrides', () => {
+    const overrides = { 'tcp.port': '--tcp-port' };
+    const dto = toConfigOverridesDto(overrides);
+    expect(dto).toEqual({ overrides });
+    expect(dto.overrides).not.toBe(overrides);
   });
 });
