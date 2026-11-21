@@ -40,9 +40,10 @@
     scroller?.scrollTo({ top: scroller.scrollHeight });
   }
 
-  // After the new row is in the DOM, stay at the end while following.
+  // After the new row is in the DOM, stay at the end while following. An empty table is a new
+  // scope (or a wipe): start following again.
   $effect(() => {
-    void entries.length;
+    if (entries.length === 0) following = true;
     if (following && scroller) scroller.scrollTop = scroller.scrollHeight;
   });
 </script>
@@ -75,6 +76,8 @@
     aria-live="off"
     tabindex="0"
   >
+    <!-- Always there, so its header row doesn't come and go while another scope loads. -->
+    <SpeechTable {entries} />
     {#if entries.length === 0}
       <div class="empty">
         <md-icon aria-hidden="true">mic</md-icon>
@@ -86,8 +89,6 @@
           <p>Make the screen reader speak.</p>
         {/if}
       </div>
-    {:else}
-      <SpeechTable {entries} />
     {/if}
   </div>
 
@@ -163,13 +164,21 @@
     overflow-y: auto;
   }
 
+  /* Hidden for a moment: while another scope's rows load there is no point in saying "No speech". */
   .empty {
+    animation: reveal 0s 250ms backwards;
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 96px 24px;
     color: var(--md-sys-color-on-surface-variant);
     text-align: center;
+  }
+
+  @keyframes reveal {
+    from {
+      visibility: hidden;
+    }
   }
 
   .empty md-icon {

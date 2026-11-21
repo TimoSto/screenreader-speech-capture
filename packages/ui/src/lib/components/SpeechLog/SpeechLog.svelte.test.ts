@@ -57,7 +57,9 @@ describe('SpeechLog', () => {
   it('shows an empty state without entries', async () => {
     await render(SpeechLog, props({ entries: [] }));
     await expect.element(page.getByText('No speech yet')).toBeVisible();
-    expect(document.querySelector('table')).toBeNull();
+    // The header stays, so it doesn't come and go while another scope loads.
+    expect(page.getByRole('columnheader').elements()).toHaveLength(3);
+    expect(document.querySelectorAll('tbody tr')).toHaveLength(0);
   });
 
   it('offers to add a marker only where one would show up', async () => {
