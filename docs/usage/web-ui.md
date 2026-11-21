@@ -137,6 +137,18 @@ The actions panel sends [native input](native-input.md) through the bridge, the 
 
 ## Settings
 
+The page is one pane, like the speech log, with a section per topic (its "Settings" heading is for
+screen readers only).
+
+### Appearance
+
+The **Color theme** is a radio group: light, dark, high contrast and dark high contrast (black text on
+white, or white on black, with 2px outlines and a thicker focus ring). The choice applies at once and is
+kept in this browser's `localStorage`; the bridge doesn't know about it. The UI starts light and ignores
+the system's `prefers-color-scheme`.
+
+### Bridge settings *(planned, [M5](../ROADMAP.md))*
+
 A form for the [configuration](configuration.md): ports, hosts, encoding, buffer size, log file,
 Playwright version, and native input on/off.
 

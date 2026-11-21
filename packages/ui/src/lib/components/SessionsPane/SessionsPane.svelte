@@ -131,6 +131,7 @@
     height: 100%;
     min-height: 0;
     padding: 16px 12px;
+    border: var(--app-border-width) solid var(--md-sys-color-outline);
     border-radius: 28px;
     background: var(--md-sys-color-surface-container-low);
   }

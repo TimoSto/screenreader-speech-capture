@@ -56,10 +56,13 @@
     justify-content: center;
     width: 56px;
     height: 32px;
+    border: var(--app-border-width) solid transparent;
+    box-sizing: border-box;
     border-radius: 16px;
   }
 
   .indicator.current {
+    border-color: var(--md-sys-color-outline);
     background: var(--md-sys-color-secondary-container);
     color: var(--md-sys-color-on-secondary-container);
   }

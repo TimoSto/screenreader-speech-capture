@@ -76,8 +76,9 @@ GitHub issues. This file only tracks milestones.
       stream through a BFF relay; an ended session is read once, page by page
 - [ ] Live log extras: filter, export, wipe, copy, gap rows, "announce new entries" switch
 - [ ] Actions panel: keys, presets, click, delayed send (needs M4)
-- [x] Explicit light / dark toggle in the top bar (`data-theme` on `<html>`, choice remembered in
-      `localStorage`). The UI starts light and ignores `prefers-color-scheme`
+- [x] Color theme setting on the Settings page: light, dark, high contrast, dark high contrast
+      (`data-theme` on `<html>`, choice remembered in `localStorage`). The UI starts light and
+      ignores `prefers-color-scheme`
 - [ ] Settings (validation, services)
 - [ ] Setup page with check button
 - [ ] Accessibility of the UI itself (no feedback loop)

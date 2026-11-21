@@ -183,6 +183,7 @@
     min-height: 0;
     overflow: hidden;
     border: 1px solid var(--md-sys-color-outline-variant);
+    border-width: max(1px, var(--app-border-width));
     border-radius: 16px;
     background: var(--md-sys-color-surface-container-lowest);
   }

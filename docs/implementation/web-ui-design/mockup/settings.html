@@ -1,0 +1,424 @@
+<!doctype html>
+<!--
+  Speech Capture - Settings page with four color themes (mockup). Static, no build, no network.
+  Spec context: ../DESIGN.md, live tokens: packages/ui/src/lib/styles/tokens.css.
+  New themes: [data-theme='high-contrast'] and [data-theme='dark-high-contrast'] (full token blocks below).
+  The selectors also match any wrapper ([data-theme]) so several themes can be previewed side by side;
+  in the app, only :root[data-theme=...] is needed.
+  Contrast (WCAG 2.x), computed by script over 58 pairs per theme:
+    High contrast:      text pairs (45) min 7.21:1 (need 7:1); boundary pairs (13) min 5.21:1 (need 3:1)
+    Dark high contrast: text pairs (45) min 8.06:1 (need 7:1); boundary pairs (13) min 6.22:1 (need 3:1)
+  Full table at the bottom of the page.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speech Capture - Settings (mockup)</title>
+<style>
+/* ---- Tokens. light + dark: copied from packages/ui/src/lib/styles/tokens.css, scoped so they work on wrappers ---- */
+[data-theme='light'] {
+  color-scheme: light;
+  --md-sys-color-primary: #415f91;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #d6e3ff;
+  --md-sys-color-on-primary-container: #001b3e;
+  --md-sys-color-secondary: #565f71;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #dae2f9;
+  --md-sys-color-on-secondary-container: #131c2b;
+  --md-sys-color-tertiary: #705575;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #fad8fd;
+  --md-sys-color-on-tertiary-container: #28132e;
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
+  --app-success: #2f6a1e;
+  --app-on-success: #ffffff;
+  --app-success-container: #b6f29a;
+  --app-on-success-container: #062100;
+  --app-warning: #7a5900;
+  --app-on-warning: #ffffff;
+  --app-warning-container: #ffdea4;
+  --app-on-warning-container: #261900;
+  --md-sys-color-surface: #f9f9ff;
+  --md-sys-color-on-surface: #191c20;
+  --md-sys-color-on-surface-variant: #44474e;
+  --md-sys-color-outline: #74777f;
+  --md-sys-color-outline-variant: #c4c6d0;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #f3f3fa;
+  --md-sys-color-surface-container: #ededf4;
+  --md-sys-color-surface-container-high: #e7e8ee;
+  --md-sys-color-surface-container-highest: #e2e2e9;
+  --md-sys-color-inverse-surface: #2e3036;
+  --md-sys-color-inverse-on-surface: #f0f0f7;
+  --md-sys-color-inverse-primary: #aac7ff;
+  --app-new-row: rgba(65, 95, 145, 0.1);
+  --md-sys-color-scrim: rgba(0, 0, 0, 0.32);
+}
+[data-theme='dark'] {
+  color-scheme: dark;
+  --md-sys-color-primary: #aac7ff;
+  --md-sys-color-on-primary: #0a305f;
+  --md-sys-color-primary-container: #284777;
+  --md-sys-color-on-primary-container: #d6e3ff;
+  --md-sys-color-secondary: #bec6dc;
+  --md-sys-color-on-secondary: #283141;
+  --md-sys-color-secondary-container: #3e4759;
+  --md-sys-color-on-secondary-container: #dae2f9;
+  --md-sys-color-tertiary: #ddbce0;
+  --md-sys-color-on-tertiary: #3f2844;
+  --md-sys-color-tertiary-container: #573e5c;
+  --md-sys-color-on-tertiary-container: #fad8fd;
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #ffdad6;
+  --app-success: #9bd680;
+  --app-on-success: #0b3900;
+  --app-success-container: #185108;
+  --app-on-success-container: #b6f29a;
+  --app-warning: #f5bf48;
+  --app-on-warning: #412d00;
+  --app-warning-container: #5c4200;
+  --app-on-warning-container: #ffdea4;
+  --md-sys-color-surface: #111318;
+  --md-sys-color-on-surface: #e2e2e9;
+  --md-sys-color-on-surface-variant: #c4c6d0;
+  --md-sys-color-outline: #8e9099;
+  --md-sys-color-outline-variant: #44474e;
+  --md-sys-color-surface-container-lowest: #0c0e13;
+  --md-sys-color-surface-container-low: #191c20;
+  --md-sys-color-surface-container: #1d2024;
+  --md-sys-color-surface-container-high: #282a2f;
+  --md-sys-color-surface-container-highest: #33353a;
+  --md-sys-color-inverse-surface: #e2e2e9;
+  --md-sys-color-inverse-on-surface: #2e3036;
+  --md-sys-color-inverse-primary: #415f91;
+  --app-new-row: rgba(170, 199, 255, 0.12);
+  --md-sys-color-scrim: rgba(0, 0, 0, 0.5);
+}
+/* ---- NEW: high contrast themes ---- */
+:root[data-theme='high-contrast'],
+[data-theme='high-contrast'] {
+  color-scheme: light;
+  --md-sys-color-primary: #0a2f6e;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #d9e5ff;
+  --md-sys-color-on-primary-container: #000000;
+  --md-sys-color-secondary: #2b3345;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #e1e7f6;
+  --md-sys-color-on-secondary-container: #000000;
+  --md-sys-color-tertiary: #4d2255;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #f5ddf9;
+  --md-sys-color-on-tertiary-container: #000000;
+  --md-sys-color-error: #8c0009;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffe0dc;
+  --md-sys-color-on-error-container: #000000;
+  --app-success: #0b4a00;
+  --app-on-success: #ffffff;
+  --app-success-container: #d0f5bc;
+  --app-on-success-container: #000000;
+  --app-warning: #5c3f00;
+  --app-on-warning: #ffffff;
+  --app-warning-container: #ffe7b0;
+  --app-on-warning-container: #000000;
+  --md-sys-color-surface: #ffffff;
+  --md-sys-color-on-surface: #000000;
+  --md-sys-color-on-surface-variant: #1a1a1a;
+  --md-sys-color-outline: #000000;
+  --md-sys-color-outline-variant: #595959;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #f6f6f6;
+  --md-sys-color-surface-container: #eeeeee;
+  --md-sys-color-surface-container-high: #e6e6e6;
+  --md-sys-color-surface-container-highest: #dedede;
+  --md-sys-color-inverse-surface: #000000;
+  --md-sys-color-inverse-on-surface: #ffffff;
+  --md-sys-color-inverse-primary: #a9c6ff;
+  --app-new-row: rgba(10, 47, 110, 0.16);
+  --md-sys-color-scrim: rgba(0, 0, 0, 0.6);
+  --app-border-width: 2px; /* structural: containers and interactive elements get a 2px outline */
+  --md-sys-state-focus-indicator-thickness: 4px;
+  --md-sys-state-hover-state-layer-opacity: 0.16;
+  --md-sys-state-pressed-state-layer-opacity: 0.24;
+  --app-disabled-content-opacity: 0.6;
+}
+
+:root[data-theme='dark-high-contrast'],
+[data-theme='dark-high-contrast'] {
+  color-scheme: dark;
+  --md-sys-color-primary: #9ec4ff;
+  --md-sys-color-on-primary: #000000;
+  --md-sys-color-primary-container: #003a8c;
+  --md-sys-color-on-primary-container: #ffffff;
+  --md-sys-color-secondary: #d0d9f0;
+  --md-sys-color-on-secondary: #000000;
+  --md-sys-color-secondary-container: #2c3752;
+  --md-sys-color-on-secondary-container: #ffffff;
+  --md-sys-color-tertiary: #f3c8f8;
+  --md-sys-color-on-tertiary: #000000;
+  --md-sys-color-tertiary-container: #5b2a63;
+  --md-sys-color-on-tertiary-container: #ffffff;
+  --md-sys-color-error: #ffb9b0;
+  --md-sys-color-on-error: #000000;
+  --md-sys-color-error-container: #8c0009;
+  --md-sys-color-on-error-container: #ffffff;
+  --app-success: #96f272;
+  --app-on-success: #000000;
+  --app-success-container: #0f5200;
+  --app-on-success-container: #ffffff;
+  --app-warning: #ffd54f;
+  --app-on-warning: #000000;
+  --app-warning-container: #6b4a00;
+  --app-on-warning-container: #ffffff;
+  --md-sys-color-surface: #000000;
+  --md-sys-color-on-surface: #ffffff;
+  --md-sys-color-on-surface-variant: #f0f0f0;
+  --md-sys-color-outline: #ffffff;
+  --md-sys-color-outline-variant: #a6a6a6;
+  --md-sys-color-surface-container-lowest: #000000;
+  --md-sys-color-surface-container-low: #0d0d0d;
+  --md-sys-color-surface-container: #141414;
+  --md-sys-color-surface-container-high: #1c1c1c;
+  --md-sys-color-surface-container-highest: #262626;
+  --md-sys-color-inverse-surface: #ffffff;
+  --md-sys-color-inverse-on-surface: #000000;
+  --md-sys-color-inverse-primary: #0a2f6e;
+  --app-new-row: rgba(158, 196, 255, 0.22);
+  --md-sys-color-scrim: rgba(0, 0, 0, 0.8);
+  --app-border-width: 2px; /* structural: containers and interactive elements get a 2px outline */
+  --md-sys-state-focus-indicator-thickness: 4px;
+  --md-sys-state-hover-state-layer-opacity: 0.16;
+  --md-sys-state-pressed-state-layer-opacity: 0.24;
+  --app-disabled-content-opacity: 0.6;
+}
+
+/* Light/dark: no structural border. */
+[data-theme='light'], [data-theme='dark'] { --app-border-width: 0px; }
+/* ---- Page chrome (mockup only) ---- */
+body{margin:0;background:#e9e9ee;color:#191c20;font:14px/20px 'Roboto Flex Variable','Roboto Flex',Roboto,system-ui,sans-serif}
+.page{max-width:1560px;margin:0 auto;padding:24px}
+.page-h{font-size:24px;line-height:32px;margin:0 0 4px;font-weight:500}
+.page-h2{font-size:20px;margin:32px 0 12px;font-weight:500}
+.page-p{margin:0 0 16px;max-width:900px;color:#44474e}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.frame{border-radius:12px;overflow:hidden;border:1px solid #888;background:var(--md-sys-color-surface);color:var(--md-sys-color-on-surface)}
+.frame-cap{font:500 12px/16px system-ui,sans-serif;padding:6px 12px;background:#2e3036;color:#f0f0f7}
+code{font-family:var(--app-font-mono,ui-monospace,monospace)}
+.tbl{background:#fff;padding:8px 12px;border-radius:8px}.tbl summary{cursor:pointer;font-weight:500}
+.tbl table{border-collapse:collapse;font-size:12px;margin-top:8px;width:100%}.tbl th,.tbl td{border-bottom:1px solid #ccc;padding:3px 8px;text-align:left}
+/* ---- App shell (from monitor.html, trimmed) ---- */
+.shell{background:var(--md-sys-color-surface);color:var(--md-sys-color-on-surface);display:flex;flex-direction:column;min-height:560px;font:400 14px/20px 'Roboto Flex Variable','Roboto Flex',Roboto,system-ui,sans-serif}
+.mono{font-family:'Roboto Mono',ui-monospace,Consolas,monospace;font-size:12px;line-height:16px}
+.dim{color:var(--md-sys-color-on-surface-variant)}
+.bar{display:flex;align-items:center;gap:12px;padding:8px 16px 8px 14px;min-height:56px}
+.bar-t{display:flex;flex-direction:column;margin-right:auto;min-width:0}.bar-h{font-size:20px;line-height:24px;font-weight:500}
+.logo{width:40px;height:40px;border-radius:12px;background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);display:flex;align-items:center;justify-content:center;flex:none}
+.schip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:8px;background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface);font-size:12px;font-weight:500;border:var(--app-border-width) solid var(--md-sys-color-outline);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--md-sys-color-outline)}.dot.ok{background:var(--app-success)}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--md-sys-color-error);display:inline-block}
+.body{display:flex;gap:12px;padding:0 12px 12px 0;flex:1;min-width:0}
+.rail{width:80px;flex:none;display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:4px}
+.rail-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--md-sys-color-on-surface-variant);text-decoration:none;width:80px;border-radius:12px}
+.rail-item[aria-current]{color:var(--md-sys-color-on-surface)}
+.rail-ind{display:flex;align-items:center;justify-content:center;width:56px;height:32px;border-radius:16px}
+.rail-item[aria-current] .rail-ind{background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);border:var(--app-border-width) solid var(--md-sys-color-outline);box-sizing:border-box}
+.rail-item:focus-visible{outline:var(--md-sys-state-focus-indicator-thickness) solid var(--md-sys-color-primary);outline-offset:2px}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px;padding-right:4px}
+h1{margin:4px 0 0;font-size:28px;line-height:36px;font-weight:400}
+h2{margin:0 0 8px;font-size:16px;line-height:24px;font-weight:500}
+.card{background:var(--md-sys-color-surface-container-low);border-radius:16px;padding:16px;border:var(--app-border-width) solid var(--md-sys-color-outline)}
+.card.ghost{background:transparent;border:2px dashed var(--md-sys-color-outline-variant)}
+.hint{margin:0;font-size:13px;line-height:18px;color:var(--md-sys-color-on-surface-variant)}
+/* ---- Radio group ---- */
+.group{border:0;margin:0;padding:0;min-width:0}
+.group legend{padding:0;font-size:14px;line-height:20px;font-weight:500;color:var(--md-sys-color-on-surface)}
+.group .hint{margin:2px 0 12px}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{position:relative;display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 16px 8px 12px;border-radius:12px;cursor:pointer;background:var(--md-sys-color-surface);border:1px solid var(--md-sys-color-outline);box-sizing:border-box;color:var(--md-sys-color-on-surface)}
+.opt:hover{background:var(--md-sys-color-surface-container-high)}
+.opt input{position:absolute;inset:0;margin:0;opacity:0;cursor:pointer}   /* native radio stays the real control, fills the card */
+.mark{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--md-sys-color-outline);box-sizing:border-box;display:grid;place-items:center}
+.opt:has(input:checked) .mark::after{content:'';width:10px;height:10px;border-radius:50%;background:var(--md-sys-color-primary)}
+.opt:has(input:checked){border:3px solid var(--md-sys-color-primary);padding:6px 14px 6px 10px;background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container)}
+.opt:has(input:checked) .mark{border-color:var(--md-sys-color-primary)}
+.opt:has(input:focus-visible){outline:var(--md-sys-state-focus-indicator-thickness) solid var(--md-sys-color-primary);outline-offset:2px}
+.txt{display:flex;flex-direction:column;flex:1;min-width:0}
+.lbl{font-size:16px;line-height:24px;font-weight:500}
+.dsc{font-size:13px;line-height:18px}
+.opt:not(:has(input:checked)) .dsc{color:var(--md-sys-color-on-surface-variant)}
+.sel{display:none;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--md-sys-color-on-primary-container)}
+.opt:has(input:checked) .sel{display:inline-flex}
+.swatch{flex:none;position:relative;width:72px;height:44px;border-radius:8px;background:var(--md-sys-color-surface);border:2px solid var(--md-sys-color-outline);box-sizing:border-box;overflow:hidden;display:block}
+.sw-bar{position:absolute;left:0;right:0;top:0;height:10px;background:var(--md-sys-color-primary)}
+.sw-aa{position:absolute;left:8px;bottom:5px;font:600 15px/16px system-ui,sans-serif;color:var(--md-sys-color-on-surface)}
+.sw-chip{position:absolute;right:7px;bottom:7px;width:20px;height:12px;border-radius:6px;background:var(--md-sys-color-primary)}
+/* ---- Monitor snippet ---- */
+.sess{list-style:none;margin:0;padding:8px;width:210px;flex:none;box-sizing:border-box;background:var(--md-sys-color-surface-container-low);border-radius:16px;border:var(--app-border-width) solid var(--md-sys-color-outline);display:flex;flex-direction:column;gap:4px;align-self:flex-start}
+.sbtn{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:2px;width:100%;padding:8px 14px;border-radius:24px;cursor:pointer}
+.sbtn:focus-visible{outline:var(--md-sys-state-focus-indicator-thickness) solid var(--md-sys-color-primary);outline-offset:2px}
+.sbtn[aria-current]{background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);border:var(--app-border-width) solid var(--md-sys-color-outline);padding:calc(8px - var(--app-border-width)) calc(14px - var(--app-border-width))}
+.sn{font-size:14px;font-weight:500}.sm{display:flex;align-items:center;gap:6px;color:var(--md-sys-color-on-surface-variant)}
+.sbtn[aria-current] .sm{color:var(--md-sys-color-on-secondary-container)}
+.log{flex:1;min-width:0;background:var(--md-sys-color-surface-container-low);border-radius:16px;padding:8px;border:var(--app-border-width) solid var(--md-sys-color-outline);display:flex;flex-direction:column;gap:2px}
+.chips{display:flex;gap:8px;padding:4px 4px 8px}
+.chip{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--md-sys-color-outline);font-size:13px;font-weight:500;color:var(--md-sys-color-on-surface-variant)}
+.chip.on{background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);border:var(--app-border-width) solid var(--md-sys-color-outline)}
+.chip.err{background:var(--md-sys-color-error-container);color:var(--md-sys-color-on-error-container)}
+.row{display:flex;align-items:baseline;gap:12px;padding:6px 12px;border-radius:8px;font-size:15px;line-height:22px}
+.row .ts{color:var(--md-sys-color-on-surface-variant);flex:none}
+.row .rt{flex:1;min-width:0}
+.row .gap{color:var(--md-sys-color-tertiary);font-weight:600}
+.row.newrow{background:var(--app-new-row)}
+.row.mk{background:var(--md-sys-color-tertiary-container);color:var(--md-sys-color-on-tertiary-container);border:var(--app-border-width) solid var(--md-sys-color-outline)}
+.row.mk .ts{color:inherit}
+
+</style>
+</head>
+<body>
+<div class="page">
+<h1 class="page-h">Settings page, four color themes</h1>
+<p class="page-p">Each frame is the same page under its own <code>data-theme</code>. The swatches inside the radio options always show their own theme. Selected option: filled radio dot + thicker outline + check icon with the word "Selected" (not color alone).</p>
+<div class="grid">
+<div class="frame" data-theme="light"><div class="frame-cap">Light</div><div class="shell"><header class="bar"><div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2"/></svg></div><div class="bar-t"><span class="bar-h">Speech Capture</span><span class="mono dim">my-test-vm:5151 · bridge 0.3.0</span></div><span class="schip"><span class="dot ok"></span>Voice connected</span><span class="schip"><span class="live-dot"></span>Session #4</span></header><div class="body"><nav class="rail" aria-label="Pages"><a class="rail-item" href="#"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2"/></svg></span>Monitor</a><a class="rail-item" href="#" aria-current="page"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span>Settings</a><a class="rail-item" href="#"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Setup</a></nav><main class="main"><h1>Settings</h1><section class="card" aria-labelledby="light-ap"><h2 id="light-ap">Appearance</h2><fieldset class="group"><legend>Color theme</legend><p class="hint" id="light-hint">Stored in this browser only. Applied immediately.</p><div class="opts" role="presentation"><label class="opt"><input type="radio" name="light-theme" value="light" checked aria-describedby="light-light-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="light" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">Light</span><span class="dsc" id="light-light-d">Default light scheme.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label><label class="opt"><input type="radio" name="light-theme" value="dark" aria-describedby="light-dark-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="dark" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">Dark</span><span class="dsc" id="light-dark-d">Default dark scheme.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label><label class="opt"><input type="radio" name="light-theme" value="high-contrast" aria-describedby="light-high-contrast-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="high-contrast" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">High contrast</span><span class="dsc" id="light-high-contrast-d">White surface, black text, 2px outlines.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label><label class="opt"><input type="radio" name="light-theme" value="dark-high-contrast" aria-describedby="light-dark-high-contrast-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="dark-high-contrast" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">Dark high contrast</span><span class="dsc" id="light-dark-high-contrast-d">Black surface, white text, 2px outlines.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label></div></fieldset></section><section class="card ghost" aria-label="More settings"><h2>Notifications</h2><p class="hint">Future settings sections go here, one card per topic.</p></section></main></div></div></div>
+<div class="frame" data-theme="dark"><div class="frame-cap">Dark</div><div class="shell"><header class="bar"><div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2"/></svg></div><div class="bar-t"><span class="bar-h">Speech Capture</span><span class="mono dim">my-test-vm:5151 · bridge 0.3.0</span></div><span class="schip"><span class="dot ok"></span>Voice connected</span><span class="schip"><span class="live-dot"></span>Session #4</span></header><div class="body"><nav class="rail" aria-label="Pages"><a class="rail-item" href="#"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2"/></svg></span>Monitor</a><a class="rail-item" href="#" aria-current="page"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span>Settings</a><a class="rail-item" href="#"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Setup</a></nav><main class="main"><h1>Settings</h1><section class="card" aria-labelledby="dark-ap"><h2 id="dark-ap">Appearance</h2><fieldset class="group"><legend>Color theme</legend><p class="hint" id="dark-hint">Stored in this browser only. Applied immediately.</p><div class="opts" role="presentation"><label class="opt"><input type="radio" name="dark-theme" value="light" aria-describedby="dark-light-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="light" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">Light</span><span class="dsc" id="dark-light-d">Default light scheme.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label><label class="opt"><input type="radio" name="dark-theme" value="dark" checked aria-describedby="dark-dark-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="dark" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">Dark</span><span class="dsc" id="dark-dark-d">Default dark scheme.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label><label class="opt"><input type="radio" name="dark-theme" value="high-contrast" aria-describedby="dark-high-contrast-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="high-contrast" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">High contrast</span><span class="dsc" id="dark-high-contrast-d">White surface, black text, 2px outlines.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label><label class="opt"><input type="radio" name="dark-theme" value="dark-high-contrast" aria-describedby="dark-dark-high-contrast-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="dark-high-contrast" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">Dark high contrast</span><span class="dsc" id="dark-dark-high-contrast-d">Black surface, white text, 2px outlines.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label></div></fieldset></section><section class="card ghost" aria-label="More settings"><h2>Notifications</h2><p class="hint">Future settings sections go here, one card per topic.</p></section></main></div></div></div>
+<div class="frame" data-theme="high-contrast"><div class="frame-cap">High contrast</div><div class="shell"><header class="bar"><div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2"/></svg></div><div class="bar-t"><span class="bar-h">Speech Capture</span><span class="mono dim">my-test-vm:5151 · bridge 0.3.0</span></div><span class="schip"><span class="dot ok"></span>Voice connected</span><span class="schip"><span class="live-dot"></span>Session #4</span></header><div class="body"><nav class="rail" aria-label="Pages"><a class="rail-item" href="#"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2"/></svg></span>Monitor</a><a class="rail-item" href="#" aria-current="page"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span>Settings</a><a class="rail-item" href="#"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Setup</a></nav><main class="main"><h1>Settings</h1><section class="card" aria-labelledby="high-contrast-ap"><h2 id="high-contrast-ap">Appearance</h2><fieldset class="group"><legend>Color theme</legend><p class="hint" id="high-contrast-hint">Stored in this browser only. Applied immediately.</p><div class="opts" role="presentation"><label class="opt"><input type="radio" name="high-contrast-theme" value="light" aria-describedby="high-contrast-light-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="light" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">Light</span><span class="dsc" id="high-contrast-light-d">Default light scheme.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label><label class="opt"><input type="radio" name="high-contrast-theme" value="dark" aria-describedby="high-contrast-dark-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="dark" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">Dark</span><span class="dsc" id="high-contrast-dark-d">Default dark scheme.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label><label class="opt"><input type="radio" name="high-contrast-theme" value="high-contrast" checked aria-describedby="high-contrast-high-contrast-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="high-contrast" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">High contrast</span><span class="dsc" id="high-contrast-high-contrast-d">White surface, black text, 2px outlines.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label><label class="opt"><input type="radio" name="high-contrast-theme" value="dark-high-contrast" aria-describedby="high-contrast-dark-high-contrast-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="dark-high-contrast" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">Dark high contrast</span><span class="dsc" id="high-contrast-dark-high-contrast-d">Black surface, white text, 2px outlines.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label></div></fieldset></section><section class="card ghost" aria-label="More settings"><h2>Notifications</h2><p class="hint">Future settings sections go here, one card per topic.</p></section></main></div></div></div>
+<div class="frame" data-theme="dark-high-contrast"><div class="frame-cap">Dark high contrast</div><div class="shell"><header class="bar"><div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2"/></svg></div><div class="bar-t"><span class="bar-h">Speech Capture</span><span class="mono dim">my-test-vm:5151 · bridge 0.3.0</span></div><span class="schip"><span class="dot ok"></span>Voice connected</span><span class="schip"><span class="live-dot"></span>Session #4</span></header><div class="body"><nav class="rail" aria-label="Pages"><a class="rail-item" href="#"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2"/></svg></span>Monitor</a><a class="rail-item" href="#" aria-current="page"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span>Settings</a><a class="rail-item" href="#"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Setup</a></nav><main class="main"><h1>Settings</h1><section class="card" aria-labelledby="dark-high-contrast-ap"><h2 id="dark-high-contrast-ap">Appearance</h2><fieldset class="group"><legend>Color theme</legend><p class="hint" id="dark-high-contrast-hint">Stored in this browser only. Applied immediately.</p><div class="opts" role="presentation"><label class="opt"><input type="radio" name="dark-high-contrast-theme" value="light" aria-describedby="dark-high-contrast-light-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="light" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">Light</span><span class="dsc" id="dark-high-contrast-light-d">Default light scheme.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label><label class="opt"><input type="radio" name="dark-high-contrast-theme" value="dark" aria-describedby="dark-high-contrast-dark-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="dark" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">Dark</span><span class="dsc" id="dark-high-contrast-dark-d">Default dark scheme.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label><label class="opt"><input type="radio" name="dark-high-contrast-theme" value="high-contrast" aria-describedby="dark-high-contrast-high-contrast-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="high-contrast" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">High contrast</span><span class="dsc" id="dark-high-contrast-high-contrast-d">White surface, black text, 2px outlines.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label><label class="opt"><input type="radio" name="dark-high-contrast-theme" value="dark-high-contrast" checked aria-describedby="dark-high-contrast-dark-high-contrast-d"><span class="mark" aria-hidden="true"></span><span class="swatch" data-theme="dark-high-contrast" aria-hidden="true"><span class="sw-bar"></span><span class="sw-aa">Aa</span><span class="sw-chip"></span></span><span class="txt"><span class="lbl">Dark high contrast</span><span class="dsc" id="dark-high-contrast-dark-high-contrast-d">Black surface, white text, 2px outlines.</span></span><span class="sel" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Selected</span></label></div></fieldset></section><section class="card ghost" aria-label="More settings"><h2>Notifications</h2><p class="hint">Future settings sections go here, one card per topic.</p></section></main></div></div></div>
+</div>
+<h2 class="page-h2">Monitor snippet in the two new themes</h2>
+<div class="grid">
+<div class="frame" data-theme="high-contrast"><div class="frame-cap">Monitor snippet, High contrast</div><div class="shell"><header class="bar"><div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2"/></svg></div><div class="bar-t"><span class="bar-h">Speech Capture</span><span class="mono dim">my-test-vm:5151 · bridge 0.3.0</span></div><span class="schip"><span class="dot ok"></span>Voice connected</span><span class="schip"><span class="live-dot"></span>Session #4</span></header><div class="body"><nav class="rail" aria-label="Pages"><a class="rail-item" href="#" aria-current="page"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2"/></svg></span>Monitor</a><a class="rail-item" href="#"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span>Settings</a><a class="rail-item" href="#"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Setup</a></nav><ul class="sess" aria-label="Sessions"><li><button class="sbtn" aria-current="true"><span class="sn">#4 manual: explore header</span><span class="mono sm"><span class="live-dot"></span>live · 38 entries</span></button><span class="stop" aria-hidden="true"></span></li><li><button class="sbtn"><span class="sn">#3 mcp: checkout</span><span class="mono sm">ended · 12 entries</span></button></li></ul><div class="log"><div class="chips"><span class="chip on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Speech</span><span class="chip">Markers</span><span class="chip err">2 errors</span></div><div class="row"><span class="mono ts">12:04:31.204</span><span class="rt">Contact us, heading level 1</span></div><div class="row"><span class="mono ts">12:04:32.411</span><span class="rt">Full name, edit, required, blank</span><span class="mono gap">+1.2 s</span></div><div class="row mk"><span class="mono ts">12:04:35.620</span><span class="rt"><b>marker</b> focus submit</span></div><div class="row"><span class="mono ts">12:04:35.998</span><span class="rt">Send message, button</span></div><div class="row newrow"><span class="mono ts">12:04:36.402</span><span class="rt">alert, There are 2 errors in this form</span></div></div></div></div></div>
+<div class="frame" data-theme="dark-high-contrast"><div class="frame-cap">Monitor snippet, Dark high contrast</div><div class="shell"><header class="bar"><div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2"/></svg></div><div class="bar-t"><span class="bar-h">Speech Capture</span><span class="mono dim">my-test-vm:5151 · bridge 0.3.0</span></div><span class="schip"><span class="dot ok"></span>Voice connected</span><span class="schip"><span class="live-dot"></span>Session #4</span></header><div class="body"><nav class="rail" aria-label="Pages"><a class="rail-item" href="#" aria-current="page"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2"/></svg></span>Monitor</a><a class="rail-item" href="#"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span>Settings</a><a class="rail-item" href="#"><span class="rail-ind"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Setup</a></nav><ul class="sess" aria-label="Sessions"><li><button class="sbtn" aria-current="true"><span class="sn">#4 manual: explore header</span><span class="mono sm"><span class="live-dot"></span>live · 38 entries</span></button><span class="stop" aria-hidden="true"></span></li><li><button class="sbtn"><span class="sn">#3 mcp: checkout</span><span class="mono sm">ended · 12 entries</span></button></li></ul><div class="log"><div class="chips"><span class="chip on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Speech</span><span class="chip">Markers</span><span class="chip err">2 errors</span></div><div class="row"><span class="mono ts">12:04:31.204</span><span class="rt">Contact us, heading level 1</span></div><div class="row"><span class="mono ts">12:04:32.411</span><span class="rt">Full name, edit, required, blank</span><span class="mono gap">+1.2 s</span></div><div class="row mk"><span class="mono ts">12:04:35.620</span><span class="rt"><b>marker</b> focus submit</span></div><div class="row"><span class="mono ts">12:04:35.998</span><span class="rt">Send message, button</span></div><div class="row newrow"><span class="mono ts">12:04:36.402</span><span class="rt">alert, There are 2 errors in this form</span></div></div></div></div></div>
+</div>
+<h2 class="page-h2">Contrast results</h2>
+<p class="page-p">Text pairs need 7:1 (AAA), boundaries (outline, dividers, focus ring) need 3:1. High contrast: text min 7.21:1, boundaries min 5.21:1. Dark high contrast: text min 8.06:1, boundaries min 6.22:1. Outline (the 2px borders) is pure black / pure white, 21:1 on the base surface.</p>
+<details class="tbl"><summary>All 116 pairs</summary>
+<table><thead><tr><th>Theme</th><th>Pair</th><th>Foreground</th><th>Background</th><th>Ratio</th><th>Needs</th><th>Result</th></tr></thead><tbody>
+<tr><td>High contrast</td><td>on-primary / primary</td><td>#ffffff</td><td>#0a2f6e</td><td>12.77:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-secondary / secondary</td><td>#ffffff</td><td>#2b3345</td><td>12.63:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-tertiary / tertiary</td><td>#ffffff</td><td>#4d2255</td><td>12.53:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-error / error</td><td>#ffffff</td><td>#8c0009</td><td>9.91:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-success / success</td><td>#ffffff</td><td>#0b4a00</td><td>10.53:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-warning / warning</td><td>#ffffff</td><td>#5c3f00</td><td>9.70:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-primary-container / primary-container</td><td>#000000</td><td>#d9e5ff</td><td>16.60:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-secondary-container / secondary-container</td><td>#000000</td><td>#e1e7f6</td><td>16.96:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-tertiary-container / tertiary-container</td><td>#000000</td><td>#f5ddf9</td><td>16.59:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-error-container / error-container</td><td>#000000</td><td>#ffe0dc</td><td>16.95:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-success-container / success-container</td><td>#000000</td><td>#d0f5bc</td><td>17.47:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-warning-container / warning-container</td><td>#000000</td><td>#ffe7b0</td><td>17.31:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-surface / surface</td><td>#000000</td><td>#ffffff</td><td>21.00:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-surface-variant / surface</td><td>#1a1a1a</td><td>#ffffff</td><td>17.40:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>outline (border) / surface</td><td>#000000</td><td>#ffffff</td><td>21.00:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>outline-variant (divider) / surface</td><td>#595959</td><td>#ffffff</td><td>7.00:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-surface / surface-container-lowest</td><td>#000000</td><td>#ffffff</td><td>21.00:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-surface-variant / surface-container-lowest</td><td>#1a1a1a</td><td>#ffffff</td><td>17.40:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>outline (border) / surface-container-lowest</td><td>#000000</td><td>#ffffff</td><td>21.00:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>outline-variant (divider) / surface-container-lowest</td><td>#595959</td><td>#ffffff</td><td>7.00:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-surface / surface-container-low</td><td>#000000</td><td>#f6f6f6</td><td>19.43:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-surface-variant / surface-container-low</td><td>#1a1a1a</td><td>#f6f6f6</td><td>16.10:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>outline (border) / surface-container-low</td><td>#000000</td><td>#f6f6f6</td><td>19.43:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>outline-variant (divider) / surface-container-low</td><td>#595959</td><td>#f6f6f6</td><td>6.48:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-surface / surface-container</td><td>#000000</td><td>#eeeeee</td><td>18.10:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-surface-variant / surface-container</td><td>#1a1a1a</td><td>#eeeeee</td><td>15.00:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>outline (border) / surface-container</td><td>#000000</td><td>#eeeeee</td><td>18.10:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>outline-variant (divider) / surface-container</td><td>#595959</td><td>#eeeeee</td><td>6.04:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-surface / surface-container-high</td><td>#000000</td><td>#e6e6e6</td><td>16.83:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-surface-variant / surface-container-high</td><td>#1a1a1a</td><td>#e6e6e6</td><td>13.94:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>outline (border) / surface-container-high</td><td>#000000</td><td>#e6e6e6</td><td>16.83:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>outline-variant (divider) / surface-container-high</td><td>#595959</td><td>#e6e6e6</td><td>5.61:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-surface / surface-container-highest</td><td>#000000</td><td>#dedede</td><td>15.61:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-surface-variant / surface-container-highest</td><td>#1a1a1a</td><td>#dedede</td><td>12.94:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>outline (border) / surface-container-highest</td><td>#000000</td><td>#dedede</td><td>15.61:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>outline-variant (divider) / surface-container-highest</td><td>#595959</td><td>#dedede</td><td>5.21:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>primary as text/icon / surface</td><td>#0a2f6e</td><td>#ffffff</td><td>12.77:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>primary as text/icon / surface-container-low</td><td>#0a2f6e</td><td>#f6f6f6</td><td>11.81:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>primary as text/icon / surface-container-highest</td><td>#0a2f6e</td><td>#dedede</td><td>9.49:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>secondary as text/icon / surface</td><td>#2b3345</td><td>#ffffff</td><td>12.63:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>secondary as text/icon / surface-container-low</td><td>#2b3345</td><td>#f6f6f6</td><td>11.69:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>secondary as text/icon / surface-container-highest</td><td>#2b3345</td><td>#dedede</td><td>9.39:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>tertiary as text/icon / surface</td><td>#4d2255</td><td>#ffffff</td><td>12.53:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>tertiary as text/icon / surface-container-low</td><td>#4d2255</td><td>#f6f6f6</td><td>11.60:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>tertiary as text/icon / surface-container-highest</td><td>#4d2255</td><td>#dedede</td><td>9.32:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>error as text/icon / surface</td><td>#8c0009</td><td>#ffffff</td><td>9.91:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>error as text/icon / surface-container-low</td><td>#8c0009</td><td>#f6f6f6</td><td>9.17:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>error as text/icon / surface-container-highest</td><td>#8c0009</td><td>#dedede</td><td>7.37:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>success as text/icon / surface</td><td>#0b4a00</td><td>#ffffff</td><td>10.53:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>success as text/icon / surface-container-low</td><td>#0b4a00</td><td>#f6f6f6</td><td>9.75:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>success as text/icon / surface-container-highest</td><td>#0b4a00</td><td>#dedede</td><td>7.83:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>warning as text/icon / surface</td><td>#5c3f00</td><td>#ffffff</td><td>9.70:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>warning as text/icon / surface-container-low</td><td>#5c3f00</td><td>#f6f6f6</td><td>8.97:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>warning as text/icon / surface-container-highest</td><td>#5c3f00</td><td>#dedede</td><td>7.21:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>inverse-on-surface / inverse-surface</td><td>#ffffff</td><td>#000000</td><td>21.00:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>inverse-primary (button text) / inverse-surface</td><td>#a9c6ff</td><td>#000000</td><td>12.21:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>on-surface / new-row tint over surface (#d8dee8)</td><td>#000000</td><td>#d8dee8</td><td>15.53:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>High contrast</td><td>focus ring (primary) / surface</td><td>#0a2f6e</td><td>#ffffff</td><td>12.77:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-primary / primary</td><td>#000000</td><td>#9ec4ff</td><td>11.79:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-secondary / secondary</td><td>#000000</td><td>#d0d9f0</td><td>14.87:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-tertiary / tertiary</td><td>#000000</td><td>#f3c8f8</td><td>14.43:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-error / error</td><td>#000000</td><td>#ffb9b0</td><td>12.82:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-success / success</td><td>#000000</td><td>#96f272</td><td>15.24:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-warning / warning</td><td>#000000</td><td>#ffd54f</td><td>14.88:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-primary-container / primary-container</td><td>#ffffff</td><td>#003a8c</td><td>10.59:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-secondary-container / secondary-container</td><td>#ffffff</td><td>#2c3752</td><td>11.83:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-tertiary-container / tertiary-container</td><td>#ffffff</td><td>#5b2a63</td><td>10.74:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-error-container / error-container</td><td>#ffffff</td><td>#8c0009</td><td>9.91:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-success-container / success-container</td><td>#ffffff</td><td>#0f5200</td><td>9.43:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-warning-container / warning-container</td><td>#ffffff</td><td>#6b4a00</td><td>8.06:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-surface / surface</td><td>#ffffff</td><td>#000000</td><td>21.00:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-surface-variant / surface</td><td>#f0f0f0</td><td>#000000</td><td>18.43:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>outline (border) / surface</td><td>#ffffff</td><td>#000000</td><td>21.00:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>outline-variant (divider) / surface</td><td>#a6a6a6</td><td>#000000</td><td>8.63:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-surface / surface-container-lowest</td><td>#ffffff</td><td>#000000</td><td>21.00:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-surface-variant / surface-container-lowest</td><td>#f0f0f0</td><td>#000000</td><td>18.43:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>outline (border) / surface-container-lowest</td><td>#ffffff</td><td>#000000</td><td>21.00:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>outline-variant (divider) / surface-container-lowest</td><td>#a6a6a6</td><td>#000000</td><td>8.63:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-surface / surface-container-low</td><td>#ffffff</td><td>#0d0d0d</td><td>19.44:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-surface-variant / surface-container-low</td><td>#f0f0f0</td><td>#0d0d0d</td><td>17.05:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>outline (border) / surface-container-low</td><td>#ffffff</td><td>#0d0d0d</td><td>19.44:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>outline-variant (divider) / surface-container-low</td><td>#a6a6a6</td><td>#0d0d0d</td><td>7.98:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-surface / surface-container</td><td>#ffffff</td><td>#141414</td><td>18.42:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-surface-variant / surface-container</td><td>#f0f0f0</td><td>#141414</td><td>16.17:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>outline (border) / surface-container</td><td>#ffffff</td><td>#141414</td><td>18.42:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>outline-variant (divider) / surface-container</td><td>#a6a6a6</td><td>#141414</td><td>7.57:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-surface / surface-container-high</td><td>#ffffff</td><td>#1c1c1c</td><td>17.04:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-surface-variant / surface-container-high</td><td>#f0f0f0</td><td>#1c1c1c</td><td>14.95:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>outline (border) / surface-container-high</td><td>#ffffff</td><td>#1c1c1c</td><td>17.04:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>outline-variant (divider) / surface-container-high</td><td>#a6a6a6</td><td>#1c1c1c</td><td>7.00:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-surface / surface-container-highest</td><td>#ffffff</td><td>#262626</td><td>15.13:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-surface-variant / surface-container-highest</td><td>#f0f0f0</td><td>#262626</td><td>13.28:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>outline (border) / surface-container-highest</td><td>#ffffff</td><td>#262626</td><td>15.13:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>outline-variant (divider) / surface-container-highest</td><td>#a6a6a6</td><td>#262626</td><td>6.22:1</td><td>3:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>primary as text/icon / surface</td><td>#9ec4ff</td><td>#000000</td><td>11.79:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>primary as text/icon / surface-container-low</td><td>#9ec4ff</td><td>#0d0d0d</td><td>10.92:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>primary as text/icon / surface-container-highest</td><td>#9ec4ff</td><td>#262626</td><td>8.50:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>secondary as text/icon / surface</td><td>#d0d9f0</td><td>#000000</td><td>14.87:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>secondary as text/icon / surface-container-low</td><td>#d0d9f0</td><td>#0d0d0d</td><td>13.76:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>secondary as text/icon / surface-container-highest</td><td>#d0d9f0</td><td>#262626</td><td>10.71:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>tertiary as text/icon / surface</td><td>#f3c8f8</td><td>#000000</td><td>14.43:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>tertiary as text/icon / surface-container-low</td><td>#f3c8f8</td><td>#0d0d0d</td><td>13.35:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>tertiary as text/icon / surface-container-highest</td><td>#f3c8f8</td><td>#262626</td><td>10.40:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>error as text/icon / surface</td><td>#ffb9b0</td><td>#000000</td><td>12.82:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>error as text/icon / surface-container-low</td><td>#ffb9b0</td><td>#0d0d0d</td><td>11.86:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>error as text/icon / surface-container-highest</td><td>#ffb9b0</td><td>#262626</td><td>9.24:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>success as text/icon / surface</td><td>#96f272</td><td>#000000</td><td>15.24:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>success as text/icon / surface-container-low</td><td>#96f272</td><td>#0d0d0d</td><td>14.11:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>success as text/icon / surface-container-highest</td><td>#96f272</td><td>#262626</td><td>10.98:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>warning as text/icon / surface</td><td>#ffd54f</td><td>#000000</td><td>14.88:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>warning as text/icon / surface-container-low</td><td>#ffd54f</td><td>#0d0d0d</td><td>13.77:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>warning as text/icon / surface-container-highest</td><td>#ffd54f</td><td>#262626</td><td>10.73:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>inverse-on-surface / inverse-surface</td><td>#000000</td><td>#ffffff</td><td>21.00:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>inverse-primary (button text) / inverse-surface</td><td>#0a2f6e</td><td>#ffffff</td><td>12.77:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>on-surface / new-row tint over surface (#232b38)</td><td>#ffffff</td><td>#232b38</td><td>14.25:1</td><td>7:1</td><td>pass</td></tr>
+<tr><td>Dark high contrast</td><td>focus ring (primary) / surface</td><td>#9ec4ff</td><td>#000000</td><td>11.79:1</td><td>3:1</td><td>pass</td></tr>
+</tbody></table></details>
+</div>
+</body>
+</html>

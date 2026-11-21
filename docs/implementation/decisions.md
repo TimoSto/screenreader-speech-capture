@@ -337,3 +337,12 @@ or outside any session when none is current. So the log offers the action (`canA
 current session, and in "Outside sessions" while no session is current. In "Outside sessions" while a
 session is live, and in an ended session, it is hidden: the marker would appear in a different log than
 the one on screen. A button that is there but does something else would be worse than none.
+
+
+## The UI theme lives in the browser, not in the bridge config
+
+The color theme (light, dark, high contrast, dark high contrast) is a property of the person and the
+browser looking at the UI, not of the bridge, and several browsers can open the same bridge. So it is kept
+in `localStorage` (`sr-theme`) and the bridge config and API don't know about it. An inline script in
+`app.html` applies it before the first paint. `prefers-color-scheme` is ignored on purpose: the UI starts
+light, and a high-contrast need is an explicit choice.

@@ -5,8 +5,6 @@ import AppHeader from './AppHeader.svelte';
 
 const props = (patch: Partial<Parameters<typeof render<typeof AppHeader>>[1]> = {}) => ({
   host: '127.0.0.1:5151',
-  theme: 'light' as const,
-  onToggleTheme: () => {},
   ...patch,
 });
 

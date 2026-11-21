@@ -1,4 +1,4 @@
-import { DEFAULT_THEME, toggleTheme, type Theme, type ThemeStorage } from '#lib/core/theme.js';
+import { DEFAULT_THEME, type Theme, type ThemeStorage } from '#lib/core/theme.js';
 
 export function createThemeStore(storage: ThemeStorage) {
   let current = $state<Theme>(DEFAULT_THEME);
@@ -10,9 +10,10 @@ export function createThemeStore(storage: ThemeStorage) {
     init() {
       current = storage.read() ?? DEFAULT_THEME;
     },
-    toggle() {
-      current = toggleTheme(current);
-      storage.write(current);
+    /** Apply and remember a choice. */
+    set(theme: Theme) {
+      current = theme;
+      storage.write(theme);
     },
   };
 }

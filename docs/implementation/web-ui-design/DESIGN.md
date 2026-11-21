@@ -23,9 +23,11 @@ API over loopback; core / adapters / stores / components layers.
 ## Foundations
 
 - **Color:** MD3 scheme from seed `#415F91`, plus two extended colors: `success` (live, connected,
-  running) and `warning` (crashed, truncated). All roles are in `tokens.css`. Light and dark are
-  both first-class; the app follows `prefers-color-scheme`, with a manual toggle in the top bar
-  (`data-theme` on `<html>`).
+  running) and `warning` (crashed, truncated). All roles are in `tokens.css`. Four themes
+  (light, dark, high contrast, dark high contrast; the last two add 2px outlines, a thicker focus
+  ring and a left edge on new log rows) are chosen on the Settings page (`data-theme` on `<html>`,
+  remembered in `localStorage`). The app starts light and ignores `prefers-color-scheme`. Mockup:
+  `mockup/settings.html` ([screenshot](settings-themes.png)), with the contrast ratios.
 - **Tokens:** names follow @material/web (`--md-sys-color-*`, `--md-sys-typescale-*`, `--md-sys-shape-corner-*`,
   `--md-sys-state-*`, `--md-sys-motion-*`), so its components could use the theme as-is. What MD3 does not
   define is prefixed `--app-` (success, warning, layout, mono font). The full 15-style type scale is
@@ -93,7 +95,7 @@ API over loopback; core / adapters / stores / components layers.
   input unavailability shows only in the Actions panel. Without an answer from the bridge the
   chips keep the last known values but turn neutral with a red dot. A service that is starting or
   stopped also gets a red dot (not ready); `No session` stays grey.
-- Right: a refresh icon button (tooltip "GET /api/v1/status") and a theme toggle. The status is read once on
+- Right: a refresh icon button (tooltip "GET /api/v1/status"). The status is read once on
   load and again only when the refresh button is clicked (no polling); a hidden `role="status"`
   region speaks only problems.
 - Bar color: `error-container` when no voice has connected, `warning-container` when Playwright or
@@ -285,5 +287,6 @@ sessions started from the UI are attributed.
    a client of the versioned API only. The mockup is agnostic.
 2. **Input availability:** without an input flag in `/status`, the Actions panel can't show
    "unavailable" before the first try. Worth adding `input.available` back to the status DTO?
-3. **Settings and Setup pages** are not designed yet.
+3. **Setup page** is not designed yet. Settings is designed only for the color theme
+   (`mockup/settings.html`); the bridge config form is not.
 4. **Narrow screens** (drawer + modal Actions sheet) are only described, not drawn.

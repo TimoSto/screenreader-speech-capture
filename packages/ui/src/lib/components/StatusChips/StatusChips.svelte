@@ -34,6 +34,7 @@
     height: 32px;
     padding: 0 12px;
     border: 1px solid var(--md-sys-color-outline-variant);
+    border-width: max(1px, var(--app-border-width));
     border-radius: 8px;
     background: var(--md-sys-color-surface-container-lowest, transparent);
     color: var(--md-sys-color-on-surface);
