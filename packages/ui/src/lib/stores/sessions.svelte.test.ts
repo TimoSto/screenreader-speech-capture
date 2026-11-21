@@ -30,6 +30,10 @@ function fakeApi(initial: Omit<SessionListDto, 'outsideEntries'> & { outsideEntr
       state = { ...state, currentId: null };
       return Promise.resolve();
     }),
+    delete: vi.fn((id: number) => {
+      state = { ...state, sessions: state.sessions.filter((s) => s.id !== id) };
+      return Promise.resolve();
+    }),
   };
   return api;
 }
@@ -93,6 +97,17 @@ describe('createSessionsStore', () => {
     expect(store.currentId).toBe(1);
     await store.end();
     expect(store.currentId).toBeNull();
+    stop();
+  });
+
+  it('reads again after a delete', async () => {
+    const api = fakeApi({ sessions: [session(1, '2026-11-12T09:00:00.000Z')], currentId: null });
+    const store = createSessionsStore(api);
+    const stop = store.init(null);
+    await vi.waitFor(() => expect(store.sessions).toHaveLength(1));
+    await store.delete(1);
+    expect(api.delete).toHaveBeenCalledWith(1);
+    expect(store.sessions).toEqual([]);
     stop();
   });
 

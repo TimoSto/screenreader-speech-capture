@@ -43,6 +43,11 @@ export function canAddMarker(scope: SessionScope, currentId: number | null): boo
   return currentId === null ? scope === 'none' : scope === currentId;
 }
 
+/** Whether the log can delete `scope`: an ended session, never the current one or the outside log. */
+export function canDeleteSession(scope: SessionScope, currentId: number | null): boolean {
+  return scope !== 'none' && scope !== currentId;
+}
+
 /** Whether new speech can still arrive in `scope`. */
 export function isLiveScope(scope: SessionScope, currentId: number | null): boolean {
   return scope === 'none' || scope === currentId;

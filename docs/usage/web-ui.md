@@ -92,6 +92,11 @@ The main area. It shows the entries of the selected session, oldest first, newes
   session when none is current, so the button is only shown in the current session and in "Outside
   sessions" while no session is current. It is hidden in an ended session, and in "Outside sessions"
   while a session is live.
+- **Delete session** (the bin button in the log's header, only in an ended session) asks to confirm,
+  then removes the session and its speech from the bridge (`DELETE /api/v1/sessions?session=<id>`,
+  see [Sessions](speech-capture.md#sessions)) and selects the next older session, or the next newer
+  one. With none left, the pane follows the current session, or shows "Outside sessions". The current
+  session and "Outside sessions" have no delete button.
 
 Planned, not implemented yet *(planned, [M5](../ROADMAP.md#m5-web-ui-))*:
 

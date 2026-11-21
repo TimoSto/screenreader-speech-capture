@@ -10,6 +10,8 @@ export interface SessionsApi {
   start(name: string, run: string | null): Promise<StartSessionResponseDto>;
   /** Ends the current session; does nothing if none is current. */
   end(): Promise<void>;
+  /** Deletes an ended session and its speech. Rejects with the bridge's message. */
+  delete(id: number): Promise<void>;
 }
 
 /** `4 s`, `3 min 12 s`, `1 h 05 min`. Never negative (the bridge's clock may run ahead). */
@@ -75,4 +77,15 @@ export function selectedScope(
   const id = requested === null || !/^\d+$/.test(requested) ? null : Number(requested);
   if (id !== null && sessions.some((session) => session.id === id)) return id;
   return currentId ?? OUTSIDE_SESSIONS;
+}
+
+/**
+ * The session to show once `deletedId` is gone: the next older one, else the next newer one
+ * (`sessions` is newest first), else `null`, which the page resolves to the current session or the
+ * speech outside any session (`selectedScope`).
+ */
+export function scopeAfterDelete(deletedId: number, sessions: SessionDto[]): number | null {
+  const at = sessions.findIndex((session) => session.id === deletedId);
+  if (at === -1) return null;
+  return (sessions[at + 1] ?? sessions[at - 1])?.id ?? null;
 }

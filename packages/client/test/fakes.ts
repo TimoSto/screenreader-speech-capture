@@ -80,6 +80,7 @@ export class FakeBridgeApi implements BridgeApi {
   clientName: string | null = null;
   /** Every session started, oldest first (the fake never forgets one). */
   readonly allSessions: Session[] = [];
+  private lastSessionId = 0;
   private current: Session | undefined;
   apiVersion = '1.4';
   state: BridgeStatus['bridge']['state'] = 'ready';
@@ -145,7 +146,7 @@ export class FakeBridgeApi implements BridgeApi {
     const previous = this.current;
     this.endCurrent();
     const session: Session = {
-      id: this.allSessions.length + 1,
+      id: ++this.lastSessionId,
       name: request.name,
       run: request.run ?? null,
       client: this.clientName,
@@ -168,6 +169,22 @@ export class FakeBridgeApi implements BridgeApi {
     const failure = this.fail();
     if (failure) return failure;
     this.endCurrent();
+    return Promise.resolve();
+  }
+
+  deleteSession(id: number): Promise<void> {
+    this.calls.push(`delete ${id}`);
+    const failure = this.fail();
+    if (failure) return failure;
+    const found = this.allSessions.find((s) => s.id === id);
+    if (!found)
+      return Promise.reject(new BridgeHttpError(404, 'NOT_FOUND', `Session ${id} does not exist`));
+    if (found.id === this.current?.id) {
+      return Promise.reject(
+        new BridgeHttpError(400, 'INVALID_REQUEST', 'the current session cannot be deleted'),
+      );
+    }
+    this.allSessions.splice(this.allSessions.indexOf(found), 1);
     return Promise.resolve();
   }
 
@@ -276,6 +293,7 @@ export class FakeBridgeApi implements BridgeApi {
     this.seq = 1000;
     this.entries = [];
     this.allSessions.length = 0;
+    this.lastSessionId = 0;
     this.current = undefined;
     this.dropStreams(new Error('restarted'));
   }

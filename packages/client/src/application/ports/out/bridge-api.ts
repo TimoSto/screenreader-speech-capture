@@ -34,6 +34,8 @@ export interface BridgeApi {
   startSession(request: { name: string; run?: string | undefined }): Promise<StartedSession>;
   /** `POST /api/v1/sessions/end` (API 1.3). */
   endSession(): Promise<void>;
+  /** Deletes an ended session and its speech (API 1.16). */
+  deleteSession(id: number): Promise<void>;
   /** `GET /api/v1/sessions` (API 1.3). */
   listSessions(): Promise<SessionList>;
   /** `POST /api/v1/input/click` (API 1.14): a native click. */

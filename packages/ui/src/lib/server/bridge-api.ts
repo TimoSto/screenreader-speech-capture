@@ -31,6 +31,8 @@ export interface BridgeApi {
   startSession(request: StartSessionRequestDto): Promise<StartSessionResponseDto>;
   /** Ends the current session; does nothing if none is current. */
   endSession(): Promise<void>;
+  /** Deletes an ended session and its speech (the bridge refuses the current one). */
+  deleteSession(id: number): Promise<void>;
   /** Inserts a marker; the bridge files it under the current session (or outside any). */
   addMarker(label: string): Promise<SpeechEntryDto>;
   /** One page of a scope's entries with `seq > since`, oldest first (`session`: an id or `none`). */
@@ -61,7 +63,11 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
   // call, not a page of another site.
   const origin = new URL(root).origin;
 
-  async function call(method: 'GET' | 'POST', path: string, body?: unknown): Promise<unknown> {
+  async function call(
+    method: 'GET' | 'POST' | 'DELETE',
+    path: string,
+    body?: unknown,
+  ): Promise<unknown> {
     let response: Response;
     try {
       response = await fetchFn(`${root}${path}`, {
@@ -107,6 +113,9 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
     startSession: (request) => read('POST', '/sessions', StartSessionResponseSchema, request),
     endSession: async () => {
       await call('POST', '/sessions/end');
+    },
+    deleteSession: async (id) => {
+      await call('DELETE', `/sessions?session=${id}`);
     },
     addMarker: (label) => read('POST', '/markers', SpeechEntrySchema, { label }),
     speech: (session, since, limit) => {

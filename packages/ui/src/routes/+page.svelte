@@ -6,8 +6,8 @@
   import SpeechLog from '#lib/components/SpeechLog/SpeechLog.svelte';
   import SessionsPane from '#lib/components/SessionsPane/SessionsPane.svelte';
   import { sessionsPaneStore, sessionsStore, speechStore } from '#lib/composition.js';
-  import { selectedScope, type SessionScope } from '#lib/core/sessions.js';
-  import { canAddMarker, isLiveScope, logHeading } from '#lib/core/speech.js';
+  import { scopeAfterDelete, selectedScope, type SessionScope } from '#lib/core/sessions.js';
+  import { canAddMarker, canDeleteSession, isLiveScope, logHeading } from '#lib/core/speech.js';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -34,6 +34,7 @@
 
   const heading = $derived(logHeading(selectedId, list.sessions));
   const canMark = $derived(canAddMarker(selectedId, list.currentId));
+  const canDelete = $derived(canDeleteSession(selectedId, list.currentId));
 
   onMount(() => {
     sessionsPaneStore.init();
@@ -66,6 +67,15 @@
     }
   }
 
+  async function remove(): Promise<void> {
+    if (typeof selectedId !== 'number') return;
+    const next = scopeAfterDelete(selectedId, list.sessions);
+    await sessionsStore.delete(selectedId);
+    // Without a neighbour the URL is dropped, and the pane follows the current session (or the
+    // speech outside any session).
+    await select(next);
+  }
+
   async function start(name: string, run: string | null): Promise<void> {
     const started = await sessionsStore.start(name, run);
     await select(started.id); // pinned in the URL, so it stays selected after it ends
@@ -94,6 +104,8 @@
       connection={speechStore.connection}
       {canMark}
       onAddMarker={(label: string) => speechStore.addMarker(label)}
+      {canDelete}
+      onDelete={remove}
     />
   </div>
 </div>

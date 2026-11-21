@@ -163,6 +163,7 @@ export const CLI_OUTPUT = {
   status: BridgeStatusOutput,
   'session start': StartedSessionOutput,
   'session end': v.object({ ended: v.literal(true) }),
+  'session delete': v.object({ deleted: v.literal(true) }),
   'session list': SessionListOutput,
   clear: v.object({ cleared: v.literal(true) }),
   speech: v.object({

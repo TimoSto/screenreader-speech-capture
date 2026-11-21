@@ -25,8 +25,12 @@ export class HttpSessionsApi implements SessionsApi {
     await this.send('POST', `${this.url}/end`, undefined, undefined);
   }
 
+  async delete(id: number): Promise<void> {
+    await this.send('DELETE', `${this.url}/${id}`, undefined, undefined);
+  }
+
   private async send<S extends DtoSchema>(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'DELETE',
     url: string,
     body: unknown,
     schema: S | undefined,

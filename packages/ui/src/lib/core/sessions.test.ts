@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionDto } from '@screenreader-speech-capture/shared';
-import { describeSession, formatDuration, selectedScope } from './sessions.js';
+import { describeSession, formatDuration, scopeAfterDelete, selectedScope } from './sessions.js';
 
 const session = (patch: Partial<SessionDto> = {}): SessionDto => ({
   id: 7,
@@ -71,5 +71,23 @@ describe('selectedScope', () => {
   it('falls back to the speech outside sessions when no session is current', () => {
     expect(selectedScope(null, sessions, null)).toBe('none');
     expect(selectedScope('99', sessions, null)).toBe('none');
+  });
+});
+
+describe('scopeAfterDelete', () => {
+  const sessions = [session({ id: 3 }), session({ id: 2 }), session({ id: 1 })];
+
+  it('moves to the next older session', () => {
+    expect(scopeAfterDelete(2, sessions)).toBe(1);
+    expect(scopeAfterDelete(3, sessions)).toBe(2);
+  });
+
+  it('moves to the next newer one when it was the oldest', () => {
+    expect(scopeAfterDelete(1, sessions)).toBe(2);
+  });
+
+  it('has none left when it was the only one, or is not in the list', () => {
+    expect(scopeAfterDelete(1, [session({ id: 1 })])).toBeNull();
+    expect(scopeAfterDelete(9, sessions)).toBeNull();
   });
 });

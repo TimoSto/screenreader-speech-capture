@@ -129,6 +129,10 @@ export class SpeechCaptureClient implements SpeechCapture, NativeInput {
     return this.#service.endSession();
   }
 
+  deleteSession(id: number): Promise<void> {
+    return this.#service.deleteSession(id);
+  }
+
   sessions(): Promise<SessionList> {
     return this.#service.sessions();
   }

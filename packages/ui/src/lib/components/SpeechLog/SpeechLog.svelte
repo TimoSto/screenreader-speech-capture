@@ -4,6 +4,7 @@
   import '@material/web/iconbutton/icon-button.js';
   import type { SpeechEntryDto } from '@screenreader-speech-capture/shared';
   import type { FeedState } from '#lib/core/speech.js';
+  import DeleteSessionDialog from './DeleteSessionDialog.svelte';
   import MarkerDialog from './MarkerDialog.svelte';
   import SpeechTable from './SpeechTable.svelte';
 
@@ -17,11 +18,16 @@
     canMark: boolean;
     /** Rejects with a message to show; resolves when the marker is in. */
     onAddMarker: (label: string) => Promise<void>;
+    /** Whether the shown scope is an ended session that can be deleted (see `canDeleteSession`). */
+    canDelete: boolean;
+    /** Rejects with a message to show; resolves when the session is deleted. */
+    onDelete: () => Promise<void>;
   };
 
-  let { heading, entries, connection, canMark, onAddMarker }: Props = $props();
+  let { heading, entries, connection, canMark, onAddMarker, canDelete, onDelete }: Props = $props();
 
   let markerOpen = $state(false);
+  let deleteOpen = $state(false);
 
   /** Scrolled up further than this from the end, the log stops following new rows. */
   const FOLLOW_SLACK_PX = 48;
@@ -51,16 +57,28 @@
 <section class="log" aria-labelledby="log-heading">
   <header>
     <h1 id="log-heading" class="trunc">{heading}</h1>
-    {#if canMark}
+    {#if canMark || canDelete}
       <div role="toolbar" aria-label="Log actions">
-        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <md-icon-button
-          title="Add marker"
-          aria-label="Add marker"
-          onclick={() => (markerOpen = true)}
-        >
-          <md-icon aria-hidden="true">bookmark_add</md-icon>
-        </md-icon-button>
+        {#if canMark}
+          <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+          <md-icon-button
+            title="Add marker"
+            aria-label="Add marker"
+            onclick={() => (markerOpen = true)}
+          >
+            <md-icon aria-hidden="true">bookmark_add</md-icon>
+          </md-icon-button>
+        {/if}
+        {#if canDelete}
+          <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+          <md-icon-button
+            title="Delete session"
+            aria-label="Delete session"
+            onclick={() => (deleteOpen = true)}
+          >
+            <md-icon aria-hidden="true">delete</md-icon>
+          </md-icon-button>
+        {/if}
       </div>
     {/if}
   </header>
@@ -114,6 +132,15 @@
 
 {#if canMark}
   <MarkerDialog open={markerOpen} onAdd={onAddMarker} onClose={() => (markerOpen = false)} />
+{/if}
+
+{#if canDelete}
+  <DeleteSessionDialog
+    open={deleteOpen}
+    {heading}
+    {onDelete}
+    onClose={() => (deleteOpen = false)}
+  />
 {/if}
 
 <style>

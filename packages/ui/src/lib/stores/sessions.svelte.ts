@@ -4,7 +4,7 @@ import type { SessionDto, SessionListDto } from '@screenreader-speech-capture/sh
 /** How often the list is read again, so entry counts and sessions of other clients show up. */
 const REFRESH_MS = 3000;
 
-/** The sessions: read on `init`, then every few seconds, and after every start or end. */
+/** The sessions: read on `init`, then every few seconds, and after every start, end or delete. */
 export function createSessionsStore(api: SessionsApi) {
   let sessions = $state<SessionDto[]>([]);
   let currentId = $state<number | null>(null);
@@ -91,6 +91,11 @@ export function createSessionsStore(api: SessionsApi) {
     },
     async end(): Promise<void> {
       await api.end();
+      await refreshAfterChange();
+    },
+    /** Deletes an ended session. Rejects with the bridge's message. */
+    async delete(id: number): Promise<void> {
+      await api.delete(id);
       await refreshAfterChange();
     },
   };
