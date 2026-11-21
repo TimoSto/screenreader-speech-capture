@@ -71,22 +71,33 @@ and agent tasks apart.
 
 ## Live log
 
-The main area. It shows the entries of the selected session as they arrive (over SSE), newest at
-the bottom.
+The main area. It shows the entries of the selected session, oldest first, newest at the bottom.
 
-- Each row shows the time (`receivedAt`, and the gap to the previous entry), the text, and
-  `voice` / `connectionId` when there are several voices. Markers are shown as separator rows.
-  With **All** selected, session starts are separator rows too.
-- **Follow** scrolls to new entries automatically. Scrolling up pauses it, and a "n new"
-  button jumps back to the end.
+- The heading is `#<session id> <session name>`, or "Outside sessions" for the speech outside any
+  session.
+- Each row shows when it arrived (`receivedAt`, `hh:mm:ss.mmm`), the text, and its `seq`. A marker
+  entry (added through the API) is a row with a bookmark pill. A row that just arrived is tinted
+  briefly. The `seq` column is hidden when the log is narrow.
+- **The current session and "Outside sessions"** show what is in the buffer, then follow new
+  speech over SSE (`GET /api/v1/speech/stream`, through the UI's own relay). A dropped connection
+  shows "Connection lost, reconnecting…" and the browser resumes with `Last-Event-ID`, so nothing
+  is missed or shown twice.
+- **An ended session** can't get new entries, so it is read once with `GET /api/v1/speech?session=<id>`
+  (in pages of 1000) and no stream is opened. If its entries all left the buffer, the log says so.
+- **Follow** scrolls to new entries automatically. Scrolling up pauses it, and a "Jump to latest"
+  button resumes it.
+- The log keeps the newest 5000 rows of the selected scope.
+
+Planned, not implemented yet *(planned, [M5](../ROADMAP.md#m5-web-ui-))*:
+
 - **Search / filter** by text (substring or regex) and by voice. Markers can be hidden.
 - **Add marker** (with a label) goes into the current session.
 - **Copy** the visible text, or **export** it (the selected session, or all) as JSON / JSONL /
   plain text.
 - **Wipe everything** (`DELETE /api/v1/speech`, with a confirmation that names how many sessions
   it removes). Tests and agents don't need it: they start sessions.
-- After a reconnect, the UI fetches what it missed with `since=<last seq>`. If the bridge reports
-  `truncated: true`, it shows a gap row.
+- The gap to the previous entry, a `voice` / `connectionId` badge when there are several voices,
+  and a gap row when the bridge reports `truncated: true`.
 
 ## Actions
 

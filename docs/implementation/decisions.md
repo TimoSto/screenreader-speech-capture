@@ -289,3 +289,24 @@ icon ligature text (`add`, `stop`) as a visible label.
 `node_modules` (a global install only has the bridge's own dependencies). So `packages/ui/vite.config.ts`
 bundles what the server code imports (`ssr.noExternal`), and `packages/bridge/tsdown.config.ts` fails the
 build when a bare import is left in `ui/build/server`.
+
+## The speech table follows live scopes over SSE and reads ended sessions once
+
+The bridge's stream (`GET /speech/stream`) only sends *new* entries unless the client reconnects with
+`Last-Event-ID`. So a live scope opens the stream through the UI's relay with `since=0`, which the relay
+sends upstream as `Last-Event-ID: 0`: the bridge replays the buffer (filtered by `session`) and then
+follows, with no race between a history fetch and the stream, and the store's `seq` check absorbs
+overlaps. An ended session never gets entries, so it is read once with `GET /speech?session=<id>` in
+pages and no connection is held open. The page decides "live" once, when a scope opens: a session that
+ends while it is shown keeps its rows and is read as an ended one the next time it is selected.
+
+The relay passes the bridge's response body through untouched instead of parsing and re-framing events,
+so the UI can't drift from the bridge's SSE format (`docs/usage/flows/sse.md`).
+
+## The speech table is a real `<table>`
+
+The mockup draws the rows as a `div` grid with an `aria-hidden` column header. A `<table>` with
+`<th scope="col">` gives screen reader users (this tool's users) row and column navigation, so the UI uses
+one. The time and seq columns are as wide as their text (`seq` is a 13-digit number), and the seq column
+is hidden in a narrow log. The sticky header needs `border-collapse: separate`, or its borders scroll away.
+

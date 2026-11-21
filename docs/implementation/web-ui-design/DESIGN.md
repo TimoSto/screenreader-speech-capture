@@ -143,6 +143,11 @@ Just a list:
 
 ### Log pane
 
+> **As built so far (speech table):** the heading is `#id name` with no subline, there is no toolbar,
+> no filter row and no `GAP` column (columns: Received, Spoken text, Seq, a real `<table>`), no footer
+> except a "reconnecting" / "jump to latest" strip. An ended session is read once instead of
+> streamed. Everything else below is still the design.
+
 - **Header:** session name (title-large, `h1`), mono subline `#id · run · started hh:mm:ss ·
   live|ended after …`, plus `client` (the session's `X-SR-Speech-Client`) when set. Toolbar (`role="toolbar"`): Actions toggle, divider, Add marker, Copy
   visible text, Export (JSON / JSONL / text), Wipe everything (`error`).

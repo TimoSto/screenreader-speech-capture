@@ -209,12 +209,16 @@ the real backend ([decision](decisions.md#the-web-ui-is-a-sveltekit-bff-inside-t
 packages/ui/src/
   env / hooks      (none yet)
   lib/server/      the BFF's only way to the bridge: bridge-api.ts (fetch + schema check of every answer)
+  lib/core/        pure: sessions, speech (the `SpeechFeed` port, row cap, heading and time formats)
+  lib/adapters/    fetch / EventSource / localStorage: SseSpeechFeed, HttpSessionsApi, HttpStatusApi, ...
+  lib/stores/      Svelte runes stores built on the ports (speech, sessions, status, theme, ...)
+  lib/components/  SpeechLog, SessionsPane, ... (one folder each, with a `*.svelte.test.ts`)
   routes/          pages and their `+page.server.ts` / `+layout.server.ts` load functions
 ```
 
-Planned for the pages ([M5](../ROADMAP.md#m5-web-ui-)): a hexagon-lite layout with `lib/core`
-(client-side use cases and the ports `SpeechFeed`, `SessionsApi`, `StatusApi`, `InputApi`,
-`ConfigApi`), `lib/adapters` (their HTTP/SSE implementations), `lib/stores`, `lib/components` and one
+The pages use a hexagon-lite layout ([M5](../ROADMAP.md#m5-web-ui-)): `lib/core` (client-side use
+cases and the ports `SpeechFeed`, `SessionsApi`, `StatusApi`; `InputApi` and `ConfigApi` are
+planned), `lib/adapters` (their HTTP/SSE implementations), `lib/stores`, `lib/components` and one
 composition file (`lib/composition.ts`) that wires adapters into stores, so components never call
 `fetch` and can be tested against fake adapters.
 
@@ -230,9 +234,25 @@ imports the UI).
 | `lib/components`, `routes/**/*.svelte`, `+page.ts`, `+layout.ts` | stores, core                         | adapters, `lib/server`; the same I/O globals                                                                   |
 | `lib/server`, `*.server.ts` (the BFF)                          | core, `shared`, SvelteKit            | stores, components, adapters                                                                                  |
 
+### The speech table's data path
+
+The browser never talks to the bridge. `SseSpeechFeed` (adapter) implements the `SpeechFeed` port for
+the speech store, which the monitor page re-opens whenever the selected scope changes:
+
+- **Live scope** (the current session or `none`): an `EventSource` on `/ui/api/speech/stream?session=…&since=0`.
+  The route in `routes/api/speech/stream/+server.ts` calls `BridgeApi.openSpeechStream` and returns
+  the bridge's body unchanged (`text/event-stream`), so every event and the bridge's `Last-Event-ID`
+  replay reach the browser. `EventSource` can't set a header on its first request, so `?since=` is
+  sent upstream as `Last-Event-ID` (`0` replays the whole buffer of that scope). The header the browser
+  sends on its own reconnects wins over the query. The upstream request is aborted with the browser's.
+- **Ended session**: `GET /ui/api/speech?session=<id>&since=<seq>&limit=1000` (`BridgeApi.speech`),
+  repeated while `hasMore`. No stream, because nothing new can arrive.
+- The store drops an entry whose `seq` is not above the last one shown (replays after a reconnect),
+  and keeps the newest `MAX_ROWS` rows. Whether a scope is live is decided when it opens.
+
 ### Serving the UI
 
-The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's status route `/ui/api/status`. The bridge's UI handler redirects the bare `/` to `/ui/`. Code builds URLs with `resolve()` from `$app/paths`.
+The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's routes under `/ui/api/` (`status`, `sessions`, `speech`, `speech/stream`). The bridge's UI handler redirects the bare `/` to `/ui/`. Code builds URLs with `resolve()` from `$app/paths`.
 
 The build of `packages/ui` (`build/`, with `handler.js`) is copied to `packages/bridge/dist/ui` by the
 bridge's build (tsdown `copy`; the bridge depends on the UI in the workspace, so `pnpm build` builds
