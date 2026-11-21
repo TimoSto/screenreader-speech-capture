@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SpeechEntryDto } from '@screenreader-speech-capture/shared';
-import { MAX_ROWS, type SpeechFeed, type SpeechFeedHandlers } from '#lib/core/speech.js';
+import {
+  MAX_ROWS,
+  type SpeechApi,
+  type SpeechFeed,
+  type SpeechFeedHandlers,
+} from '#lib/core/speech.js';
 import type { SessionScope } from '#lib/core/sessions.js';
 import { createSpeechStore } from './speech.svelte.js';
 
@@ -29,13 +34,20 @@ function fakes() {
       return close;
     },
   };
-  return { feed, opened };
+  const labels: string[] = [];
+  const api: SpeechApi = {
+    addMarker(label) {
+      labels.push(label);
+      return label === 'bad' ? Promise.reject(new Error('refused')) : Promise.resolve();
+    },
+  };
+  return { feed, api, opened, labels };
 }
 
 describe('createSpeechStore', () => {
   it('collects the entries of the feed', () => {
-    const { feed, opened } = fakes();
-    const store = createSpeechStore(feed);
+    const { feed, api, opened } = fakes();
+    const store = createSpeechStore(feed, api);
     store.open(2, true);
     opened[0].handlers.onEntry(entry(1));
     opened[0].handlers.onEntry(entry(2));
@@ -44,8 +56,8 @@ describe('createSpeechStore', () => {
   });
 
   it('drops an entry it has already seen (a replay after a reconnect)', () => {
-    const { feed, opened } = fakes();
-    const store = createSpeechStore(feed);
+    const { feed, api, opened } = fakes();
+    const store = createSpeechStore(feed, api);
     store.open('none', true);
     opened[0].handlers.onEntry(entry(1));
     opened[0].handlers.onEntry(entry(2));
@@ -55,8 +67,8 @@ describe('createSpeechStore', () => {
   });
 
   it('empties the table when the bridge wipes its buffer', () => {
-    const { feed, opened } = fakes();
-    const store = createSpeechStore(feed);
+    const { feed, api, opened } = fakes();
+    const store = createSpeechStore(feed, api);
     store.open('none', true);
     opened[0].handlers.onEntry(entry(1));
     opened[0].handlers.onClear();
@@ -66,8 +78,8 @@ describe('createSpeechStore', () => {
   });
 
   it('stops the old feed and starts empty when the scope changes', () => {
-    const { feed, opened } = fakes();
-    const store = createSpeechStore(feed);
+    const { feed, api, opened } = fakes();
+    const store = createSpeechStore(feed, api);
     store.open(1, true);
     opened[0].handlers.onEntry(entry(1));
     store.open(2, true);
@@ -77,8 +89,8 @@ describe('createSpeechStore', () => {
   });
 
   it('stops the feed with the function open returns', () => {
-    const { feed, opened } = fakes();
-    const store = createSpeechStore(feed);
+    const { feed, api, opened } = fakes();
+    const store = createSpeechStore(feed, api);
     const stop = store.open(1, true);
     stop();
     stop();
@@ -86,8 +98,8 @@ describe('createSpeechStore', () => {
   });
 
   it('keeps the newest rows when the cap is reached', () => {
-    const { feed, opened } = fakes();
-    const store = createSpeechStore(feed);
+    const { feed, api, opened } = fakes();
+    const store = createSpeechStore(feed, api);
     store.open(1, true);
     for (let seq = 1; seq <= MAX_ROWS + 2; seq++) opened[0].handlers.onEntry(entry(seq));
     expect(store.entries).toHaveLength(MAX_ROWS);
@@ -95,15 +107,15 @@ describe('createSpeechStore', () => {
   });
 
   it('tells the feed whether the scope is live', () => {
-    const { feed, opened } = fakes();
-    const store = createSpeechStore(feed);
+    const { feed, api, opened } = fakes();
+    const store = createSpeechStore(feed, api);
     store.open(1, false);
     expect(opened[0].live).toBe(false);
   });
 
   it('adds a batch in order and skips what it already shows', () => {
-    const { feed, opened } = fakes();
-    const store = createSpeechStore(feed);
+    const { feed, api, opened } = fakes();
+    const store = createSpeechStore(feed, api);
     store.open(1, false);
     opened[0].handlers.onEntries([entry(1), entry(2), entry(3)]);
     opened[0].handlers.onEntries([entry(2), entry(3), entry(4)]);
@@ -111,11 +123,25 @@ describe('createSpeechStore', () => {
   });
 
   it('follows the connection state', () => {
-    const { feed, opened } = fakes();
-    const store = createSpeechStore(feed);
+    const { feed, api, opened } = fakes();
+    const store = createSpeechStore(feed, api);
     store.open(1, true);
     expect(store.connection).toBe('connecting');
     opened[0].handlers.onState('live');
     expect(store.connection).toBe('live');
+  });
+
+  it('adds a marker through the api and leaves the table to the feed', async () => {
+    const { feed, api, labels } = fakes();
+    const store = createSpeechStore(feed, api);
+    await store.addMarker('step 3');
+    expect(labels).toEqual(['step 3']);
+    expect(store.entries).toEqual([]);
+  });
+
+  it('passes on the reason a marker was refused', async () => {
+    const { feed, api } = fakes();
+    const store = createSpeechStore(feed, api);
+    await expect(store.addMarker('bad')).rejects.toThrow('refused');
   });
 });

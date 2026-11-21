@@ -1,9 +1,9 @@
-import { MAX_ROWS, type FeedState, type SpeechFeed } from '#lib/core/speech.js';
+import { MAX_ROWS, type FeedState, type SpeechApi, type SpeechFeed } from '#lib/core/speech.js';
 import type { SessionScope } from '#lib/core/sessions.js';
 import type { SpeechEntryDto } from '@screenreader-speech-capture/shared';
 
 /** The speech of one scope: streamed from `open` until the returned function is called. */
-export function createSpeechStore(feed: SpeechFeed) {
+export function createSpeechStore(feed: SpeechFeed, api: SpeechApi) {
   let entries = $state.raw<SpeechEntryDto[]>([]);
   let connection = $state<FeedState>('connecting');
   let close: (() => void) | null = null;
@@ -55,6 +55,11 @@ export function createSpeechStore(feed: SpeechFeed) {
         },
       });
       return stop;
+    },
+
+    /** Rejects with the reason; the new entry arrives through the feed, so nothing is added here. */
+    addMarker(label: string): Promise<void> {
+      return api.addMarker(label);
     },
   };
 }

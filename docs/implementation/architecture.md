@@ -217,7 +217,7 @@ packages/ui/src/
 ```
 
 The pages use a hexagon-lite layout ([M5](../ROADMAP.md#m5-web-ui-)): `lib/core` (client-side use
-cases and the ports `SpeechFeed`, `SessionsApi`, `StatusApi`; `InputApi` and `ConfigApi` are
+cases and the ports `SpeechFeed`, `SpeechApi`, `SessionsApi`, `StatusApi`; `InputApi` and `ConfigApi` are
 planned), `lib/adapters` (their HTTP/SSE implementations), `lib/stores`, `lib/components` and one
 composition file (`lib/composition.ts`) that wires adapters into stores, so components never call
 `fetch` and can be tested against fake adapters.
@@ -249,10 +249,13 @@ the speech store, which the monitor page re-opens whenever the selected scope ch
   repeated while `hasMore`. No stream, because nothing new can arrive.
 - The store drops an entry whose `seq` is not above the last one shown (replays after a reconnect),
   and keeps the newest `MAX_ROWS` rows. Whether a scope is live is decided when it opens.
+- **Add marker**: `HttpSpeechApi` (the `SpeechApi` port) posts `{ label }` to `/ui/api/markers`, which
+  calls `BridgeApi.addMarker` (`POST /api/v1/markers`). Nothing is added to the table locally: the
+  entry comes back through the feed.
 
 ### Serving the UI
 
-The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's routes under `/ui/api/` (`status`, `sessions`, `speech`, `speech/stream`). The bridge's UI handler redirects the bare `/` to `/ui/`. Code builds URLs with `resolve()` from `$app/paths`.
+The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's routes under `/ui/api/` (`status`, `sessions`, `speech`, `speech/stream`, `markers`). The bridge's UI handler redirects the bare `/` to `/ui/`. Code builds URLs with `resolve()` from `$app/paths`.
 
 The build of `packages/ui` (`build/`, with `handler.js`) is copied to `packages/bridge/dist/ui` by the
 bridge's build (tsdown `copy`; the bridge depends on the UI in the workspace, so `pnpm build` builds

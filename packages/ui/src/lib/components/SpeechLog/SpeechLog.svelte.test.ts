@@ -1,5 +1,5 @@
 import axe from 'axe-core';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import type { SpeechEntryDto } from '@screenreader-speech-capture/shared';
@@ -21,6 +21,8 @@ const props = (patch: Record<string, unknown> = {}) => ({
   heading: '#3 Checkout flow',
   entries: [entry(1), entry(2, { kind: 'marker', text: 'step 3', source: 'api' }), entry(3)],
   connection: 'live' as const,
+  canMark: true,
+  onAddMarker: () => Promise.resolve(),
   ...patch,
 });
 
@@ -55,12 +57,42 @@ describe('SpeechLog', () => {
   it('shows an empty state without entries', async () => {
     await render(SpeechLog, props({ entries: [] }));
     await expect.element(page.getByText('No speech yet')).toBeVisible();
-    expect(document.querySelector('table')).toBeNull();
+    // The header stays, so it doesn't come and go while another scope loads.
+    expect(page.getByRole('columnheader').elements()).toHaveLength(3);
+    expect(document.querySelectorAll('tbody tr')).toHaveLength(0);
   });
 
-  it('has no toolbar yet', async () => {
-    await render(SpeechLog, props());
+  it('offers to add a marker only where one would show up', async () => {
+    await render(SpeechLog, props({ canMark: false }));
     expect(document.querySelector('[role="toolbar"]')).toBeNull();
+    expect(page.getByRole('button', { name: 'Add marker' }).elements()).toHaveLength(0);
+  });
+
+  it('adds a marker from the dialog with a trimmed label', async () => {
+    const onAddMarker = vi.fn(() => Promise.resolve());
+    await render(SpeechLog, props({ onAddMarker }));
+    await page.getByRole('button', { name: 'Add marker' }).click();
+    await page.getByLabelText('Label').fill('  step 4  ');
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await vi.waitFor(() => expect(onAddMarker).toHaveBeenCalledWith('step 4'));
+  });
+
+  it('asks for a label instead of adding an empty marker', async () => {
+    const onAddMarker = vi.fn(() => Promise.resolve());
+    await render(SpeechLog, props({ onAddMarker }));
+    await page.getByRole('button', { name: 'Add marker' }).click();
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await expect.element(page.getByText('Enter a label.')).toBeVisible();
+    expect(onAddMarker).not.toHaveBeenCalled();
+  });
+
+  it('shows the message when the marker is refused', async () => {
+    const onAddMarker = vi.fn(() => Promise.reject(new Error('The bridge is not reachable')));
+    await render(SpeechLog, props({ onAddMarker }));
+    await page.getByRole('button', { name: 'Add marker' }).click();
+    await page.getByLabelText('Label').fill('x');
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await expect.element(page.getByRole('alert')).toHaveTextContent('The bridge is not reachable');
   });
 
   it('says so while the stream reconnects', async () => {

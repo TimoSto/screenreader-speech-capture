@@ -72,7 +72,7 @@ GitHub issues. This file only tracks milestones.
 - [x] Speech table per session: `#id name` heading, received / spoken text / seq columns, follows new
       rows. A live scope (current session, outside sessions) replays the buffer and follows the SSE
       stream through a BFF relay; an ended session is read once, page by page
-- [ ] Live log extras: filter, markers (add marker), export, wipe, copy, gap rows, "announce new entries" switch
+- [ ] Live log extras: filter, export, wipe, copy, gap rows, "announce new entries" switch
 - [ ] Actions panel: keys, presets, click, delayed send (needs M4)
 - [x] Explicit light / dark toggle in the top bar (`data-theme` on `<html>`, choice remembered in
       `localStorage`). The UI starts light and ignores `prefers-color-scheme`

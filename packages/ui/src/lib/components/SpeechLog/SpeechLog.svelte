@@ -1,8 +1,10 @@
 <script lang="ts">
   import '@material/web/button/filled-tonal-button.js';
   import '@material/web/icon/icon.js';
+  import '@material/web/iconbutton/icon-button.js';
   import type { SpeechEntryDto } from '@screenreader-speech-capture/shared';
   import type { FeedState } from '#lib/core/speech.js';
+  import MarkerDialog from './MarkerDialog.svelte';
   import SpeechTable from './SpeechTable.svelte';
 
   type Props = {
@@ -11,9 +13,15 @@
     /** Oldest first. */
     entries: readonly SpeechEntryDto[];
     connection: FeedState;
+    /** Whether a marker added now shows up in this log (see `canAddMarker`). */
+    canMark: boolean;
+    /** Rejects with a message to show; resolves when the marker is in. */
+    onAddMarker: (label: string) => Promise<void>;
   };
 
-  let { heading, entries, connection }: Props = $props();
+  let { heading, entries, connection, canMark, onAddMarker }: Props = $props();
+
+  let markerOpen = $state(false);
 
   /** Scrolled up further than this from the end, the log stops following new rows. */
   const FOLLOW_SLACK_PX = 48;
@@ -32,9 +40,10 @@
     scroller?.scrollTo({ top: scroller.scrollHeight });
   }
 
-  // After the new row is in the DOM, stay at the end while following.
+  // After the new row is in the DOM, stay at the end while following. An empty table is a new
+  // scope (or a wipe): start following again.
   $effect(() => {
-    void entries.length;
+    if (entries.length === 0) following = true;
     if (following && scroller) scroller.scrollTop = scroller.scrollHeight;
   });
 </script>
@@ -42,6 +51,18 @@
 <section class="log" aria-labelledby="log-heading">
   <header>
     <h1 id="log-heading" class="trunc">{heading}</h1>
+    {#if canMark}
+      <div role="toolbar" aria-label="Log actions">
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <md-icon-button
+          title="Add marker"
+          aria-label="Add marker"
+          onclick={() => (markerOpen = true)}
+        >
+          <md-icon aria-hidden="true">bookmark_add</md-icon>
+        </md-icon-button>
+      </div>
+    {/if}
   </header>
 
   <!-- Focusable so the keyboard can scroll it. -->
@@ -55,6 +76,8 @@
     aria-live="off"
     tabindex="0"
   >
+    <!-- Always there, so its header row doesn't come and go while another scope loads. -->
+    <SpeechTable {entries} />
     {#if entries.length === 0}
       <div class="empty">
         <md-icon aria-hidden="true">mic</md-icon>
@@ -66,8 +89,6 @@
           <p>Make the screen reader speak.</p>
         {/if}
       </div>
-    {:else}
-      <SpeechTable {entries} />
     {/if}
   </div>
 
@@ -91,6 +112,10 @@
   {/if}
 </section>
 
+{#if canMark}
+  <MarkerDialog open={markerOpen} onAdd={onAddMarker} onClose={() => (markerOpen = false)} />
+{/if}
+
 <style>
   .log {
     box-sizing: border-box;
@@ -105,7 +130,11 @@
   }
 
   header {
+    box-sizing: border-box;
     flex: none;
+    /* The icon button (40px) is only there in some scopes: always reserve its height, so the
+       table doesn't jump when the selected session changes. */
+    min-height: 64px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -135,13 +164,21 @@
     overflow-y: auto;
   }
 
+  /* Hidden for a moment: while another scope's rows load there is no point in saying "No speech". */
   .empty {
+    animation: reveal 0s 250ms backwards;
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 96px 24px;
     color: var(--md-sys-color-on-surface-variant);
     text-align: center;
+  }
+
+  @keyframes reveal {
+    from {
+      visibility: hidden;
+    }
   }
 
   .empty md-icon {

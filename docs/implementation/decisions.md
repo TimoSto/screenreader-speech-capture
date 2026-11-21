@@ -310,3 +310,11 @@ The mockup draws the rows as a `div` grid with an `aria-hidden` column header. A
 one. The time and seq columns are as wide as their text (`seq` is a 13-digit number), and the seq column
 is hidden in a narrow log. The sticky header needs `border-collapse: separate`, or its borders scroll away.
 
+
+## The add-marker action only shows where the marker would land
+
+`POST /api/v1/markers` has no session parameter: the bridge files a marker under the current session,
+or outside any session when none is current. So the log offers the action (`canAddMarker`) in the
+current session, and in "Outside sessions" while no session is current. In "Outside sessions" while a
+session is live, and in an ended session, it is hidden: the marker would appear in a different log than
+the one on screen. A button that is there but does something else would be worse than none.
