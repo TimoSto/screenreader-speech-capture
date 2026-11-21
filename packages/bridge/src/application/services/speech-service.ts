@@ -1,5 +1,6 @@
 import { API_LIMITS } from '@screenreader-speech-capture/shared';
 import { invalidField } from '../../domain/errors.js';
+import type { SessionFilter } from '../../domain/session.js';
 import type { SpeechPage } from '../../domain/speech-buffer.js';
 import type { SpeechEntry } from '../../domain/speech-entry.js';
 import type { SpeechDraft, SpeechLog } from '../../domain/speech-log.js';
@@ -56,10 +57,14 @@ export class SpeechService implements RecordSpeech, SpeechUseCases {
     return followLog(this.deps, { since, sessionId, staleSince: 'replay' }, listener, options);
   }
 
-  /** Wipes the buffer and the ended sessions. The current session stays current. */
-  clear(): void {
-    this.deps.log.clear();
-    this.deps.events.publish({ type: 'clear' });
+  /** Wipes the buffer and the ended sessions, or one scope. The current session stays current. */
+  clear(session?: SessionFilter): void {
+    if (session === undefined) {
+      this.deps.log.clear();
+      this.deps.events.publish({ type: 'clear' });
+      return;
+    }
+    this.deps.events.publish({ type: 'clear', sessionId: this.deps.log.clearScope(session) });
   }
 
   addMarker(label: string): SpeechEntry {

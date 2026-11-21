@@ -19,7 +19,7 @@ export interface FollowOptions {
 /**
  * Hands `listener` the log's entries after `since`, then the new events, with nothing missed or
  * repeated in between (`SpeechUseCases.watch`, the wait). With `sessionId`, only that session's
- * entries (`null`: those outside sessions); `clear` and `session` events always come. Returns a
+ * entries (`null`: those outside sessions); `session` events always come, and a `clear` unless it only cleared another scope. Returns a
  * function that stops it; calling it again does nothing.
  *
  * Without `since` (`null`) no entry is replayed; the first event is `position`, the log's
@@ -54,6 +54,10 @@ export function followLog(
   let replaying = since !== null;
   let stopped = false;
   const unsubscribe = events.subscribe((event) => {
+    if (event.type === 'clear' && event.sessionId !== undefined && sessionId !== undefined) {
+      // Another scope was cleared: this feed's rows are untouched.
+      if (event.sessionId !== sessionId) return;
+    }
     if (event.type !== 'entry') return listener(event);
     if (replaying || !cursor.advance(event.entry)) return;
     if (sessionId === undefined || event.entry.sessionId === sessionId) listener(event);

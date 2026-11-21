@@ -35,6 +35,10 @@ export function sseFrame(event: WatchEvent): string {
         event.session,
         () => `event: session\ndata: ${JSON.stringify(toSessionDto(event.session))}\n\n`,
       );
+    case 'clear':
+      return event.sessionId === undefined
+        ? 'event: clear\ndata: {}\n\n'
+        : `event: clear\ndata: ${JSON.stringify({ sessionId: event.sessionId })}\n\n`;
     default:
       return `event: ${event.type}\ndata: {}\n\n`;
   }

@@ -72,6 +72,26 @@ describe('SpeechService', () => {
     }
   });
 
+  it('clears one scope, keeps the session and publishes a scoped clear event', () => {
+    const log = new SpeechLog(100);
+    const events = new InProcessEventBus();
+    const published: SpeechEvent[] = [];
+    events.subscribe((event) => published.push(event));
+    const speech = new SpeechService({ log, events, clock: new SystemClock() });
+    speech.record({ text: 'outside', voice: null, connectionId: 1 });
+    log.startSession({ name: 'a', run: null, client: null, startedAt: new Date() });
+    speech.record({ text: 'a1', voice: null, connectionId: 1 });
+    speech.addMarker('mark');
+    speech.clear('current');
+    expect(published.at(-1)).toEqual({ type: 'clear', sessionId: 1 });
+    expect(speech.list({ since: 0 }).entries.map((e) => e.text)).toEqual(['outside']);
+    expect(log.currentSession()).toMatchObject({ id: 1 });
+    speech.clear('none');
+    expect(published.at(-1)).toEqual({ type: 'clear', sessionId: null });
+    expect(speech.list({ since: 0 }).entries).toEqual([]);
+    expect(log.currentSession()).toMatchObject({ id: 1 });
+  });
+
   it('clears and publishes a clear event', () => {
     const { speech, published } = setup();
     speech.record({ text: 'one', voice: null, connectionId: 1 });

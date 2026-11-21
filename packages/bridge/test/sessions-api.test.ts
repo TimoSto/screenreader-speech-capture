@@ -294,4 +294,71 @@ describe('Sessions API', () => {
       expect((await del(bridge, '?session=9')).status).toBe(404);
     });
   });
+
+  describe('DELETE /speech?session=', () => {
+    const clear = (bridge: Bridge, query: string) =>
+      fetch(api(bridge, `/speech${query}`), { method: 'DELETE' });
+
+    it('clears the current session, keeping it running, and leaves the rest', async () => {
+      const bridge = await start();
+      await say(bridge, 'outside');
+      await startSession(bridge, { name: 'a' });
+      await say(bridge, 'a1');
+      await startSession(bridge, { name: 'b' });
+      await say(bridge, 'b1');
+      await post(bridge, '/markers', { label: 'mark' });
+      expect((await clear(bridge, '?session=current')).status).toBe(204);
+      expect(await texts(bridge, '')).toEqual(['outside', 'a1']);
+      const list = await json<SessionListDto>(await fetch(api(bridge, '/sessions')));
+      expect(list).toMatchObject({ currentId: 2, sessions: [{ id: 2, entries: 0 }, { id: 1 }] });
+      await say(bridge, 'b2');
+      expect(await texts(bridge, 'session=2')).toEqual(['b2']);
+    });
+
+    it('clears the entries outside sessions while a session is current', async () => {
+      const bridge = await start();
+      await say(bridge, 'outside');
+      await startSession(bridge, { name: 'a' });
+      await say(bridge, 'a1');
+      expect((await clear(bridge, '?session=none')).status).toBe(204);
+      expect(await texts(bridge, '')).toEqual(['a1']);
+    });
+
+    it('refuses an ended session, answers 404 for none current or an unknown id', async () => {
+      const bridge = await start();
+      expect((await clear(bridge, '?session=current')).status).toBe(404);
+      await startSession(bridge, { name: 'a' });
+      await say(bridge, 'a1');
+      await startSession(bridge, { name: 'b' });
+      const ended = await clear(bridge, '?session=1');
+      expect(ended.status).toBe(400);
+      expect((await json<ErrorBodyDto>(ended)).error).toMatchObject({
+        details: { field: 'session' },
+      });
+      expect((await clear(bridge, '?session=9')).status).toBe(404);
+      expect(await texts(bridge, '')).toEqual(['a1']);
+    });
+
+    it('sends a scoped clear event to the feed of that scope only', async () => {
+      const bridge = await start();
+      await startSession(bridge, { name: 'a' });
+      const abort = new AbortController();
+      const open = async (query: string) => {
+        const response = await fetch(api(bridge, `/speech/stream${query}`), {
+          signal: abort.signal,
+        });
+        return response.body!.getReader();
+      };
+      const feedA = await open('?session=1');
+      const feedNone = await open('?session=none');
+      await clear(bridge, '?session=1');
+      const read = async (reader: ReadableStreamDefaultReader<Uint8Array>) =>
+        new TextDecoder().decode((await reader.read()).value);
+      const first = await read(feedA);
+      expect(first).toContain('event: position');
+      expect(first + (await read(feedA))).toContain('event: clear\ndata: {"sessionId":1}');
+      expect(await read(feedNone)).not.toContain('event: clear');
+      abort.abort();
+    });
+  });
 });

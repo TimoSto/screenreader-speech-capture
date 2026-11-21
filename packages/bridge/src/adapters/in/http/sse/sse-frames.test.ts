@@ -52,6 +52,15 @@ describe('sseFrame', () => {
     expect(JSON.parse(frame[1]!.slice('data: '.length))).toMatchObject({ id: 2, name: 'login' });
   });
 
+  it('says which scope a scoped clear was for', () => {
+    expect(sseFrame({ type: 'clear', sessionId: 3 })).toBe(
+      'event: clear\ndata: {"sessionId":3}\n\n',
+    );
+    expect(sseFrame({ type: 'clear', sessionId: null })).toBe(
+      'event: clear\ndata: {"sessionId":null}\n\n',
+    );
+  });
+
   it.each(['clear', 'truncated'] as const)('sends %s with empty data and no id', (type) => {
     expect(sseFrame({ type })).toBe(`event: ${type}\ndata: {}\n\n`);
   });

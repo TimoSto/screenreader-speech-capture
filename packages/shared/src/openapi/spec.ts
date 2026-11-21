@@ -31,7 +31,8 @@ event of \`GET /speech/stream\` and the replay of a \`Last-Event-ID\` above ever
 removed \`restartRequired\` again (an exception to "minor versions only add", since no client
 existed): \`PUT /config\` now only saves, a setting takes effect on the next start, and \`GET\`
 shows the settings in use. 1.14 added native input (\`POST /input/click\`, \`POST /input/keys\`) and
-the \`INPUT_DISABLED\` error code again. 1.15 added \`outsideEntries\` to \`GET /sessions\`. 1.16 added \`DELETE /sessions\`.
+the \`INPUT_DISABLED\` error code again. 1.15 added \`outsideEntries\` to \`GET /sessions\`. 1.16 added \`DELETE /sessions\`. 1.17 added the \`session\` parameter of \`DELETE /speech\` and the
+\`sessionId\` in the \`data\` of a scoped \`clear\` event.
 
 Every error has the same body (\`ErrorBody\`). Clients must handle unknown error codes as errors
 of their HTTP status.
@@ -135,13 +136,41 @@ session were dropped.
     delete: {
       tags: ['speech'],
       operationId: 'clearSpeech',
-      summary: 'Wipe the buffer and the ended sessions',
-      description: `Removes all entries and all ended sessions. The current session stays current, empty.
-\`seq\` keeps counting. Meant for manual use: tests and agents start a session instead.
+      summary: 'Wipe the buffer, or clear one scope',
+      description: `Without \`session\`, removes all entries and all ended sessions. The current session stays
+current, empty. \`seq\` keeps counting. Meant for manual use: tests and agents start a session
+instead.
+
+With \`session\` (since API 1.17), removes only the entries and markers of the current session
+(its \`id\` or \`current\`) or of \`none\` (the entries outside any session, also while a session is
+current). The session stays current and keeps running, now with no entries. An ended session
+cannot be cleared (\`INVALID_REQUEST\`): delete it with \`DELETE /sessions\`. The \`clear\` event
+of \`GET /speech/stream\` then names the scope.
 `,
+      parameters: [
+        {
+          name: 'session',
+          in: 'query',
+          required: false,
+          description:
+            'Only clear this scope: the id of the current session, `current`, or `none`. Without it everything is wiped.',
+          schema: {
+            oneOf: [
+              { type: 'integer', minimum: 1 },
+              { type: 'string', enum: ['current', 'none'] },
+            ],
+          },
+        },
+      ],
       responses: {
         '204': {
           description: 'Cleared.',
+        },
+        '400': {
+          $ref: '#/components/responses/InvalidRequest',
+        },
+        '404': {
+          $ref: '#/components/responses/SessionNotFound',
         },
       },
     },
@@ -273,9 +302,10 @@ request).
       operationId: 'streamSpeech',
       summary: 'Stream new entries (Server-Sent Events)',
       description: `One \`entry\` event per new entry, with the event \`id\` set to its \`seq\` and the entry as
-JSON \`data\`. After a clear, a \`clear\` event with \`data: {}\`. When a session starts or
+JSON \`data\`. After a clear, a \`clear\` event with \`data: {}\`; after a clear of one scope (\`DELETE /speech?session=\`, since API 1.17) its \`data\` is
+\`{"sessionId": 3}\` (\`null\` for the entries outside sessions), and only the entries of that scope are gone. When a session starts or
 ends, a \`session\` event with the \`Session\` as \`data\` and no \`id\`. With \`session\`, only
-that session's \`entry\` events are sent; \`clear\` and \`session\` events always are. A
+that session's \`entry\` events are sent; \`session\` events always are, and \`clear\` events unless they only cleared another scope. A
 \`: ping\` comment every 15 s keeps the connection open.
 
 A stream opened without \`Last-Event-ID\` starts with a \`position\` event (\`data: {}\`, since
