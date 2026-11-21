@@ -277,7 +277,6 @@
   --app-actions-width: 360px;
   --app-status-sheet-width: 400px;
   --app-gutter: 12px;
-  --app-log-columns: 112px 64px minmax(0, 1fr) 56px; /* received · gap · text · seq */
 
   /* Behavior */
   --app-new-row-ms: 1600; /* new rows tinted with --app-new-row this long */

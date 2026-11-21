@@ -68,8 +68,11 @@ GitHub issues. This file only tracks milestones.
 - [x] Navigation rail (Monitor `/ui/`, Settings `/ui/settings`, Setup `/ui/setup`; text-only pages so far)
 - [ ] Layout and status panel (side sheet; polls `GET /status`, or an SSE `status` event instead
       of polling)
-- [x] Context pane: sessions (newest first, follow the current one, new / end session dialogs, selection in `?session=`; the list is polled every 3 s until the UI has an SSE feed)
-- [ ] Live log per session (follow, filter, markers, export, wipe)
+- [x] Context pane: sessions (newest first, follow the current one, new / end session dialogs, selection in `?session=`; the list is still polled every 3 s; the speech table has an SSE feed, the list could use its `session` events)
+- [x] Speech table per session: `#id name` heading, received / spoken text / seq columns, follows new
+      rows. A live scope (current session, outside sessions) replays the buffer and follows the SSE
+      stream through a BFF relay; an ended session is read once, page by page
+- [ ] Live log extras: filter, markers (add marker), export, wipe, copy, gap rows, "announce new entries" switch
 - [ ] Actions panel: keys, presets, click, delayed send (needs M4)
 - [x] Explicit light / dark toggle in the top bar (`data-theme` on `<html>`, choice remembered in
       `localStorage`). The UI starts light and ignores `prefers-color-scheme`
