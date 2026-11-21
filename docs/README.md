@@ -43,6 +43,7 @@ For contributors: how the bridge and client are built and why.
 |---|---|
 | [Architecture](implementation/architecture.md) | Monorepo, hexagonal bridge and client, UI structure |
 | [TCP capture](implementation/tcp-capture.md) | Listener, framing and decoding, from line to speech entry |
+| [text-to-socket-engine internals](implementation/text-to-socket-engine/README.md) | Source walkthrough of the third-party SAPI voice: COM server, voice registration, speak and TCP redirect, build, quirks |
 | [Decisions](implementation/decisions.md) | Choices that rarely change and why (Node.js, not Go) |
 | [Development](implementation/development.md) | Building, testing without Windows, CI and releases |
 | [Simplification candidates](implementation/simplification-candidates.md) | Backlog of parts to drop or simplify, and why |
