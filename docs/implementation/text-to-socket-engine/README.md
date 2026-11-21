@@ -8,6 +8,14 @@ explain what it does so we know exactly what arrives on port 4449 and why.
 What the bridge does with the bytes is in [TCP capture](../tcp-capture.md); what users configure is
 in [VM setup](../../usage/vm-setup.md). This folder is only about the **engine**.
 
+> **Planned, not started: a Rust rewrite of the voice.** The upstream C++ engine hasn't had a commit in
+> about six years. The plan is to move to our own engine written in Rust, so we control the build
+> (x64 and x86 DLLs from CI), can fix the [quirks](quirks.md), and can add options such as a language
+> argument for `addVoice`. Until then the upstream engine stays in use. There is no milestone or date
+> yet, and the wire format (one line per `Speak` call, optional header line) would stay the same, so the
+> bridge wouldn't change. The pages below describe the **current C++ engine** and serve as the
+> specification for the rewrite.
+
 > Everything below is read from the engine's source unless a sentence is marked *(inferred)*. Those
 > mark SAPI/Windows behaviour the source relies on but doesn't show; verify them on a VM before
 > building on them.
