@@ -8,6 +8,9 @@ import { AppError } from '../domain/errors.js';
 /** The environment variable the UI's BFF reads the bridge's address from. */
 export const BRIDGE_API_URL_ENV = 'SR_BRIDGE_API_URL';
 
+/** The header adapter-node reads the request's protocol from (`PROTOCOL_HEADER`). */
+const PROTOCOL_HEADER = 'x-sr-bridge-protocol';
+
 /** The `adapter-node` handler of the SvelteKit app (`packages/ui`, copied to `dist/ui`). */
 type NodeHandler = (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => void;
 
@@ -55,6 +58,9 @@ export function createUiMount(dir: URL, logger: Logger): UiMount | undefined {
       } catch {
         throw new AppError('SERVICE_UNAVAILABLE', 'The web UI failed to start');
       }
+      // The bridge only speaks plain HTTP. adapter-node assumes https unless told otherwise, which
+      // makes SvelteKit's CSRF check reject every same-origin body-less DELETE/POST (403).
+      req.headers[PROTOCOL_HEADER] = 'http';
       handler(req, res, () => {
         res.statusCode = 404;
         res.end();
@@ -63,6 +69,7 @@ export function createUiMount(dir: URL, logger: Logger): UiMount | undefined {
     async mount(apiUrl) {
       try {
         process.env[BRIDGE_API_URL_ENV] = apiUrl;
+        process.env.PROTOCOL_HEADER = PROTOCOL_HEADER;
         const module = (await import(file.href)) as { handler?: unknown };
         if (typeof module.handler !== 'function') throw new Error('handler.js has no `handler`');
         settle.resolve(module.handler as NodeHandler);
