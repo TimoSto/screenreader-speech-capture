@@ -36,12 +36,17 @@ describe('the UI handler', () => {
           out.body = body;
         },
       };
-      await mount!.handler({ url } as http.IncomingMessage, res as unknown as http.ServerResponse);
-      return out;
+      const req = { url, headers: {} } as http.IncomingMessage;
+      await mount!.handler(req, res as unknown as http.ServerResponse);
+      return { ...out, req };
     };
 
     expect(await call('/')).toMatchObject({ status: 302, headers: { location: '/ui/' } });
-    expect((await call('/ui/settings')).body).toBe('app');
+    const app = await call('/ui/settings');
+    expect(app.body).toBe('app');
+    // adapter-node would otherwise assume https and SvelteKit's CSRF check would refuse the UI's DELETEs.
+    expect(process.env.PROTOCOL_HEADER).toBeDefined();
+    expect(app.req.headers[process.env.PROTOCOL_HEADER!]).toBe('http');
   });
 });
 
