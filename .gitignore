@@ -20,3 +20,4 @@ playwright-report/
 
 # Vitest browser mode failure screenshots
 .vitest/
+/examples/playwright/.env.local
