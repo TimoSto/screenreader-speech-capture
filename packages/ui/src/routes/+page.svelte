@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
+  import LoopbackBanner from '#lib/components/LoopbackBanner/LoopbackBanner.svelte';
   import SpeechLog from '#lib/components/SpeechLog/SpeechLog.svelte';
   import SessionsPane from '#lib/components/SessionsPane/SessionsPane.svelte';
   import { sessionsPaneStore, sessionsStore, speechStore } from '#lib/composition.js';
@@ -111,17 +112,23 @@
     />
   </aside>
   <div class="log">
-    <SpeechLog
-      {heading}
-      entries={speechStore.entries}
-      connection={speechStore.connection}
-      {canMark}
-      onAddMarker={(label: string) => speechStore.addMarker(label)}
-      {canClear}
-      onClear={clear}
-      {canDelete}
-      onDelete={remove}
-    />
+    {#if data.local}
+      <LoopbackBanner />
+    {/if}
+    <div class="log-body">
+      <SpeechLog
+        {heading}
+        local={data.local}
+        entries={speechStore.entries}
+        connection={speechStore.connection}
+        {canMark}
+        onAddMarker={(label: string) => speechStore.addMarker(label)}
+        {canClear}
+        onClear={clear}
+        {canDelete}
+        onDelete={remove}
+      />
+    </div>
   </div>
 </div>
 
@@ -154,8 +161,17 @@
   }
 
   .log {
+    display: flex;
     flex: 1;
+    flex-direction: column;
+    gap: 12px;
     min-width: 0;
+    min-height: 0;
+  }
+
+  /* The log fills what the banner (when there is one) leaves. */
+  .log-body {
+    flex: 1;
     min-height: 0;
   }
 </style>

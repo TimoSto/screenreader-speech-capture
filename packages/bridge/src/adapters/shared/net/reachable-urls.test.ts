@@ -1,6 +1,11 @@
 import type os from 'node:os';
-import { expect, it } from 'vitest';
-import { describeAddress, describeListener, reachableUrls } from './reachable-urls.js';
+import { describe, expect, it } from 'vitest';
+import {
+  describeAddress,
+  describeListener,
+  reachableUrls,
+  isLoopbackAddress,
+} from './reachable-urls.js';
 
 const info = (
   address: string,
@@ -54,4 +59,18 @@ it('describes a schemeless address like a listener', () => {
     '0.0.0.0:4449, reachable at 192.168.122.57:4449, 172.20.0.1:4449, localhost:4449',
   );
   expect(describeAddress('127.0.0.1', 4449, interfaces)).toBe('127.0.0.1:4449');
+});
+
+describe('isLoopbackAddress', () => {
+  it.each([
+    ['127.0.0.1', true],
+    ['::1', true],
+    ['::ffff:127.0.0.1', true],
+    ['192.168.1.7', false],
+    ['::ffff:10.0.0.1', false],
+    ['fe80::1', false],
+    [undefined, false],
+  ])('%j → %s', (address, expected) => {
+    expect(isLoopbackAddress(address)).toBe(expected);
+  });
 });

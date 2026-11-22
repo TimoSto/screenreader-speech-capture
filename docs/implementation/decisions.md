@@ -346,3 +346,14 @@ browser looking at the UI, not of the bridge, and several browsers can open the 
 in `localStorage` (`sr-theme`) and the bridge config and API don't know about it. An inline script in
 `app.html` applies it before the first paint. `prefers-color-scheme` is ignored on purpose: the UI starts
 light, and a high-contrast need is an explicit choice.
+
+
+## A UI opened on the bridge's machine hides its log from the screen reader
+
+The screen reader reads the machine it runs on, so the UI opened there would speak its own log rows into
+the log (`Outside sessions`, `#<seq>` cells). `aria-live="off"` isn't enough: JAWS still reads changes
+inside a focused region. The bridge's UI handler sets `x-sr-bridge-local: 1` on a request whose peer
+address is loopback and removes the header from every other one (so a client can't send it); the BFF's
+`hooks.server.ts` turns it into `locals.local`, and `SpeechLog` then marks its rows `aria-hidden`, drops
+the region and `tabindex`, and a warning banner above the log says why. A page opened from another machine is unchanged. A proxy that
+connects from loopback makes remote viewers look local.

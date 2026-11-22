@@ -3,6 +3,10 @@ import os from 'node:os';
 /** True for a host that means "every interface" (`0.0.0.0`, `::`). */
 export const isWildcard = (host: string): boolean => ['0.0.0.0', '::', ''].includes(host);
 
+/** True for a peer address on this machine (`127.0.0.0/8`, `::1`, or either as IPv4-mapped IPv6). */
+export const isLoopbackAddress = (address: string | undefined): boolean =>
+  address !== undefined && /^(::ffff:)?127\.\d+\.\d+\.\d+$|^::1$/i.test(address);
+
 /** `host:port` for a URL, with an IPv6 host in brackets. */
 export function hostPort(host: string, port: number): string {
   return host.includes(':') ? `[${host}]:${port}` : `${host}:${port}`;
