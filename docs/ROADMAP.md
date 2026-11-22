@@ -84,9 +84,10 @@ GitHub issues. This file only tracks milestones.
 - [ ] Setup page with check button
 - [ ] Accessibility of the UI itself (no feedback loop)
 
-### M6 Agents ⬜
+### M6 Agents 🚧
 
-- [ ] Agent skill (`SKILL.md`) + `install-skill` command
+- [x] Agent skill (`SKILL.md`, in `packages/client/skills/`; not yet tried on a real VM)
+- [ ] `install-skill` command (ship the skill in the npm package and copy it into `.claude/skills`)
 - [ ] Subagent definitions (for example `a11y-screenreader-tester`)
 
 ### M7 Distribution 🚧

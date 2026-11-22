@@ -21,9 +21,18 @@ version doesn't have to match the bridge's.
 It only uses `fetch` (Node ≥ 20) and depends only on `packages/shared`. `@playwright/test` is an
 optional peer dependency, needed only for the fixture; `setFocus(page)` of the library takes any page with `evaluate()`.
 
-```bash
-pnpm add -D screenreader-speech-capture-client
-```
+## Install
+
+Pick the way that fits how you use it (Node ≥ 20 in all cases):
+
+| You want | Run | Then |
+| --- | --- | --- |
+| the library or the Playwright fixture in a test project | `pnpm add -D screenreader-speech-capture-client` (or `npm i -D …`) | `import` it; the CLI is also there via `npx screenreader-speech-capture-client` or `pnpm exec` |
+| the CLI once, nothing installed (agents, CI, a quick check) | nothing | `npx screenreader-speech-capture-client <command>` |
+| the CLI as a plain command on this machine | `npm i -g screenreader-speech-capture-client` | `screenreader-speech-capture-client <command>` |
+
+The examples below use `npx`; with a global install, drop the `npx`. See [CLI for agents](#cli-for-agents)
+for the commands.
 
 ## Bridge URL
 
@@ -236,7 +245,7 @@ The fixture:
 ## CLI for agents
 
 The CLI command has the same name as the package, `screenreader-speech-capture-client`, so
-`npx screenreader-speech-capture-client` works even where nothing is installed.
+`npx screenreader-speech-capture-client` works even where nothing is installed (see [Install](#install)).
 
 Every command takes `--url` (overrides the [stored bridge URL](#bridge-url)) and `--json` for
 machine-readable output (the shape of every command is the valibot schema in
