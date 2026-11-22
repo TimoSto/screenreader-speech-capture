@@ -7,7 +7,10 @@ declare global {
       message: string;
       field?: string;
     }
-    // interface Locals {}
+    interface Locals {
+      /** The page is opened on the bridge's machine, where the screen reader would read the log. */
+      local: boolean;
+    }
     // interface PageData {}
     // interface PageState {}
     // interface Platform {}

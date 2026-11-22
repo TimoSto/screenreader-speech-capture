@@ -185,7 +185,11 @@ speech arrives within a few seconds.
   controls, visible focus). The context pane is a navigation landmark with a list of sessions, and
   the actions panel a labelled region.
 - **No feedback loop:** if the UI is open *on the VM*, the screen reader would read new log rows,
-  that speech would be recorded, and so on. So the live log is **not** an ARIA live region by
-  default. A setting turns announcements on for people who use the UI from another machine.
+  that speech would be recorded, and so on. `aria-live="off"` alone doesn't stop that (a screen
+  reader still reads changes in a focused region), so the bridge tells the UI when the page is
+  requested from its own machine (a loopback address or one of its own network addresses, such as `http://192.168.x.y:5151/ui/` opened on the VM) and the UI then hides the log rows from the
+  accessibility tree (`aria-hidden`, not focusable) and shows a warning banner above the log. Opened from another
+  machine the log is a normal, focusable region, and not a live region. A setting that turns
+  announcements on for those people *(planned)*.
 - Best practice: open the UI from your own machine, not in the VM's desktop session, so it doesn't
   steal focus from the browser under test (see the note under [Actions](#actions)).
