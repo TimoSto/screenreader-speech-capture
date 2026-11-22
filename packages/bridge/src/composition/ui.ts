@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import type http from 'node:http';
 import type { UiHandler } from '../adapters/in/http/ui-handler.js';
-import { hostPort, isLoopbackAddress, isWildcard } from '../adapters/shared/net/reachable-urls.js';
+import { hostPort, isOwnAddress, isWildcard } from '../adapters/shared/net/reachable-urls.js';
 import type { Logger } from '../application/ports/out/logger.js';
 import { AppError } from '../domain/errors.js';
 
@@ -68,7 +68,7 @@ export function createUiMount(dir: URL, logger: Logger): UiMount | undefined {
       // The bridge only speaks plain HTTP. adapter-node assumes https unless told otherwise, which
       // makes SvelteKit's CSRF check reject every same-origin body-less DELETE/POST (403).
       req.headers[PROTOCOL_HEADER] = 'http';
-      if (isLoopbackAddress(req.socket?.remoteAddress)) req.headers[LOCAL_HEADER] = '1';
+      if (isOwnAddress(req.socket?.remoteAddress)) req.headers[LOCAL_HEADER] = '1';
       else delete req.headers[LOCAL_HEADER];
       handler(req, res, () => {
         res.statusCode = 404;

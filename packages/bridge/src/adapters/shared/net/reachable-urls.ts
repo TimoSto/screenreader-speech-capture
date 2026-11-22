@@ -7,6 +7,27 @@ export const isWildcard = (host: string): boolean => ['0.0.0.0', '::', ''].inclu
 export const isLoopbackAddress = (address: string | undefined): boolean =>
   address !== undefined && /^(::ffff:)?127\.\d+\.\d+\.\d+$|^::1$/i.test(address);
 
+/**
+ * True when `address` (a peer address) belongs to this machine: loopback, or one of its own
+ * interface addresses. A page opened through the machine's LAN IP (`http://192.168.x.y:5151`)
+ * reaches the bridge from that same address, not from loopback.
+ */
+export function isOwnAddress(
+  address: string | undefined,
+  interfaces: NodeJS.Dict<os.NetworkInterfaceInfo[]> = os.networkInterfaces(),
+): boolean {
+  if (address === undefined) return false;
+  if (isLoopbackAddress(address)) return true;
+  // `::ffff:192.168.1.5` is IPv4 on a dual-stack socket; `fe80::1%eth0` carries its zone.
+  const bare = address
+    .replace(/^::ffff:/i, '')
+    .replace(/%.*$/, '')
+    .toLowerCase();
+  return Object.values(interfaces)
+    .flatMap((infos) => infos ?? [])
+    .some((info) => info.address.replace(/%.*$/, '').toLowerCase() === bare);
+}
+
 /** `host:port` for a URL, with an IPv6 host in brackets. */
 export function hostPort(host: string, port: number): string {
   return host.includes(':') ? `[${host}]:${port}` : `${host}:${port}`;

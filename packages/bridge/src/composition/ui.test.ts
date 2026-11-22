@@ -55,7 +55,7 @@ describe('the UI handler', () => {
     expect(app.req.headers[LOCAL_HEADER]).toBe('1');
 
     // From another machine the header is gone, even when the client sent one.
-    remoteAddress = '192.168.1.7';
+    remoteAddress = '203.0.113.7';
     expect((await call('/ui/')).req.headers[LOCAL_HEADER]).toBeUndefined();
   });
 });

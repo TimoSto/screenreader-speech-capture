@@ -5,6 +5,7 @@ import {
   describeListener,
   reachableUrls,
   isLoopbackAddress,
+  isOwnAddress,
 } from './reachable-urls.js';
 
 const info = (
@@ -72,5 +73,19 @@ describe('isLoopbackAddress', () => {
     [undefined, false],
   ])('%j → %s', (address, expected) => {
     expect(isLoopbackAddress(address)).toBe(expected);
+  });
+});
+
+describe('isOwnAddress', () => {
+  const own = { eth0: [info('192.168.122.177'), info('fe80::1%eth0', 'IPv6')] };
+  it.each([
+    ['192.168.122.177', true],
+    ['::ffff:192.168.122.177', true],
+    ['fe80::1', true],
+    ['127.0.0.1', true],
+    ['192.168.122.1', false],
+    [undefined, false],
+  ])('%j → %s', (address, expected) => {
+    expect(isOwnAddress(address, own)).toBe(expected);
   });
 });

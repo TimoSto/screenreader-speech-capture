@@ -7,9 +7,9 @@
   <md-icon aria-hidden="true">warning</md-icon>
   <p>
     <strong>The speech log is hidden from the screen reader (aria-hidden).</strong>
-    This page is opened on the bridge's own machine (loopback address): the screen reader would read new
-    rows aloud and they would be recorded again. Open the UI from another machine to read the log with
-    a screen reader.
+    This page is opened on the bridge's own machine (loopback or its own network address): the screen
+    reader would read new rows aloud and they would be recorded again. Open the UI from another machine
+    to read the log with a screen reader.
   </p>
 </div>
 

@@ -187,7 +187,7 @@ speech arrives within a few seconds.
 - **No feedback loop:** if the UI is open *on the VM*, the screen reader would read new log rows,
   that speech would be recorded, and so on. `aria-live="off"` alone doesn't stop that (a screen
   reader still reads changes in a focused region), so the bridge tells the UI when the page is
-  requested from its own machine (a loopback address) and the UI then hides the log rows from the
+  requested from its own machine (a loopback address or one of its own network addresses, such as `http://192.168.x.y:5151/ui/` opened on the VM) and the UI then hides the log rows from the
   accessibility tree (`aria-hidden`, not focusable) and shows a warning banner above the log. Opened from another
   machine the log is a normal, focusable region, and not a live region. A setting that turns
   announcements on for those people *(planned)*.
