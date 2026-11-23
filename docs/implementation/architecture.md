@@ -224,7 +224,10 @@ composition file (`lib/composition.ts`) that wires adapters into stores, so comp
 `fetch` and can be tested against fake adapters. The root layout creates the stores
 (`provideAppStores`) and components read them from the Svelte context (`appStores()`). They are
 not module-level singletons: on the server every request renders its own app, and a shared store
-would show one viewer's state to another.
+would show one viewer's state to another. The adapters call the UI's own routes through one helper
+(`lib/adapters/route-request.ts`) and don't check the answers against the schemas again: the BFF
+checked every bridge answer, and only the UI calls `/ui/api/*`. The SSE entries are the exception,
+because the stream relay passes them on unchecked.
 
 ESLint enforces the layers (`uiLayers` in `eslint.config.js`; `*.test.ts` is exempt). Every UI file
 also keeps the rule that `packages/ui` never imports bridge or client code (and the bridge never

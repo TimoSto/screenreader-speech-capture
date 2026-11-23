@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { StatusSchema } from '@screenreader-speech-capture/shared';
-import { routeDto, routeRequest } from './route-request';
+import { routeJson, routeRequest } from './route-request';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -53,9 +52,13 @@ describe('routeRequest', () => {
   });
 });
 
-describe('routeDto', () => {
-  it('rejects an answer that does not match the schema', async () => {
-    stubFetch(() => json({ nope: true }));
-    await expect(routeDto('/ui/api/status', StatusSchema)).rejects.toThrow(/Unexpected answer at/);
+describe('routeJson', () => {
+  it('answers the parsed body as it is (the BFF checked it)', async () => {
+    stubFetch(() => json({ sessions: [], currentId: null, outsideEntries: 0 }));
+    await expect(routeJson('/ui/api/sessions')).resolves.toEqual({
+      sessions: [],
+      currentId: null,
+      outsideEntries: 0,
+    });
   });
 });

@@ -1,5 +1,3 @@
-import { checkDto, type DtoOf, type DtoSchema } from '@screenreader-speech-capture/shared';
-
 /** What the UI's own routes answer on an error: SvelteKit's `error()` body (`App.Error`). */
 export interface RouteError {
   message: string;
@@ -40,16 +38,14 @@ export async function routeRequest(
   return response;
 }
 
-/** {@link routeRequest} for an answer that must match `schema`. */
-export async function routeDto<S extends DtoSchema>(
-  url: string,
-  schema: S,
-  request?: RouteRequest,
-): Promise<DtoOf<S>> {
+/**
+ * {@link routeRequest} for a JSON answer. It is not checked again: the BFF already checked the
+ * bridge's answer against the contract (`lib/server/bridge-api.ts`), and only the UI calls its
+ * routes. `T` is what the route answers.
+ */
+export async function routeJson<T>(url: string, request?: RouteRequest): Promise<T> {
   const response = await routeRequest(url, request);
-  const checked = checkDto(schema, await response.json());
-  if (!checked.ok) throw new Error(`Unexpected answer at ${checked.field}: ${checked.message}`);
-  return checked.value;
+  return (await response.json()) as T;
 }
 
 async function readRouteError(response: Response): Promise<RouteError | null> {
