@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionDto } from '@screenreader-speech-capture/shared';
-import { describeSession, formatDuration, scopeAfterDelete, selectedScope } from './sessions.js';
+import {
+  describeSession,
+  formatDuration,
+  parseScope,
+  scopeAfterDelete,
+  selectedScope,
+} from './sessions.js';
 
 const session = (patch: Partial<SessionDto> = {}): SessionDto => ({
   id: 7,
@@ -48,6 +54,30 @@ describe('describeSession', () => {
     expect(meta.duration).toBe('3 min 12 s');
     expect(meta.entries).toBe('1 entry');
     expect(meta.spoken).toBe('Session 7, 3 min 12 s, 1 entry');
+  });
+});
+
+describe('parseScope', () => {
+  it('reads a session id or none', () => {
+    expect(parseScope('7')).toBe(7);
+    expect(parseScope('none')).toBe('none');
+  });
+
+  it('refuses anything else', () => {
+    for (const value of [
+      '',
+      '0',
+      '007',
+      '-1',
+      '1.5',
+      '1e3',
+      ' 7',
+      'abc',
+      'None',
+      '9007199254740993',
+    ]) {
+      expect(parseScope(value), value).toBeNull();
+    }
   });
 });
 

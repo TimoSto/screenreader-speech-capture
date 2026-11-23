@@ -1,4 +1,5 @@
 import { bridgeApiFromEnv } from '#lib/server/bridge-api.js';
+import { scopeParam } from '#lib/server/scope.js';
 import type { RequestHandler } from './$types';
 
 /**
@@ -9,7 +10,7 @@ import type { RequestHandler } from './$types';
  */
 export const GET: RequestHandler = async ({ url, request, fetch }) => {
   const upstream = await bridgeApiFromEnv(fetch).openSpeechStream(
-    url.searchParams.get('session'),
+    scopeParam(url),
     // `EventSource` cannot set the header on its first request, so `?since=` stands in for it; the
     // header it sends itself when it reconnects wins.
     request.headers.get('last-event-id') ?? url.searchParams.get('since'),
