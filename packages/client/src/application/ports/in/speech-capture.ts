@@ -70,6 +70,14 @@ export interface SilenceOptions {
   timeout?: number | undefined;
 }
 
+export interface RecordOptions extends SilenceOptions {
+  /**
+   * Milliseconds the screen reader may take to start talking after `fn`; `quietFor` counts from
+   * its first speech. If nothing is said in this time, the recording ends empty. Default 2000.
+   */
+  firstWithin?: number | undefined;
+}
+
 export interface ReadyOptions {
   /** Milliseconds. Default 120000. */
   timeout?: number | undefined;
@@ -99,7 +107,7 @@ export interface OnSpeechOptions {
 
 export interface Recording<T> {
   result: T;
-  /** Speech spoken while `fn` ran and until silence, oldest first. */
+  /** Speech spoken while `fn` ran and until silence, oldest first. Empty: nothing was said. */
   entries: SpeechEntry[];
   /**
    * Some of that speech was dropped because the bridge's buffer was full before it could be read:
@@ -171,10 +179,12 @@ export interface SpeechCapture {
    */
   waitForSilence(options?: SilenceOptions): Promise<void>;
   /**
-   * Runs `fn` and returns the speech spoken while it ran (waits for silence at the end), then
-   * moves the cursor to the end.
+   * Runs `fn` and returns the speech spoken while it ran and after it: it waits up to
+   * `firstWithin` ms for the first speech, then until nothing was said for `quietFor` ms. Moves
+   * the cursor to the end. Rejects with `SpeechTimeoutError` if speech goes on until `timeout`;
+   * its `entries` are then everything recorded so far (`fn` has run).
    */
-  record<T>(fn: () => T | Promise<T>, options?: SilenceOptions): Promise<Recording<T>>;
+  record<T>(fn: () => T | Promise<T>, options?: RecordOptions): Promise<Recording<T>>;
   /**
    * Subscribes to the live feed (SSE): `listener` gets every new speech entry as the bridge
    * receives it, until the returned function is called. Reconnects by itself after a lost

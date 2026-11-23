@@ -315,6 +315,48 @@ describe('record', () => {
     expect(texts(entries)).toEqual(['during', 'right after']);
     expect(sr.cursor()).toBe(3);
   });
+
+  it('waits up to firstWithin for the first speech, then quietFor from it', async () => {
+    const { api, clock, sr } = setup();
+    clock.at(1500, () => api.speak('late'));
+    const { entries } = await sr.record(() => undefined);
+    expect(texts(entries)).toEqual(['late']);
+    expect(clock.now()).toBe(2000);
+  });
+
+  it('ends empty after firstWithin when nothing is said', async () => {
+    const { clock, sr } = setup();
+    expect((await sr.record(() => undefined)).entries).toEqual([]);
+    expect(clock.now()).toBe(2000);
+    const start = clock.now();
+    await sr.record(() => undefined, { firstWithin: 300 });
+    expect(clock.now() - start).toBe(300);
+  });
+
+  it('counts speech while fn ran as the first speech', async () => {
+    const { api, clock, sr } = setup();
+    // The fake clock jumps to the end of a sleep when nothing is due: a tick at 1 ms lets the
+    // feed's replay of 'at once' arrive first.
+    clock.at(1, () => undefined);
+    const { entries } = await sr.record(() => api.speak('at once'), { quietFor: 300 });
+    expect(texts(entries)).toEqual(['at once']);
+    expect(clock.now()).toBe(301);
+  });
+
+  it('rejects with everything recorded when the speech does not pause', async () => {
+    const { api, clock, sr } = setup();
+    api.speak('before');
+    for (let t = 100; t <= 2000; t += 100) clock.at(t, () => api.speak(`tick ${t}`));
+    const error = await sr
+      .record(() => api.speak('during'), { quietFor: 300, timeout: 1000 })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(SpeechTimeoutError);
+    expect((error as Error).message).toBe('Speech did not pause for 300 ms within 1000 ms');
+    const recorded = texts((error as SpeechTimeoutError).entries);
+    expect(recorded.slice(0, 2)).toEqual(['during', 'tick 100']);
+    expect(recorded).not.toContain('before');
+    expect(sr.cursor()).toBe(0);
+  });
 });
 
 describe('speech dropped from the bridge buffer', () => {

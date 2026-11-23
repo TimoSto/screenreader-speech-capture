@@ -117,7 +117,7 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `waitForOutput(match, { timeout?, since?, normalize?, session? })` | `SpeechEntry` | Wait until a speech entry after the cursor (or `since`) matches, then move the cursor past it. `match` is a `string` (substring), a `RegExp` or a predicate `(u) => boolean`. `normalize: true` ignores case and extra whitespace. `session` (an `id` or `'current'`) only matches that session's entries; `'current'` is the session current when the wait starts, even if another one starts meanwhile. Markers never match. Waits read the buffer, then follow the [live feed](#live-feed): no polling. Throws `SpeechTimeoutError` (with the speech seen so far in `entries`) on timeout. Default `timeout`: 5000 ms. |
 | `waitForSequence(matches[], { timeout?, since?, normalize?, session? })` | `SpeechEntry[]` | Wait until the matches occur in this order (other entries may come in between). Moves the cursor past the last match. Throws `SpeechTimeoutError` like `waitForOutput`. |
 | `waitForSilence({ quietFor?, timeout? })` | `void` | Wait until nothing new has been spoken for `quietFor` ms (default 500), counted from the call. Throws `SpeechTimeoutError` if speech goes on until `timeout` (default 10000 ms). Useful before asserting on "everything that was said". |
-| `record(fn, { quietFor?, timeout? })` | `{ result, entries, truncated }` | Run `fn` and return everything spoken while it ran (waits for silence at the end, then moves the cursor to the end). `truncated: true`: some of it was dropped because the bridge's buffer was full, so `entries` is incomplete (raise `buffer.maxEntries`). |
+| `record(fn, { firstWithin?, quietFor?, timeout? })` | `{ result, entries, truncated }` | Run `fn` and return everything spoken while it ran and after it: waits up to `firstWithin` ms (default 2000) for the first speech, then until nothing new was said for `quietFor` ms (default 500), and moves the cursor to the end. Empty `entries`: nothing was said within `firstWithin`. `truncated: true`: some of it was dropped because the bridge's buffer was full, so `entries` is incomplete (raise `buffer.maxEntries`). Throws `SpeechTimeoutError` if speech goes on until `timeout` (default 10000 ms); its `entries` are everything recorded until then. |
 | `mark(label)` | `SpeechEntry` | Insert a marker. Its `seq` can be used as `since`. |
 | `setFocus(page, { target? })` | `void` | Make the page's browser window the OS foreground window with a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
 | `click({ x, y }, { button? })` | `void` | Native click at screen coordinates in physical pixels (`POST /api/v1/input/click`). |
@@ -286,7 +286,7 @@ npx screenreader-speech-capture-client focus --script       # the function to ru
 npx screenreader-speech-capture-client focus --geometry '<its JSON result>' [--capture]   # click the browser's title bar
 npx screenreader-speech-capture-client click --x 640 --y 12  # native click (negative: --x=-5)
 npx screenreader-speech-capture-client press "Insert+T"      # native keys, several args = sequence (--delay <ms>)
-npx screenreader-speech-capture-client press h --capture [--quiet-for 500] [--timeout 10000]   # … and print the speech it caused (also click)
+npx screenreader-speech-capture-client press h --capture [--first-within 2000] [--quiet-for 500] [--timeout 10000]   # … and print the speech it caused (also click)
 npx screenreader-speech-capture-client tail [--since <seq>]  # live feed until Ctrl+C (NDJSON with --json)
 ```
 
@@ -295,7 +295,7 @@ Exit codes, so agents can branch on them without parsing output:
 | Code | Meaning |
 |---|---|
 | `0` | Success (for `wait`: match found) |
-| `1` | Timeout / no match (also `status --wait-ready`, `wait-silence` and `--capture`) |
+| `1` | Timeout / no match (also `status --wait-ready`, `wait-silence`, and `--capture` when the speech didn't pause) |
 | `2` | Bridge not reachable, HTTP error, or incompatible bridge version |
 | `3` | Invalid usage or invalid client config |
 | `4` | Internal error: a bug in the client (the stack goes to stderr; please report it) |
@@ -318,11 +318,11 @@ its output (and `tail` ends with it as its last line). The message also goes to 
 | `BridgeHttpError` | `2` | The bridge refused the request. Also has `status`, `code` (for example `INPUT_DISABLED`, `NOT_FOUND`, `INVALID_REQUEST`) and, if sent, `details` (for example `field`) from the [error](http-api.md#errors). Retrying the same call won't help. |
 | `IncompatibleBridgeError` | `2` | Another major API version: install matching versions. |
 | `BridgeNotReadyError` | `1` | `status --wait-ready` timed out. |
-| `SpeechTimeoutError` | `1` | `wait-silence` or `--capture` timed out: speech went on. |
+| `SpeechTimeoutError` | `1` | `wait-silence` timed out: speech went on (stderr lists the speech seen). |
 | `InternalError` | `4` | A bug in the client. |
 
-`wait` is the exception: its timeout is a result, `{ "matched": false, … }` (see below), not an
-error object. The schema is `CliErrorOutput` in `packages/client/src/adapters/in/cli/output.ts`.
+`wait` and `--capture` are the exceptions: their timeout is a result, `{ "matched": false, … }`
+and `{ "silent": false, … }` (see below), not an error object. The schema is `CliErrorOutput` in `packages/client/src/adapters/in/cli/output.ts`.
 
 `session start` prints the new session's id (the whole session with `--json`). `session list`
 prints one line per session, newest first (`#7 checkout test (run nightly-42): current, 3 entries,
@@ -350,11 +350,15 @@ isn't that object is a usage error (exit `3`).
 
 `press` and `click` print `{ "pressed": true }` / `{ "clicked": true }` with `--json`. With
 `--capture` (also on `focus --geometry`) they are the library's [`record()`](#functions) in one call: they note where the
-buffer ends, act, wait until nothing was spoken for `--quiet-for` ms (default 500, at most
-`--timeout`, default 10000), and print the speech from that point on, one line per entry, or
-`{ "pressed": true, "entries": [...], "truncated": false }` with `--json`. Speech from before the
-action can't get in. If the speech doesn't pause in time, the action has still happened, and the
-command exits with `1` (`SpeechTimeoutError`).
+buffer ends, act, wait up to `--first-within` ms (default 2000) for the screen reader to start
+talking, then until nothing was spoken for `--quiet-for` ms (default 500, all at most `--timeout`,
+default 10000), and print the speech from that point on, one line per entry, or
+`{ "pressed": true, "entries": [...], "truncated": false, "silent": true }` with `--json`. Speech
+from before the action can't get in. Raise `--first-within` for actions the screen reader is slow
+to announce (a page load, a dialog). When nothing was said, stdout stays empty (`"entries": []`
+with `--json`) and stderr says `no speech after the action`. If the speech doesn't pause in time,
+the action has still happened: the command prints what was said until then with
+`"silent": false`, the timeout on stderr, and exits with `1`.
 
 `tail` is for people watching (agents use `wait`, `wait-silence` or `--capture`). It prints each entry as it arrives (`#12 Submit, button`, markers included) until Ctrl+C or
 `SIGTERM`, then exits with `0`. A closed pipe (`tail --json | head -3`) ends it too, once the next

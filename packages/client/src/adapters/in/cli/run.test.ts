@@ -343,6 +343,8 @@ describe('speech commands', () => {
       fake.clock.at(fake.clock.now() + t, () => fake.api.speak('x'));
     const busy = await cli(['wait-silence', '--quiet-for', '100', '--timeout', '1000'], fake);
     expect(busy.code).toBe(EXIT.timeout);
+    // What kept the screen reader talking.
+    expect(busy.stderr).toContain('Speech seen:\n  #');
   });
 
   it('session start warns when it ended the session of another client', async () => {
@@ -685,16 +687,57 @@ describe('native input commands', () => {
     expect(fake.api.calls).toEqual([]);
   });
 
-  it('press --capture exits 1 with an error object when the speech does not pause', async () => {
+  it('press --capture exits 1 with the speech so far when the speech does not pause', async () => {
     const fake = fakeSpeech();
     for (let t = 0; t < 5000; t += 50)
-      fake.clock.at(fake.clock.now() + t, () => fake.api.speak('x'));
+      fake.clock.at(fake.clock.now() + t, () => fake.api.speak(`tick ${t}`));
     const result = await cli(
       ['press', 'h', '--capture', '--quiet-for', '100', '--timeout', '1000', '--json'],
       fake,
     );
     expect(result.code).toBe(EXIT.timeout);
-    expect(JSON.parse(result.stdout)).toMatchObject({ error: { type: 'SpeechTimeoutError' } });
+    const output = JSON.parse(result.stdout) as { entries: { text: string }[] };
+    expect(output).toMatchObject({ pressed: true, silent: false, truncated: false });
+    expect(output.entries.length).toBeGreaterThan(10);
+    expect(result.stderr).toContain('Speech did not pause for 100 ms within 1000 ms');
+    expect(fake.api.calls).toContain('keys h');
+
+    const text = await cli(
+      ['press', 'h', '--capture', '--quiet-for', '100', '--timeout', '1000'],
+      fake,
+    );
+    expect(text.code).toBe(EXIT.timeout);
+    expect(text.stdout).toMatch(/^tick \d+\n/);
+  });
+
+  it('press --capture waits --first-within for speech that starts late', async () => {
+    const fake = fakeSpeech();
+    const { api, clock } = fake;
+    const pressKeys = api.pressKeys.bind(api);
+    api.pressKeys = (request) =>
+      pressKeys(request).then(() => clock.at(clock.now() + 1500, () => api.speak('Dialog')));
+    const late = await cli(['press', 'Enter', '--capture', '--json'], fake);
+    expect(JSON.parse(late.stdout)).toMatchObject({ entries: [{ text: 'Dialog' }], silent: true });
+
+    const early = await cli(
+      ['press', 'Enter', '--capture', '--first-within', '500', '--json'],
+      fake,
+    );
+    expect(JSON.parse(early.stdout)).toMatchObject({ entries: [], silent: true });
+  });
+
+  it('press --capture says so when nothing was spoken', async () => {
+    const fake = fakeSpeech();
+    const text = await cli(['press', 'h', '--capture', '--first-within', '100'], fake);
+    expect(text).toMatchObject({ code: EXIT.ok, stdout: '' });
+    expect(text.stderr).toContain('no speech after the action');
+    const json = await cli(['press', 'h', '--capture', '--first-within', '100', '--json'], fake);
+    expect(JSON.parse(json.stdout)).toEqual({
+      pressed: true,
+      entries: [],
+      truncated: false,
+      silent: true,
+    });
   });
 
   it('--quiet-for and --timeout only go with --capture', async () => {

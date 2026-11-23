@@ -6,6 +6,7 @@ import {
   parseWindowGeometry,
   type WindowGeometry,
 } from '../../../../domain/native-input.js';
+import { SpeechTimeoutError } from '../../../../domain/errors.js';
 import type { SpeechEntry } from '../../../../domain/speech-entry.js';
 import { EXIT, type Command, type Context, type HelpLine } from '../command.js';
 import { TRUNCATED_WARNING } from '../format.js';
@@ -13,11 +14,13 @@ import { NAME, UsageError, expectArgs, optionalInt, requiredSignedInt } from '..
 
 // Native input on the VM (docs/usage/native-input.md).
 
-const CAPTURE_USAGE = '[--capture [--quiet-for <ms>] [--timeout <ms>]]';
+const CAPTURE_USAGE = '[--capture [--first-within|--quiet-for|--timeout <ms>]]';
 const CAPTURE_HELP = [
-  '--capture prints the speech it caused, until nothing was spoken',
-  'for --quiet-for ms (default 500, 10000)',
+  '--capture prints the speech it caused: waits up to --first-within ms',
+  'for the first speech, then until nothing was spoken for --quiet-for ms',
+  '(default 2000, 500, 10000); exits 1 if speech goes on until --timeout',
 ];
+const CAPTURE_OPTIONS = ['capture', 'first-within', 'quiet-for', 'timeout'] as const;
 
 const CLICK: HelpLine = {
   usage: `click --x <px> --y <px> [--button <b>] ${CAPTURE_USAGE}`,
@@ -30,7 +33,7 @@ const CLICK: HelpLine = {
 };
 
 export const click: Command = {
-  options: ['x', 'y', 'button', 'capture', 'quiet-for', 'timeout'],
+  options: ['x', 'y', 'button', ...CAPTURE_OPTIONS],
   help: [CLICK],
   async run(args, ctx) {
     const { values, input, out } = ctx;
@@ -41,10 +44,13 @@ export const click: Command = {
     if (button !== undefined && button !== 'left' && button !== 'right' && button !== 'middle') {
       throw new UsageError(`--button must be left, right or middle, got "${button}".`);
     }
-    const speech = await act(ctx, () => input().click({ x, y }, { button }));
-    if (speech === undefined) out('click', { clicked: true }, `Clicked at ${x},${y}`);
-    else out('click', { clicked: true, ...speech }, joinText(speech.entries));
-    return EXIT.ok;
+    const exit = await act(
+      ctx,
+      () => input().click({ x, y }, { button }),
+      (captured) => out('click', { clicked: true, ...captured }, joinText(captured.entries)),
+    );
+    if (exit === undefined) out('click', { clicked: true }, `Clicked at ${x},${y}`);
+    return exit ?? EXIT.ok;
   },
 };
 
@@ -59,7 +65,7 @@ const PRESS: HelpLine = {
 };
 
 export const press: Command = {
-  options: ['delay', 'capture', 'quiet-for', 'timeout'],
+  options: ['delay', ...CAPTURE_OPTIONS],
   help: [PRESS],
   async run(args, ctx) {
     const { values, input, out } = ctx;
@@ -72,10 +78,13 @@ export const press: Command = {
       if (!parsed.ok) throw new UsageError(`Invalid key: ${parsed.message} (key names: --help).`);
     }
     const keys = args.length === 1 ? args[0]! : args;
-    const speech = await act(ctx, () => input().pressKeys(keys, { delayMs }));
-    if (speech === undefined) out('press', { pressed: true }, `Pressed ${args.join(' ')}`);
-    else out('press', { pressed: true, ...speech }, joinText(speech.entries));
-    return EXIT.ok;
+    const exit = await act(
+      ctx,
+      () => input().pressKeys(keys, { delayMs }),
+      (captured) => out('press', { pressed: true, ...captured }, joinText(captured.entries)),
+    );
+    if (exit === undefined) out('press', { pressed: true }, `Pressed ${args.join(' ')}`);
+    return exit ?? EXIT.ok;
   },
 };
 
@@ -93,7 +102,7 @@ const FOCUS: HelpLine = {
 export const FOCUS_SCRIPT = `() => ${READ_GEOMETRY_SCRIPT}`;
 
 export const focus: Command = {
-  options: ['script', 'geometry', 'capture', 'quiet-for', 'timeout'],
+  options: ['script', 'geometry', ...CAPTURE_OPTIONS],
   help: [FOCUS],
   async run(args, ctx) {
     const { values, input, out } = ctx;
@@ -108,15 +117,19 @@ export const focus: Command = {
       return EXIT.ok;
     }
     const point = clickPoint(geometryOf(values.geometry!));
-    const speech = await act(ctx, () => input().click(point));
-    if (speech === undefined) {
+    const exit = await act(
+      ctx,
+      () => input().click(point),
+      (captured) => out('focus', { focused: true, point, ...captured }, joinText(captured.entries)),
+    );
+    if (exit === undefined) {
       out(
         'focus',
         { focused: true, point },
         `Focused: clicked the title bar at ${point.x},${point.y}`,
       );
-    } else out('focus', { focused: true, point, ...speech }, joinText(speech.entries));
-    return EXIT.ok;
+    }
+    return exit ?? EXIT.ok;
   },
 };
 
@@ -134,27 +147,52 @@ function geometryOf(raw: string): WindowGeometry {
   }
 }
 
+/** What `--capture` recorded; `silent: false` when the speech went on until `--timeout`. */
+interface Captured {
+  entries: SpeechEntry[];
+  truncated: boolean;
+  silent: boolean;
+}
+
 /**
- * Runs `action`. With `--capture`, returns the speech spoken from just before it until silence
- * (`record`), so speech of earlier steps can't be mistaken for its result.
+ * Runs `action`. Without `--capture`, returns `undefined`. With it, records the speech spoken from
+ * just before the action until silence (`record`), so speech of earlier steps can't be mistaken
+ * for its result, hands it to `print` and returns the exit code. Speech that doesn't pause is a
+ * result too (`silent: false`, exit 1): what was said is what the caller has to judge.
  */
 async function act(
-  { values, speech, io }: Context,
+  { values, speech, io, json }: Context,
   action: () => Promise<void>,
-): Promise<{ entries: SpeechEntry[]; truncated: boolean } | undefined> {
+  print: (captured: Captured) => void,
+): Promise<number | undefined> {
+  const firstWithin = optionalInt(values, 'first-within', 0);
   const quietFor = optionalInt(values, 'quiet-for', 1);
   const timeout = optionalInt(values, 'timeout', 0);
   if (!values.capture) {
-    if (quietFor !== undefined || timeout !== undefined) {
-      throw new UsageError('--quiet-for and --timeout only go with --capture.');
+    if (firstWithin !== undefined || quietFor !== undefined || timeout !== undefined) {
+      throw new UsageError('--first-within, --quiet-for and --timeout only go with --capture.');
     }
     await action();
     return undefined;
   }
-  // A timeout (speech didn't pause) is a SpeechTimeoutError: exit 1, reported like every error.
-  const { entries, truncated } = await speech().record(action, { quietFor, timeout });
-  if (truncated) io.stderr(`${NAME}: ${TRUNCATED_WARNING}\n`);
-  return { entries, truncated };
+  let captured: Captured;
+  let failure: string | undefined;
+  try {
+    const recording = await speech().record(action, { firstWithin, quietFor, timeout });
+    captured = { entries: recording.entries, truncated: recording.truncated, silent: true };
+    if (captured.truncated) io.stderr(`${NAME}: ${TRUNCATED_WARNING}\n`);
+  } catch (error) {
+    if (!(error instanceof SpeechTimeoutError)) throw error;
+    // Its message already says when speech was dropped from the bridge's full buffer.
+    captured = { entries: error.entries, truncated: error.truncated, silent: false };
+    failure = `${error.message}; the action has happened`;
+  }
+  // Text mode prints nothing for no speech, rather than an empty line.
+  if (json || captured.entries.length > 0) print(captured);
+  if (captured.entries.length === 0) io.stderr(`${NAME}: no speech after the action.\n`);
+  if (failure === undefined) return EXIT.ok;
+  io.stderr(`${NAME}: ${failure}.\n`);
+  return EXIT.timeout;
 }
 
 function joinText(entries: readonly SpeechEntry[]): string {

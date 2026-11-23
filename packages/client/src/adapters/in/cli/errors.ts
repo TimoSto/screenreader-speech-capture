@@ -7,6 +7,7 @@ import {
   SpeechTimeoutError,
 } from '../../../domain/errors.js';
 import { EXIT, type CliIo } from './command.js';
+import { seenText } from './format.js';
 import { NAME, UsageError } from './options.js';
 import type { CliError } from './output.js';
 
@@ -46,7 +47,12 @@ export function describeError(error: unknown): DescribedError {
     };
   }
   const [, type, exit] = known;
-  const hint = error instanceof UsageError ? '\nRun with --help to see the commands.' : '';
+  const hint =
+    error instanceof UsageError
+      ? '\nRun with --help to see the commands.'
+      : error instanceof SpeechTimeoutError
+        ? `.${seenText(error.entries)}`
+        : '';
   const http =
     error instanceof BridgeHttpError
       ? {

@@ -18,6 +18,7 @@ export const OPTIONS = {
   limit: { type: 'string' },
   timeout: { type: 'string' },
   'quiet-for': { type: 'string' },
+  'first-within': { type: 'string' },
   'include-markers': { type: 'boolean' },
   separator: { type: 'string' },
   regex: { type: 'boolean' },
