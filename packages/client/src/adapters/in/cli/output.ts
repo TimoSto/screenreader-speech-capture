@@ -213,6 +213,50 @@ export const CLI_OUTPUT = {
   'config path': v.object({ file }),
 } as const;
 
+/**
+ * What every command prints with `--json` when it fails (instead of its own output), next to the
+ * message on stderr. `wait` reports a timeout with its own `matched: false` instead.
+ */
+export const CliErrorOutput = v.pipe(
+  v.object({
+    error: v.object({
+      type: v.pipe(
+        v.picklist([
+          'UsageError',
+          'ClientConfigError',
+          'BridgeUnreachableError',
+          'BridgeHttpError',
+          'IncompatibleBridgeError',
+          'BridgeNotReadyError',
+          'SpeechTimeoutError',
+          'InternalError',
+        ]),
+        v.description(
+          'What went wrong; the exit code follows from it. `InternalError` is a bug in the client.',
+        ),
+      ),
+      message: v.string(),
+      status: v.pipe(
+        v.optional(integer(100)),
+        v.description('`BridgeHttpError` only: the HTTP status.'),
+      ),
+      code: v.pipe(
+        v.optional(v.string()),
+        v.description(
+          '`BridgeHttpError` only: the error code, for example `INPUT_DISABLED`. New codes may appear.',
+        ),
+      ),
+      details: v.pipe(
+        v.optional(v.record(v.string(), v.unknown())),
+        v.description('`BridgeHttpError` only, if the bridge sent them, for example `field`.'),
+      ),
+    }),
+  }),
+  v.description('A failed command (exit code 1 to 4).'),
+);
+
+export type CliError = v.InferOutput<typeof CliErrorOutput>;
+
 export type CliCommand = keyof typeof CLI_OUTPUT;
 
 /** What `command` prints with `--json`. */

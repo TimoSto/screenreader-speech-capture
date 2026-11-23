@@ -5,7 +5,7 @@ import type { Option, Values } from './options.js';
 import type { CliCommand, CliOutput } from './output.js';
 
 /** Exit codes (docs/usage/client.md#cli-for-agents). */
-export const EXIT = { ok: 0, timeout: 1, bridge: 2, usage: 3 } as const;
+export const EXIT = { ok: 0, timeout: 1, bridge: 2, usage: 3, internal: 4 } as const;
 
 export interface CliIo {
   /** The per-user settings behind `config` and the bridge URL. */

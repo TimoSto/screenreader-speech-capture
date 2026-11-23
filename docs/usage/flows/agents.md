@@ -52,7 +52,8 @@ sequenceDiagram
 ## Following speech with tail
 
 `tail` prints each entry as it arrives until Ctrl+C, `SIGTERM` or a closed pipe. A lost connection
-is reconnected without losing entries; a bridge that isn't reachable at the start is exit code `2`.
+is reconnected without losing entries; a bridge that isn't reachable at the start is exit code `2`
+([errors with `--json`](../client.md#errors-with---json)).
 
 ```mermaid
 sequenceDiagram
@@ -63,7 +64,7 @@ sequenceDiagram
     U->>CLI: tail --json
     CLI->>B: GET /api/v1/status (version check)
     alt bridge not reachable
-        CLI-->>U: error, exit code 2
+        CLI-->>U: {"error":{"type":"BridgeUnreachableError",…}}, exit code 2
     else reachable
         CLI->>B: GET /api/v1/speech/stream
         B-->>CLI: event: entry seq 41
@@ -74,7 +75,11 @@ sequenceDiagram
         CLI-->>U: stderr: reconnecting
         CLI->>B: GET /api/v1/speech/stream, Last-Event-ID: 41
         B-->>CLI: missed entries, then live
-        U->>CLI: Ctrl+C
-        CLI-->>U: exit code 0
+        alt error a reconnect can't fix (HTTP 4xx)
+            CLI-->>U: last line {"error":{"type":"BridgeHttpError",…}}, exit code 2
+        else
+            U->>CLI: Ctrl+C
+            CLI-->>U: exit code 0
+        end
     end
 ```
