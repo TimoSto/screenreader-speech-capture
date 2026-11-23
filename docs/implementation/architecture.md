@@ -207,8 +207,9 @@ the real backend ([decision](decisions.md#the-web-ui-is-a-sveltekit-bff-inside-t
 
 ```
 packages/ui/src/
-  env / hooks      (none yet)
-  lib/server/      the BFF's only way to the bridge: bridge-api.ts (fetch + schema check of every answer)
+  hooks.server.ts  per request: `locals.local` (opened on the bridge's machine) and `locals.bridge` (the BridgeApi)
+  lib/server/      the BFF's only way to the bridge: bridge-api.ts (fetch + schema check of every answer),
+                   handed to routes and loads as `locals.bridge`
   lib/core/        pure: sessions, speech (the `SpeechFeed` port, row cap, heading and time formats)
   lib/adapters/    fetch / EventSource / localStorage: SseSpeechFeed, HttpSessionsApi, HttpStatusApi, ...
   lib/stores/      Svelte runes stores built on the ports (speech, sessions, status, theme, ...)
@@ -229,13 +230,13 @@ ESLint enforces the layers (`uiLayers` in `eslint.config.js`; `*.test.ts` is exe
 also keeps the rule that `packages/ui` never imports bridge or client code (and the bridge never
 imports the UI).
 
-| Layer                                                          | May import                           | Must not                                                                                                      |
-| -------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `lib/core`                                                     | relative files, `#lib/core`, `shared` | packages, Svelte/SvelteKit, other layers; `fetch`, `EventSource`, browser globals, timers, `Date.now()`, `new Date()`, `console` |
-| `lib/adapters`                                                 | core, packages                       | stores, components, routes, `lib/server`                                                                      |
-| `lib/stores`                                                   | core, Svelte                         | adapters (injected), components, `lib/server`; `fetch`, `EventSource`, `WebSocket`, `XMLHttpRequest`          |
-| `lib/components`, `routes/**/*.svelte`, `+page.ts`, `+layout.ts` | stores, core                         | adapters, `lib/server`; the same I/O globals                                                                   |
-| `lib/server`, `*.server.ts` (the BFF)                          | core, `shared`, SvelteKit            | stores, components, adapters                                                                                  |
+| Layer                                                            | May import                            | Must not                                                                                                                         |
+| ---------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `lib/core`                                                       | relative files, `#lib/core`, `shared` | packages, Svelte/SvelteKit, other layers; `fetch`, `EventSource`, browser globals, timers, `Date.now()`, `new Date()`, `console` |
+| `lib/adapters`                                                   | core, packages                        | stores, components, routes, `lib/server`                                                                                         |
+| `lib/stores`                                                     | core, Svelte                          | adapters (injected), components, `lib/server`; `fetch`, `EventSource`, `WebSocket`, `XMLHttpRequest`                             |
+| `lib/components`, `routes/**/*.svelte`, `+page.ts`, `+layout.ts` | stores, core                          | adapters, `lib/server`; the same I/O globals                                                                                     |
+| `lib/server`, `*.server.ts` (the BFF)                            | core, `shared`, SvelteKit             | stores, components, adapters                                                                                                     |
 
 ### The speech table's data path
 
