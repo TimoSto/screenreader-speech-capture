@@ -19,8 +19,11 @@
 
   let { data }: PageProps = $props();
 
-  const { sessions: sessionsStore, speech: speechStore, sessionsPane: sessionsPaneStore } =
-    appStores();
+  const {
+    sessions: sessionsStore,
+    speech: speechStore,
+    sessionsPane: sessionsPaneStore,
+  } = appStores();
 
   // Until the store has read the list, show what the server rendered (`+page.server.ts`), so the
   // server's HTML already has the sessions. The store is only filled in the browser.
