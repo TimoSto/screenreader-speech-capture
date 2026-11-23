@@ -25,9 +25,6 @@ import {
 } from '@screenreader-speech-capture/shared';
 import type { SessionScope } from '#lib/core/sessions.js';
 
-/** Where the BFF finds the bridge when `SR_BRIDGE_API_URL` is not set (`pnpm dev:ui`). */
-export const DEFAULT_BRIDGE_URL = 'http://127.0.0.1:5151';
-
 type Fetch = typeof fetch;
 
 /** The bridge's HTTP API as the BFF uses it: the only place the UI server talks to the bridge. */
@@ -179,10 +176,4 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
 
 function describe(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
-}
-
-/** The bridge API of this deployment (read per request, so no SvelteKit env module is needed). */
-export function bridgeApiFromEnv(fetchFn: Fetch): BridgeApi {
-  // The bridge sets SR_BRIDGE_API_URL to its own address when it mounts the UI.
-  return createBridgeApi(process.env.SR_BRIDGE_API_URL ?? DEFAULT_BRIDGE_URL, fetchFn);
 }

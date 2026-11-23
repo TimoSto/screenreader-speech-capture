@@ -1,5 +1,5 @@
 import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
-import { bridgeApiFromEnv } from '#lib/server/bridge-api.js';
+import { bridgeApiFromEnv } from '#lib/server/bridge-from-env.js';
 import { serverLog } from '#lib/server/log.js';
 
 /**

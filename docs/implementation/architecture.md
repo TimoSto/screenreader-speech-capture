@@ -297,7 +297,7 @@ working. Before loading, it also puts its `[web-ui]` logger on `globalThis` unde
 `Symbol.for('screenreader-speech-capture.ui-logger')` (`UI_LOGGER_KEY`). The UI's `serverLog()`
 (`lib/server/log.ts`) writes to it, and `handleError` in `hooks.server.ts` logs every unexpected
 error there, so those lines reach the log file and never block on the console. Without a bridge
-(`pnpm dev:ui`) it falls back to the console. The BFF reads the variable per request and falls back to `http://127.0.0.1:5151`, so
+(`pnpm dev:ui`) it falls back to the console. The BFF reads the variable through `$app/env/private` (declared and checked in `src/env.ts`) and falls back to `http://127.0.0.1:5151`, so
 `pnpm dev:ui` (the Vite dev server) works next to `pnpm dev`. See the
 [flow](flows/web-ui.md).
 
