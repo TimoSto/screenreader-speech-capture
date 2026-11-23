@@ -293,7 +293,11 @@ Host and origin checks run first, so they cover the UI too. The API `Router` is 
 Once the HTTP port is known (it can be `0` in tests), the bridge sets `SR_BRIDGE_API_URL` to its own
 loopback address and loads `handler.js` (SvelteKit reads its environment when it loads). Until then a
 request waits; if loading fails, the error is logged and the UI answers `503` while the API keeps
-working. The BFF reads the variable per request and falls back to `http://127.0.0.1:5151`, so
+working. Before loading, it also puts its `[web-ui]` logger on `globalThis` under
+`Symbol.for('screenreader-speech-capture.ui-logger')` (`UI_LOGGER_KEY`). The UI's `serverLog()`
+(`lib/server/log.ts`) writes to it, and `handleError` in `hooks.server.ts` logs every unexpected
+error there, so those lines reach the log file and never block on the console. Without a bridge
+(`pnpm dev:ui`) it falls back to the console. The BFF reads the variable per request and falls back to `http://127.0.0.1:5151`, so
 `pnpm dev:ui` (the Vite dev server) works next to `pnpm dev`. See the
 [flow](flows/web-ui.md).
 
