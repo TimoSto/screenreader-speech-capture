@@ -135,6 +135,12 @@ const TRUNCATED_READ =
   "Some of the speech was dropped because the bridge's buffer was full: this is what is left " +
   '(a warning goes to stderr).';
 
+/** Where `focus --geometry` clicked, in physical pixels. */
+const focusPoint = v.pipe(
+  v.object({ x: v.pipe(v.number(), v.integer()), y: v.pipe(v.number(), v.integer()) }),
+  v.description('The screen point clicked (the middle of the title bar), in physical pixels.'),
+);
+
 /** What `press` / `click --capture` add: the speech the action caused. */
 const captured = {
   entries: v.pipe(
@@ -207,6 +213,16 @@ export const CLI_OUTPUT = {
   click: v.union([
     v.object({ clicked: v.literal(true) }),
     v.object({ clicked: v.literal(true), ...captured }),
+  ]),
+  focus: v.union([
+    v.object({
+      script: v.pipe(
+        v.string(),
+        v.description("With --script: the function to run with Playwright MCP's browser_evaluate."),
+      ),
+    }),
+    v.object({ focused: v.literal(true), point: focusPoint }),
+    v.object({ focused: v.literal(true), point: focusPoint, ...captured }),
   ]),
   press: v.union([
     v.object({ pressed: v.literal(true) }),
