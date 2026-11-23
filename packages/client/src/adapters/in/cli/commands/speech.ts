@@ -11,7 +11,7 @@ import {
   seenText,
   TRUNCATED_WARNING,
 } from '../format.js';
-import { NAME, UsageError, expectArgs, optionalInt, scope } from '../options.js';
+import { NAME, UsageError, expectArgs, optionalInt, scope, sessionOption } from '../options.js';
 
 // The commands that talk to the bridge. Each one's `help` is also its usage error.
 
@@ -114,7 +114,7 @@ export const session: Command = {
 };
 
 const CLEAR: HelpLine = {
-  usage: 'clear (--all | --session <id|current> | --outside)',
+  usage: 'clear (--all | --session <id> | --outside)',
   description: [
     'Delete recorded speech: --all the whole buffer, all sessions (for manual',
     "use); --session one session's speech (it keeps running); --outside the",
@@ -128,7 +128,8 @@ export const clear: Command = {
   async run(args, { values, speech, out }) {
     expectArgs(args, 0, CLEAR.usage);
     // No default scope: wiping every session of every client must be asked for (--all).
-    const scopes = [values.all, values.session !== undefined, values.outside].filter(Boolean);
+    const session = sessionOption(values);
+    const scopes = [values.all, session !== undefined, values.outside].filter(Boolean);
     if (scopes.length === 0) {
       throw new UsageError(
         'clear needs a scope: --all (the whole buffer, all sessions), --session <id|current> ' +
@@ -139,13 +140,10 @@ export const clear: Command = {
     if (values.outside) {
       await speech().clear({ session: 'none' });
       out('clear', { cleared: true }, 'Speech outside sessions cleared.');
-    } else if (values.session === 'current') {
-      await speech().clear({ session: 'current' });
-      out('clear', { cleared: true }, 'Speech of the current session cleared.');
-    } else if (values.session !== undefined) {
-      const id = optionalInt(values, 'session', 1);
-      await speech().clear({ session: id });
-      out('clear', { cleared: true }, `Speech of session ${id} cleared.`);
+    } else if (session !== undefined) {
+      await speech().clear({ session });
+      const which = session === 'current' ? 'the current session' : `session ${session}`;
+      out('clear', { cleared: true }, `Speech of ${which} cleared.`);
     } else {
       await speech().clear();
       out('clear', { cleared: true }, 'Speech buffer cleared.');

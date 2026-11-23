@@ -243,7 +243,9 @@ machine-readable output (the shape of every command is the valibot schema in
 `packages/client/src/adapters/in/cli/output.ts`). A CLI call has no memory between invocations, so there is no
 cursor. Instead, `speech`, `text` and `wait` read the **current
 [session](speech-capture.md#sessions)** (everything since `session start`) by default, or the whole
-buffer when no session is current. `--session <id>` picks another one, `--all` ignores sessions.
+buffer when no session is current. `--session <id>` picks another one, `--session current` the
+current one explicitly (with none current that is a `BridgeHttpError` `NOT_FOUND`, exit `2`), and
+`--all` ignores sessions. `clear` takes the same words.
 So `wait "button"` also matches what an *earlier* step said: use `mark` and `--since` to look at
 a smaller range, or `--capture` on `press` / `click` (below) to get exactly the speech an action
 caused.
@@ -258,9 +260,9 @@ npx screenreader-speech-capture-client session list
 npx screenreader-speech-capture-client clear --all           # wipes everything, all sessions (a bare clear is a usage error)
 npx screenreader-speech-capture-client clear --session current   # only the current session's speech; it keeps running
 npx screenreader-speech-capture-client clear --outside        # only the speech outside sessions
-npx screenreader-speech-capture-client speech [--since <seq>] [--limit <n>] [--include-markers] [--session <id> | --all]
-npx screenreader-speech-capture-client text [--since <seq>] [--separator <s>] [--session <id> | --all]
-npx screenreader-speech-capture-client wait "Submit, button" [--regex] [--normalize] [--timeout 5000] [--since <seq>] [--session <id> | --all]
+npx screenreader-speech-capture-client speech [--since <seq>] [--limit <n>] [--include-markers] [--session <id|current> | --all]
+npx screenreader-speech-capture-client text [--since <seq>] [--separator <s>] [--session <id|current> | --all]
+npx screenreader-speech-capture-client wait "Submit, button" [--regex] [--normalize] [--timeout 5000] [--since <seq>] [--session <id|current> | --all]
 npx screenreader-speech-capture-client wait-silence [--quiet-for 500] [--timeout 10000]
 npx screenreader-speech-capture-client mark "before tab"   # prints the marker's seq
 npx screenreader-speech-capture-client click --x 640 --y 12  # native click (negative: --x=-5)

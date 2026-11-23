@@ -44,8 +44,9 @@ seq: every entry (speech or marker) gets a number that only grows. --since <seq>
 ${keyNames()}
 
 speech, text and wait read the current session (everything since "session start"), or the
-whole buffer when no session is current. --session <id> reads another session, --all the
-whole buffer. tail without --since prints only new speech.
+whole buffer when no session is current. --session <id> reads another session (<id> may be
+"current": an error if none is current), --all the whole buffer; clear takes the same words.
+tail without --since prints only new speech.
 
 Exit codes: 0 success, 1 timeout / no match, 2 bridge not reachable, HTTP error or
 incompatible bridge, 3 invalid usage or config, 4 internal error (a bug in this client).

@@ -85,18 +85,29 @@ export function expectArgs<N extends 0 | 1 | 2>(args: string[], count: N, usage:
   return args as Args<N>;
 }
 
+/** `--session <id|current>`, the same for the reads and `clear`. */
+export function sessionOption(values: Values): SessionRef | undefined {
+  const raw = values.session;
+  if (raw === undefined || raw === 'current') return raw;
+  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw)) || Number(raw) < 1) {
+    throw new UsageError(`--session must be a session id (>= 1) or current, got "${raw}".`);
+  }
+  return Number(raw);
+}
+
 /**
- * The session `speech`, `text` and `wait` read: `--session <id>`, nothing with `--all`, otherwise
- * the current session. Its id, not `'current'`, so without a current session it reads the whole
- * buffer instead of answering 404.
+ * The session `speech`, `text` and `wait` read: `--session <id|current>`, nothing with `--all`,
+ * otherwise the current session. Without an option it is the current session's id, not
+ * `'current'`, so with none current it reads the whole buffer instead of answering 404. An explicit
+ * `--session current` stays `'current'`: with none current that is the bridge's `NOT_FOUND`.
  */
 export async function scope(
   values: Values,
   speech: SpeechCapture,
 ): Promise<SessionRef | undefined> {
-  const id = optionalInt(values, 'session', 1);
-  if (values.all && id !== undefined) throw new UsageError('Use either --session or --all.');
-  if (id !== undefined) return id;
+  const session = sessionOption(values);
+  if (values.all && session !== undefined) throw new UsageError('Use either --session or --all.');
+  if (session !== undefined) return session;
   if (values.all) return undefined;
   return (await speech.status()).session.current?.id;
 }
