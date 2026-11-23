@@ -32,6 +32,8 @@ export const OPTIONS = {
   button: { type: 'string' },
   delay: { type: 'string' },
   capture: { type: 'boolean' },
+  script: { type: 'boolean' },
+  geometry: { type: 'string' },
 } as const;
 
 export type Values = ReturnType<typeof parseArgs<{ options: typeof OPTIONS }>>['values'];

@@ -10,7 +10,7 @@ Details: [Agents](../agents.md), [CLI for agents](../client.md#cli-for-agents).
 
 ## The agent loop
 
-One session per task, then per step either `press … --capture` (a screen reader command: one call
+One session per task, `focus` once so native keys reach the MCP browser, then per step either `press … --capture` (a screen reader command: one call
 acts and prints the speech it caused) or **mark → act → wait-silence → text --since** (an action
 through Playwright MCP, which runs in another process). A CLI call has no memory, so the marker's
 `seq` is the step's starting point. The exit codes let the agent branch without parsing output.
@@ -27,6 +27,14 @@ sequenceDiagram
     A->>CLI: session start "audit checkout page"
     CLI->>B: POST /api/v1/sessions
     CLI-->>A: session id 7, exit 0
+    A->>CLI: focus --script
+    CLI-->>A: () => ({ screenX: window.screenX, … })
+    A->>B: MCP: browser_evaluate(function)
+    B->>MCP: passthrough
+    MCP-->>A: {"screenX": 0, "screenY": 0, …}
+    A->>CLI: focus --geometry '{…}'
+    CLI->>B: POST /api/v1/input/click (title bar)
+    Note over SR: the browser is the foreground window
     loop each step
         alt screen reader command
             A->>CLI: press h --capture --json

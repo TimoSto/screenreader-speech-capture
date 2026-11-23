@@ -18,6 +18,7 @@ import {
   ClientConfigError,
   IncompatibleBridgeError,
 } from '../../../domain/errors.js';
+import { READ_GEOMETRY_SCRIPT, clickPoint } from '../../../domain/native-input.js';
 import { createClientConfig } from '../../../main.js';
 import { EXIT, runCli } from './run.js';
 
@@ -613,6 +614,61 @@ describe('native input commands', () => {
       entries: [{ text: 'Checkout - Browser' }, { text: 'Main landmark' }],
       truncated: false,
     });
+  });
+
+  const GEOMETRY = {
+    screenX: 100,
+    screenY: 50,
+    outerWidth: 1200,
+    outerHeight: 900,
+    innerWidth: 1184,
+    innerHeight: 780,
+    devicePixelRatio: 1.5,
+  };
+
+  it('focus --script prints the function for MCP browser_evaluate, without the bridge', async () => {
+    const fake = fakeSpeech();
+    const result = await cli(['focus', '--script', '--json'], fake);
+    const { script } = JSON.parse(result.stdout) as { script: string };
+    // The same script setFocus evaluates, so --geometry gets what parseWindowGeometry takes.
+    expect(script).toBe(`() => ${READ_GEOMETRY_SCRIPT}`);
+    expect(fake.api.calls).toEqual([]);
+  });
+
+  it('focus --geometry clicks the middle of the title bar, like setFocus', async () => {
+    const fake = fakeSpeech();
+    const point = clickPoint(GEOMETRY);
+    const result = await cli(['focus', '--geometry', JSON.stringify(GEOMETRY), '--json'], fake);
+    expect(result.code).toBe(EXIT.ok);
+    expect(JSON.parse(result.stdout)).toEqual({ focused: true, point });
+    expect(fake.api.calls).toContain(`click left ${point.x},${point.y}`);
+  });
+
+  it('focus --geometry --capture prints what the screen reader said about the window', async () => {
+    const fake = speaking('Checkout - Browser');
+    const result = await cli(
+      ['focus', '--geometry', JSON.stringify(GEOMETRY), '--capture', '--json'],
+      fake,
+    );
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      focused: true,
+      entries: [{ text: 'Checkout - Browser' }],
+      truncated: false,
+    });
+  });
+
+  it.each([
+    [['focus']],
+    [['focus', '--script', '--geometry', '{}']],
+    [['focus', '--script', '--capture']],
+    [['focus', '--geometry', 'not json']],
+    [['focus', '--geometry', '{"screenX":0}']],
+  ])('focus %j is a usage error and clicks nothing', async (args) => {
+    const fake = fakeSpeech();
+    const result = await cli([...args, '--json'], fake);
+    expect(result.code).toBe(EXIT.usage);
+    expect(JSON.parse(result.stdout)).toMatchObject({ error: { type: 'UsageError' } });
+    expect(fake.api.calls).toEqual([]);
   });
 
   it('press --capture exits 1 with an error object when the speech does not pause', async () => {

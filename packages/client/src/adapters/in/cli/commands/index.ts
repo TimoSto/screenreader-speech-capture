@@ -1,12 +1,12 @@
 import type { Command } from '../command.js';
 import { config } from './config.js';
-import { click, press } from './input.js';
+import { click, focus, press } from './input.js';
 import { clear, mark, session, speech, status, tail, text, wait, waitSilence } from './speech.js';
 
 /** The commands by name, grouped as `--help` lists them. */
 export const COMMAND_GROUPS: readonly Readonly<Record<string, Command>>[] = [
   { status, session, clear, speech, text, wait, 'wait-silence': waitSilence, mark, tail },
-  { click, press },
+  { focus, click, press },
   { config },
 ];
 

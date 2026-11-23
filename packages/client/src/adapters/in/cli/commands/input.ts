@@ -1,4 +1,11 @@
 import { parseKeyChord } from '@screenreader-speech-capture/shared';
+import {
+  FocusError,
+  READ_GEOMETRY_SCRIPT,
+  clickPoint,
+  parseWindowGeometry,
+  type WindowGeometry,
+} from '../../../../domain/native-input.js';
 import type { SpeechEntry } from '../../../../domain/speech-entry.js';
 import { EXIT, type Command, type Context, type HelpLine } from '../command.js';
 import { TRUNCATED_WARNING } from '../format.js';
@@ -70,6 +77,60 @@ export const press: Command = {
     return EXIT.ok;
   },
 };
+
+const FOCUS_WINDOW: HelpLine = {
+  usage: `focus (--script | --geometry <json>) ${CAPTURE_USAGE}`,
+  description: [
+    'Bring the browser to the foreground, before press: run the --script',
+    "function with Playwright MCP's browser_evaluate and pass its result as",
+    '--geometry; clicks the middle of the title bar;',
+    ...CAPTURE_HELP,
+  ],
+};
+
+/** What MCP's `browser_evaluate` runs: the same script `setFocus` evaluates in the page. */
+export const FOCUS_SCRIPT = `() => ${READ_GEOMETRY_SCRIPT}`;
+
+export const focus: Command = {
+  options: ['script', 'geometry', 'capture', 'quiet-for', 'timeout'],
+  help: [FOCUS_WINDOW],
+  async run(args, ctx) {
+    const { values, input, out } = ctx;
+    // Exactly one of --script and --geometry.
+    if (args.length !== 0 || Boolean(values.script) === (values.geometry !== undefined)) {
+      throw new UsageError(`Usage: ${NAME} ${FOCUS_WINDOW.usage}`);
+    }
+    if (values.script) {
+      if (values.capture) throw new UsageError('--capture goes with --geometry, not --script.');
+      out('focus', { script: FOCUS_SCRIPT }, FOCUS_SCRIPT);
+      return EXIT.ok;
+    }
+    const point = clickPoint(geometryOf(values.geometry!));
+    const speech = await act(ctx, () => input().click(point));
+    if (speech === undefined) {
+      out(
+        'focus',
+        { focused: true, point },
+        `Focused: clicked the title bar at ${point.x},${point.y}`,
+      );
+    } else out('focus', { focused: true, point, ...speech }, joinText(speech.entries));
+    return EXIT.ok;
+  },
+};
+
+/** `--geometry`: what the `--script` function returned, as JSON. */
+function geometryOf(raw: string): WindowGeometry {
+  try {
+    return parseWindowGeometry(JSON.parse(raw));
+  } catch (error) {
+    if (!(error instanceof SyntaxError || error instanceof FocusError)) throw error;
+    throw new UsageError(
+      `--geometry must be the JSON object the "focus --script" function returns ` +
+        `(screenX, screenY, outerWidth, outerHeight, innerWidth, innerHeight, ` +
+        `devicePixelRatio): ${error.message}`,
+    );
+  }
+}
 
 /**
  * Runs `action`. With `--capture`, returns the speech spoken from just before it until silence

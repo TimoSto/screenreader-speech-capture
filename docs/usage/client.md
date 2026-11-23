@@ -265,6 +265,8 @@ npx screenreader-speech-capture-client text [--since <seq>] [--separator <s>] [-
 npx screenreader-speech-capture-client wait "Submit, button" [--regex] [--normalize] [--timeout 5000] [--since <seq>] [--session <id|current> | --all]
 npx screenreader-speech-capture-client wait-silence [--quiet-for 500] [--timeout 10000]
 npx screenreader-speech-capture-client mark "before tab"   # prints the marker's seq
+npx screenreader-speech-capture-client focus --script       # the function to run with Playwright MCP's browser_evaluate
+npx screenreader-speech-capture-client focus --geometry '<its JSON result>' [--capture]   # click the browser's title bar
 npx screenreader-speech-capture-client click --x 640 --y 12  # native click (negative: --x=-5)
 npx screenreader-speech-capture-client press "Insert+T"      # native keys, several args = sequence (--delay <ms>)
 npx screenreader-speech-capture-client press h --capture [--quiet-for 500] [--timeout 10000]   # … and print the speech it caused (also click)
@@ -320,8 +322,15 @@ With `--json`, `wait` prints `{ "matched": true, "entry": {...} }`, or on timeou
 follow [`GET /speech/wait`](http-api.md#endpoints), which reports `omitted` instead). `mark` prints the marker's `seq`, or the whole entry
 with `--json`.
 
+`focus` brings a browser the CLI has no `page` of (the one Playwright MCP drives) to the
+foreground, for [native input](native-input.md). `focus --script` prints the function `setFocus`
+evaluates (`{ "script": "() => ({…})" }` with `--json`). Run it with MCP's `browser_evaluate` and
+pass its result to `focus --geometry '<json>'`, which clicks the middle of the window's title bar,
+like `setFocus(page)`, and prints `{ "focused": true, "point": { "x": …, "y": … } }`. A value that
+isn't that object is a usage error (exit `3`).
+
 `press` and `click` print `{ "pressed": true }` / `{ "clicked": true }` with `--json`. With
-`--capture` they are the library's [`record()`](#functions) in one call: they note where the
+`--capture` (also on `focus --geometry`) they are the library's [`record()`](#functions) in one call: they note where the
 buffer ends, act, wait until nothing was spoken for `--quiet-for` ms (default 500, at most
 `--timeout`, default 10000), and print the speech from that point on, one line per entry, or
 `{ "pressed": true, "entries": [...], "truncated": false }` with `--json`. Speech from before the
