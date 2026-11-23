@@ -632,4 +632,125 @@ describe('tail', () => {
     expect((await run(['tail', 'x'])).code).toBe(EXIT.usage);
     expect((await run(['tail', '--limit', '3'])).code).toBe(EXIT.usage);
   });
+
+  it('ends with the error as its last --json line when the feed stops for good', async () => {
+    const t = tail(['--json']);
+    await vi.waitFor(() => expect(t.api.openStreams).toBe(1));
+    t.api.speak('one');
+    await vi.waitFor(() => expect(t.output.stdout).not.toBe(''));
+    t.api.dropStreams(new BridgeHttpError(404, 'NOT_FOUND', 'Gone'));
+    expect(await t.done).toBe(EXIT.bridge);
+    expectCliOutput(['tail', '--json'], t.output.stdout);
+    const lines = t.output.stdout.trim().split('\n');
+    expect(JSON.parse(lines.at(-1)!)).toEqual({
+      error: {
+        type: 'BridgeHttpError',
+        message: 'Gone (HTTP 404, NOT_FOUND)',
+        status: 404,
+        code: 'NOT_FOUND',
+      },
+    });
+    expect(t.output.stderr).toContain('Gone (HTTP 404, NOT_FOUND)');
+  });
+});
+
+describe('errors', () => {
+  const cli = (args: string[], fake = fakeSpeech()) => run(args, fakeConfig().config, fake);
+  const errorOf = (stdout: string) => (JSON.parse(stdout) as { error: unknown }).error;
+
+  it('--json prints the error object on stdout, the message stays on stderr', async () => {
+    const fake = fakeSpeech();
+    fake.api.failures = [new BridgeUnreachableError('http://vm:5151')];
+    const result = await cli(['status', '--json'], fake);
+    expect(result.code).toBe(EXIT.bridge);
+    expect(errorOf(result.stdout)).toEqual({
+      type: 'BridgeUnreachableError',
+      message: 'The bridge at http://vm:5151 is not reachable',
+    });
+    expect(result.stderr).toContain('not reachable');
+  });
+
+  it('without --json, stdout stays empty', async () => {
+    const fake = fakeSpeech();
+    fake.api.failures = [new BridgeUnreachableError('http://vm:5151')];
+    expect(await cli(['status'], fake)).toMatchObject({ code: EXIT.bridge, stdout: '' });
+  });
+
+  it("keeps a bridge error's status, code and details", async () => {
+    const fake = fakeSpeech();
+    await fake.api.status();
+    fake.api.failures.push(
+      new BridgeHttpError(400, 'INVALID_REQUEST', 'Unknown key "foo"', { field: 'keys' }),
+    );
+    const result = await cli(['press', 'foo', '--json'], fake);
+    expect(result.code).toBe(EXIT.bridge);
+    expect(errorOf(result.stdout)).toEqual({
+      type: 'BridgeHttpError',
+      message: 'Unknown key "foo" (HTTP 400, INVALID_REQUEST)',
+      status: 400,
+      code: 'INVALID_REQUEST',
+      details: { field: 'keys' },
+    });
+  });
+
+  it('tells an incompatible bridge apart from an unreachable one', async () => {
+    const fake = fakeSpeech();
+    fake.api.apiVersion = '2.0';
+    const result = await cli(['text', '--json'], fake);
+    expect(result.code).toBe(EXIT.bridge);
+    expect(errorOf(result.stdout)).toMatchObject({ type: 'IncompatibleBridgeError' });
+  });
+
+  it.each([
+    [['wait', '--json']],
+    [['--bogus', '--json']],
+    [['speech', '--limit', 'x', '--json']],
+    [['--json']],
+  ])('reports invalid usage %j as UsageError, exit 3', async (args) => {
+    const result = await cli(args);
+    expect(result.code).toBe(EXIT.usage);
+    expect(errorOf(result.stdout)).toMatchObject({ type: 'UsageError' });
+    expect(result.stderr).toContain('Run with --help');
+  });
+
+  it('reports an invalid config as ClientConfigError, exit 3', async () => {
+    const { config } = fakeConfig({
+      set: () => Promise.reject(new ClientConfigError('URL "x" is not a valid URL')),
+    });
+    const result = await run(['config', 'set', 'url', 'x', '--json'], config);
+    expect(result.code).toBe(EXIT.usage);
+    expect(errorOf(result.stdout)).toEqual({
+      type: 'ClientConfigError',
+      message: 'URL "x" is not a valid URL',
+    });
+  });
+
+  it('timeouts of status --wait-ready and wait-silence print an error object, exit 1', async () => {
+    const fake = fakeSpeech();
+    fake.api.state = 'starting';
+    const ready = await cli(['status', '--wait-ready', '--timeout', '300', '--json'], fake);
+    expect(ready.code).toBe(EXIT.timeout);
+    expect(errorOf(ready.stdout)).toMatchObject({ type: 'BridgeNotReadyError' });
+
+    fake.api.state = 'ready';
+    for (let t = 0; t < 5000; t += 50)
+      fake.clock.at(fake.clock.now() + t, () => fake.api.speak('x'));
+    const busy = await cli(
+      ['wait-silence', '--quiet-for', '100', '--timeout', '1000', '--json'],
+      fake,
+    );
+    expect(busy.code).toBe(EXIT.timeout);
+    expect(errorOf(busy.stdout)).toMatchObject({ type: 'SpeechTimeoutError' });
+    expect(busy.stderr).toContain('1000 ms');
+  });
+
+  it('an unexpected error is a bug: exit 4 with the stack, not 1', async () => {
+    const fake = fakeSpeech();
+    fake.api.failures = [new TypeError('boom')];
+    const result = await cli(['status', '--json'], fake);
+    expect(result.code).toBe(EXIT.internal);
+    expect(errorOf(result.stdout)).toEqual({ type: 'InternalError', message: 'boom' });
+    expect(result.stderr).toContain('internal error, please report it: TypeError: boom');
+    expect(result.stderr).toContain('run.test.ts');
+  });
 });

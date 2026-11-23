@@ -46,8 +46,9 @@ describe('helpText', () => {
     }
   });
 
-  it('ends with the exit codes and a newline', () => {
-    expect(help).toMatch(/3 invalid usage or config\.\n$/);
+  it('ends with the exit codes, the --json error object and a newline', () => {
+    expect(help).toContain('4 internal error');
+    expect(help).toMatch(/a failed command prints \{"error":.* on stdout\.\n$/);
   });
 });
 

@@ -34,6 +34,7 @@ whole buffer when no session is current. --session <id> reads another session, -
 whole buffer. --since <seq> takes a seq printed by mark (for tail, default: only new speech).
 
 Exit codes: 0 success, 1 timeout / no match, 2 bridge not reachable, HTTP error or
-incompatible bridge, 3 invalid usage or config.
+incompatible bridge, 3 invalid usage or config, 4 internal error (a bug in this client).
+With --json, a failed command prints {"error":{"type","message",...}} on stdout.
 `;
 }

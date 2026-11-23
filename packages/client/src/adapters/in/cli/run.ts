@@ -1,49 +1,34 @@
 import { parseArgs } from 'node:util';
 import type { NativeInput } from '../../../application/ports/in/native-input.js';
 import type { SpeechCapture } from '../../../application/ports/in/speech-capture.js';
-import {
-  BridgeHttpError,
-  BridgeNotReadyError,
-  BridgeUnreachableError,
-  ClientConfigError,
-  IncompatibleBridgeError,
-} from '../../../domain/errors.js';
 import { EXIT, type CliIo, type Context } from './command.js';
 import { COMMANDS } from './commands/index.js';
+import { reportError } from './errors.js';
 import { helpText } from './help.js';
-import { NAME, OPTIONS, UsageError, checkOptions } from './options.js';
+import { OPTIONS, UsageError, checkOptions } from './options.js';
 
 export { EXIT, type CliIo } from './command.js';
 export { helpText } from './help.js';
 
-/** Runs one CLI invocation and returns its exit code. */
+/**
+ * Runs one CLI invocation and returns its exit code. Never rejects: an error a command doesn't
+ * expect is a bug and ends with exit code 4, not with Node's 1 ("no match").
+ */
 export async function runCli(argv: readonly string[], io: CliIo): Promise<number> {
+  // Known once the arguments parse; if they don't, a plain --json among them counts.
+  const state = { json: argv.includes('--json') };
   try {
-    return await dispatch(argv, io);
+    return await dispatch(argv, io, state);
   } catch (error) {
-    const code = exitCode(error);
-    if (code === undefined) throw error;
-    const hint = error instanceof UsageError ? '\nRun with --help to see the commands.' : '';
-    io.stderr(`${NAME}: ${(error as Error).message}${hint}\n`);
-    return code;
+    return reportError(error, io, state.json);
   }
 }
 
-/** The exit code for an expected error, `undefined` for a bug. */
-function exitCode(error: unknown): number | undefined {
-  if (error instanceof UsageError || error instanceof ClientConfigError) return EXIT.usage;
-  if (error instanceof BridgeNotReadyError) return EXIT.timeout;
-  if (
-    error instanceof BridgeUnreachableError ||
-    error instanceof BridgeHttpError ||
-    error instanceof IncompatibleBridgeError
-  ) {
-    return EXIT.bridge;
-  }
-  return undefined;
-}
-
-async function dispatch(argv: readonly string[], io: CliIo): Promise<number> {
+async function dispatch(
+  argv: readonly string[],
+  io: CliIo,
+  state: { json: boolean },
+): Promise<number> {
   let parsed;
   try {
     parsed = parseArgs({ args: [...argv], allowPositionals: true, options: OPTIONS });
@@ -51,6 +36,7 @@ async function dispatch(argv: readonly string[], io: CliIo): Promise<number> {
     throw new UsageError((error as Error).message);
   }
   const { values, positionals } = parsed;
+  state.json = values.json;
   if (values.help) {
     io.stdout(helpText());
     return EXIT.ok;

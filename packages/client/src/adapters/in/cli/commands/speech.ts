@@ -2,6 +2,7 @@ import { SpeechTimeoutError, SpeechTruncatedError } from '../../../../domain/err
 import type { SpeechEntry } from '../../../../domain/speech-entry.js';
 import type { CliIo } from '../command.js';
 import { EXIT, type Command, type HelpLine } from '../command.js';
+import { reportError } from '../errors.js';
 import {
   formatEntry,
   formatSession,
@@ -246,19 +247,14 @@ const WAIT_SILENCE: HelpLine = {
 export const waitSilence: Command = {
   options: ['quiet-for', 'timeout'],
   help: [WAIT_SILENCE],
-  async run(args, { values, speech, out, io }) {
+  async run(args, { values, speech, out }) {
     expectArgs(args, 0, WAIT_SILENCE.usage);
     const quietFor = optionalInt(values, 'quiet-for', 1);
     const timeout = optionalInt(values, 'timeout', 0);
-    try {
-      await speech().waitForSilence({ quietFor, timeout });
-      out('wait-silence', { silent: true }, 'Silent.');
-      return EXIT.ok;
-    } catch (error) {
-      if (!(error instanceof SpeechTimeoutError)) throw error;
-      io.stderr(`${NAME}: ${error.message}.\n`);
-      return EXIT.timeout;
-    }
+    // A timeout is a SpeechTimeoutError: exit 1, reported like every other error.
+    await speech().waitForSilence({ quietFor, timeout });
+    out('wait-silence', { silent: true }, 'Silent.');
+    return EXIT.ok;
   },
 };
 
@@ -318,8 +314,9 @@ export const tail: Command = {
             );
           },
           onError: (error, { retrying }) => {
-            io.stderr(`${NAME}: ${error.message}${retrying ? ', reconnecting' : ''}\n`);
-            if (!retrying) finish(EXIT.bridge);
+            // The feed stopped for good: the error ends the output, as for any other command.
+            if (retrying) io.stderr(`${NAME}: ${error.message}, reconnecting\n`);
+            else finish(reportError(error, io, json));
           },
         },
       );

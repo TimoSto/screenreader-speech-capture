@@ -2,7 +2,16 @@
 import { hostname } from 'node:os';
 import packageJson from '../../package.json' with { type: 'json' };
 import { createClientConfig, SpeechCaptureClient } from '../main.js';
-import { runCli } from '../adapters/in/cli/run.js';
+import { EXIT, runCli } from '../adapters/in/cli/run.js';
+
+// `runCli` reports every error itself. Anything thrown outside it is a bug too, and must not end
+// with Node's exit code 1, which means "timeout / no match".
+const crash = (error: unknown) => {
+  process.stderr.write(`Internal error, please report it: ${String(stackOf(error))}\n`);
+  process.exit(EXIT.internal);
+};
+process.on('uncaughtException', crash);
+process.on('unhandledRejection', crash);
 
 process.exitCode = await runCli(process.argv.slice(2), {
   config: createClientConfig(process.env),
@@ -29,4 +38,8 @@ function interrupt(): AbortSignal {
     stop();
   });
   return controller.signal;
+}
+
+function stackOf(error: unknown): unknown {
+  return error instanceof Error ? (error.stack ?? error.message) : error;
 }

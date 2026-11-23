@@ -274,6 +274,31 @@ Exit codes, so agents can branch on them without parsing output:
 | `1` | Timeout / no match (also `status --wait-ready` and `wait-silence`) |
 | `2` | Bridge not reachable, HTTP error, or incompatible bridge version |
 | `3` | Invalid usage or invalid client config |
+| `4` | Internal error: a bug in the client (the stack goes to stderr; please report it) |
+
+### Errors with `--json`
+
+With `--json`, stdout is always JSON: a failed command prints one error object there instead of
+its output (and `tail` ends with it as its last line). The message also goes to stderr, as without
+`--json`, where stdout stays empty.
+
+```json
+{"error":{"type":"BridgeHttpError","message":"Native input is not available (HTTP 409, INPUT_DISABLED)","status":409,"code":"INPUT_DISABLED"}}
+```
+
+| `type` | Exit code | Meaning |
+|---|---|---|
+| `UsageError` | `3` | Wrong command, arguments or options; the message names the problem or prints the usage. |
+| `ClientConfigError` | `3` | Invalid bridge URL or client config file. |
+| `BridgeUnreachableError` | `2` | No connection: wrong URL, bridge not running, network. Retrying (or `status --wait-ready`) may help. |
+| `BridgeHttpError` | `2` | The bridge refused the request. Also has `status`, `code` (for example `INPUT_DISABLED`, `NOT_FOUND`, `INVALID_REQUEST`) and, if sent, `details` (for example `field`) from the [error](http-api.md#errors). Retrying the same call won't help. |
+| `IncompatibleBridgeError` | `2` | Another major API version: install matching versions. |
+| `BridgeNotReadyError` | `1` | `status --wait-ready` timed out. |
+| `SpeechTimeoutError` | `1` | `wait-silence` timed out: speech went on. |
+| `InternalError` | `4` | A bug in the client. |
+
+`wait` is the exception: its timeout is a result, `{ "matched": false, … }` (see below), not an
+error object. The schema is `CliErrorOutput` in `packages/client/src/adapters/in/cli/output.ts`.
 
 `session start` prints the new session's id (the whole session with `--json`). `session list`
 prints one line per session, newest first (`#7 checkout test (run nightly-42): current, 3 entries,
@@ -297,6 +322,8 @@ line is written. By default it shows only new speech; `--since
 `{"type":"entry","entry":{...}}`, `{"type":"session","session":{...}}` (a session started or
 ended), `{"type":"clear"}` and `{"type":"truncated"}`. If the bridge is
 not reachable at the start it exits with `2`; a connection lost later is reconnected (with a note
-on stderr) without losing entries.
+on stderr) without losing entries. An error a reconnect can't fix (an HTTP `4xx`, an incompatible
+bridge) ends it with exit code `2`, and with `--json` with the
+[error object](#errors-with---json) as the last line.
 
 For the typical agent loop, see [Agents](agents.md#agent-loop).
