@@ -4,12 +4,28 @@ import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { MemoryLogger } from '../../test/fakes.js';
-import { bridgeApiUrl, createUiMount, LOCAL_HEADER } from './ui.js';
+import { bridgeApiUrl, createUiMount, LOCAL_HEADER, UI_LOGGER_KEY } from './ui.js';
 
 describe('createUiMount', () => {
   it('is undefined without a build of the UI', () => {
     const logger = new MemoryLogger();
     expect(createUiMount(new URL('./no-such-ui/', import.meta.url), logger)).toBeUndefined();
+  });
+});
+
+describe('mount', () => {
+  it("hands the UI the bridge's logger before it loads the app", async () => {
+    const dir = mkdtempSync(`${tmpdir()}/ui-`);
+    // The app's server code reads the logger when it loads, as SvelteKit's hooks may.
+    writeFileSync(
+      `${dir}/handler.js`,
+      `globalThis[Symbol.for('screenreader-speech-capture.ui-logger')].error('from the app');
+       export const handler = () => {};`,
+    );
+    const logger = new MemoryLogger();
+    await createUiMount(pathToFileURL(`${dir}/`), logger)!.mount('http://127.0.0.1:1');
+    expect((globalThis as Record<symbol, unknown>)[UI_LOGGER_KEY]).toBe(logger);
+    expect(logger.lines).toContain('error from the app');
   });
 });
 

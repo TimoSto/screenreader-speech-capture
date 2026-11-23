@@ -18,6 +18,13 @@ const PROTOCOL_HEADER = 'x-sr-bridge-protocol';
  */
 export const LOCAL_HEADER = 'x-sr-bridge-local';
 
+/**
+ * Where the UI's server code finds the bridge log (`packages/ui/src/lib/server/log.ts` reads it):
+ * a `Symbol.for` key on `globalThis`, because the bridge and the UI don't import each other. Its
+ * lines then get the `[web-ui]` prefix, go to the log file and never block on the console.
+ */
+export const UI_LOGGER_KEY = Symbol.for('screenreader-speech-capture.ui-logger');
+
 /** The `adapter-node` handler of the SvelteKit app (`packages/ui`, copied to `dist/ui`). */
 type NodeHandler = (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => void;
 
@@ -79,6 +86,7 @@ export function createUiMount(dir: URL, logger: Logger): UiMount | undefined {
       try {
         process.env[BRIDGE_API_URL_ENV] = apiUrl;
         process.env.PROTOCOL_HEADER = PROTOCOL_HEADER;
+        (globalThis as Record<symbol, unknown>)[UI_LOGGER_KEY] = logger;
         const module = (await import(file.href)) as { handler?: unknown };
         if (typeof module.handler !== 'function') throw new Error('handler.js has no `handler`');
         settle.resolve(module.handler as NodeHandler);
