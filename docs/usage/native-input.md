@@ -38,7 +38,7 @@ element you pass. Then it calls `/api/v1/input/click`.
 **Key names** (`/api/v1/input/keys`): keys are joined with `+` for chords (`Insert+T`, `Control+Home`)
 and passed as an array for sequences (`["h", "h", "Insert+Down"]`). Names follow robotjs
 (`a`–`z`, `0`–`9`, `enter`, `tab`, `escape`, `up`, `down`, `left`, `right`, `home`, `end`,
-`pageup`, `pagedown`, `f1`–`f12`, `space`, `backspace`, `delete`, `insert`, `capslock`), case-insensitive. `Ctrl`, `Esc`, `Return`, `Del`, `Ins`, `PgUp`, `PgDn`, `Windows` and `Meta` are accepted as aliases. A name the bridge doesn't know answers `400 INVALID_REQUEST` with `details.field` `keys`, before any key is sent. A request holds at most 100 chords; `delayMs` (default 50, at most 10000) pauses between them.
+`pageup`, `pagedown`, `f1`–`f12`, `space`, `backspace`, `delete`, `insert`, `capslock`), case-insensitive. `Ctrl`, `Esc`, `Return`, `Del`, `Ins`, `PgUp`, `PgDn`, `Windows` and `Meta` are accepted as aliases. A name the bridge doesn't know answers `400 INVALID_REQUEST` with `details.field` `keys`, before any key is sent. The rule is part of the contract (`packages/shared/src/key-chord.ts`): the CLI's `press` checks the keys with it before sending (a usage error, exit `3`) and lists the names in `--help`. A request holds at most 100 chords; `delayMs` (default 50, at most 10000) pauses between them.
 Modifiers are `Control`, `Shift`, `Alt`, `Win`. `Insert` and `CapsLock` also work as modifiers,
 because NVDA and JAWS use them as their screen reader key: they are held down with `keyToggle`
 while the other keys are pressed.

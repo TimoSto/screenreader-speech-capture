@@ -96,8 +96,9 @@ Relative imports use `.js` extensions (ESM), and type-only imports must use `imp
 `packages/shared` holds only the HTTP API contract (exported from `src/index.ts`, consumed as TS
 source): the DTOs as **valibot schemas** (`XSchema`, with `XDto = InferOutput<…>`), the protocol
 limits and patterns (`limits.ts`: `API_LIMITS`, `CONFIG_LIMITS`), and `checkDto` (`validate.ts`),
-which the client uses to check every answer. Plus one contract rule: `text-match.ts` (`normalizeText`, `createTextTest`), used by both
-the bridge's wait and the client's waits. A second, Node-only entry
+which the client uses to check every answer. Plus two contract rules, used by both sides: `text-match.ts` (`normalizeText`, `createTextTest`;
+the bridge's wait and the client's waits) and `key-chord.ts` (`parseKeyChord` and the key names;
+the bridge's input and the CLI's `press` check and `--help`). A second, Node-only entry
 (`@screenreader-speech-capture/shared/platform-paths`, kept out of `index.ts` so the UI can import
 the DTOs) holds `appDir`, the per-user config/state/cache folders, so the bridge's `config.json` and
 the client's `client.json` agree. It is private and bundled into published packages by tsdown — never published on its own.

@@ -1,3 +1,4 @@
+import { parseKeyChord } from '@screenreader-speech-capture/shared';
 import type { SpeechEntry } from '../../../../domain/speech-entry.js';
 import { EXIT, type Command, type Context, type HelpLine } from '../command.js';
 import { TRUNCATED_WARNING } from '../format.js';
@@ -12,10 +13,11 @@ const CAPTURE_HELP = [
 ];
 
 const FOCUS: HelpLine = {
-  usage: `click --x <px> --y <px> [--button left|right|middle] ${CAPTURE_USAGE}`,
+  usage: `click --x <px> --y <px> [--button <b>] ${CAPTURE_USAGE}`,
   description: [
     'Native click at a screen point in physical pixels, for example to give',
-    'a window the focus (negative values: --x=-5);',
+    'a window the focus (negative values: --x=-5); --button left (default),',
+    'right or middle;',
     ...CAPTURE_HELP,
   ],
 };
@@ -56,6 +58,11 @@ export const press: Command = {
     const { values, input, out } = ctx;
     if (args.length === 0) throw new UsageError(`Usage: ${NAME} ${PRESS.usage}`);
     const delayMs = optionalInt(values, 'delay', 0);
+    // The same rule as the bridge's: a wrong key name is a usage error, not a bridge error.
+    for (const chord of args) {
+      const parsed = parseKeyChord(chord);
+      if (!parsed.ok) throw new UsageError(`Invalid key: ${parsed.message} (key names: --help).`);
+    }
     const keys = args.length === 1 ? args[0]! : args;
     const speech = await act(ctx, () => input().pressKeys(keys, { delayMs }));
     if (speech === undefined) out('press', { pressed: true }, `Pressed ${args.join(' ')}`);
