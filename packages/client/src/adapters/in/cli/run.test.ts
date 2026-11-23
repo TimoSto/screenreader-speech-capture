@@ -188,7 +188,11 @@ describe('speech commands', () => {
     const fake = fakeSpeech();
     await cli(['session', 'start', 'one'], fake);
     const outputs = [];
-    for (const args of [['session', 'end'], ['clear'], ['wait-silence', '--timeout', '1000']]) {
+    for (const args of [
+      ['session', 'end'],
+      ['clear', '--all'],
+      ['wait-silence', '--timeout', '1000'],
+    ]) {
       const result = await cli([...args, '--json'], fake);
       expect(result.code).toBe(EXIT.ok);
       outputs.push(JSON.parse(result.stdout) as unknown);
@@ -231,10 +235,26 @@ describe('speech commands', () => {
     expect((await run(['clear', '--session', 'x'], undefined, fake)).code).toBe(EXIT.usage);
   });
 
+  it('clear needs exactly one scope; a bare clear deletes nothing', async () => {
+    const fake = fakeSpeech();
+    const bare = await cli(['clear', '--json'], fake);
+    expect(bare.code).toBe(EXIT.usage);
+    expect(JSON.parse(bare.stdout)).toMatchObject({
+      error: { type: 'UsageError', message: expect.stringContaining('--all') as unknown },
+    });
+    for (const args of [
+      ['clear', '--all', '--outside'],
+      ['clear', '--all', '--session', '1'],
+    ]) {
+      expect((await cli(args, fake)).stderr).toContain('only one of --all, --session or --outside');
+    }
+    expect(fake.api.calls.filter((call) => call.startsWith('clear'))).toEqual([]);
+  });
+
   it('clear, mark, speech and text; --since takes a marker seq', async () => {
     const fake = fakeSpeech();
     fake.api.speak('old');
-    expect((await cli(['clear'], fake)).stdout).toBe('Speech buffer cleared.\n');
+    expect((await cli(['clear', '--all'], fake)).stdout).toBe('Speech buffer cleared.\n');
     fake.api.speak('one');
     const mark = await cli(['mark', 'step 1'], fake);
     expect(mark.stdout).toBe('3\n');

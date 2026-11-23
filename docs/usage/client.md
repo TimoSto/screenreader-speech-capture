@@ -255,7 +255,7 @@ npx screenreader-speech-capture-client session start "checkout flow" [--run <lab
 npx screenreader-speech-capture-client session end
 npx screenreader-speech-capture-client session delete <id>   # an ended session and its speech
 npx screenreader-speech-capture-client session list
-npx screenreader-speech-capture-client clear                 # wipes everything, all sessions
+npx screenreader-speech-capture-client clear --all           # wipes everything, all sessions (a bare clear is a usage error)
 npx screenreader-speech-capture-client clear --session current   # only the current session's speech; it keeps running
 npx screenreader-speech-capture-client clear --outside        # only the speech outside sessions
 npx screenreader-speech-capture-client speech [--since <seq>] [--limit <n>] [--include-markers] [--session <id> | --all]

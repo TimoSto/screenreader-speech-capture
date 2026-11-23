@@ -114,22 +114,28 @@ export const session: Command = {
 };
 
 const CLEAR: HelpLine = {
-  usage: 'clear [--session <id|current> | --outside]',
+  usage: 'clear (--all | --session <id|current> | --outside)',
   description: [
-    'Wipe the whole speech buffer, all sessions (for manual use); --session',
-    'clears only that session (it keeps running), --outside only the speech',
-    'outside sessions',
+    'Delete recorded speech: --all the whole buffer, all sessions (for manual',
+    "use); --session one session's speech (it keeps running); --outside the",
+    'speech outside sessions',
   ],
 };
 
 export const clear: Command = {
-  options: ['session', 'outside'],
+  options: ['all', 'session', 'outside'],
   help: [CLEAR],
   async run(args, { values, speech, out }) {
     expectArgs(args, 0, CLEAR.usage);
-    if (values.session !== undefined && values.outside) {
-      throw new UsageError('Use either --session or --outside.');
+    // No default scope: wiping every session of every client must be asked for (--all).
+    const scopes = [values.all, values.session !== undefined, values.outside].filter(Boolean);
+    if (scopes.length === 0) {
+      throw new UsageError(
+        'clear needs a scope: --all (the whole buffer, all sessions), --session <id|current> ' +
+          'or --outside. To start fresh, prefer "session start".',
+      );
     }
+    if (scopes.length > 1) throw new UsageError('Use only one of --all, --session or --outside.');
     if (values.outside) {
       await speech().clear({ session: 'none' });
       out('clear', { cleared: true }, 'Speech outside sessions cleared.');
