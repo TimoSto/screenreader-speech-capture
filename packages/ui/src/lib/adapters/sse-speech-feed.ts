@@ -1,7 +1,11 @@
-import { checkDto, SpeechEntrySchema, SpeechListSchema } from '@screenreader-speech-capture/shared';
+import {
+  checkDto,
+  SpeechEntrySchema,
+  type SpeechListDto,
+} from '@screenreader-speech-capture/shared';
 import type { SessionScope } from '#lib/core/sessions.js';
 import type { SpeechFeed, SpeechFeedHandlers } from '#lib/core/speech.js';
-import { routeDto } from './route-request.js';
+import { routeJson } from './route-request.js';
 
 /** Entries read per request when an ended session is read page by page. */
 const PAGE_SIZE = 1000;
@@ -37,6 +41,7 @@ export class SseSpeechFeed implements SpeechFeed {
       } catch {
         return;
       }
+      // The one check left in the browser: the BFF relays the stream as it is, unchecked.
       const checked = checkDto(SpeechEntrySchema, data);
       if (checked.ok) handlers.onEntry(checked.value);
     });
@@ -54,13 +59,9 @@ export class SseSpeechFeed implements SpeechFeed {
           since: String(since),
           limit: String(PAGE_SIZE),
         });
-        const { entries, hasMore } = await routeDto(
-          `${this.speechUrl}?${query}`,
-          SpeechListSchema,
-          {
-            signal: abort.signal,
-          },
-        );
+        const { entries, hasMore } = await routeJson<SpeechListDto>(`${this.speechUrl}?${query}`, {
+          signal: abort.signal,
+        });
         handlers.onEntries(entries);
         const last = entries.at(-1);
         if (!hasMore || last === undefined) return;
