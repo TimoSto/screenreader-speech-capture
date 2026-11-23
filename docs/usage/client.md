@@ -244,7 +244,9 @@ machine-readable output (the shape of every command is the valibot schema in
 cursor. Instead, `speech`, `text` and `wait` read the **current
 [session](speech-capture.md#sessions)** (everything since `session start`) by default, or the whole
 buffer when no session is current. `--session <id>` picks another one, `--all` ignores sessions.
-Use `mark` and `--since` to look at a smaller range.
+So `wait "button"` also matches what an *earlier* step said: use `mark` and `--since` to look at
+a smaller range, or `--capture` on `press` / `click` (below) to get exactly the speech an action
+caused.
 
 ```bash
 npx screenreader-speech-capture-client config set url http://my-test-vm:5151   # once, see Bridge URL
@@ -263,6 +265,7 @@ npx screenreader-speech-capture-client wait-silence [--quiet-for 500] [--timeout
 npx screenreader-speech-capture-client mark "before tab"   # prints the marker's seq
 npx screenreader-speech-capture-client click --x 640 --y 12  # native click (negative: --x=-5)
 npx screenreader-speech-capture-client press "Insert+T"      # native keys, several args = sequence (--delay <ms>)
+npx screenreader-speech-capture-client press h --capture [--quiet-for 500] [--timeout 10000]   # … and print the speech it caused (also click)
 npx screenreader-speech-capture-client tail [--since <seq>]  # live feed until Ctrl+C (NDJSON with --json)
 ```
 
@@ -271,7 +274,7 @@ Exit codes, so agents can branch on them without parsing output:
 | Code | Meaning |
 |---|---|
 | `0` | Success (for `wait`: match found) |
-| `1` | Timeout / no match (also `status --wait-ready` and `wait-silence`) |
+| `1` | Timeout / no match (also `status --wait-ready`, `wait-silence` and `--capture`) |
 | `2` | Bridge not reachable, HTTP error, or incompatible bridge version |
 | `3` | Invalid usage or invalid client config |
 | `4` | Internal error: a bug in the client (the stack goes to stderr; please report it) |
@@ -294,7 +297,7 @@ its output (and `tail` ends with it as its last line). The message also goes to 
 | `BridgeHttpError` | `2` | The bridge refused the request. Also has `status`, `code` (for example `INPUT_DISABLED`, `NOT_FOUND`, `INVALID_REQUEST`) and, if sent, `details` (for example `field`) from the [error](http-api.md#errors). Retrying the same call won't help. |
 | `IncompatibleBridgeError` | `2` | Another major API version: install matching versions. |
 | `BridgeNotReadyError` | `1` | `status --wait-ready` timed out. |
-| `SpeechTimeoutError` | `1` | `wait-silence` timed out: speech went on. |
+| `SpeechTimeoutError` | `1` | `wait-silence` or `--capture` timed out: speech went on. |
 | `InternalError` | `4` | A bug in the client. |
 
 `wait` is the exception: its timeout is a result, `{ "matched": false, … }` (see below), not an
@@ -314,6 +317,14 @@ With `--json`, `wait` prints `{ "matched": true, "entry": {...} }`, or on timeou
 `truncated: true` if some of it was dropped because the bridge's buffer was full (the shapes
 follow [`GET /speech/wait`](http-api.md#endpoints), which reports `omitted` instead). `mark` prints the marker's `seq`, or the whole entry
 with `--json`.
+
+`press` and `click` print `{ "pressed": true }` / `{ "clicked": true }` with `--json`. With
+`--capture` they are the library's [`record()`](#functions) in one call: they note where the
+buffer ends, act, wait until nothing was spoken for `--quiet-for` ms (default 500, at most
+`--timeout`, default 10000), and print the speech from that point on, one line per entry, or
+`{ "pressed": true, "entries": [...], "truncated": false }` with `--json`. Speech from before the
+action can't get in. If the speech doesn't pause in time, the action has still happened, and the
+command exits with `1` (`SpeechTimeoutError`).
 
 `tail` prints each entry as it arrives (`#12 Submit, button`, markers included) until Ctrl+C or
 `SIGTERM`, then exits with `0`. A closed pipe (`tail --json | head -3`) ends it too, once the next

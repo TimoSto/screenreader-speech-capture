@@ -9,6 +9,7 @@ import {
   formatSessionEvent,
   formatStatus,
   seenText,
+  TRUNCATED_WARNING,
 } from '../format.js';
 import { NAME, UsageError, expectArgs, optionalInt, scope } from '../options.js';
 
@@ -198,7 +199,9 @@ const WAIT: HelpLine = {
     'wait <text> [--regex] [--normalize] [--since <seq>] [--timeout <ms>] [--session <id> | --all]',
   description: [
     'Wait until speech contains <text> (or matches the regex);',
-    'also finds speech that arrived before the call (default timeout 5000)',
+    'also finds speech that arrived before the call (default timeout 5000).',
+    'It searches the whole session: pass --since <seq> (from mark) to see',
+    'only newer speech, or use press --capture',
   ],
 };
 
@@ -339,10 +342,7 @@ async function readAll(
     return { entries: await read(), truncated: false };
   } catch (error) {
     if (!(error instanceof SpeechTruncatedError)) throw error;
-    io.stderr(
-      `${NAME}: some speech was dropped because the bridge's buffer was full ` +
-        '(raise buffer.maxEntries); showing what is left.\n',
-    );
+    io.stderr(`${NAME}: ${TRUNCATED_WARNING}\n`);
     return { entries: error.entries, truncated: true };
   }
 }

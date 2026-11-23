@@ -135,6 +135,15 @@ const TRUNCATED_READ =
   "Some of the speech was dropped because the bridge's buffer was full: this is what is left " +
   '(a warning goes to stderr).';
 
+/** What `press` / `click --capture` add: the speech the action caused. */
+const captured = {
+  entries: v.pipe(
+    v.array(SpeechEntryOutput),
+    v.description('With --capture: the speech from just before the action until silence.'),
+  ),
+  truncated: v.pipe(v.boolean(), v.description(TRUNCATED_READ)),
+};
+
 const configKey = v.picklist(Object.keys(CONFIG_KEYS) as (keyof typeof CONFIG_KEYS)[]);
 const file = v.pipe(v.string(), v.description('The client config file.'));
 
@@ -195,8 +204,14 @@ export const CLI_OUTPUT = {
   ),
   'wait-silence': v.object({ silent: v.literal(true) }),
   mark: SpeechEntryOutput,
-  click: v.object({ clicked: v.literal(true) }),
-  press: v.object({ pressed: v.literal(true) }),
+  click: v.union([
+    v.object({ clicked: v.literal(true) }),
+    v.object({ clicked: v.literal(true), ...captured }),
+  ]),
+  press: v.union([
+    v.object({ pressed: v.literal(true) }),
+    v.object({ pressed: v.literal(true), ...captured }),
+  ]),
   tail: v.pipe(
     v.variant('type', [
       v.object({ type: v.literal('entry'), entry: SpeechEntryOutput }),

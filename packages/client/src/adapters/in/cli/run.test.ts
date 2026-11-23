@@ -521,6 +521,68 @@ describe('native input commands', () => {
     const result = await cli(['press', 'a'], fake);
     expect(result.code).toBe(EXIT.bridge);
   });
+
+  /** A fake bridge whose screen reader says `texts` on every key press and click. */
+  function speaking(...texts: string[]) {
+    const fake = fakeSpeech();
+    const { api } = fake;
+    const pressKeys = api.pressKeys.bind(api);
+    const click = api.click.bind(api);
+    api.pressKeys = (request) => pressKeys(request).then(() => api.speak(...texts));
+    api.click = (request) => click(request).then(() => api.speak(...texts));
+    return fake;
+  }
+
+  it('press --capture prints the speech the press caused, not older speech', async () => {
+    const fake = speaking('Checkout, heading level 1');
+    fake.api.speak('Submit, button');
+    const result = await cli(['press', 'h', '--capture', '--json'], fake);
+    expect(result.code).toBe(EXIT.ok);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      pressed: true,
+      entries: [{ text: 'Checkout, heading level 1' }],
+      truncated: false,
+    });
+    expect(fake.api.calls).toContain('keys h');
+
+    const text = await cli(['press', 'h', '--capture', '--quiet-for', '200'], fake);
+    expect(text).toMatchObject({ code: EXIT.ok, stdout: 'Checkout, heading level 1\n' });
+  });
+
+  it('click --capture prints the speech the click caused', async () => {
+    const fake = speaking('Checkout - Browser', 'Main landmark');
+    const result = await cli(['click', '--x', '1', '--y', '2', '--capture', '--json'], fake);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      clicked: true,
+      entries: [{ text: 'Checkout - Browser' }, { text: 'Main landmark' }],
+      truncated: false,
+    });
+  });
+
+  it('press --capture exits 1 with an error object when the speech does not pause', async () => {
+    const fake = fakeSpeech();
+    for (let t = 0; t < 5000; t += 50)
+      fake.clock.at(fake.clock.now() + t, () => fake.api.speak('x'));
+    const result = await cli(
+      ['press', 'h', '--capture', '--quiet-for', '100', '--timeout', '1000', '--json'],
+      fake,
+    );
+    expect(result.code).toBe(EXIT.timeout);
+    expect(JSON.parse(result.stdout)).toMatchObject({ error: { type: 'SpeechTimeoutError' } });
+  });
+
+  it('--quiet-for and --timeout only go with --capture', async () => {
+    const fake = fakeSpeech();
+    for (const args of [
+      ['press', 'h', '--quiet-for', '100'],
+      ['click', '--x', '1', '--y', '1', '--timeout', '100'],
+    ]) {
+      const result = await cli(args, fake);
+      expect(result.code).toBe(EXIT.usage);
+      expect(result.stderr).toContain('only go with --capture');
+    }
+    expect(fake.api.calls.filter((c) => c.startsWith('keys') || c.startsWith('click'))).toEqual([]);
+  });
 });
 
 describe('tail', () => {

@@ -14,12 +14,19 @@ Agents drive the browser through [Playwright MCP](playwright-mcp.md#playwright-m
 ```bash
 npx screenreader-speech-capture-client config set url http://my-test-vm:5151   # once per user
 npx screenreader-speech-capture-client session start "audit checkout page"      # once per task
-SEQ=$(npx screenreader-speech-capture-client mark step-1)
-# … act through Playwright MCP, or send a screen reader command:
-npx screenreader-speech-capture-client press h
+
+# A screen reader command: one call presses the key and prints what it caused.
+npx screenreader-speech-capture-client press h --capture --json      # → judge the entries
+
+# An action through Playwright MCP runs in another process, so mark where the step starts:
+SEQ=$(npx screenreader-speech-capture-client mark step-2)
+# … act through Playwright MCP …
 npx screenreader-speech-capture-client wait-silence
 npx screenreader-speech-capture-client text --since "$SEQ" --json   # → judge the output
 ```
+
+Don't use a bare `wait "…"` to check a step: it searches the whole session and can match what an
+earlier step said. Pass `--since`.
 
 ## Agent skill
 
@@ -35,7 +42,8 @@ It teaches an agent how to use the CLI:
 
 - to start a [session](speech-capture.md#sessions) per task (`session start`) instead of `clear`,
   so a person can follow the task in the [web UI](web-ui.md#context-pane),
-- the loop **mark → act → wait-silence → text --since**,
+- the loop: `press … --capture` for screen reader commands, **mark → act → wait-silence →
+  text --since** for Playwright MCP actions,
 - when to use Playwright MCP input and when to use `press` (screen reader commands),
 - that the browser must be in the foreground first (`focus`), and when to do that again,
 - the exit codes, and that the exact wording depends on the screen reader and its verbosity.

@@ -31,6 +31,7 @@ export const OPTIONS = {
   y: { type: 'string' },
   button: { type: 'string' },
   delay: { type: 'string' },
+  capture: { type: 'boolean' },
 } as const;
 
 export type Values = ReturnType<typeof parseArgs<{ options: typeof OPTIONS }>>['values'];
