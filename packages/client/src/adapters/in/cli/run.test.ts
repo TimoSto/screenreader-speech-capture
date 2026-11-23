@@ -402,6 +402,28 @@ describe('speech commands', () => {
     expect((await cli(['text'], fake)).stdout).toBe('before\nSubmit, button\nName, edit\n');
   });
 
+  it('--session current reads the current session, and is an error when none is', async () => {
+    const fake = fakeSpeech();
+    fake.api.speak('before');
+    await cli(['session', 'start', 'one'], fake);
+    fake.api.speak('Submit, button');
+    expect((await cli(['text', '--session', 'current'], fake)).stdout).toBe('Submit, button\n');
+    expect(fake.api.calls).toContain('list 0 session=current');
+    expect((await cli(['wait', 'Submit', '--session', 'current'], fake)).code).toBe(EXIT.ok);
+
+    await cli(['session', 'end'], fake);
+    const none = await cli(['speech', '--session', 'current', '--json'], fake);
+    expect(none.code).toBe(EXIT.bridge);
+    expect(JSON.parse(none.stdout)).toMatchObject({
+      error: { type: 'BridgeHttpError', code: 'NOT_FOUND' },
+    });
+    // Without the option, no current session means the whole buffer.
+    expect((await cli(['text'], fake)).stdout).toBe('before\nSubmit, button\n');
+
+    const invalid = await cli(['speech', '--session', 'x'], fake);
+    expect(invalid.stderr).toContain('--session must be a session id (>= 1) or current, got "x".');
+  });
+
   it.each([
     [new BridgeUnreachableError('http://vm:1'), 'not reachable'],
     [new BridgeHttpError(500, 'INTERNAL', 'boom'), 'boom (HTTP 500, INTERNAL)'],
@@ -437,7 +459,7 @@ describe('speech commands', () => {
     [['session', 'list', 'extra']],
     [['speech', '--session', '0']],
     [['speech', '--session', '1', '--all']],
-    [['text', '--session', 'current']],
+    [['text', '--session', 'now']],
     [['wait', 'x', '--all', '--session', '2']],
     [['mark', 'x', '--all']],
   ])('exits 3 for %j without calling the bridge', async (args) => {
