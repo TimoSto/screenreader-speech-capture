@@ -47,6 +47,7 @@ For contributors: how the bridge and client are built and why.
 | [Decisions](implementation/decisions.md) | Choices that rarely change and why (Node.js, not Go) |
 | [Development](implementation/development.md) | Building, testing without Windows, CI and releases |
 | [Simplification candidates](implementation/simplification-candidates.md) | Backlog of parts to drop or simplify, and why |
+| [Bridge ↔ client review](implementation/agent-cli-review.md) | How the client CLI and the bridge could work better together for agents (not agreed yet) |
 
 ### Implementation flows
 

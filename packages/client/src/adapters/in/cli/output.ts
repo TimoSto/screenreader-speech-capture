@@ -145,9 +145,19 @@ const focusPoint = v.pipe(
 const captured = {
   entries: v.pipe(
     v.array(SpeechEntryOutput),
-    v.description('With --capture: the speech from just before the action until silence.'),
+    v.description(
+      'With --capture: the speech from just before the action until silence, oldest first. ' +
+        'Empty: nothing was said within --first-within ms.',
+    ),
   ),
   truncated: v.pipe(v.boolean(), v.description(TRUNCATED_READ)),
+  silent: v.pipe(
+    v.boolean(),
+    v.description(
+      '`false`: the speech went on until --timeout (exit code 1); `entries` is what was said ' +
+        'until then. The action has happened either way.',
+    ),
+  ),
 };
 
 const configKey = v.picklist(Object.keys(CONFIG_KEYS) as (keyof typeof CONFIG_KEYS)[]);
@@ -246,7 +256,8 @@ export const CLI_OUTPUT = {
 
 /**
  * What every command prints with `--json` when it fails (instead of its own output), next to the
- * message on stderr. `wait` reports a timeout with its own `matched: false` instead.
+ * message on stderr. `wait` reports a timeout with its own `matched: false` instead, and
+ * `--capture` with `silent: false`.
  */
 export const CliErrorOutput = v.pipe(
   v.object({

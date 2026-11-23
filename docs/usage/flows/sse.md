@@ -203,8 +203,9 @@ sequenceDiagram
 ## Wait for silence and record
 
 `waitForSilence` follows the stream until nothing has been spoken for `quietFor` ms, counted from
-the call. `record(fn)` notes the newest `seq`, runs `fn`, waits for silence and reads everything
-after the noted `seq`. Details: [Functions](../client.md#functions).
+the call. `record(fn)` notes the newest `seq`, runs `fn`, follows the stream from the noted `seq`
+(up to `firstWithin` ms for the first speech, then `quietFor` ms of silence) and reads everything
+after it. Details: [Functions](../client.md#functions).
 
 ```mermaid
 sequenceDiagram
@@ -218,10 +219,9 @@ sequenceDiagram
     B-->>C: buffer.lastSeq 50
     C->>C: run fn (Tab in the browser)
     SR->>B: "Name, edit, blank" → seq 51
-    Note over C: waitForSilence starts
-    C->>B: GET /api/v1/status
-    B-->>C: buffer.lastSeq 51
-    C->>B: GET /api/v1/speech/stream<br/>Last-Event-ID: 51
+    C->>B: GET /api/v1/speech/stream<br/>Last-Event-ID: 50
+    B-->>C: event: entry seq 51 (replay: the first speech)
+    Note over C: no speech yet would end it after 2000 ms (firstWithin)
     SR->>B: "blank" → seq 52
     B-->>C: event: entry seq 52 (silence counted again)
     Note over C: 500 ms (quietFor) without speech

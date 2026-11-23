@@ -17,6 +17,7 @@ import type {
   OnSpeechOptions,
   ReadyOptions,
   Recording,
+  RecordOptions,
   SilenceOptions,
   SpeechCapture,
   StartSessionOptions,
@@ -46,7 +47,13 @@ function remember(seen: SpeechEntry[], entries: SpeechEntry[]): void {
   if (seen.length > MAX_SEEN) seen.splice(0, seen.length - MAX_SEEN);
 }
 
-const DEFAULTS = { timeout: 5000, quietFor: 500, silenceTimeout: 10_000, readyTimeout: 120_000 };
+const DEFAULTS = {
+  timeout: 5000,
+  quietFor: 500,
+  silenceTimeout: 10_000,
+  firstWithin: 2000,
+  readyTimeout: 120_000,
+};
 
 /** How often `waitForReady` asks for the status. */
 const READY_POLL_MS = 500;
@@ -229,42 +236,31 @@ export class SpeechCaptureService implements SpeechCapture {
   }
 
   async waitForSilence(options: SilenceOptions = {}): Promise<void> {
-    const { clock } = this.deps;
     const quietFor = options.quietFor ?? DEFAULTS.quietFor;
     const timeout = options.timeout ?? DEFAULTS.silenceTimeout;
     await this.compatible();
-    const start = clock.now();
-    const end = await this.endSeq();
-    // Speech may have arrived just before the call, so silence is counted from the call.
-    let lastSpeech = start;
-    const seen: SpeechEntry[] = [];
-    const left = () => Math.min(lastSpeech + quietFor, start + timeout) - clock.now();
-    await this.follow({ since: end }, left(), (entry, timer) => {
-      if (!isSpeech(entry)) return undefined;
-      remember(seen, [entry]);
-      lastSpeech = clock.now();
-      timer.set(left());
-      return undefined;
-    });
-    // The timer ran out at the earlier of the two; timers may fire a little early, so don't
-    // compare with `now()`.
-    if (lastSpeech + quietFor <= start + timeout) return;
-    throw new SpeechTimeoutError(
-      `Speech did not pause for ${quietFor} ms within ${timeout} ms`,
-      seen,
-    );
+    const settled = await this.settle({ since: await this.endSeq(), quietFor, timeout });
+    if (!settled.silent)
+      throw new SpeechTimeoutError(silenceFailure(quietFor, timeout), settled.seen);
   }
 
-  async record<T>(fn: () => T | Promise<T>, options: SilenceOptions = {}): Promise<Recording<T>> {
+  async record<T>(fn: () => T | Promise<T>, options: RecordOptions = {}): Promise<Recording<T>> {
+    const quietFor = options.quietFor ?? DEFAULTS.quietFor;
+    const timeout = options.timeout ?? DEFAULTS.silenceTimeout;
+    const firstWithin = options.firstWithin ?? DEFAULTS.firstWithin;
     const moves = this.#moves;
     await this.compatible();
     const start = await this.endSeq();
     const result = await fn();
-    await this.waitForSilence(options);
+    // Followed from `start`, so speech spoken while `fn` ran counts as the first speech too.
+    const { silent } = await this.settle({ since: start, quietFor, timeout, firstWithin });
     const { entries, truncated } = await this.fetchSince(start);
+    const speech = entries.filter(isSpeech);
+    // The whole recording, not only the last entries seen: it is what the caller judges.
+    if (!silent) throw new SpeechTimeoutError(silenceFailure(quietFor, timeout), speech, truncated);
     const last = entries.at(-1)?.seq;
     if (last !== undefined) this.#advance(last, moves);
-    return { result, entries: entries.filter(isSpeech), truncated };
+    return { result, entries: speech, truncated };
   }
 
   onSpeech(listener: (entry: SpeechEntry) => void, options: OnSpeechOptions = {}): () => void {
@@ -274,6 +270,39 @@ export class SpeechCaptureService implements SpeechCapture {
       listener,
       options,
     );
+  }
+
+  /**
+   * Follows the feed from `since` until nothing was spoken for `quietFor` ms. Without
+   * `firstWithin`, silence is counted from the call. With it, the first speech (also replayed
+   * entries after `since`) may take up to `firstWithin` ms, and silence is counted from there; if
+   * none comes in that time, it is silent. Not silent: speech went on until `timeout`.
+   */
+  private async settle(options: {
+    since: number;
+    quietFor: number;
+    timeout: number;
+    firstWithin?: number;
+  }): Promise<{ silent: boolean; seen: SpeechEntry[] }> {
+    const { clock } = this.deps;
+    const { since, quietFor, timeout, firstWithin } = options;
+    const start = clock.now();
+    // Speech may have arrived just before the call, so silence is counted from the call.
+    let lastSpeech = firstWithin === undefined ? start : undefined;
+    const seen: SpeechEntry[] = [];
+    const end = () => (lastSpeech === undefined ? start + firstWithin! : lastSpeech + quietFor);
+    const left = () => Math.min(end(), start + timeout) - clock.now();
+    await this.follow({ since }, left(), (entry, timer) => {
+      if (!isSpeech(entry)) return undefined;
+      remember(seen, [entry]);
+      lastSpeech = clock.now();
+      timer.set(left());
+      return undefined;
+    });
+    // The timer ran out at the earlier of the two; timers may fire a little early, so don't
+    // compare with `now()`. Nothing spoken at all is silence, whatever `firstWithin` was.
+    const silent = lastSpeech === undefined || lastSpeech + quietFor <= start + timeout;
+    return { silent, seen };
   }
 
   /** Checks the API version once. A failed check is repeated on the next call. */
@@ -421,6 +450,10 @@ class Timer {
   stop(): void {
     this.#controller?.abort();
   }
+}
+
+function silenceFailure(quietFor: number, timeout: number): string {
+  return `Speech did not pause for ${quietFor} ms within ${timeout} ms`;
 }
 
 function describe(match: SpeechMatch): string {

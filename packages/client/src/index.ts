@@ -19,6 +19,7 @@ export type {
   OnSpeechOptions,
   ReadyOptions,
   Recording,
+  RecordOptions,
   SilenceOptions,
   SpeechCapture,
   StartSessionOptions,

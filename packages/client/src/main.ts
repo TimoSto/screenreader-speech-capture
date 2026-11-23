@@ -14,6 +14,7 @@ import type {
   OnSpeechOptions,
   ReadyOptions,
   Recording,
+  RecordOptions,
   SilenceOptions,
   SpeechCapture,
   StartSessionOptions,
@@ -162,7 +163,7 @@ export class SpeechCaptureClient implements SpeechCapture, NativeInput {
     return this.#service.waitForSilence(options);
   }
 
-  record<T>(fn: () => T | Promise<T>, options?: SilenceOptions): Promise<Recording<T>> {
+  record<T>(fn: () => T | Promise<T>, options?: RecordOptions): Promise<Recording<T>> {
     return this.#service.record(fn, options);
   }
 
