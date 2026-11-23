@@ -220,7 +220,10 @@ The pages use a hexagon-lite layout ([M5](../ROADMAP.md#m5-web-ui-)): `lib/core`
 cases and the ports `SpeechFeed`, `SpeechApi`, `SessionsApi`, `StatusApi`; `InputApi` and `ConfigApi` are
 planned), `lib/adapters` (their HTTP/SSE implementations), `lib/stores`, `lib/components` and one
 composition file (`lib/composition.ts`) that wires adapters into stores, so components never call
-`fetch` and can be tested against fake adapters.
+`fetch` and can be tested against fake adapters. The root layout creates the stores
+(`provideAppStores`) and components read them from the Svelte context (`appStores()`). They are
+not module-level singletons: on the server every request renders its own app, and a shared store
+would show one viewer's state to another.
 
 ESLint enforces the layers (`uiLayers` in `eslint.config.js`; `*.test.ts` is exempt). Every UI file
 also keeps the rule that `packages/ui` never imports bridge or client code (and the bridge never

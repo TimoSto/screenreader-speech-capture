@@ -1,3 +1,4 @@
+import { getContext, setContext } from 'svelte';
 import { resolve } from '$app/paths';
 import { BrowserThemeStorage } from '#lib/adapters/browser-theme-storage.js';
 import { markIconFontReady } from '#lib/adapters/icon-font.js';
@@ -15,15 +16,40 @@ import { createStatusStore } from '#lib/stores/status.svelte.js';
 import { createThemeStore } from '#lib/stores/theme.svelte.js';
 
 /** Wires the adapters into the stores; components get the stores, never the adapters. */
-export const themeStore = createThemeStore(new BrowserThemeStorage());
-export const statusStore = createStatusStore(new HttpStatusApi(resolve('/api/status')));
-export const configStore = createConfigStore(new HttpConfigApi(resolve('/api/config')));
-export const sessionsStore = createSessionsStore(new HttpSessionsApi(resolve('/api/sessions')));
-export const speechStore = createSpeechStore(
-  new SseSpeechFeed(resolve('/api/speech/stream'), resolve('/api/speech')),
-  new HttpSpeechApi(resolve('/api/markers'), resolve('/api/speech')),
-);
-export const sessionsPaneStore = createSessionsPaneStore(new BrowserSessionsPaneStorage());
+export function createAppStores() {
+  return {
+    theme: createThemeStore(new BrowserThemeStorage()),
+    status: createStatusStore(new HttpStatusApi(resolve('/api/status'))),
+    config: createConfigStore(new HttpConfigApi(resolve('/api/config'))),
+    sessions: createSessionsStore(new HttpSessionsApi(resolve('/api/sessions'))),
+    speech: createSpeechStore(
+      new SseSpeechFeed(resolve('/api/speech/stream'), resolve('/api/speech')),
+      new HttpSpeechApi(resolve('/api/markers'), resolve('/api/speech')),
+    ),
+    sessionsPane: createSessionsPaneStore(new BrowserSessionsPaneStorage()),
+  };
+}
+
+export type AppStores = ReturnType<typeof createAppStores>;
+
+/** The context key of the stores (component tests pass their own stores under it). */
+export const APP_STORES = Symbol('app-stores');
+
+/**
+ * Creates the stores of one app and hands them to the components below (the root layout calls it).
+ * Not a module-level singleton: on the server every request renders its own app, and a store
+ * shared by all of them would show one viewer's state to another.
+ */
+export function provideAppStores(): AppStores {
+  return setContext(APP_STORES, createAppStores());
+}
+
+/** The stores {@link provideAppStores} created. Call it while a component initialises. */
+export function appStores(): AppStores {
+  const stores = getContext<AppStores | undefined>(APP_STORES);
+  if (stores === undefined) throw new Error('appStores() needs provideAppStores() in a parent');
+  return stores;
+}
 
 /** Ends the icon placeholder shimmer once the icon font is loaded. */
 export { markIconFontReady };

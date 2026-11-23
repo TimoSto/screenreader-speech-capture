@@ -6,7 +6,7 @@
   import iconFont from '@fontsource/material-symbols-outlined/files/material-symbols-outlined-latin-400-normal.woff2?url';
   import AppHeader from '#lib/components/AppHeader/AppHeader.svelte';
   import NavRail from '#lib/components/NavRail/NavRail.svelte';
-  import { markIconFontReady, themeStore } from '#lib/composition.js';
+  import { markIconFontReady, provideAppStores } from '#lib/composition.js';
   import type { NavItem } from '#lib/core/navigation.js';
   import '#lib/styles/fonts.css';
   import '#lib/styles/tokens.css';
@@ -14,6 +14,9 @@
   import type { LayoutProps } from './$types';
 
   let { children }: LayoutProps = $props();
+
+  // One set of stores per app: per request on the server, once in the browser.
+  const { theme: themeStore } = provideAppStores();
 
   const navItems: NavItem[] = [
     { href: resolve('/'), label: 'Monitor', icon: 'monitor', exact: true },
