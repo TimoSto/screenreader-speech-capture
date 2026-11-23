@@ -235,8 +235,25 @@ The fixture:
 
 ## CLI for agents
 
-The CLI command has the same name as the package, `screenreader-speech-capture-client`, so
-`npx screenreader-speech-capture-client` works even where nothing is installed.
+The CLI command has the same name as the package, `screenreader-speech-capture-client`.
+
+### Running the CLI
+
+| Where | Install | Call |
+|---|---|---|
+| An agent's machine (recommended for agents) | `npm i -g screenreader-speech-capture-client@<version>`, once | `screenreader-speech-capture-client …` |
+| A project that has the client already (tests) | `pnpm add -D screenreader-speech-capture-client` | `npx screenreader-speech-capture-client …` (runs the project's copy) |
+| One-off, nothing installed | none | `npx -y screenreader-speech-capture-client@<version> …` |
+
+Always pin an exact version. An unpinned `npx` looks the package up on every call and runs whatever
+is newest: while the package is at `0.x`, a minor release may change the CLI (`@0` doesn't prevent
+that), and a new major API version fails with `IncompatibleBridgeError` against an older bridge
+([Versioning](http-api.md#versioning)). Update a global install by installing again, and keep it
+in step with the bridge: `--version` prints the client's version, `status` the bridge's API version.
+`-y` skips npx's install prompt, which would block an agent. The examples below use the `npx`
+form, which also finds a global install.
+
+### Commands
 
 Every command takes `--url` (overrides the [stored bridge URL](#bridge-url)) and `--json` for
 machine-readable output (the shape of every command is the valibot schema in

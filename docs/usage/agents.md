@@ -9,26 +9,28 @@ Flows: [Agents](flows/agents.md).
 ## Agent loop
 
 Agents drive the browser through [Playwright MCP](playwright-mcp.md#playwright-mcp) and read speech through the
-[CLI](client.md#cli-for-agents). A typical loop:
+[CLI](client.md#cli-for-agents), installed once per machine ([Running the CLI](client.md#running-the-cli)).
+A typical loop:
 
 ```bash
-npx screenreader-speech-capture-client config set url http://my-test-vm:5151   # once per user
-npx screenreader-speech-capture-client session start "audit checkout page"      # once per task
+npm i -g screenreader-speech-capture-client@<version>                       # once per machine
+screenreader-speech-capture-client config set url http://my-test-vm:5151   # once per user
+screenreader-speech-capture-client session start "audit checkout page"      # once per task
 
 # Before the first screen reader command, and again after anything that could steal focus
 # (a new window, a dialog): bring the MCP browser to the foreground. Run the printed function
 # with Playwright MCP's browser_evaluate and pass what it returns:
-npx screenreader-speech-capture-client focus --script
-npx screenreader-speech-capture-client focus --geometry '{"screenX":0,"screenY":0,…}'
+screenreader-speech-capture-client focus --script
+screenreader-speech-capture-client focus --geometry '{"screenX":0,"screenY":0,…}'
 
 # A screen reader command: one call presses the key and prints what it caused.
-npx screenreader-speech-capture-client press h --capture --json      # → judge the entries
+screenreader-speech-capture-client press h --capture --json      # → judge the entries
 
 # An action through Playwright MCP runs in another process, so mark where the step starts:
-SEQ=$(npx screenreader-speech-capture-client mark step-2)
+SEQ=$(screenreader-speech-capture-client mark step-2)
 # … act through Playwright MCP …
-npx screenreader-speech-capture-client wait-silence
-npx screenreader-speech-capture-client text --since "$SEQ" --json   # → judge the output
+screenreader-speech-capture-client wait-silence
+screenreader-speech-capture-client text --since "$SEQ" --json   # → judge the output
 ```
 
 Don't use a bare `wait "…"` to check a step: it searches the whole session and can match what an
