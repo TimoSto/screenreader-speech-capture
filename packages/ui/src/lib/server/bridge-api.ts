@@ -163,6 +163,9 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
         error(502, `The bridge is not reachable: ${describe(cause)}`);
       }
       if (!response.ok || response.body === null) {
+        // Unread, the body would hold the bridge connection until it is garbage collected, and
+        // `EventSource` retries every few seconds while the bridge refuses.
+        await response.body?.cancel().catch(() => undefined);
         error(
           response.status === 200 ? 502 : response.status,
           'The speech stream is not available',
