@@ -35,6 +35,11 @@ describe('helpText', () => {
     expect(lines[at + 1]).toMatch(/^ {25}line with --json\)/);
   });
 
+  it('warns that wait sees the whole session, and points to --since and --capture', () => {
+    expect(help).toMatch(/It searches the whole session: pass --since <seq>/);
+    expect(help).toMatch(/--capture prints the speech it caused/);
+  });
+
   it('separates the config commands with a blank line', () => {
     const at = lines.findIndex((line) => line.startsWith('  config set url'));
     expect(lines[at - 1]).toBe('');

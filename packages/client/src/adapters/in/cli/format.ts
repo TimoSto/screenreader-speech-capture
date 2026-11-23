@@ -3,6 +3,11 @@ import type { BridgeStatus } from '../../../domain/bridge-status.js';
 import type { Session } from '../../../domain/session.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 
+/** On stderr when a read or capture lost speech to the bridge's full buffer (`truncated`). */
+export const TRUNCATED_WARNING =
+  "some speech was dropped because the bridge's buffer was full " +
+  '(raise buffer.maxEntries); showing what is left.';
+
 export const SOURCE_LABEL: Record<ValueSource, string> = {
   explicit: '--url',
   env: URL_ENV,

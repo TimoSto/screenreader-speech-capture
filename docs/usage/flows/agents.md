@@ -10,9 +10,11 @@ Details: [Agents](../agents.md), [CLI for agents](../client.md#cli-for-agents).
 
 ## The agent loop
 
-One session per task, then per step: **mark → act → wait-silence → text --since**. A CLI call has
-no memory, so the marker's `seq` is the step's starting point. The exit codes let the agent branch
-without parsing output.
+One session per task, then per step either `press … --capture` (a screen reader command: one call
+acts and prints the speech it caused) or **mark → act → wait-silence → text --since** (an action
+through Playwright MCP, which runs in another process). A CLI call has no memory, so the marker's
+`seq` is the step's starting point. The exit codes let the agent branch without parsing output.
+Details: [Agent loop](../agents.md#agent-loop).
 
 ```mermaid
 sequenceDiagram
@@ -26,23 +28,28 @@ sequenceDiagram
     CLI->>B: POST /api/v1/sessions
     CLI-->>A: session id 7, exit 0
     loop each step
-        A->>CLI: mark step-1
-        CLI->>B: POST /api/v1/markers
-        CLI-->>A: seq 120
-        alt page interaction
+        alt screen reader command
+            A->>CLI: press h --capture --json
+            CLI->>B: GET /api/v1/status (buffer ends at seq 119)
+            CLI->>B: POST /api/v1/input/keys
+            SR->>B: speech (TCP :4449)
+            CLI->>B: follow the stream until 500 ms quiet
+            CLI->>B: GET /api/v1/speech?since=119
+            CLI-->>A: {"pressed": true, "entries": […], "truncated": false}, exit 0 (or 1)
+        else page interaction
+            A->>CLI: mark step-1
+            CLI->>B: POST /api/v1/markers
+            CLI-->>A: seq 120
             A->>B: MCP: browser_click / browser_press_key (/playwright-mcp)
             B->>MCP: passthrough
-        else screen reader command
-            A->>CLI: press h
-            CLI->>B: POST /api/v1/input/keys
+            SR->>B: speech (TCP :4449)
+            A->>CLI: wait-silence
+            CLI->>B: follow the stream until 500 ms quiet
+            CLI-->>A: exit 0 (or 1: speech didn't pause)
+            A->>CLI: text --since 120 --json
+            CLI->>B: GET /api/v1/speech?since=120&session=current
+            CLI-->>A: {"text": "…", "truncated": false}
         end
-        SR->>B: speech (TCP :4449)
-        A->>CLI: wait-silence
-        CLI->>B: follow the stream until 500 ms quiet
-        CLI-->>A: exit 0 (or 1: speech didn't pause)
-        A->>CLI: text --since 120 --json
-        CLI->>B: GET /api/v1/speech?since=120&session=current
-        CLI-->>A: {"text": "…", "truncated": false}
         Note over A: judge what was announced
     end
     A->>CLI: session end
