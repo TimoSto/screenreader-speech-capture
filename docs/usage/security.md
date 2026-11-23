@@ -38,3 +38,17 @@ The Playwright server and MCP themselves listen on `127.0.0.1` (ports `3000` and
 machines can only reach them through the bridge and its checks. A page in the VM's own browser
 can still reach those loopback ports directly. That is a known limit; the planned shared-secret
 token is the answer to it.
+
+## The web UI's Content Security Policy
+
+Every page of the [web UI](web-ui.md) is sent with a `Content-Security-Policy` header
+(`csp` in `packages/ui/vite.config.ts`):
+
+- **Scripts** only come from the UI itself. SvelteKit gives its own inline script a nonce, and so
+  does `app.html` for the script that applies the saved theme before the first paint. A script that
+  got into a page any other way (for example through text the page shows) doesn't run.
+- **No framing** (`frame-ancestors 'none'`): no other page can show the UI in a frame, so nobody can
+  lay a decoy over its buttons (delete session, clear speech) and get them clicked.
+- **Connections, fonts and images** only go to the UI's own address (`img-src` also allows `data:`).
+  The UI only talks to its own BFF, which calls the bridge from the server.
+- **Styles** still allow inline ones: Svelte and `@material/web` set `style` attributes.
