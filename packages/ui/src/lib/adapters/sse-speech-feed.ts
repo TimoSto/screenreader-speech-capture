@@ -1,6 +1,7 @@
 import { checkDto, SpeechEntrySchema, SpeechListSchema } from '@screenreader-speech-capture/shared';
 import type { SessionScope } from '#lib/core/sessions.js';
 import type { SpeechFeed, SpeechFeedHandlers } from '#lib/core/speech.js';
+import { routeDto } from './route-request.js';
 
 /** Entries read per request when an ended session is read page by page. */
 const PAGE_SIZE = 1000;
@@ -53,14 +54,13 @@ export class SseSpeechFeed implements SpeechFeed {
           since: String(since),
           limit: String(PAGE_SIZE),
         });
-        const response = await fetch(`${this.speechUrl}?${query}`, {
-          headers: { accept: 'application/json' },
-          signal: abort.signal,
-        });
-        if (!response.ok) throw new Error(`The request answered ${response.status}`);
-        const checked = checkDto(SpeechListSchema, await response.json());
-        if (!checked.ok) throw new Error(`Unexpected answer at ${checked.field}`);
-        const { entries, hasMore } = checked.value;
+        const { entries, hasMore } = await routeDto(
+          `${this.speechUrl}?${query}`,
+          SpeechListSchema,
+          {
+            signal: abort.signal,
+          },
+        );
         handlers.onEntries(entries);
         const last = entries.at(-1);
         if (!hasMore || last === undefined) return;
