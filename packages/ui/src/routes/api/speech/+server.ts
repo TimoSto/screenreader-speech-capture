@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { API_LIMITS } from '@screenreader-speech-capture/shared';
 import { bridgeApiFromEnv } from '#lib/server/bridge-api.js';
+import { scopeParam } from '#lib/server/scope.js';
 import type { RequestHandler } from './$types';
 
 function intParam(value: string | null, fallback: number, max: number): number {
@@ -14,10 +15,7 @@ function intParam(value: string | null, fallback: number, max: number): number {
 
 /** One page of a scope's speech (`?session=<id|none>&since=<seq>&limit=<n>`), oldest first. */
 export const GET: RequestHandler = async ({ url, fetch }) => {
-  const session = url.searchParams.get('session');
-  if (session !== null && session !== 'none' && !/^\d+$/.test(session)) {
-    error(400, 'session must be an id or "none"');
-  }
+  const session = scopeParam(url);
   const since = intParam(url.searchParams.get('since'), 0, Number.MAX_SAFE_INTEGER);
   const limit = intParam(
     url.searchParams.get('limit'),
@@ -29,10 +27,6 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 
 /** Clears the speech of the current session or of `none` (`?session=<id|none>`); it keeps running. */
 export const DELETE: RequestHandler = async ({ url, fetch }) => {
-  const session = url.searchParams.get('session');
-  if (session === null || (session !== 'none' && !/^[1-9]\d*$/.test(session))) {
-    error(400, 'session must be a session id or "none"');
-  }
-  await bridgeApiFromEnv(fetch).clearSpeech(session);
+  await bridgeApiFromEnv(fetch).clearSpeech(scopeParam(url, true));
   return new Response(null, { status: 204 });
 };

@@ -64,6 +64,17 @@ export type SessionScope = number | 'none';
 /** The URL value that selects the speech outside any session (the bridge's `session=none`). */
 export const OUTSIDE_SESSIONS = 'none';
 
+/** A session id as the bridge hands them out: a positive whole number, in decimal, no leading zero. */
+const SESSION_ID = /^[1-9]\d*$/;
+
+/** A session id (`'7'`) or `none`, as a URL spells it; `null` for anything else. */
+export function parseScope(value: string): SessionScope | null {
+  if (value === OUTSIDE_SESSIONS) return OUTSIDE_SESSIONS;
+  if (!SESSION_ID.test(value)) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) ? id : null;
+}
+
 /**
  * The scope a pane shows: `none` if the URL asks for it, the session named in the URL if it still
  * exists, otherwise the current one (following), otherwise the speech outside any session.
@@ -73,9 +84,9 @@ export function selectedScope(
   sessions: SessionDto[],
   currentId: number | null,
 ): SessionScope {
-  if (requested === OUTSIDE_SESSIONS) return OUTSIDE_SESSIONS;
-  const id = requested === null || !/^\d+$/.test(requested) ? null : Number(requested);
-  if (id !== null && sessions.some((session) => session.id === id)) return id;
+  const scope = requested === null ? null : parseScope(requested);
+  if (scope === OUTSIDE_SESSIONS) return OUTSIDE_SESSIONS;
+  if (scope !== null && sessions.some((session) => session.id === scope)) return scope;
   return currentId ?? OUTSIDE_SESSIONS;
 }
 
