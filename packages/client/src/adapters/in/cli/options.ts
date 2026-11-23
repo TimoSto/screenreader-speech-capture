@@ -61,20 +61,22 @@ export function checkOptions(command: string, allowed: readonly Option[], values
   }
 }
 
+/** `raw` as an integer >= `min` (digits only), or a usage error with `message`. */
+export function intArg(raw: string, min: number, message: string): number {
+  const value = Number(raw);
+  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(value) || value < min) {
+    throw new UsageError(message);
+  }
+  return value;
+}
+
 /** An integer option >= `min`, `undefined` if not given. */
 export function optionalInt(values: Values, name: Option, min: number): number | undefined {
   const raw = values[name];
   if (raw === undefined) return undefined;
-  const value = Number(raw);
-  if (
-    typeof raw !== 'string' ||
-    !/^\d+$/.test(raw) ||
-    !Number.isSafeInteger(value) ||
-    value < min
-  ) {
-    throw new UsageError(`--${name} must be an integer >= ${min}, got "${String(raw)}".`);
-  }
-  return value;
+  const message = `--${name} must be an integer >= ${min}, got "${String(raw)}".`;
+  if (typeof raw !== 'string') throw new UsageError(message);
+  return intArg(raw, min, message);
 }
 
 type Args<N extends number, T extends string[] = []> = T['length'] extends N
@@ -91,10 +93,7 @@ export function expectArgs<N extends 0 | 1 | 2>(args: string[], count: N, usage:
 export function sessionOption(values: Values): SessionRef | undefined {
   const raw = values.session;
   if (raw === undefined || raw === 'current') return raw;
-  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw)) || Number(raw) < 1) {
-    throw new UsageError(`--session must be a session id (>= 1) or current, got "${raw}".`);
-  }
-  return Number(raw);
+  return intArg(raw, 1, `--session must be a session id (>= 1) or current, got "${raw}".`);
 }
 
 /**

@@ -1,3 +1,4 @@
+import { createTextTest } from '@screenreader-speech-capture/shared';
 import { SpeechTimeoutError, SpeechTruncatedError } from '../../../../domain/errors.js';
 import type { SpeechEntry } from '../../../../domain/speech-entry.js';
 import type { CliIo } from '../command.js';
@@ -11,7 +12,15 @@ import {
   seenText,
   TRUNCATED_WARNING,
 } from '../format.js';
-import { NAME, UsageError, expectArgs, optionalInt, scope, sessionOption } from '../options.js';
+import {
+  NAME,
+  UsageError,
+  expectArgs,
+  intArg,
+  optionalInt,
+  scope,
+  sessionOption,
+} from '../options.js';
 
 // The commands that talk to the bridge. Each one's `help` is also its usage error.
 
@@ -85,10 +94,7 @@ export const session: Command = {
         return EXIT.ok;
       case 'delete': {
         const [raw] = expectArgs(rest, 1, SESSION_DELETE.usage);
-        const id = Number(raw);
-        if (!/^\d+$/.test(raw) || !Number.isSafeInteger(id) || id < 1) {
-          throw new UsageError(`The session id must be an integer >= 1, got "${raw}".`);
-        }
+        const id = intArg(raw, 1, `The session id must be an integer >= 1, got "${raw}".`);
         await speech().deleteSession(id);
         out('session delete', { deleted: true }, `Session ${id} deleted.`);
         return EXIT.ok;
@@ -242,6 +248,11 @@ export const wait: Command = {
         out('wait', { matched: false, entries: error.entries, truncated: error.truncated }, '');
       }
       io.stderr(`${NAME}: ${error.message}.${seenText(error.entries)}\n`);
+      // The wording depends on the screen reader and its verbosity: point at --normalize when it
+      // is what made the difference.
+      const normalized = values.normalize ? undefined : createTextTest(match, true);
+      const near = normalized && error.entries.find((e) => normalized(e.text));
+      if (near) io.stderr(`Hint: with --normalize it matches ${formatEntry(near)}.\n`);
       return EXIT.timeout;
     }
   },
@@ -286,7 +297,8 @@ const TAIL: HelpLine = {
   usage: 'tail [--since <seq>]',
   description: [
     'Print speech live as it arrives, until Ctrl+C (one JSON event per',
-    'line with --json); --since first prints the buffered entries after <seq>',
+    'line with --json); --since first prints the buffered entries after <seq>.',
+    'For people watching; agents use wait, wait-silence or --capture',
   ],
 };
 

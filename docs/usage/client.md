@@ -336,7 +336,9 @@ they print what is left, warn on stderr and still exit `0`; with `--json` they a
 With `--json`, `wait` prints `{ "matched": true, "entry": {...} }`, or on timeout
 `{ "matched": false, "entries": [...], "truncated": false }` with the speech seen, and
 `truncated: true` if some of it was dropped because the bridge's buffer was full (the shapes
-follow [`GET /speech/wait`](http-api.md#endpoints), which reports `omitted` instead). `mark` prints the marker's `seq`, or the whole entry
+follow [`GET /speech/wait`](http-api.md#endpoints), which reports `omitted` instead). On a timeout, stderr lists the speech seen, and if one of those entries
+matches when case and extra whitespace are ignored, a hint to use `--normalize`.
+`mark` prints the marker's `seq`, or the whole entry
 with `--json`.
 
 `focus` brings a browser the CLI has no `page` of (the one Playwright MCP drives) to the
@@ -354,7 +356,7 @@ buffer ends, act, wait until nothing was spoken for `--quiet-for` ms (default 50
 action can't get in. If the speech doesn't pause in time, the action has still happened, and the
 command exits with `1` (`SpeechTimeoutError`).
 
-`tail` prints each entry as it arrives (`#12 Submit, button`, markers included) until Ctrl+C or
+`tail` is for people watching (agents use `wait`, `wait-silence` or `--capture`). It prints each entry as it arrives (`#12 Submit, button`, markers included) until Ctrl+C or
 `SIGTERM`, then exits with `0`. A closed pipe (`tail --json | head -3`) ends it too, once the next
 line is written. By default it shows only new speech; `--since
 <seq>` first prints the buffered entries after `seq`. With `--json` it prints one event per line:

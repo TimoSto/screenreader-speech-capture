@@ -9,7 +9,7 @@ import {
 import type { SpeechEntry } from '../../../../domain/speech-entry.js';
 import { EXIT, type Command, type Context, type HelpLine } from '../command.js';
 import { TRUNCATED_WARNING } from '../format.js';
-import { NAME, UsageError, optionalInt, requiredSignedInt } from '../options.js';
+import { NAME, UsageError, expectArgs, optionalInt, requiredSignedInt } from '../options.js';
 
 // Native input on the VM (docs/usage/native-input.md).
 
@@ -19,7 +19,7 @@ const CAPTURE_HELP = [
   'for --quiet-for ms (default 500, 10000)',
 ];
 
-const FOCUS: HelpLine = {
+const CLICK: HelpLine = {
   usage: `click --x <px> --y <px> [--button <b>] ${CAPTURE_USAGE}`,
   description: [
     'Native click at a screen point in physical pixels, for example to give',
@@ -31,12 +31,12 @@ const FOCUS: HelpLine = {
 
 export const click: Command = {
   options: ['x', 'y', 'button', 'capture', 'quiet-for', 'timeout'],
-  help: [FOCUS],
+  help: [CLICK],
   async run(args, ctx) {
     const { values, input, out } = ctx;
-    if (args.length !== 0) throw new UsageError(`Usage: ${NAME} ${FOCUS.usage}`);
-    const x = requiredSignedInt(values, 'x', FOCUS.usage);
-    const y = requiredSignedInt(values, 'y', FOCUS.usage);
+    expectArgs(args, 0, CLICK.usage);
+    const x = requiredSignedInt(values, 'x', CLICK.usage);
+    const y = requiredSignedInt(values, 'y', CLICK.usage);
     const { button } = values;
     if (button !== undefined && button !== 'left' && button !== 'right' && button !== 'middle') {
       throw new UsageError(`--button must be left, right or middle, got "${button}".`);
@@ -63,6 +63,7 @@ export const press: Command = {
   help: [PRESS],
   async run(args, ctx) {
     const { values, input, out } = ctx;
+    // One or more keys: more than expectArgs checks.
     if (args.length === 0) throw new UsageError(`Usage: ${NAME} ${PRESS.usage}`);
     const delayMs = optionalInt(values, 'delay', 0);
     // The same rule as the bridge's: a wrong key name is a usage error, not a bridge error.
@@ -78,7 +79,7 @@ export const press: Command = {
   },
 };
 
-const FOCUS_WINDOW: HelpLine = {
+const FOCUS: HelpLine = {
   usage: `focus (--script | --geometry <json>) ${CAPTURE_USAGE}`,
   description: [
     'Bring the browser to the foreground, before press: run the --script',
@@ -93,12 +94,13 @@ export const FOCUS_SCRIPT = `() => ${READ_GEOMETRY_SCRIPT}`;
 
 export const focus: Command = {
   options: ['script', 'geometry', 'capture', 'quiet-for', 'timeout'],
-  help: [FOCUS_WINDOW],
+  help: [FOCUS],
   async run(args, ctx) {
     const { values, input, out } = ctx;
+    expectArgs(args, 0, FOCUS.usage);
     // Exactly one of --script and --geometry.
-    if (args.length !== 0 || Boolean(values.script) === (values.geometry !== undefined)) {
-      throw new UsageError(`Usage: ${NAME} ${FOCUS_WINDOW.usage}`);
+    if (Boolean(values.script) === (values.geometry !== undefined)) {
+      throw new UsageError(`Usage: ${NAME} ${FOCUS.usage}`);
     }
     if (values.script) {
       if (values.capture) throw new UsageError('--capture goes with --geometry, not --script.');

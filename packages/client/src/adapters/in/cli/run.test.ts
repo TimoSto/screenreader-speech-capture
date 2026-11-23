@@ -319,6 +319,20 @@ describe('speech commands', () => {
     expect(json.stderr).toContain('No speech arrived.');
   });
 
+  it('a wait timeout hints at --normalize when only case or spacing differ', async () => {
+    const fake = fakeSpeech();
+    fake.api.speak('Submit,  Button');
+    const json = await cli(['wait', 'submit, button', '--timeout', '0', '--json'], fake);
+    expect(json.code).toBe(EXIT.timeout);
+    expect(json.stderr).toContain('Hint: with --normalize it matches #1 Submit,  Button.');
+    expect(JSON.parse(json.stdout)).toMatchObject({ matched: false });
+
+    expect((await cli(['wait', 'Cancel', '--timeout', '0'], fake)).stderr).not.toContain('Hint');
+    expect(
+      (await cli(['wait', 'cancel', '--normalize', '--timeout', '0'], fake)).stderr,
+    ).not.toContain('Hint');
+  });
+
   it('wait-silence succeeds after quiet-for, exits 1 while speech goes on', async () => {
     const fake = fakeSpeech();
     expect(await cli(['wait-silence', '--quiet-for', '100'], fake)).toMatchObject({
