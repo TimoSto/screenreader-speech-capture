@@ -23,6 +23,7 @@ import {
   type StartSessionResponseDto,
   type StatusDto,
 } from '@screenreader-speech-capture/shared';
+import type { SessionScope } from '#lib/core/sessions.js';
 
 /** Where the BFF finds the bridge when `SR_BRIDGE_API_URL` is not set (`pnpm dev:ui`). */
 export const DEFAULT_BRIDGE_URL = 'http://127.0.0.1:5151';
@@ -39,7 +40,7 @@ export interface BridgeApi {
   /** Deletes an ended session and its speech (the bridge refuses the current one). */
   deleteSession(id: number): Promise<void>;
   /** Clears the speech of the current session or of `none` (`session`: an id or `none`); it keeps running. */
-  clearSpeech(session: string): Promise<void>;
+  clearSpeech(session: SessionScope): Promise<void>;
   /** The configuration in use (`active`) or the one the next start will use (`saved`). */
   config(view: 'active' | 'saved'): Promise<ConfigDto>;
   /** The settings a flag or environment variable sets: the config file can't change them. */
@@ -52,13 +53,13 @@ export interface BridgeApi {
   /** Inserts a marker; the bridge files it under the current session (or outside any). */
   addMarker(label: string): Promise<SpeechEntryDto>;
   /** One page of a scope's entries with `seq > since`, oldest first (`session`: an id or `none`). */
-  speech(session: string | null, since: number, limit: number): Promise<SpeechListDto>;
+  speech(session: SessionScope | null, since: number, limit: number): Promise<SpeechListDto>;
   /**
    * Opens the bridge's SSE stream (`session`: an id or `none`). The body is passed on as it is,
    * so `Last-Event-ID` replays and every event name reach the browser untouched.
    */
   openSpeechStream(
-    session: string | null,
+    session: SessionScope | null,
     lastEventId: string | null,
     signal: AbortSignal,
   ): Promise<Response>;
@@ -135,7 +136,7 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
       await call('DELETE', `/sessions?session=${id}`);
     },
     clearSpeech: async (session) => {
-      await call('DELETE', `/speech?session=${encodeURIComponent(session)}`);
+      await call('DELETE', `/speech?session=${session}`);
     },
     config: (view) => read('GET', `/config?view=${view}`, ConfigSchema),
     configOverrides: () => read('GET', '/config/overrides', ConfigOverridesSchema),
@@ -143,11 +144,11 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
     addMarker: (label) => read('POST', '/markers', SpeechEntrySchema, { label }),
     speech: (session, since, limit) => {
       const query = new URLSearchParams({ since: String(since), limit: String(limit) });
-      if (session !== null) query.set('session', session);
+      if (session !== null) query.set('session', String(session));
       return read('GET', `/speech?${query}`, SpeechListSchema);
     },
     openSpeechStream: async (session, lastEventId, signal) => {
-      const query = session === null ? '' : `?session=${encodeURIComponent(session)}`;
+      const query = session === null ? '' : `?session=${session}`;
       let response: Response;
       try {
         response = await fetchFn(`${root}/speech/stream${query}`, {

@@ -228,9 +228,9 @@ describe('createBridgeApi', () => {
     const api = createBridgeApi('http://bridge', () =>
       Promise.resolve(new Response(body, { status: 404 })),
     );
-    await expect(
-      api.openSpeechStream('9', null, new AbortController().signal),
-    ).rejects.toMatchObject({ status: 404 });
+    await expect(api.openSpeechStream(9, null, new AbortController().signal)).rejects.toMatchObject(
+      { status: 404 },
+    );
     expect(cancelled).toBe(true);
   });
 
@@ -250,7 +250,7 @@ describe('createBridgeApi', () => {
         return json({ entries: [], truncated: false, hasMore: false });
       }),
     );
-    const list = await api.speech('4', 10, 500);
+    const list = await api.speech(4, 10, 500);
     expect(new URL(requested).searchParams.toString()).toBe('since=10&limit=500&session=4');
     expect(list.hasMore).toBe(false);
   });
