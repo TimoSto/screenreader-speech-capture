@@ -18,6 +18,26 @@ export default defineConfig({
       adapter: adapter(),
       // The bridge serves the UI under /ui; the API lives at /api/v1.
       paths: { base: '/ui' },
+      // docs/usage/security.md#the-web-uis-content-security-policy. Scripts only from the UI itself
+      // (SvelteKit adds a nonce for its own inline script, and `app.html`'s theme script carries
+      // `%sveltekit.nonce%`); no page may frame the UI, so its delete and clear buttons can't be
+      // clicked through a hidden frame. Styles stay open to inline ones: Svelte and @material/web
+      // set `style` attributes.
+      csp: {
+        mode: 'auto',
+        directives: {
+          'default-src': ['self'],
+          'script-src': ['self'],
+          'style-src': ['self', 'unsafe-inline'],
+          'img-src': ['self', 'data:'],
+          'font-src': ['self'],
+          'connect-src': ['self'],
+          'object-src': ['none'],
+          'base-uri': ['self'],
+          'form-action': ['self'],
+          'frame-ancestors': ['none'],
+        },
+      },
       // Remote functions (`*.remote.ts`) are still experimental in this Kit version
       // (docs/implementation/decisions.md#the-ui-uses-sveltekits-experimental-remote-functions).
       experimental: { remoteFunctions: true },
