@@ -312,9 +312,10 @@ error there, so those lines reach the log file and never block on the console. W
 
 `packages/shared` holds only the **API contract**: the DTOs as valibot schemas, the protocol limits
 and a check function ([decisions](decisions.md#the-api-contract-is-valibot-schemas)). Each hexagon
-owns its own domain model and maps to and from the DTOs in its HTTP adapter. The one piece of behaviour in it is the `normalize`
-text rule (`text-match.ts`): it is part of the contract, so the bridge's `GET /speech/wait` and the
-client's waits use the same copy.
+owns its own domain model and maps to and from the DTOs in its HTTP adapter. Its two pieces of behaviour are part of the contract, so
+both sides use the same copy: the `normalize` text rule (`text-match.ts`, the bridge's
+`GET /speech/wait` and the client's waits) and the key-chord rule (`key-chord.ts`, the bridge's
+`POST /input/keys` and the CLI's `press` check and `--help`).
 
 It also has one Node-only entry, `@screenreader-speech-capture/shared/platform-paths`: `appDir`
 resolves the per-user config, state and cache folders (`%APPDATA%` / `%LOCALAPPDATA%` on Windows,

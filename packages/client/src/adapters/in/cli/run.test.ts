@@ -511,6 +511,20 @@ describe('native input commands', () => {
     ]);
   });
 
+  it('press rejects an unknown key name before sending anything', async () => {
+    const fake = fakeSpeech();
+    const result = await cli(['press', 'h', 'Insert+Foo', '--json'], fake);
+    expect(result.code).toBe(EXIT.usage);
+    expect(JSON.parse(result.stdout)).toEqual({
+      error: {
+        type: 'UsageError',
+        message: 'Invalid key: unknown key "Foo" in "Insert+Foo" (key names: --help).',
+      },
+    });
+    expect(fake.api.calls.filter((call) => call.startsWith('keys'))).toEqual([]);
+    expect((await cli(['press', 'ctrl+Home', 'PgDn'], fake)).code).toBe(EXIT.ok);
+  });
+
   it('press needs keys, and a bridge error exits 2', async () => {
     expect((await cli(['press'])).code).toBe(EXIT.usage);
     const fake = fakeSpeech();
@@ -742,13 +756,13 @@ describe('errors', () => {
     const fake = fakeSpeech();
     await fake.api.status();
     fake.api.failures.push(
-      new BridgeHttpError(400, 'INVALID_REQUEST', 'Unknown key "foo"', { field: 'keys' }),
+      new BridgeHttpError(400, 'INVALID_REQUEST', 'keys: at most 100 chords', { field: 'keys' }),
     );
-    const result = await cli(['press', 'foo', '--json'], fake);
+    const result = await cli(['press', 'h', '--json'], fake);
     expect(result.code).toBe(EXIT.bridge);
     expect(errorOf(result.stdout)).toEqual({
       type: 'BridgeHttpError',
-      message: 'Unknown key "foo" (HTTP 400, INVALID_REQUEST)',
+      message: 'keys: at most 100 chords (HTTP 400, INVALID_REQUEST)',
       status: 400,
       code: 'INVALID_REQUEST',
       details: { field: 'keys' },

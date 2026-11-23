@@ -1,3 +1,4 @@
+import { KEY_ALIASES, MODIFIER_KEYS, NAMED_KEYS } from '@screenreader-speech-capture/shared';
 import { describe, expect, it } from 'vitest';
 import { COMMANDS } from './commands/index.js';
 import { helpText } from './help.js';
@@ -38,6 +39,32 @@ describe('helpText', () => {
   it('warns that wait sees the whole session, and points to --since and --capture', () => {
     expect(help).toMatch(/It searches the whole session: pass --since <seq>/);
     expect(help).toMatch(/--capture prints the speech it caused/);
+  });
+
+  it('shows the typical agent loop and explains seq', () => {
+    expect(help).toContain('Typical use (one session per task, then per step):');
+    expect(help).toMatch(/^ {2}press h --capture --json +a screen reader command/m);
+    expect(help).toMatch(/^ {2}text --since <seq> --json +what was said after the marker$/m);
+    expect(help).toContain('seq: every entry (speech or marker) gets a number that only grows.');
+  });
+
+  it('lists every key name press accepts, from the shared contract', () => {
+    const at = help.indexOf('Keys for press');
+    const block = help.slice(at, help.indexOf('\n\n', at)).split(/\s+/);
+    for (const key of [...MODIFIER_KEYS, ...NAMED_KEYS.filter((k) => !/^f\d+$/.test(k))]) {
+      expect(
+        block.some((word) => word.replace(/;$/, '') === key),
+        key,
+      ).toBe(true);
+    }
+    for (const [alias, key] of Object.entries(KEY_ALIASES)) {
+      expect(block, alias).toContain(`${alias}=${key}`);
+    }
+    expect(block).toContain('f1-f12;');
+  });
+
+  it('keeps every line within 100 columns', () => {
+    expect(lines.filter((line) => line.length > 100)).toEqual([]);
   });
 
   it('separates the config commands with a blank line', () => {

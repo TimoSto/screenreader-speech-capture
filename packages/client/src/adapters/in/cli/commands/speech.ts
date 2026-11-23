@@ -116,8 +116,9 @@ export const session: Command = {
 const CLEAR: HelpLine = {
   usage: 'clear [--session <id|current> | --outside]',
   description: [
-    'Wipe the whole speech buffer, all sessions (for manual use); --session clears only the',
-    'current session (it keeps running), --outside only the speech outside sessions',
+    'Wipe the whole speech buffer, all sessions (for manual use); --session',
+    'clears only that session (it keeps running), --outside only the speech',
+    'outside sessions',
   ],
 };
 

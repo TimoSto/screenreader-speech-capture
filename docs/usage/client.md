@@ -291,7 +291,7 @@ its output (and `tail` ends with it as its last line). The message also goes to 
 
 | `type` | Exit code | Meaning |
 |---|---|---|
-| `UsageError` | `3` | Wrong command, arguments or options; the message names the problem or prints the usage. |
+| `UsageError` | `3` | Wrong command, arguments or options (also an unknown [key name](native-input.md#key-names) for `press`); the message names the problem or prints the usage. |
 | `ClientConfigError` | `3` | Invalid bridge URL or client config file. |
 | `BridgeUnreachableError` | `2` | No connection: wrong URL, bridge not running, network. Retrying (or `status --wait-ready`) may help. |
 | `BridgeHttpError` | `2` | The bridge refused the request. Also has `status`, `code` (for example `INPUT_DISABLED`, `NOT_FOUND`, `INVALID_REQUEST`) and, if sent, `details` (for example `field`) from the [error](http-api.md#errors). Retrying the same call won't help. |
