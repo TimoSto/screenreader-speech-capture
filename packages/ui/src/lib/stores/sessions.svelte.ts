@@ -4,7 +4,7 @@ import type { SessionDto, SessionListDto } from '@screenreader-speech-capture/sh
 /** How often the list is read again, so entry counts and sessions of other clients show up. */
 const REFRESH_MS = 3000;
 
-/** The sessions: read on `init`, then every few seconds, and after every start, end or delete. */
+/** The sessions: seeded by the page, read on `init`, then every few seconds, and after every start, end or delete. */
 export function createSessionsStore(api: SessionsApi) {
   let sessions = $state<SessionDto[]>([]);
   let currentId = $state<number | null>(null);
@@ -14,11 +14,11 @@ export function createSessionsStore(api: SessionsApi) {
   let now = $state(Date.now());
   let inFlight: Promise<void> | null = null;
 
-  function apply(list: SessionListDto): void {
+  function apply(list: SessionListDto, at = Date.now()): void {
     sessions = list.sessions;
     currentId = list.currentId;
     outsideEntries = list.outsideEntries;
-    now = Date.now();
+    now = at;
     loaded = true;
   }
 
@@ -56,7 +56,7 @@ export function createSessionsStore(api: SessionsApi) {
     get outsideEntries() {
       return outsideEntries;
     },
-    /** Whether a list has been applied yet; until then the page shows what the server rendered. */
+    /** Whether a list has been applied yet (the seed or a read). */
     get loaded() {
       return loaded;
     },
@@ -68,11 +68,18 @@ export function createSessionsStore(api: SessionsApi) {
       return now;
     },
     /**
-     * Reads the list and keeps it fresh; `seed` is the list the server rendered, so there is no
-     * flash. Returns the function that stops the timers (call it when the page goes away).
+     * Shows the list the page's load read (`now`: when it was read), before any request of its
+     * own. Call it while the page renders, on the server too: the stores are per request, so the
+     * server's HTML and the first browser render agree. Does nothing once a list is shown.
      */
-    init(seed: SessionListDto | null): () => void {
-      if (seed && sessions.length === 0) apply(seed);
+    seed(list: SessionListDto | null, at: number): void {
+      if (list !== null && !loaded) apply(list, at);
+    },
+    /**
+     * Reads the list and keeps it fresh. Call it in the browser only. Returns the function that
+     * stops the timers (call it when the page goes away).
+     */
+    init(): () => void {
       void read();
       const tick = setInterval(() => {
         if (currentId !== null) now = Date.now();

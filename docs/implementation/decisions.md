@@ -357,3 +357,19 @@ address is loopback or one of the machine's own interface addresses (a page open
 `hooks.server.ts` turns it into `locals.local`, and `SpeechLog` then marks its rows `aria-hidden`, drops
 the region and `tabindex`, and a warning banner above the log says why. A page opened from another machine is unchanged. A proxy that
 connects from the machine itself makes remote viewers look local.
+
+## The UI uses SvelteKit's experimental remote functions
+
+Remote functions (`query`, `command` in `*.remote.ts`) replace a hand-written `+server.ts` route and a
+`fetch` adapter with one typed function, and a query awaited during the server render goes into the page,
+so the browser's first call needs no request. In this Kit version they are behind
+`experimental.remoteFunctions`, and their API may change in a minor release. The dependencies are pinned
+to exact versions, so a change only arrives with a deliberate upgrade. They are adopted one resource at a
+time, starting with the sessions list (`lib/remote/sessions.remote.ts`). Two rules keep the layers:
+
+- Only adapters (behind the `lib/core` ports) and server code call a remote function (`uiRemote` in
+  `eslint.config.js`); stores and components still get the stores, so their tests are unchanged.
+- Svelte's experimental async mode (`await` in components) stays off. On the server a query's `current`
+  is always `undefined`, so the page's load awaits the query and the page seeds the store with the result
+  while it renders.
+
