@@ -1,6 +1,5 @@
 import { error, json } from '@sveltejs/kit';
 import { API_LIMITS } from '@screenreader-speech-capture/shared';
-import { bridgeApiFromEnv } from '#lib/server/bridge-api.js';
 import { scopeParam } from '#lib/server/scope.js';
 import type { RequestHandler } from './$types';
 
@@ -14,7 +13,7 @@ function intParam(value: string | null, fallback: number, max: number): number {
 }
 
 /** One page of a scope's speech (`?session=<id|none>&since=<seq>&limit=<n>`), oldest first. */
-export const GET: RequestHandler = async ({ url, fetch }) => {
+export const GET: RequestHandler = async ({ url, locals }) => {
   const session = scopeParam(url);
   const since = intParam(url.searchParams.get('since'), 0, Number.MAX_SAFE_INTEGER);
   const limit = intParam(
@@ -22,11 +21,11 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
     API_LIMITS.list.default,
     API_LIMITS.list.max,
   );
-  return json(await bridgeApiFromEnv(fetch).speech(session, since, limit));
+  return json(await locals.bridge.speech(session, since, limit));
 };
 
 /** Clears the speech of the current session or of `none` (`?session=<id|none>`); it keeps running. */
-export const DELETE: RequestHandler = async ({ url, fetch }) => {
-  await bridgeApiFromEnv(fetch).clearSpeech(scopeParam(url, true));
+export const DELETE: RequestHandler = async ({ url, locals }) => {
+  await locals.bridge.clearSpeech(scopeParam(url, true));
   return new Response(null, { status: 204 });
 };
