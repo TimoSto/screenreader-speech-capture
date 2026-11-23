@@ -1,13 +1,20 @@
 import type { SessionListDto, StartSessionResponseDto } from '@screenreader-speech-capture/shared';
 import type { SessionsApi } from '#lib/core/sessions.js';
+import { getSessions } from '#lib/remote/sessions.remote.js';
 import { routeJson, routeRequest } from './route-request.js';
 
-/** Reads and changes sessions through the UI's own sessions routes (`url` includes the base path). */
+/**
+ * Reads the sessions with the `getSessions` remote query and changes them through the UI's own
+ * sessions routes (`url` includes the base path).
+ */
 export class HttpSessionsApi implements SessionsApi {
   constructor(private readonly url: string) {}
 
-  list(): Promise<SessionListDto> {
-    return routeJson<SessionListDto>(this.url);
+  /** Always asks the server again: a query keeps its last answer while anything still uses it. */
+  async list(): Promise<SessionListDto> {
+    const sessions = getSessions();
+    await sessions.refresh();
+    return sessions.current as SessionListDto;
   }
 
   start(name: string, run: string | null): Promise<StartSessionResponseDto> {

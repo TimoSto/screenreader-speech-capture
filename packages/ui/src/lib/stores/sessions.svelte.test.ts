@@ -46,7 +46,7 @@ describe('createSessionsStore', () => {
   it('keeps the number of entries outside any session', async () => {
     const api = fakeApi({ sessions: [], currentId: null, outsideEntries: 5 });
     const store = createSessionsStore(api);
-    const stop = store.init(null);
+    const stop = store.init();
     await vi.waitFor(() => expect(store.outsideEntries).toBe(5));
     stop();
   });
@@ -54,7 +54,8 @@ describe('createSessionsStore', () => {
   it('shows the seed at once and then reads the list', async () => {
     const api = fakeApi({ sessions: [session(2), session(1)], currentId: 2 });
     const store = createSessionsStore(api);
-    const stop = store.init({ sessions: [session(1)], currentId: 1, outsideEntries: 0 });
+    store.seed({ sessions: [session(1)], currentId: 1, outsideEntries: 0 }, Date.now());
+    const stop = store.init();
     expect(store.currentId).toBe(1);
     await vi.waitFor(() => expect(store.currentId).toBe(2));
     expect(store.sessions.map((s) => s.id)).toEqual([2, 1]);
@@ -65,14 +66,14 @@ describe('createSessionsStore', () => {
     const api = fakeApi({ sessions: [session(1)], currentId: 1 });
     const store = createSessionsStore(api);
     expect(store.loaded).toBe(false);
-    const stop = store.init(null);
+    const stop = store.init();
     await vi.waitFor(() => expect(store.loaded).toBe(true));
     stop();
 
     const down = fakeApi({ sessions: [], currentId: null });
     vi.mocked(down.list).mockRejectedValue(new Error('down'));
     const failed = createSessionsStore(down);
-    const stopFailed = failed.init(null);
+    const stopFailed = failed.init();
     await vi.waitFor(() => expect(failed.reachable).toBe(false));
     expect(failed.loaded).toBe(false);
     stopFailed();
@@ -82,7 +83,8 @@ describe('createSessionsStore', () => {
     const api = fakeApi({ sessions: [session(1)], currentId: 1 });
     vi.mocked(api.list).mockRejectedValue(new Error('down'));
     const store = createSessionsStore(api);
-    const stop = store.init({ sessions: [session(1)], currentId: 1, outsideEntries: 0 });
+    store.seed({ sessions: [session(1)], currentId: 1, outsideEntries: 0 }, Date.now());
+    const stop = store.init();
     await vi.waitFor(() => expect(store.reachable).toBe(false));
     expect(store.sessions).toHaveLength(1);
     stop();
@@ -91,7 +93,7 @@ describe('createSessionsStore', () => {
   it('reads again after a start and after an end', async () => {
     const api = fakeApi({ sessions: [], currentId: null });
     const store = createSessionsStore(api);
-    const stop = store.init(null);
+    const stop = store.init();
     await store.start('checkout test', null);
     expect(api.start).toHaveBeenCalledWith('checkout test', null);
     expect(store.currentId).toBe(1);
@@ -103,7 +105,7 @@ describe('createSessionsStore', () => {
   it('reads again after a delete', async () => {
     const api = fakeApi({ sessions: [session(1, '2026-11-12T09:00:00.000Z')], currentId: null });
     const store = createSessionsStore(api);
-    const stop = store.init(null);
+    const stop = store.init();
     await vi.waitFor(() => expect(store.sessions).toHaveLength(1));
     await store.delete(1);
     expect(api.delete).toHaveBeenCalledWith(1);
@@ -114,7 +116,7 @@ describe('createSessionsStore', () => {
   it('reads the list again on refresh', async () => {
     const api = fakeApi({ sessions: [], currentId: null });
     const store = createSessionsStore(api);
-    const stop = store.init(null);
+    const stop = store.init();
     await vi.waitFor(() => expect(api.list).toHaveBeenCalledTimes(1));
     await store.refresh();
     expect(api.list).toHaveBeenCalledTimes(2);
@@ -133,7 +135,8 @@ describe('createSessionsStore', () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
     const api = fakeApi({ sessions: [session(1)], currentId: 1 });
     const store = createSessionsStore(api);
-    const stop = store.init({ sessions: [session(1)], currentId: 1, outsideEntries: 0 });
+    store.seed({ sessions: [session(1)], currentId: 1, outsideEntries: 0 }, Date.now());
+    const stop = store.init();
     const before = store.now;
     vi.advanceTimersByTime(1000);
     expect(store.now).toBeGreaterThan(before);

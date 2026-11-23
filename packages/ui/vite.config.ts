@@ -18,6 +18,9 @@ export default defineConfig({
       adapter: adapter(),
       // The bridge serves the UI under /ui; the API lives at /api/v1.
       paths: { base: '/ui' },
+      // Remote functions (`*.remote.ts`) are still experimental in this Kit version
+      // (docs/implementation/decisions.md#the-ui-uses-sveltekits-experimental-remote-functions).
+      experimental: { remoteFunctions: true },
     }),
   ],
 });

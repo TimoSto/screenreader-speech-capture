@@ -211,7 +211,8 @@ packages/ui/src/
   lib/server/      the BFF's only way to the bridge: bridge-api.ts (fetch + schema check of every answer),
                    handed to routes and loads as `locals.bridge`
   lib/core/        pure: sessions, speech (the `SpeechFeed` port, row cap, heading and time formats)
-  lib/adapters/    fetch / EventSource / localStorage: SseSpeechFeed, HttpSessionsApi, HttpStatusApi, ...
+  lib/adapters/    fetch / EventSource / localStorage / remote calls: SseSpeechFeed, HttpSessionsApi, ...
+  lib/remote/      remote functions (`*.remote.ts`, server code): getSessions
   lib/stores/      Svelte runes stores built on the ports (speech, sessions, status, theme, ...)
   lib/components/  SpeechLog, SessionsPane, ... (one folder each, with a `*.svelte.test.ts`)
   routes/          pages and their `+page.server.ts` / `+layout.server.ts` load functions
@@ -237,8 +238,8 @@ imports the UI).
 | ---------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `lib/core`                                                       | relative files, `#lib/core`, `shared` | packages, Svelte/SvelteKit, other layers; `fetch`, `EventSource`, browser globals, timers, `Date.now()`, `new Date()`, `console` |
 | `lib/adapters`                                                   | core, packages                        | stores, components, routes, `lib/server`                                                                                         |
-| `lib/stores`                                                     | core, Svelte                          | adapters (injected), components, `lib/server`; `fetch`, `EventSource`, `WebSocket`, `XMLHttpRequest`                             |
-| `lib/components`, `routes/**/*.svelte`, `+page.ts`, `+layout.ts` | stores, core                          | adapters, `lib/server`; the same I/O globals                                                                                     |
+| `lib/stores`                                                     | core, Svelte                          | adapters (injected), components, `lib/server`, `lib/remote`; `fetch`, `EventSource`, `WebSocket`, `XMLHttpRequest`                             |
+| `lib/components`, `routes/**/*.svelte`, `+page.ts`, `+layout.ts` | stores, core                          | adapters, `lib/server`, `lib/remote`; the same I/O globals                                                                                   |
 | `lib/server`, `*.server.ts` (the BFF)                            | core, `shared`, SvelteKit             | stores, components, adapters                                                                                                     |
 
 ### The speech table's data path
@@ -270,6 +271,11 @@ the speech store, which the monitor page re-opens whenever the selected scope ch
   A refused setting keeps the bridge's `details.field` as `error.field` (`App.Error`), which the adapter turns
   into a `SettingRejected`. The config store keeps the state and `pending` (`pendingFields`: the saved
   settings that differ from what runs); the page and `TcpPortSetting` only show it.
+- **Sessions list**: the `getSessions` remote query (`lib/remote/sessions.remote.ts`, `BridgeApi.sessions`).
+  The monitor page's load awaits it, so the server's HTML has the list and Kit puts the answer in the
+  page. The page seeds the sessions store with it while rendering, on the server too.
+  `HttpSessionsApi.list` re-reads it with `refresh()` (every 3 s, and after a start, end or delete): a
+  query keeps its last answer while anything still uses it ([decision](decisions.md#the-ui-uses-sveltekits-experimental-remote-functions)).
 - **Delete session**: `HttpSessionsApi.delete` sends `DELETE /ui/api/sessions/<id>`, which calls
   `BridgeApi.deleteSession` (`DELETE /api/v1/sessions?session=<id>`). `canDeleteSession` shows the
   button only for an ended session; the page picks the next scope with `scopeAfterDelete` before the
@@ -277,7 +283,7 @@ the speech store, which the monitor page re-opens whenever the selected scope ch
 
 ### Serving the UI
 
-The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's routes under `/ui/api/` (`status`, `sessions`, `sessions/<id>`, `speech`, `speech/stream`, `markers`, `config`). Every route reads a scope the same way: `parseScope` (`lib/core/sessions.ts`)
+The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's routes under `/ui/api/` (`status`, `sessions` (`POST` only), `sessions/<id>`, `speech`, `speech/stream`, `markers`, `config`). Every route reads a scope the same way: `parseScope` (`lib/core/sessions.ts`)
 accepts a session id or `none`. `scopeParam` (`lib/server/scope.ts`) applies it to `?session=` and
 answers 400 for anything else, and the `id` matcher does the same for
 `sessions/<id>` (`src/params.ts`, typed as a number), where an invalid id is a 404. The bridge's UI handler redirects the bare `/` to `/ui/`. Code builds URLs with `resolve()` from `$app/paths`.

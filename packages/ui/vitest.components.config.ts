@@ -8,12 +8,23 @@ import { defineProject } from 'vitest/config';
 // Needs the browser once: `pnpm exec playwright install chromium`.
 export default defineProject({
   plugins: [svelte({ compilerOptions: { runes: true } })],
-  // SvelteKit's runtime isn't loaded here, so `$app/state` and `$app/paths` are stubs.
+  // SvelteKit's runtime isn't loaded here, so `$app/state`, `$app/paths` and the remote functions
+  // are stubs.
   resolve: {
-    alias: {
-      '$app/state': fileURLToPath(new URL('./src/test/app-state.ts', import.meta.url)),
-      '$app/paths': fileURLToPath(new URL('./src/test/app-paths.ts', import.meta.url)),
-    },
+    alias: [
+      {
+        find: '$app/state',
+        replacement: fileURLToPath(new URL('./src/test/app-state.ts', import.meta.url)),
+      },
+      {
+        find: '$app/paths',
+        replacement: fileURLToPath(new URL('./src/test/app-paths.ts', import.meta.url)),
+      },
+      {
+        find: /^#lib\/remote\/.*\.remote\.js$/,
+        replacement: fileURLToPath(new URL('./src/test/remote.ts', import.meta.url)),
+      },
+    ],
   },
   test: {
     name: 'ui-components',
