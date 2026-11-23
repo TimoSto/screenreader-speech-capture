@@ -1,4 +1,3 @@
-import { bridgeApiFromEnv } from '#lib/server/bridge-api.js';
 import { scopeParam } from '#lib/server/scope.js';
 import type { RequestHandler } from './$types';
 
@@ -8,8 +7,8 @@ import type { RequestHandler } from './$types';
  * missed. The upstream request ends when
  * the browser goes away.
  */
-export const GET: RequestHandler = async ({ url, request, fetch }) => {
-  const upstream = await bridgeApiFromEnv(fetch).openSpeechStream(
+export const GET: RequestHandler = async ({ url, request, locals }) => {
+  const upstream = await locals.bridge.openSpeechStream(
     scopeParam(url),
     // `EventSource` cannot set the header on its first request, so `?since=` stands in for it; the
     // header it sends itself when it reconnects wins.
