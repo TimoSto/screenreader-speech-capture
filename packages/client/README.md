@@ -29,12 +29,12 @@ npx screenreader-speech-capture-client status                                   
 ```ts
 import { test, expect } from 'screenreader-speech-capture-client/playwright';
 
-test('submit button is announced', async ({ page, speech, pressKeys }) => {
+test('submit button is announced', async ({ page, speech, recordKeys }) => {
   await page.goto('https://example.org/form');
   await page.getByRole('button', { name: 'Submit' }).focus();
   await speech.waitForOutput('Submit, button'); // found even if it was said before this line
 
-  const { entries } = await speech.record(() => pressKeys('h')); // a screen reader command
+  const { entries } = await recordKeys('h'); // a screen reader command and what it said
   expect(entries.map((e) => e.text).join(' ')).toMatch(/heading/i);
 });
 ```

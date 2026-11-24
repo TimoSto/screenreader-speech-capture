@@ -8,6 +8,8 @@ import { playwrightEndpoint } from './domain/playwright-endpoint.js';
 import { focusPage } from './adapters/in/playwright/focus.js';
 import type {
   ClickOptions,
+  InputRecording,
+  InputRecordOptions,
   NativeInput,
   PressKeysOptions,
 } from './application/ports/in/native-input.js';
@@ -35,6 +37,20 @@ export interface NativeInputFixtures {
   click: (point: ScreenPoint, options?: ClickOptions) => Promise<void>;
   /** Presses one chord (`'Insert+T'`) or a sequence (`['h', 'h']`) as native keys. */
   pressKeys: (keys: string | readonly string[], options?: PressKeysOptions) => Promise<void>;
+  /**
+   * `pressKeys` plus the speech the keys cause, recorded on the bridge from right before the keys
+   * until the speech pauses (docs/usage/native-input.md#capturing-the-speech-an-input-causes).
+   * Doesn't move the `speech` cursor.
+   */
+  recordKeys: (
+    keys: string | readonly string[],
+    options?: PressKeysOptions & InputRecordOptions,
+  ) => Promise<InputRecording>;
+  /** `click` plus the speech the click causes, recorded on the bridge like `recordKeys`. */
+  recordClick: (
+    point: ScreenPoint,
+    options?: ClickOptions & InputRecordOptions,
+  ) => Promise<InputRecording>;
   /**
    * Gives the page's browser window OS-level focus: the bridge brings it to the front
    * (docs/usage/native-input.md#bringing-the-browser-to-the-front); where it can't, a native
@@ -102,6 +118,12 @@ export const test = base.extend<Fixtures, Workers>({
   },
   pressKeys: async ({ speechClient }, use) => {
     await use((keys, options) => speechClient.pressKeys(keys, options));
+  },
+  recordKeys: async ({ speechClient }, use) => {
+    await use((keys, options) => speechClient.recordKeys(keys, options));
+  },
+  recordClick: async ({ speechClient }, use) => {
+    await use((point, options) => speechClient.recordClick(point, options));
   },
   setFocus: async ({ speechClient, page }, use) => {
     await use(() => focusPage(speechClient, page));
