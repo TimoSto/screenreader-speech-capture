@@ -96,9 +96,9 @@ first). They don't poll, and they don't use `GET /speech/wait`:
 reference behaviour for the client.
 
 The CLI's `wait` uses the same path, although it only sends a string or a regex the bridge's wait
-could take. The bridge's wait would save no request: the CLI still asks `GET /status` for its
-default scope (the current session, or the whole buffer when none is current, which
-`session=current` can't express), and the stream is open long before the
+could take. The bridge's wait would save no request: a wait asks `GET /status` once to fix its
+session (`active` and `current` are resolved when the wait starts, so a session started meanwhile
+doesn't take over), and the stream is open long before the
 screen reader speaks, so a match isn't reported any sooner. And it would be worse: one long request
 of up to 300 s (`timeoutMs` is capped) fails when the link drops, where the feed reconnects with
 `Last-Event-ID`; a `since` from an earlier bridge run waits until the timeout instead of getting

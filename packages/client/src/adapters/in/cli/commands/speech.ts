@@ -189,7 +189,7 @@ export const speech: Command = {
     // Options are checked before the bridge is asked for the current session.
     const since = sinceOption(values);
     const limit = optionalInt(values, 'limit', 1);
-    const session = await scope(values, client);
+    const session = scope(values);
     const options = {
       since: (await resolveSince(since, client, session)) ?? 0,
       limit,
@@ -217,7 +217,7 @@ export const text: Command = {
     expectArgs(args, 0, TEXT.usage);
     const client = speech();
     const since = sinceOption(values);
-    const session = await scope(values, client);
+    const session = scope(values);
     const options = { since: (await resolveSince(since, client, session)) ?? 0, session };
     // `getText` is `getSpeech` joined; reading the entries keeps what is left on truncation.
     const { entries, truncated } = await readAll(io, () => client.getSpeech(options));
@@ -257,7 +257,7 @@ export const wait: Command = {
     const client = speech();
     const since = sinceOption(values);
     const timeout = optionalInt(values, 'timeout', 0);
-    const session = await scope(values, client);
+    const session = scope(values);
     const options = {
       since: (await resolveSince(since, client, session)) ?? 0,
       timeout,

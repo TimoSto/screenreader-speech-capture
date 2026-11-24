@@ -345,6 +345,15 @@ describe('SpeechLog', () => {
       expect(log.resolveFilter('current')).toBe(1);
     });
 
+    it('resolves active to the current id, or to no filter when none is current', () => {
+      const log = new SpeechLog(1);
+      expect(log.resolveFilter('active')).toBeUndefined();
+      start(log, 'a');
+      expect(log.resolveFilter('active')).toBe(1);
+      log.endSession(at(1));
+      expect(log.resolveFilter('active')).toBeUndefined();
+    });
+
     it('resolves none to null', () => {
       const log = new SpeechLog(1);
       expect(log.resolveFilter('none')).toBeNull();

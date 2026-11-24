@@ -44,10 +44,11 @@ export interface SessionSummary extends Session {
 }
 
 /**
- * Which session a read is limited to: an `id`, the session current when the request came, or
- * `none` for the entries recorded outside any session.
+ * Which session a read is limited to: an `id`, the session current when the request came, `none`
+ * for the entries recorded outside any session, or `active`: the current session, or everything
+ * when none is current.
  */
-export type SessionFilter = number | 'current' | 'none';
+export type SessionFilter = number | 'current' | 'active' | 'none';
 
 export const MAX_SESSION_NAME_LENGTH = API_LIMITS.sessionLabelLength;
 

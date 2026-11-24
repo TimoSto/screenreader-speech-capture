@@ -34,10 +34,10 @@ export function booleanParam(url: URL, name: string): boolean | undefined {
 export function sessionParam(url: URL): SessionFilter | undefined {
   const raw = url.searchParams.get('session');
   if (raw === null || raw === '') return undefined;
-  if (raw === 'current' || raw === 'none') return raw;
+  if (raw === 'current' || raw === 'active' || raw === 'none') return raw;
   const id = /^\d+$/.test(raw) ? Number(raw) : NaN;
   if (!Number.isSafeInteger(id) || id < 1) {
-    throw invalidField('session', 'must be a session id, current or none');
+    throw invalidField('session', 'must be a session id, current, active or none');
   }
   return id;
 }

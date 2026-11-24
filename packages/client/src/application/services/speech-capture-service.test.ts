@@ -461,6 +461,35 @@ describe('speech dropped from the bridge buffer', () => {
 });
 
 describe('sessions', () => {
+  it("session 'active' reads the current session, or everything without one", async () => {
+    const { api, sr } = setup();
+    api.speak('outside');
+    expect(texts(await sr.getSpeech({ since: 0, session: 'active' }))).toEqual(['outside']);
+    await sr.startSession('task');
+    api.speak('inside');
+    expect(texts(await sr.getSpeech({ since: 0, session: 'active' }))).toEqual(['inside']);
+    // Sent as is: the bridge resolves it, no status first.
+    expect(api.calls.filter((c) => c.startsWith('list'))).toEqual([
+      'list 0 session=active',
+      'list 0 session=active',
+    ]);
+  });
+
+  it("a wait with session 'active' keeps the session current when it starts", async () => {
+    const { api, sr } = setup();
+    api.speak('Submit outside');
+    // None current: the whole buffer.
+    expect((await sr.waitForOutput('Submit', { since: 0, session: 'active' })).text).toBe(
+      'Submit outside',
+    );
+    await sr.startSession('task');
+    api.speak('Submit inside');
+    expect((await sr.waitForOutput('Submit', { since: 0, session: 'active' })).text).toBe(
+      'Submit inside',
+    );
+    expect(api.calls).toContain('list 0 session=1');
+  });
+
   it('startSession moves the cursor to the session start; reads and waits see only it', async () => {
     const { api, sr } = setup();
     api.speak('earlier test');
