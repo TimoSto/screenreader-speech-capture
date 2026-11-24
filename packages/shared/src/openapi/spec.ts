@@ -34,12 +34,8 @@ shows the settings in use. 1.14 added native input (\`POST /input/click\`, \`POS
 the \`INPUT_DISABLED\` error code again. 1.15 added \`outsideEntries\` to \`GET /sessions\`. 1.16 added \`DELETE /sessions\`. 1.17 added the \`session\` parameter of \`DELETE /speech\` and the
 \`sessionId\` in the \`data\` of a scoped \`clear\` event. 1.18 added the \`view\` parameter of \`GET /config\`
 and \`GET /config/overrides\`. 1.19 added \`capture\` to \`POST /input/click\` and \`POST /input/keys\`
-<<<<<<< HEAD
 (the bridge records the speech the input causes and answers \`200\` with \`InputCapture\`). 1.20
 added \`GET /markers/latest\` (the newest marker with a label, for a \`since\`).
-=======
-(the bridge records the speech the input causes and answers \`200\` with \`InputCapture\`).
->>>>>>> main
 
 Every error has the same body (\`ErrorBody\`). Clients must handle unknown error codes as errors
 of their HTTP status.
