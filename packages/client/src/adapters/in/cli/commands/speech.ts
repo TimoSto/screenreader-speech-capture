@@ -406,5 +406,5 @@ function printTimeout(
   print: (result: { status: 'timeout'; entries: SpeechEntry[]; truncated: boolean }) => void,
 ): void {
   if (json) print({ status: 'timeout', entries: error.entries, truncated: error.truncated });
-  io.stderr(`${NAME}: ${error.message}.${seenText(error.entries)}\n`);
+  io.stderr(`${NAME}: ${error.reason}.${seenText(error.entries)}\n`);
 }
