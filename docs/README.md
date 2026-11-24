@@ -33,7 +33,7 @@ Sequence diagrams of the use cases, each file with its own contents list.
 | [Truncation](usage/flows/truncation.md) | Speech dropped from the full buffer: errors, flags and events in the API, library and CLI |
 | [Playwright & MCP](usage/flows/playwright-mcp.md) | Tests through the Playwright server, the fixture, agents through MCP, `503` |
 | [Native input](usage/flows/native-input.md) | Foreground window, screen reader commands, input not available |
-| [Agents](usage/flows/agents.md) | The CLI agent loop, `tail` |
+| [Agents](usage/flows/agents.md) | Preflight, the CLI agent loop, recovering from a silent step, `tail` |
 
 ## Implementation
 

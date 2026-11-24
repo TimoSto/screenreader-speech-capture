@@ -124,10 +124,10 @@ sequenceDiagram
     participant B as Bridge :5151
 
     A->>CLI: text --json
-    CLI->>B: GET /api/v1/speech?session=current
+    CLI->>B: GET /api/v1/speech?session=active
     B-->>CLI: entries, truncated: true
     CLI-->>A: stdout: {"text": …, "truncated": true}<br/>stderr: warning, exit code 0
     A->>CLI: wait "Submit" --json
     CLI->>B: read the buffer, follow the stream
-    CLI-->>A: {"matched": false, "entries": […], "truncated": true}, exit code 1
+    CLI-->>A: {"status": "timeout", "entries": […], "truncated": true}, exit code 1
 ```

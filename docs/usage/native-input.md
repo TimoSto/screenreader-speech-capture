@@ -132,7 +132,7 @@ ends the capture; a shutdown answers `503`.
 **When input is not available** (not on Windows, or robotjs failed to load), the bridge still starts,
 logs why under `[native-input]`, and both endpoints answer `409 INPUT_DISABLED` with the reason in
 `error.message`. Clients throw a `BridgeHttpError` with that code, and the CLI exits with 2. To
-check before a run, read `input` in `GET /status` (since API 1.24; `sr-speech status` prints it):
+check before a run, read `input` in `GET /status` (since API 1.24; `screenreader-speech-capture-client status` prints it):
 `native` for keys and clicks, `focus` for bringing windows to the front, each with `available`,
 the `backend` and the `reason` when it is off.
 

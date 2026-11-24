@@ -33,7 +33,10 @@ Common problems, what causes them and how to fix them. Start with
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | The browser opens, but the screen reader says nothing about the page | The browser runs **headless** (no window). | Pass `headless: false` (the fixture does it) ([Playwright server](playwright-mcp.md#playwright-server)). |
-| | The browser window is not the **foreground** window. | `setFocus(page)` or CLI `click` ([Native input](native-input.md)). |
+| | The browser window is not the **foreground** window. | `setFocus(page)` or CLI `focus` ([Native input](native-input.md#bringing-the-browser-to-the-front)). |
+| `press … --capture` prints nothing, `"status": "no-speech"` | The keys went to another window (a dialog, a new window, the bridge console), or the screen reader is slow to announce this step. | `focus` again and repeat the step; for slow steps raise `--first-within` ([When a step fails](agents.md#when-a-step-fails)). |
+| CLI `focus` fails with `NOT_FOUND` | Playwright MCP hasn't opened its browser yet: it does on its first browser tool call. | Navigate with MCP first, then `focus`. |
+| `FOCUS_FAILED` from `focus` or `setFocus` | Windows refused to bring the window forward: a locked or disconnected desktop, or an elevated window in front. | Unlock the desktop in the VM's console and close elevated windows ([Bringing the browser to the front](native-input.md#bringing-the-browser-to-the-front)). |
 | Nothing works after an RDP session | The disconnected RDP session has no active desktop: no input, no foreground window. | Use the hypervisor console or VNC. Don't leave the VM on a disconnected RDP session ([Running on the VM](vm-setup.md#running-on-the-vm)). |
 | Screen reader commands (`H`, `Insert+T`) do nothing | They were sent with Playwright (`page.keyboard`), which the screen reader never sees. | Use `pressKeys()` / CLI `press` ([Native input](native-input.md)). |
 | `pressKeys` / `click` returns `409 INPUT_DISABLED` | The bridge couldn't load `@jitsi/robotjs`. | Native input only works on Windows. `error.message` and the `[native-input]` line of the bridge log name the reason. |

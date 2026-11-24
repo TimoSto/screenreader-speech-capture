@@ -39,8 +39,10 @@ sequenceDiagram
 
 ## A test with the Playwright fixture
 
-The fixture connects through the bridge, brings the browser to the front (native click on the page content, then a reload), and wraps every test in a
-session. Details: [Playwright fixture](../client.md#playwright-fixture).
+The fixture connects through the bridge, brings the browser to the front (the bridge finds the
+window by a title marker; where it can't, a native click on the page content, then a reload), and
+wraps every test in a session. Details: [Playwright fixture](../client.md#playwright-fixture),
+[Bringing the browser to the front](../native-input.md#bringing-the-browser-to-the-front).
 
 ```mermaid
 sequenceDiagram
@@ -53,8 +55,15 @@ sequenceDiagram
     F->>B: connect ws://vm:5151/playwright (headless false)
     F->>B: POST /api/v1/sessions {name: test title path, run: run label}
     B-->>F: session, cursor = startSeq
-    F->>B: POST /api/v1/input/click (top-left corner of the page content)
-    F->>Br: reload the page
+    F->>Br: document.title = "sr-focus-k3x9"
+    F->>B: POST /api/v1/input/focus {"target": "playwright", "title": "sr-focus-k3x9"}
+    alt window found
+        B-->>F: 200 {"title", "pid"}
+        F->>Br: put the page title back
+    else 404 or 409 INPUT_DISABLED (a browser the bridge can't find)
+        F->>B: POST /api/v1/input/click (top-left corner of the page content)
+        F->>Br: reload the page
+    end
     R->>Br: test body: page actions
     R->>F: speech.waitForOutput("Submit, button")
     F->>B: GET /speech + stream (see the SSE flows)
@@ -67,7 +76,9 @@ sequenceDiagram
 ## An agent drives the browser through MCP
 
 Playwright MCP runs in HTTP mode on `127.0.0.1:8931`; the bridge passes `/playwright-mcp` through.
-The agent reads the speech with the CLI. Details: [Agents](../agents.md#agent-loop).
+The agent brings MCP's browser to the front with the CLI and reads the speech with it. The whole
+loop (screen reader commands, markers) is in the [agent flows](agents.md#the-agent-loop). Details:
+[Agents](../agents.md#agent-loop).
 
 ```mermaid
 sequenceDiagram
@@ -80,12 +91,15 @@ sequenceDiagram
     A->>B: MCP over HTTP: POST /playwright-mcp (browser_navigate)
     B->>MCP: same request, loopback Host
     MCP->>Br: open headed Chromium, go to url
+    A->>B: CLI: focus (POST /api/v1/input/focus {"target": "mcp"})
+    Note over Br: the foreground window: the screen reader reads it
+    A->>B: CLI: mark step-1
     A->>B: POST /playwright-mcp (browser_press_key Tab)
     B->>MCP: same request
     MCP->>Br: Tab
     Br-->>SR: focus change
     SR->>B: "Email, edit" (TCP :4449)
-    A->>B: CLI: wait-silence, then text --since
+    A->>B: CLI: wait-silence, then text --since mark:step-1
     B-->>A: the speech since the step
 ```
 
