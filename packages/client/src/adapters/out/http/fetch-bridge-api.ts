@@ -3,6 +3,7 @@ import {
   API_PREFIX,
   API_VERSION,
   ApiVersionSchema,
+  FocusedWindowSchema,
   LatestMarkerSchema,
   API_LIMITS,
   checkDto,
@@ -21,6 +22,7 @@ import {
   type ServiceStatusDto,
   type CaptureOptionsDto,
   type ClickRequestDto,
+  type FocusRequestDto,
   type InputCaptureDto,
   type SessionDto,
   type SpeechEntryDto,
@@ -42,7 +44,12 @@ import {
 } from '../../../domain/errors.js';
 import type { BridgeStatus, ServiceStatus } from '../../../domain/bridge-status.js';
 import type { Session, SessionList, SessionRef, StartedSession } from '../../../domain/session.js';
-import type { MouseButton, ScreenPoint } from '../../../domain/native-input.js';
+import type {
+  FocusedWindow,
+  FocusTarget,
+  MouseButton,
+  ScreenPoint,
+} from '../../../domain/native-input.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import { parseSse, type SseMessage } from './sse-parser.js';
 
@@ -148,6 +155,21 @@ export class FetchBridgeApi implements BridgeApi {
     delayMs?: number | undefined;
   }): Promise<void> {
     await this.request('POST', '/input/keys', { body: keysBody(request) });
+  }
+
+  async focusWindow(request: {
+    target: FocusTarget;
+    title?: string | undefined;
+  }): Promise<FocusedWindow> {
+    const body: FocusRequestDto = {
+      target: request.target,
+      ...(request.title === undefined ? {} : { title: request.title }),
+    };
+    // Up to 2 s on the bridge while the browser sets its window title, plus the request itself.
+    return this.json(FocusedWindowSchema, 'POST', '/input/focus', {
+      body,
+      signal: AbortSignal.timeout(2000 + REQUEST_TIMEOUT_MS),
+    });
   }
 
   async captureClick(

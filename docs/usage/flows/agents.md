@@ -27,13 +27,12 @@ sequenceDiagram
     A->>CLI: session start "audit checkout page"
     CLI->>B: POST /api/v1/sessions
     CLI-->>A: session id 7, exit 0
-    A->>CLI: focus --script
-    CLI-->>A: () => ({ screenX: window.screenX, … })
-    A->>B: MCP: browser_evaluate(function)
-    B->>MCP: passthrough
-    MCP-->>A: {"screenX": 0, "screenY": 0, …}
-    A->>CLI: focus --geometry '{…}'
-    CLI->>B: POST /api/v1/input/click (title bar)
+    A->>B: MCP: browser_navigate (/playwright-mcp)
+    B->>MCP: passthrough (MCP opens its browser)
+    A->>CLI: focus
+    CLI->>B: POST /api/v1/input/focus {"target": "mcp"}
+    Note over B: finds the window of MCP's browser,<br/>brings it to the front
+    B-->>CLI: {"title": "Checkout - Chromium", "pid": 4242}
     Note over SR: the browser is the foreground window
     loop each step
         alt screen reader command

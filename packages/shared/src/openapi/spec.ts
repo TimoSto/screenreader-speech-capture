@@ -35,7 +35,8 @@ the \`INPUT_DISABLED\` error code again. 1.15 added \`outsideEntries\` to \`GET 
 \`sessionId\` in the \`data\` of a scoped \`clear\` event. 1.18 added the \`view\` parameter of \`GET /config\`
 and \`GET /config/overrides\`. 1.19 added \`capture\` to \`POST /input/click\` and \`POST /input/keys\`
 (the bridge records the speech the input causes and answers \`200\` with \`InputCapture\`). 1.20
-added \`GET /markers/latest\` (the newest marker with a label, for a \`since\`).
+added \`GET /markers/latest\` (the newest marker with a label, for a \`since\`). 1.21 added
+\`POST /input/focus\` and the \`FOCUS_FAILED\` error code.
 
 Every error has the same body (\`ErrorBody\`). Clients must handle unknown error codes as errors
 of their HTTP status.
@@ -544,6 +545,65 @@ dropped from the full buffer or cleared.
         },
         '409': {
           $ref: '#/components/responses/InputDisabled',
+        },
+        '503': {
+          $ref: '#/components/responses/ServiceUnavailable',
+        },
+      },
+    },
+  },
+  '/input/focus': {
+    post: {
+      tags: ['input'],
+      operationId: 'focusWindow',
+      summary: 'Bring a browser window to the front',
+      description: `Makes a window of a browser the bridge started (Playwright MCP's, or one the Playwright server launched for a test) the foreground window, so the screen reader reads it and native keys reach it (since 1.21, \`docs/usage/native-input.md#bringing-the-browser-to-the-front\`). The bridge looks for visible top-level windows of the service's process tree, front to back; with \`title\`, only one whose title contains it (it waits up to 2 seconds for the title, which the browser updates a moment after \`document.title\` changes). Runs in the input queue. Windows only. The body must be sent as \`application/json\`.
+`,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              $ref: '#/components/schemas/FocusRequest',
+            },
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'The window that is now in front.',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/FocusedWindow',
+              },
+            },
+          },
+        },
+        '400': {
+          $ref: '#/components/responses/InvalidRequest',
+        },
+        '404': {
+          description:
+            'No such window: the service is not running, has not opened a browser yet, or no window title contains `title`.',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/ErrorBody',
+              },
+            },
+          },
+        },
+        '409': {
+          description:
+            '`INPUT_DISABLED`: the bridge cannot manage windows here (not Windows, or `koffi` could not be loaded). `FOCUS_FAILED`: Windows refused to bring the window to the front.',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/ErrorBody',
+              },
+            },
+          },
         },
         '503': {
           $ref: '#/components/responses/ServiceUnavailable',

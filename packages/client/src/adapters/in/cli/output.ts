@@ -231,6 +231,15 @@ export const CLI_OUTPUT = {
         v.description("With --script: the function to run with Playwright MCP's browser_evaluate."),
       ),
     }),
+    v.object({
+      focused: v.literal(true),
+      window: v.pipe(
+        v.object({ title: v.string(), pid: v.number() }),
+        v.description(
+          "Without options: Playwright MCP's browser window the bridge brought forward.",
+        ),
+      ),
+    }),
     v.object({ focused: v.literal(true), point: focusPoint }),
     v.object({ focused: v.literal(true), point: focusPoint, ...captured }),
   ]),

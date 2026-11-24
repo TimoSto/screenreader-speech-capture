@@ -6,6 +6,24 @@ export interface ScreenPoint {
 
 export type MouseButton = 'left' | 'right' | 'middle';
 
+/** Whose browser the bridge brings to the front: Playwright MCP's, or one of the Playwright server. */
+export type FocusTarget = 'mcp' | 'playwright';
+
+/** The window the bridge brought to the front. */
+export interface FocusedWindow {
+  title: string;
+  /** The process that owns it, on the VM. */
+  pid: number;
+}
+
+/**
+ * A marker for `document.title`, so the bridge can tell this page's window from the other
+ * windows of the Playwright server's browsers. `random` gives the unique part.
+ */
+export function focusMarker(random: string): string {
+  return `sr-focus-${random}`;
+}
+
 /**
  * What a browser page reports about its window (`window.screenX`, …), in CSS pixels, plus the
  * ratio that turns them into physical pixels.

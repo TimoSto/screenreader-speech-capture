@@ -43,6 +43,7 @@ flowchart LR
         CFG["out/fs-config<br/>config.json"]
         SUP["out/process, out/playwright, out/mcp<br/>process supervisors"]
         ROBOT["out/robotjs<br/>InputInjector"]
+        WIN["out/win32<br/>WindowSystem (koffi)"]
         LOG["out/log<br/>bridge log"]
         CLK["out/clock"]
     end
@@ -75,7 +76,8 @@ packages/bridge/src/
                      mark), ResizeBuffer, WaitForSpeech, ManageSessions, SendNativeInput,
                      ManageConfig, GetStatus, ChildServices (start, apply a config change,
                      stop, reachability), BridgeLifecycle (ready, shutdown order)
-    ports/out/       driven ports: SpeechEventBus, ConfigStore, ProcessSupervisor, InputInjector, Logger, Clock
+    ports/out/       driven ports: SpeechEventBus, ConfigStore, ProcessSupervisor, InputInjector,
+                     WindowSystem, Logger, Clock
     services/        use-case implementations (only depend on domain + ports)
     shared/          helpers several services use: option checks, followLog (buffer replay
                      then live events, paced, no gap: watch and wait)
@@ -98,6 +100,7 @@ packages/bridge/src/
     out/playwright/  the Playwright server on that supervisor (installs the configured version)
     out/mcp/         supervisor for Playwright MCP
     out/robotjs/     InputInjector on @jitsi/robotjs (mouse click, key chords)
+    out/win32/       WindowSystem on koffi + user32 (process tree, top-level windows, foreground)
     out/log/         bridge log: console + file, prefixes, colours, rotation
     out/clock/       system clock
     out/platform/    default file locations (config, log, Playwright cache) on shared `appDir`
@@ -153,6 +156,14 @@ be required to build or start it:
   `settleMs` of silence if asked, then reads the start `seq`, so nothing gets between the two
   ([decision](decisions.md#captures-of-native-input-run-on-the-bridge)). After the input it follows
   the log with `followLog` and times the silence from the entries' `receivedAt` on the `Clock`.
+- `WindowFocusService` (`POST /input/focus`) picks the window and holds the rules: the target
+  supervisor's `pid()`, the windows of that process tree, the title marker and its wait. The
+  `WindowSystem` out-port only reports facts (process tree, top-level windows front to back) and
+  brings a window to the front. `Win32WindowSystem` builds the tree and does the Alt tap /
+  `AttachThreadInput` sequence on a small `Win32` interface; `win32-bindings.ts` binds that to
+  koffi (an optional dependency like robotjs, loaded in `composition/window-system.ts`, only on
+  Windows) and is the only part CI can't run. The focus runs in the input queue (`InputQueue`)
+  ([decision](decisions.md#the-bridge-focuses-browser-windows-it-started)).
 
 ## Client: hexagonal
 

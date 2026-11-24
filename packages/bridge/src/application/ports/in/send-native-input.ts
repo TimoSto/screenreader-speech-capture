@@ -15,6 +15,12 @@ export interface PressKeysRequest {
   delayMs?: number | undefined;
 }
 
+/** The queue every native input request runs in, so other work can't interleave with input. */
+export interface InputQueue {
+  /** Runs `task` after the input already queued; nothing queued later starts before it ends. */
+  exclusive<T>(task: () => Promise<T>): Promise<T>;
+}
+
 export interface InputHooks {
   /**
    * Runs in the input queue right before the input is sent, after the request was checked: no
