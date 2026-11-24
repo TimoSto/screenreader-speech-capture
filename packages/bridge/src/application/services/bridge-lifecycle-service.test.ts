@@ -11,7 +11,7 @@ function setup(stopOrder: (calls: string[]) => Stoppable[] = () => []) {
   const logger = new MemoryLogger();
   const lifecycle = new BridgeLifecycleService({
     state: { setState: (state: BridgeState) => void calls.push(`state ${state}`) },
-    waits: { shutdown: () => void calls.push('waits shutdown') },
+    pending: [{ shutdown: () => void calls.push('waits shutdown') }],
     startServices: () => new Promise<void>((resolve) => (servicesStarted = resolve)),
     stopOrder: stopOrder(calls),
     readyMessage: () => 'ready in 0.0s',

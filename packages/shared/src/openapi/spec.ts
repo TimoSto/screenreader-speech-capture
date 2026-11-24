@@ -33,7 +33,8 @@ existed): \`PUT /config\` now only saves, a setting takes effect on the next sta
 shows the settings in use. 1.14 added native input (\`POST /input/click\`, \`POST /input/keys\`) and
 the \`INPUT_DISABLED\` error code again. 1.15 added \`outsideEntries\` to \`GET /sessions\`. 1.16 added \`DELETE /sessions\`. 1.17 added the \`session\` parameter of \`DELETE /speech\` and the
 \`sessionId\` in the \`data\` of a scoped \`clear\` event. 1.18 added the \`view\` parameter of \`GET /config\`
-and \`GET /config/overrides\`.
+and \`GET /config/overrides\`. 1.19 added \`capture\` to \`POST /input/click\` and \`POST /input/keys\`
+(the bridge records the speech the input causes and answers \`200\` with \`InputCapture\`).
 
 Every error has the same body (\`ErrorBody\`). Clients must handle unknown error codes as errors
 of their HTTP status.
@@ -422,7 +423,7 @@ so a web page can't add markers cross-origin without a CORS preflight. At most 1
       tags: ['input'],
       operationId: 'click',
       summary: 'Click at a screen point',
-      description: `Sends a native mouse click, to give a window the focus (\`docs/usage/native-input.md\`). The body must be sent as \`application/json\`.
+      description: `Sends a native mouse click, to give a window the focus (\`docs/usage/native-input.md\`). With \`capture\` (since 1.19), also records the speech the click causes (\`docs/usage/native-input.md#capturing-the-speech-an-input-causes\`). The body must be sent as \`application/json\`.
 `,
       requestBody: {
         required: true,
@@ -435,14 +436,27 @@ so a web page can't add markers cross-origin without a CORS preflight. At most 1
         },
       },
       responses: {
+        '200': {
+          description: 'With `capture`: the input was sent, and the speech it caused.',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/InputCapture',
+              },
+            },
+          },
+        },
         '204': {
-          description: 'Done.',
+          description: 'Without `capture`: done.',
         },
         '400': {
           $ref: '#/components/responses/InvalidRequest',
         },
         '409': {
           $ref: '#/components/responses/InputDisabled',
+        },
+        '503': {
+          $ref: '#/components/responses/ServiceUnavailable',
         },
       },
     },
@@ -452,7 +466,7 @@ so a web page can't add markers cross-origin without a CORS preflight. At most 1
       tags: ['input'],
       operationId: 'sendKeys',
       summary: 'Send key presses',
-      description: `Presses one chord or a sequence of chords in the focused window (\`docs/usage/native-input.md#key-names\`). Requests are queued, so two requests never interleave. The body must be sent as \`application/json\`.
+      description: `Presses one chord or a sequence of chords in the focused window (\`docs/usage/native-input.md#key-names\`). Requests are queued, so two requests never interleave. With \`capture\` (since 1.19), also records the speech the keys cause (\`docs/usage/native-input.md#capturing-the-speech-an-input-causes\`). The body must be sent as \`application/json\`.
 `,
       requestBody: {
         required: true,
@@ -465,14 +479,27 @@ so a web page can't add markers cross-origin without a CORS preflight. At most 1
         },
       },
       responses: {
+        '200': {
+          description: 'With `capture`: the input was sent, and the speech it caused.',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/InputCapture',
+              },
+            },
+          },
+        },
         '204': {
-          description: 'Done.',
+          description: 'Without `capture`: done.',
         },
         '400': {
           $ref: '#/components/responses/InvalidRequest',
         },
         '409': {
           $ref: '#/components/responses/InputDisabled',
+        },
+        '503': {
+          $ref: '#/components/responses/ServiceUnavailable',
         },
       },
     },

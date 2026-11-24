@@ -3,6 +3,7 @@ import { invalidField } from '../../domain/errors.js';
 import { type KeyChord, parseKeyChord } from '../../domain/key-chord.js';
 import type {
   ClickRequest,
+  InputHooks,
   PressKeysRequest,
   SendNativeInput,
 } from '../ports/in/send-native-input.js';
@@ -44,24 +45,29 @@ export class NativeInputService implements SendNativeInput {
 
   constructor(private readonly deps: NativeInputServiceDeps) {}
 
-  async click({ x, y, button = 'left' }: ClickRequest): Promise<void> {
+  async click({ x, y, button = 'left' }: ClickRequest, hooks: InputHooks = {}): Promise<void> {
     checkCoordinate('x', x);
     checkCoordinate('y', y);
     if (!BUTTONS.includes(button)) {
       throw invalidField('button', 'must be left, right or middle');
     }
     await this.enqueue(async () => {
+      await hooks.beforeInject?.();
       await this.deps.injector.click(x, y, button);
       this.deps.logger.info(`click ${button} at ${x},${y}`);
     });
   }
 
-  async pressKeys({ keys, delayMs: delay = delayMs.default }: PressKeysRequest): Promise<void> {
+  async pressKeys(
+    { keys, delayMs: delay = delayMs.default }: PressKeysRequest,
+    hooks: InputHooks = {},
+  ): Promise<void> {
     const chords = parseKeys(keys);
     if (!Number.isInteger(delay) || delay < 0 || delay > delayMs.max) {
       throw invalidField('delayMs', `must be an integer from 0 to ${delayMs.max}`);
     }
     await this.enqueue(async () => {
+      await hooks.beforeInject?.();
       for (const [index, chord] of chords.entries()) {
         if (index > 0 && delay > 0) await this.deps.clock.sleep(delay);
         await this.press(chord);

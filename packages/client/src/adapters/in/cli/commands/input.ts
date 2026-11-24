@@ -7,6 +7,10 @@ import {
   type WindowGeometry,
 } from '../../../../domain/native-input.js';
 import { SpeechTimeoutError } from '../../../../domain/errors.js';
+import type {
+  InputRecording,
+  InputRecordOptions,
+} from '../../../../application/ports/in/native-input.js';
 import type { SpeechEntry } from '../../../../domain/speech-entry.js';
 import { EXIT, type Command, type Context, type HelpLine } from '../command.js';
 import { TRUNCATED_WARNING } from '../format.js';
@@ -14,13 +18,15 @@ import { NAME, UsageError, expectArgs, optionalInt, requiredSignedInt } from '..
 
 // Native input on the VM (docs/usage/native-input.md).
 
-const CAPTURE_USAGE = '[--capture [--first-within|--quiet-for|--timeout <ms>]]';
+// The timing options take milliseconds; `<ms>` doesn't fit the 100 columns of `click`'s line.
+const CAPTURE_USAGE = '[--capture [--first-within|--quiet-for|--timeout|--settle]]';
 const CAPTURE_HELP = [
-  '--capture prints the speech it caused: waits up to --first-within ms',
-  'for the first speech, then until nothing was spoken for --quiet-for ms',
-  '(default 2000, 500, 10000); exits 1 if speech goes on until --timeout',
+  '--capture prints the speech it caused, timed on the bridge: waits up to',
+  '--first-within ms for the first speech, then until nothing was spoken',
+  'for --quiet-for ms (default 2000, 500, 10000); exits 1 if speech goes',
+  'on until --timeout ms; --settle <ms> first waits for that much silence',
 ];
-const CAPTURE_OPTIONS = ['capture', 'first-within', 'quiet-for', 'timeout'] as const;
+const CAPTURE_OPTIONS = ['capture', 'first-within', 'quiet-for', 'timeout', 'settle'] as const;
 
 const CLICK: HelpLine = {
   usage: `click --x <px> --y <px> [--button <b>] ${CAPTURE_USAGE}`,
@@ -47,6 +53,7 @@ export const click: Command = {
     const exit = await act(
       ctx,
       () => input().click({ x, y }, { button }),
+      (options) => input().recordClick({ x, y }, { button, ...options }),
       (captured) => out('click', { clicked: true, ...captured }, joinText(captured.entries)),
     );
     if (exit === undefined) out('click', { clicked: true }, `Clicked at ${x},${y}`);
@@ -81,6 +88,7 @@ export const press: Command = {
     const exit = await act(
       ctx,
       () => input().pressKeys(keys, { delayMs }),
+      (options) => input().recordKeys(keys, { delayMs, ...options }),
       (captured) => out('press', { pressed: true, ...captured }, joinText(captured.entries)),
     );
     if (exit === undefined) out('press', { pressed: true }, `Pressed ${args.join(' ')}`);
@@ -120,6 +128,7 @@ export const focus: Command = {
     const exit = await act(
       ctx,
       () => input().click(point),
+      (options) => input().recordClick(point, options),
       (captured) => out('focus', { focused: true, point, ...captured }, joinText(captured.entries)),
     );
     if (exit === undefined) {
@@ -155,22 +164,28 @@ interface Captured {
 }
 
 /**
- * Runs `action`. Without `--capture`, returns `undefined`. With it, records the speech spoken from
- * just before the action until silence (`record`), so speech of earlier steps can't be mistaken
- * for its result, hands it to `print` and returns the exit code. Speech that doesn't pause is a
- * result too (`silent: false`, exit 1): what was said is what the caller has to judge.
+ * Runs `action`. Without `--capture`, returns `undefined`. With it, runs `record` instead: the
+ * bridge sends the input and records the speech after it until silence
+ * (docs/usage/native-input.md#capturing-the-speech-an-input-causes), so speech of earlier steps
+ * can't be mistaken for its result; hands it to `print` and returns the exit code. Speech that
+ * doesn't pause is a result too (`silent: false`, exit 1): what was said is what the caller has
+ * to judge.
  */
 async function act(
-  { values, speech, io, json }: Context,
+  { values, io, json }: Context,
   action: () => Promise<void>,
+  record: (options: InputRecordOptions) => Promise<InputRecording>,
   print: (captured: Captured) => void,
 ): Promise<number | undefined> {
   const firstWithin = optionalInt(values, 'first-within', 0);
   const quietFor = optionalInt(values, 'quiet-for', 1);
   const timeout = optionalInt(values, 'timeout', 0);
+  const settle = optionalInt(values, 'settle', 0);
   if (!values.capture) {
-    if (firstWithin !== undefined || quietFor !== undefined || timeout !== undefined) {
-      throw new UsageError('--first-within, --quiet-for and --timeout only go with --capture.');
+    if ([firstWithin, quietFor, timeout, settle].some((value) => value !== undefined)) {
+      throw new UsageError(
+        '--first-within, --quiet-for, --timeout and --settle only go with --capture.',
+      );
     }
     await action();
     return undefined;
@@ -178,7 +193,7 @@ async function act(
   let captured: Captured;
   let failure: string | undefined;
   try {
-    const recording = await speech().record(action, { firstWithin, quietFor, timeout });
+    const recording = await record({ firstWithin, quietFor, timeout, settle });
     captured = { entries: recording.entries, truncated: recording.truncated, silent: true };
     if (captured.truncated) io.stderr(`${NAME}: ${TRUNCATED_WARNING}\n`);
   } catch (error) {

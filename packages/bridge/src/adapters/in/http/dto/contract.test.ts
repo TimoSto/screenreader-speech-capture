@@ -5,6 +5,7 @@ import {
   ConfigOverridesSchema,
   ConfigSchema,
   type DtoSchema,
+  InputCaptureSchema,
   SessionListSchema,
   SessionSchema,
   SpeechEntrySchema,
@@ -17,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 import { entry, session, status } from '../../../../../test/dto-fixtures.js';
 import { DEFAULT_CONFIG } from '../../../../domain/config/index.js';
 import { toConfigDto, toConfigOverridesDto } from './config.js';
+import { toInputCaptureDto } from './input.js';
 import { toSessionDto, toSessionListDto, toStartSessionResponseDto } from './session.js';
 import { toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from './speech.js';
 import { toStatusDto } from './status.js';
@@ -38,6 +40,17 @@ const cases: [string, DtoSchema, unknown][] = [
     'wait timeout',
     WaitResultSchema,
     toWaitResultDto({ status: 'timeout', seen: [entry], omitted: 2 }),
+  ],
+  [
+    'input capture',
+    InputCaptureSchema,
+    toInputCaptureDto({
+      status: 'timeout',
+      startSeq: 41,
+      entries: [entry],
+      omitted: 1,
+      truncated: true,
+    }),
   ],
   ['ended session', SessionSchema, toSessionDto(session(new Date('2026-11-12T10:00:00Z')))],
   [

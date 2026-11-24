@@ -13,6 +13,27 @@ export interface SpeechPage {
   hasMore: boolean;
 }
 
+/** How the bridge records the speech an input causes (the `capture` of an input request). */
+export interface CaptureRequest {
+  quietForMs?: number | undefined;
+  firstWithinMs?: number | undefined;
+  timeoutMs?: number | undefined;
+  settleMs?: number | undefined;
+}
+
+/** The answer of an input request with `capture` (API 1.19). */
+export interface InputCapture {
+  status: 'silent' | 'no-speech' | 'timeout';
+  /** The newest `seq` right before the input. */
+  startSeq: number;
+  /** The speech after `startSeq` (no markers), oldest first: the first ones if `omitted`. */
+  entries: SpeechEntry[];
+  /** Later speech entries the bridge left out. */
+  omitted: number;
+  /** Entries after `startSeq` were dropped because the bridge's buffer was full. */
+  truncated: boolean;
+}
+
 /**
  * What one connection to the live feed delivers: the feed events, plus `position` first on a
  * connection without `lastEventId` (API 1.12): the `seq` of the newest entry the bridge had
@@ -49,6 +70,16 @@ export interface BridgeApi {
     keys: string | readonly string[];
     delayMs?: number | undefined;
   }): Promise<void>;
+  /** `POST /api/v1/input/click` with `capture` (API 1.19): the click and the speech it caused. */
+  captureClick(
+    request: ScreenPoint & { button?: MouseButton | undefined; capture: CaptureRequest },
+  ): Promise<InputCapture>;
+  /** `POST /api/v1/input/keys` with `capture` (API 1.19): the keys and the speech they caused. */
+  captureKeys(request: {
+    keys: string | readonly string[];
+    delayMs?: number | undefined;
+    capture: CaptureRequest;
+  }): Promise<InputCapture>;
   /**
    * One connection to the live feed (`GET /api/v1/speech/stream`). With `lastEventId` the bridge
    * first replays the buffered entries with `seq > lastEventId` (all of them, after a

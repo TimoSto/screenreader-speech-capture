@@ -4,6 +4,7 @@ import { API_PREFIX } from '@screenreader-speech-capture/shared';
 import type { GetStatus } from '../../../application/ports/in/get-status.js';
 import type { ManageConfig } from '../../../application/ports/in/manage-config.js';
 import type { ManageSessions } from '../../../application/ports/in/manage-sessions.js';
+import type { CaptureInput } from '../../../application/ports/in/capture-input.js';
 import type { SendNativeInput } from '../../../application/ports/in/send-native-input.js';
 import type { SpeechUseCases } from '../../../application/ports/in/speech.js';
 import type { WaitForSpeech } from '../../../application/ports/in/wait-for-speech.js';
@@ -34,6 +35,8 @@ interface HttpServerDeps {
   config: ManageConfig;
   sessions: ManageSessions;
   input: SendNativeInput;
+  /** Native input that records the speech it causes (`capture`). */
+  captures: CaptureInput;
   logger: Logger;
   /** Interval of the SSE `: ping` comment. Default 15 s. */
   pingMs?: number;

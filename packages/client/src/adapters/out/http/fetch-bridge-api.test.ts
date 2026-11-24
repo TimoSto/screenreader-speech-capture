@@ -171,6 +171,33 @@ describe('FetchBridgeApi requests', () => {
     ]);
   });
 
+  it('posts a capture and maps its answer', async () => {
+    const answer = {
+      status: 'silent',
+      startSeq: 41,
+      entries: [entryDto],
+      omitted: 0,
+      truncated: false,
+    };
+    const { fetch, calls } = fakeFetch(() => json(answer));
+    const bridge = api(fetch);
+    expect(
+      await bridge.captureKeys({ keys: 'h', capture: { quietForMs: 200, settleMs: undefined } }),
+    ).toEqual(answer);
+    await bridge.captureClick({ x: 1, y: 2, button: 'right', capture: {} });
+    expect(calls.map(({ method, url, body }) => [method, url, body])).toEqual([
+      ['POST', 'http://vm:5151/api/v1/input/keys', { keys: 'h', capture: { quietForMs: 200 } }],
+      ['POST', 'http://vm:5151/api/v1/input/click', { x: 1, y: 2, button: 'right', capture: {} }],
+    ]);
+  });
+
+  it('rejects a capture answer that does not match the contract', async () => {
+    const { fetch } = fakeFetch(() => json({ status: 'maybe', startSeq: 1, entries: [] }));
+    await expect(api(fetch).captureKeys({ keys: 'h', capture: {} })).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+  });
+
   it('maps the status', async () => {
     const { fetch } = fakeFetch(() => json(statusDto()));
     const status = await api(fetch).status();

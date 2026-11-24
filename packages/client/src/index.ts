@@ -29,6 +29,8 @@ export type {
   ClickOptions,
   FocusablePage,
   FocusTarget,
+  InputRecording,
+  InputRecordOptions,
   NativeInput,
   PressKeysOptions,
   SetFocusOptions,

@@ -122,6 +122,8 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `setFocus(page, { target? })` | `void` | Make the page's browser window the OS foreground window with a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
 | `click({ x, y }, { button? })` | `void` | Native click at screen coordinates in physical pixels (`POST /api/v1/input/click`). |
 | `pressKeys(keys, { delayMs? })` | `void` | Native key presses, for screen reader commands (`'Insert+T'`, `['h', 'h']`). |
+| `recordKeys(keys, { delayMs?, firstWithin?, quietFor?, timeout?, settle? })` | `{ entries, truncated, startSeq }` | `pressKeys` plus the speech it caused, recorded by the bridge ([Capturing the speech an input causes](native-input.md#capturing-the-speech-an-input-causes), API 1.19): like `record(() => pressKeys(keys))` with the same defaults, but the start is taken right before the keys and the silence is timed where the speech arrives. `settle` ms (default 0) first waits for that much silence. Throws `SpeechTimeoutError` like `record`. Doesn't move the cursor. |
+| `recordClick({ x, y }, { button?, firstWithin?, quietFor?, timeout?, settle? })` | `{ entries, truncated, startSeq }` | The same for a click. |
 | `onSpeech(cb, { since?, includeMarkers?, onSession?, onClear?, onTruncated?, onError? })` | `() => void` | Subscribe to the live feed (see [Live feed](#live-feed)). `cb` gets every new speech entry as the bridge receives it. Returns an unsubscribe function. |
 | `status()` | `BridgeStatus` | Bridge health (TCP connections, Playwright/MCP state, versions). |
 | `waitForReady({ timeout? })` | `BridgeStatus` | Wait until the bridge answers and is `ready` (default `timeout` 120000 ms). Throws `BridgeNotReadyError` on timeout. |
@@ -286,7 +288,7 @@ npx screenreader-speech-capture-client focus --script       # the function to ru
 npx screenreader-speech-capture-client focus --geometry '<its JSON result>' [--capture]   # click the browser's title bar
 npx screenreader-speech-capture-client click --x 640 --y 12  # native click (negative: --x=-5)
 npx screenreader-speech-capture-client press "Insert+T"      # native keys, several args = sequence (--delay <ms>)
-npx screenreader-speech-capture-client press h --capture [--first-within 2000] [--quiet-for 500] [--timeout 10000]   # … and print the speech it caused (also click)
+npx screenreader-speech-capture-client press h --capture [--first-within 2000] [--quiet-for 500] [--timeout 10000] [--settle 0]   # … and print the speech it caused (also click)
 npx screenreader-speech-capture-client tail [--since <seq>]  # live feed until Ctrl+C (NDJSON with --json)
 ```
 
@@ -349,12 +351,14 @@ like `setFocus(page)`, and prints `{ "focused": true, "point": { "x": …, "y": 
 isn't that object is a usage error (exit `3`).
 
 `press` and `click` print `{ "pressed": true }` / `{ "clicked": true }` with `--json`. With
-`--capture` (also on `focus --geometry`) they are the library's [`record()`](#functions) in one call: they note where the
-buffer ends, act, wait up to `--first-within` ms (default 2000) for the screen reader to start
+`--capture` (also on `focus --geometry`) the bridge records the speech the action causes, in one
+request ([`recordKeys` / `recordClick`](#functions)): it notes where the buffer ends right before
+the input, waits up to `--first-within` ms (default 2000) for the screen reader to start
 talking, then until nothing was spoken for `--quiet-for` ms (default 500, all at most `--timeout`,
-default 10000), and print the speech from that point on, one line per entry, or
+default 10000), and the command prints the speech from that point on, one line per entry, or
 `{ "pressed": true, "entries": [...], "truncated": false, "silent": true }` with `--json`. Speech
-from before the action can't get in. Raise `--first-within` for actions the screen reader is slow
+from before the action can't get in; `--settle <ms>` also keeps out speech that is still trailing
+from the previous step, by waiting for that much silence before the input. Raise `--first-within` for actions the screen reader is slow
 to announce (a page load, a dialog). When nothing was said, stdout stays empty (`"entries": []`
 with `--json`) and stderr says `no speech after the action`. If the speech doesn't pause in time,
 the action has still happened: the command prints what was said until then with

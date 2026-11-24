@@ -19,6 +19,7 @@ export const OPTIONS = {
   timeout: { type: 'string' },
   'quiet-for': { type: 'string' },
   'first-within': { type: 'string' },
+  settle: { type: 'string' },
   'include-markers': { type: 'boolean' },
   separator: { type: 'string' },
   regex: { type: 'boolean' },

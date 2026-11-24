@@ -13,14 +13,30 @@ const crash = (error: unknown) => {
 process.on('uncaughtException', crash);
 process.on('unhandledRejection', crash);
 
+/**
+ * One client for the speech and the input commands of a call, so a command that uses both checks
+ * the bridge's version once.
+ */
+const clients = new Map<string | undefined, SpeechCaptureClient>();
+function client(url: string | undefined): SpeechCaptureClient {
+  let found = clients.get(url);
+  if (!found) {
+    // One name for every CLI call on this host: `session start` and `session end` are separate
+    // processes of the same user.
+    found = new SpeechCaptureClient({
+      baseUrl: url,
+      env: process.env,
+      clientName: `${hostname()} cli`,
+    });
+    clients.set(url, found);
+  }
+  return found;
+}
+
 process.exitCode = await runCli(process.argv.slice(2), {
   config: createClientConfig(process.env),
-  // One name for every CLI call on this host: `session start` and `session end` are separate
-  // processes of the same user.
-  speech: (url) =>
-    new SpeechCaptureClient({ baseUrl: url, env: process.env, clientName: `${hostname()} cli` }),
-  input: (url) =>
-    new SpeechCaptureClient({ baseUrl: url, env: process.env, clientName: `${hostname()} cli` }),
+  speech: client,
+  input: client,
   stdout: (text) => process.stdout.write(text),
   stderr: (text) => process.stderr.write(text),
   version: packageJson.version,

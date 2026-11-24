@@ -26,6 +26,22 @@ export const API_LIMITS = {
     /** Most chords in one request. */
     maxKeys: 100,
   },
+  /**
+   * `capture` of `POST /input/click` and `POST /input/keys` (and the client's `record()`, which
+   * uses the same defaults): the defaults and ranges in milliseconds.
+   */
+  capture: {
+    /** Silence that ends the capture. */
+    quietForMs: { default: 500, min: 1, max: 60_000 },
+    /** How long the first speech may take after the input. */
+    firstWithinMs: { default: 2000, max: 300_000 },
+    /** Longest capture, counted from the input. */
+    timeoutMs: { default: 10_000, max: 300_000 },
+    /** Silence to wait for before the input (0: none). */
+    settleMs: { default: 0, max: 60_000 },
+    /** Entries the answer holds at most: the first ones. */
+    entries: 10_000,
+  },
 } as const;
 
 /** Ranges of the settings (`GET` / `PUT /config`). */

@@ -15,6 +15,7 @@ import type { Logger } from './application/ports/out/logger.js';
 import { BridgeLifecycleService } from './application/services/bridge-lifecycle-service.js';
 import { ChildServicesService } from './application/services/child-services-service.js';
 import { ConfigService } from './application/services/config-service.js';
+import { InputCaptureService } from './application/services/input-capture-service.js';
 import { NativeInputService } from './application/services/native-input-service.js';
 import { SessionService } from './application/services/session-service.js';
 import { SpeechService } from './application/services/speech-service.js';
@@ -128,6 +129,13 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     clock,
     logger: log.for('native-input'),
   });
+  const captures = new InputCaptureService({
+    input,
+    log: speechLog,
+    events,
+    clock,
+    pace: () => yieldEvery(256),
+  });
   const configService = new ConfigService({
     store,
     logger: configLogger,
@@ -161,6 +169,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     config: configService,
     sessions,
     input,
+    captures,
     logger: log.for('http-api'),
     hostnames: [hostname()],
     proxies: proxyRoutes(childServices),
@@ -172,7 +181,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   await ui?.mount(bridgeApiUrl(config.http.host, ports.http));
   const lifecycle = new BridgeLifecycleService({
     state: status,
-    waits,
+    pending: [waits, captures],
     startServices: () => childServices.startEnabled(),
     stopOrder: [http, tcp, { stop: () => childServices.stopAll() }],
     readyMessage: () =>

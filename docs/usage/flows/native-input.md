@@ -8,7 +8,8 @@ Sequence diagrams of real OS clicks and key presses, for what Playwright input c
 1. [Why Playwright keys don't reach the screen reader](#why-playwright-keys-dont-reach-the-screen-reader)
 2. [Bring the browser to the front](#bring-the-browser-to-the-front)
 3. [Send a screen reader command](#send-a-screen-reader-command)
-4. [Input is not available](#input-is-not-available)
+4. [Capture the speech a command causes](#capture-the-speech-a-command-causes)
+5. [Input is not available](#input-is-not-available)
 
 ## Why Playwright keys don't reach the screen reader
 
@@ -80,6 +81,34 @@ sequenceDiagram
     SR->>B: "Checkout - Google Chrome" (TCP :4449)
     T->>C: waitForOutput(/Checkout/)
     C-->>T: entry
+```
+
+## Capture the speech a command causes
+
+With `capture`, the bridge notes the newest `seq` in the input queue right before the keys, then
+follows the speech after it and times the silence from the entries' `receivedAt`. Details:
+[Capturing the speech an input causes](../native-input.md#capturing-the-speech-an-input-causes).
+
+```mermaid
+sequenceDiagram
+    participant T as Test / CLI
+    participant C as Client library
+    participant B as Bridge :5151
+    participant OS as Windows input
+    participant SR as NVDA / JAWS<br/>+ socket voice
+
+    T->>C: recordKeys('h') / press h --capture
+    C->>B: POST /api/v1/input/keys {"keys": "h", "capture": {"quietForMs": 500}}
+    opt settleMs > 0
+        Note over B: wait until the newest speech is settleMs old
+    end
+    Note over B: in the input queue: startSeq = newest seq (4711)
+    B->>OS: robotjs key tap
+    OS->>SR: keyboard hook: "next heading"
+    SR->>B: "Shipping, heading level 2" (TCP :4449)
+    Note over B: up to firstWithinMs for the first speech,<br/>then until quietForMs without speech
+    B-->>C: 200 {"status": "silent", "startSeq": 4711, "entries": […]}
+    C-->>T: { entries, truncated, startSeq }
 ```
 
 ## Input is not available

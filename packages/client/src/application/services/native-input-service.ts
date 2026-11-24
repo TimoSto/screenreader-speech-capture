@@ -1,3 +1,4 @@
+import { API_LIMITS } from '@screenreader-speech-capture/shared';
 import {
   clickPoint,
   FocusError,
@@ -5,18 +6,22 @@ import {
   READ_GEOMETRY_SCRIPT,
   type ScreenPoint,
 } from '../../domain/native-input.js';
+import { SpeechTimeoutError } from '../../domain/errors.js';
 import type {
   ClickOptions,
   FocusablePage,
+  InputRecording,
+  InputRecordOptions,
   NativeInput,
   PressKeysOptions,
   SetFocusOptions,
 } from '../ports/in/native-input.js';
-import type { BridgeApi } from '../ports/out/bridge-api.js';
+import type { BridgeApi, CaptureRequest, InputCapture } from '../ports/out/bridge-api.js';
+import { silenceFailure } from './silence.js';
 import { VersionGate } from './version-gate.js';
 
 interface NativeInputServiceDeps {
-  api: Pick<BridgeApi, 'status' | 'click' | 'pressKeys'>;
+  api: Pick<BridgeApi, 'status' | 'click' | 'pressKeys' | 'captureClick' | 'captureKeys'>;
   /** The HTTP API version this client was built for (`API_VERSION` from the shared contract). */
   apiVersion: string;
 }
@@ -39,6 +44,33 @@ export class NativeInputService implements NativeInput {
     await this.deps.api.pressKeys({ keys, delayMs: options.delayMs });
   }
 
+  async recordClick(
+    point: ScreenPoint,
+    options: ClickOptions & InputRecordOptions = {},
+  ): Promise<InputRecording> {
+    await this.#gate.ensure();
+    const capture = await this.deps.api.captureClick({
+      x: point.x,
+      y: point.y,
+      button: options.button,
+      capture: captureRequest(options),
+    });
+    return recording(capture, options);
+  }
+
+  async recordKeys(
+    keys: string | readonly string[],
+    options: PressKeysOptions & InputRecordOptions = {},
+  ): Promise<InputRecording> {
+    await this.#gate.ensure();
+    const capture = await this.deps.api.captureKeys({
+      keys,
+      delayMs: options.delayMs,
+      capture: captureRequest(options),
+    });
+    return recording(capture, options);
+  }
+
   async setFocus(page: FocusablePage, options: SetFocusOptions = {}): Promise<void> {
     const geometry = parseWindowGeometry(await page.evaluate(READ_GEOMETRY_SCRIPT));
     const box = options.target === undefined ? undefined : await options.target.boundingBox();
@@ -47,4 +79,29 @@ export class NativeInputService implements NativeInput {
     }
     await this.click(clickPoint(geometry, box));
   }
+}
+
+function captureRequest(options: InputRecordOptions): CaptureRequest {
+  return {
+    quietForMs: options.quietFor,
+    firstWithinMs: options.firstWithin,
+    timeoutMs: options.timeout,
+    settleMs: options.settle,
+  };
+}
+
+/** The bridge's answer as a recording; `timeout` is a `SpeechTimeoutError`, as for `record()`. */
+function recording(capture: InputCapture, options: InputRecordOptions): InputRecording {
+  const truncated = capture.truncated || capture.omitted > 0;
+  if (capture.status === 'timeout') {
+    throw new SpeechTimeoutError(
+      silenceFailure(
+        options.quietFor ?? API_LIMITS.capture.quietForMs.default,
+        options.timeout ?? API_LIMITS.capture.timeoutMs.default,
+      ),
+      capture.entries,
+      truncated,
+    );
+  }
+  return { entries: capture.entries, truncated, startSeq: capture.startSeq };
 }

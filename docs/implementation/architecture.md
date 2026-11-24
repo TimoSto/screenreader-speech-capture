@@ -148,6 +148,11 @@ be required to build or start it:
 - Key-name parsing (`KeyChord`) lives in the domain and knows no robotjs names. The adapter maps
   them, so another `InputInjector` can replace it.
 - Input is serialized in one queue, so a click and a key chord from two requests can't interleave.
+- `InputCaptureService` (the `CaptureInput` port, a request with `capture`) drives
+  `NativeInputService` with a `beforeInject` hook that runs inside that queue: it waits for
+  `settleMs` of silence if asked, then reads the start `seq`, so nothing gets between the two
+  ([decision](decisions.md#captures-of-native-input-run-on-the-bridge)). After the input it follows
+  the log with `followLog` and times the silence from the entries' `receivedAt` on the `Clock`.
 
 ## Client: hexagonal
 
