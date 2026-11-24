@@ -10,8 +10,10 @@ import { once } from 'node:events';
 import net from 'node:net';
 import { describe, expect, it } from 'vitest';
 import { SystemClock } from '../src/adapters/out/clock/system-clock.js';
+import { DisabledWindowSystem } from '../src/adapters/out/input/disabled-window-system.js';
 import { bundledMcp } from '../src/adapters/out/mcp/playwright-mcp.js';
 import type { Bridge } from '../src/main.js';
+import { RecordingInputInjector } from './fakes.js';
 import { eventually, send, start, testConfig } from './helpers.js';
 
 const api = (bridge: Bridge, path: string) => `http://127.0.0.1:${bridge.httpPort}/api/v1${path}`;
@@ -435,7 +437,13 @@ describe('HTTP API', () => {
   });
 
   it('reports the status with versions, connections and buffer', async () => {
-    const bridge = await start();
+    const bridge = await start(
+      {},
+      {
+        inputInjector: new RecordingInputInjector(),
+        windowSystem: new DisabledWindowSystem('only on Windows'),
+      },
+    );
     const socket = net.connect(bridge.tcpPort, '127.0.0.1');
     socket.write('voice=open\r\nhello\r\n');
     const status = await eventually(
@@ -471,6 +479,10 @@ describe('HTTP API', () => {
         exitCode: null,
       },
       session: { current: null, count: 0 },
+      input: {
+        native: { available: true, backend: 'fake', reason: null },
+        focus: { available: false, backend: null, reason: 'only on Windows' },
+      },
     });
   });
 

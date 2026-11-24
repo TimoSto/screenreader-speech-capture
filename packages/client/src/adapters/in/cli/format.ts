@@ -1,6 +1,6 @@
 import { CONFIG_KEYS, type ConfigKey } from '../../../domain/client-config.js';
 import type { ValueSource } from '../../../domain/config-value.js';
-import type { BridgeStatus } from '../../../domain/bridge-status.js';
+import type { BridgeStatus, InputAvailability } from '../../../domain/bridge-status.js';
 import type { Session } from '../../../domain/session.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 
@@ -57,8 +57,11 @@ export function seenText(entries: SpeechEntry[]): string {
   return ` Speech seen:\n${entries.map((e) => `  ${formatEntry(e)}`).join('\n')}`;
 }
 
+const availability = ({ available, backend, reason }: InputAvailability): string =>
+  available ? `on (${backend ?? '?'})` : `off (${reason ?? 'unknown'})`;
+
 export function formatStatus(status: BridgeStatus): string {
-  const { bridge, tcp, buffer, session } = status;
+  const { bridge, tcp, buffer, session, input } = status;
   const connections = tcp.connections.length;
   const range =
     buffer.firstSeq === null
@@ -71,5 +74,6 @@ export function formatStatus(status: BridgeStatus): string {
     `buffer  ${buffer.size} of ${buffer.maxEntries} entries (${range})`,
     `session ${session.current === null ? 'none current' : `#${session.current.id} ${session.current.name}`}, ` +
       `${session.count} in the buffer`,
+    `input   keys/clicks ${availability(input.native)}, focus ${availability(input.focus)}`,
   ].join('\n');
 }

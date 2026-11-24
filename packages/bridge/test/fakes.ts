@@ -6,6 +6,7 @@ import type { SpeechEventBus } from '../src/application/ports/out/speech-event-b
 import type { SpeechEvent, SpeechListener } from '../src/domain/speech-event.js';
 import type { ConfigPatch } from '../src/domain/config/index.js';
 import type { AppWindow, WindowSystem } from '../src/application/ports/out/window-system.js';
+import type { Availability } from '../src/domain/availability.js';
 
 /** Logger that keeps its messages, as `"<level> <message>"`. */
 export class MemoryLogger implements Logger {
@@ -65,6 +66,7 @@ export class DeferredEventBus implements SpeechEventBus {
 
 /** Injector that records what it was asked to do, as `"click left 1,2"`, `"down insert"`, … */
 export class RecordingInputInjector implements InputInjector {
+  availability: Availability = { available: true, backend: 'fake' };
   readonly calls: string[] = [];
   /** Makes `keyTap` of this key fail. */
   failOn: string | undefined;
@@ -96,6 +98,7 @@ export class RecordingInputInjector implements InputInjector {
  * window to the front and reports success unless `refuse` is set.
  */
 export class FakeWindowSystem implements WindowSystem {
+  availability: Availability = { available: true, backend: 'fake' };
   /** Child pid → parent pid. */
   parents = new Map<number, number>();
   windows: AppWindow[] = [];

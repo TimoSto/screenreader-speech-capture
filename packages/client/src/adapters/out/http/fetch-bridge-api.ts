@@ -19,6 +19,7 @@ import {
   type DtoSchema,
   type KeysRequestDto,
   type MarkerRequestDto,
+  type InputAvailabilityDto,
   type ServiceStatusDto,
   type CaptureOptionsDto,
   type ClickRequestDto,
@@ -42,7 +43,11 @@ import {
   BridgeUnreachableError,
   INVALID_RESPONSE,
 } from '../../../domain/errors.js';
-import type { BridgeStatus, ServiceStatus } from '../../../domain/bridge-status.js';
+import type {
+  BridgeStatus,
+  InputAvailability,
+  ServiceStatus,
+} from '../../../domain/bridge-status.js';
 import type { Session, SessionList, SessionRef, StartedSession } from '../../../domain/session.js';
 import type {
   FocusedWindow,
@@ -448,7 +453,21 @@ const toServiceStatus = (dto: ServiceStatusDto): ServiceStatus => ({
   exitCode: dto.exitCode,
 });
 
-const toStatus = ({ bridge, tcp, buffer, playwright, mcp, session }: StatusDto): BridgeStatus => ({
+const toInputAvailability = (dto: InputAvailabilityDto): InputAvailability => ({
+  available: dto.available,
+  backend: dto.backend,
+  reason: dto.reason,
+});
+
+const toStatus = ({
+  bridge,
+  tcp,
+  buffer,
+  playwright,
+  mcp,
+  session,
+  input,
+}: StatusDto): BridgeStatus => ({
   bridge: {
     version: bridge.version,
     apiVersion: bridge.apiVersion,
@@ -473,5 +492,9 @@ const toStatus = ({ bridge, tcp, buffer, playwright, mcp, session }: StatusDto):
   session: {
     current: session.current === null ? null : toSession(session.current),
     count: session.count,
+  },
+  input: {
+    native: toInputAvailability(input.native),
+    focus: toInputAvailability(input.focus),
   },
 });

@@ -21,6 +21,10 @@ function status(patch: Partial<StatusDto> = {}): StatusDto {
     playwright: { state: 'running', version: '1.65.0', port: 3000, restarts: 0, exitCode: null },
     mcp: { state: 'running', version: '0.0.85', port: 8931, restarts: 0, exitCode: null },
     session: { current: null, count: 0 },
+    input: {
+      native: { available: true, backend: 'robotjs', reason: null },
+      focus: { available: true, backend: 'koffi', reason: null },
+    },
     ...patch,
   };
 }

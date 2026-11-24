@@ -144,7 +144,7 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `recordKeys(keys, { delayMs?, firstWithin?, quietFor?, timeout?, settle? })` | `{ entries, truncated, startSeq }` | `pressKeys` plus the speech it caused, recorded by the bridge ([Capturing the speech an input causes](native-input.md#capturing-the-speech-an-input-causes), API 1.19): like `record(() => pressKeys(keys))` with the same defaults, but the start is taken right before the keys and the silence is timed where the speech arrives. `settle` ms (default 0) first waits for that much silence. Throws `SpeechTimeoutError` like `record`. Doesn't move the cursor. |
 | `recordClick({ x, y }, { button?, firstWithin?, quietFor?, timeout?, settle? })` | `{ entries, truncated, startSeq }` | The same for a click. |
 | `onSpeech(cb, { since?, includeMarkers?, onSession?, onClear?, onTruncated?, onError? })` | `() => void` | Subscribe to the live feed (see [Live feed](#live-feed)). `cb` gets every new speech entry as the bridge receives it. Returns an unsubscribe function. |
-| `status()` | `BridgeStatus` | Bridge health (TCP connections, Playwright/MCP state, versions). |
+| `status()` | `BridgeStatus` | Bridge health (TCP connections, Playwright/MCP state, versions, whether native input and focus work). |
 | `waitForReady({ timeout? })` | `BridgeStatus` | Wait until the bridge answers and is `ready` (default `timeout` 120000 ms). Throws `BridgeNotReadyError` on timeout. |
 | `playwrightEndpoint()` | `Promise<string>` | WebSocket URL of the bridge's Playwright server, for `browserType.connect()`. |
 

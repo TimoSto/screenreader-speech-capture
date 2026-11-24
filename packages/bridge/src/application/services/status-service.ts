@@ -4,7 +4,9 @@ import type { Config } from '../../domain/config/index.js';
 import type { SpeechLog } from '../../domain/speech-log.js';
 import type { BridgeState, GetStatus, Status } from '../ports/in/get-status.js';
 import type { BridgeStateControl } from '../ports/in/lifecycle.js';
+import type { InputInjector } from '../ports/out/input-injector.js';
 import type { ProcessSupervisor } from '../ports/out/process-supervisor.js';
+import type { WindowSystem } from '../ports/out/window-system.js';
 
 interface StatusServiceDeps {
   capture: Pick<CaptureState, 'captureStatus'>;
@@ -22,6 +24,10 @@ interface StatusServiceDeps {
   apiVersion: string;
   /** When this bridge run started. */
   startedAt: Date;
+  /** Native input (keys, clicks). */
+  injector: Pick<InputInjector, 'availability'>;
+  /** Bringing windows to the front. */
+  windows: Pick<WindowSystem, 'availability'>;
 }
 
 /**
@@ -38,7 +44,8 @@ export class StatusService implements GetStatus, BridgeStateControl {
   }
 
   status(): Status {
-    const { capture, log, supervisors, config, version, apiVersion, startedAt } = this.deps;
+    const { capture, log, supervisors, config, version, apiVersion, startedAt, injector, windows } =
+      this.deps;
     const { listener, connections } = capture.captureStatus();
     const { tcp } = config();
     const listed = log.sessions();
@@ -65,6 +72,7 @@ export class StatusService implements GetStatus, BridgeStateControl {
         current: listed.find((session) => session.id === currentId) ?? null,
         count: listed.length,
       },
+      input: { native: injector.availability, focus: windows.availability },
     };
   }
 }

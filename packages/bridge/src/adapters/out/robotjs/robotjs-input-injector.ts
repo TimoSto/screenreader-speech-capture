@@ -1,5 +1,6 @@
 import type { MouseButton } from '../../../application/ports/in/send-native-input.js';
 import type { InputInjector } from '../../../application/ports/out/input-injector.js';
+import type { Availability } from '../../../domain/availability.js';
 import type { KeyName } from '../../../domain/key-chord.js';
 
 /** The part of `@jitsi/robotjs` the injector uses. */
@@ -21,6 +22,8 @@ const robotKey = (key: KeyName) => ROBOT_KEYS[key] ?? key;
  * unit tests use a fake `RobotApi`.
  */
 export class RobotjsInputInjector implements InputInjector {
+  readonly availability: Availability = { available: true, backend: 'robotjs' };
+
   constructor(private readonly robot: RobotApi) {}
 
   click(x: number, y: number, button: MouseButton): Promise<void> {

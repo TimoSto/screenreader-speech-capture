@@ -78,6 +78,10 @@ const statusDto = (apiVersion = '1.4'): StatusDto => ({
   playwright: { state: 'stopped', version: '1.0.0', port: 3000, restarts: 0, exitCode: null },
   mcp: { state: 'stopped', version: '0.0.1', port: 8931, restarts: 0, exitCode: null },
   session: { current: sessionDto, count: 1 },
+  input: {
+    native: { available: true, backend: 'robotjs', reason: null },
+    focus: { available: true, backend: 'koffi', reason: null },
+  },
 });
 
 describe('FetchBridgeApi requests', () => {

@@ -1,3 +1,5 @@
+import type { Availability } from '../../../domain/availability.js';
+
 /** A visible top-level window (no owner window), as the window system reports it. */
 export interface AppWindow {
   /** Opaque to the application: only handed back to `bringToFront`. */
@@ -15,6 +17,8 @@ export interface AppWindow {
  * can't work (not Windows, `koffi` not loaded).
  */
 export interface WindowSystem {
+  /** Whether windows can be brought to the front here (`GET /status`, `input.focus`). */
+  readonly availability: Availability;
   /** `rootPid` and every process below it. */
   processTree(rootPid: number): Promise<Set<number>>;
   /** The visible top-level windows without an owner window, front to back. */

@@ -23,6 +23,10 @@ describe('toStatusDto', () => {
       playwright: { state: 'running', version: '1.0.0', port: 3000, restarts: 1, exitCode: 2 },
       mcp: { state: 'crashed', version: '1.0.0', port: 3000, restarts: 1, exitCode: 2 },
       session: { current: toSessionDto(session()), count: 1 },
+      input: {
+        native: { available: true, backend: 'robotjs', reason: null },
+        focus: { available: false, backend: null, reason: 'only on Windows' },
+      },
     });
   });
 

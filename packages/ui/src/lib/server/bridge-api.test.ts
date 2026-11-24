@@ -15,6 +15,10 @@ const status = {
   playwright: service,
   mcp: { ...service, port: 8931 },
   session: { current: null, count: 0 },
+  input: {
+    native: { available: true, backend: 'robotjs', reason: null },
+    focus: { available: true, backend: 'koffi', reason: null },
+  },
 };
 
 function fakeFetch(respond: (url: string) => Response | Promise<Response>): typeof fetch {

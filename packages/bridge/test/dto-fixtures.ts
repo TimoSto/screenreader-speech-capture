@@ -56,4 +56,8 @@ export const status = (current: Status['session']['current']): Status => ({
   buffer: { size: 2, maxEntries: 10, firstSeq: 3, lastSeq: 4 },
   services: { playwright: service('running'), mcp: service('crashed') },
   session: { current, count: 1 },
+  input: {
+    native: { available: true, backend: 'robotjs' },
+    focus: { available: false, reason: 'only on Windows' },
+  },
 });

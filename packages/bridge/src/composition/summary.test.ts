@@ -21,7 +21,7 @@ describe('readySummary', () => {
         playwright: supervisor('running', '1.65.0'),
         mcp: supervisor('running', '0.0.85'),
       },
-      nativeInput: 'robotjs',
+      nativeInput: { available: true, backend: 'robotjs' },
     });
     expect(text.split('\n')).toEqual([
       'ready in 2.3s',
@@ -41,7 +41,7 @@ describe('readySummary', () => {
         playwright: supervisor('running', '1.65.0'),
         mcp: supervisor('running', '0.0.85'),
       },
-      nativeInput: null,
+      nativeInput: { available: false, reason: 'not here' },
     });
     expect(text).toMatch(/HTTP API \+ web UI +http:\/\/127\.0\.0\.1:5151\n/);
   });
@@ -53,7 +53,7 @@ describe('readySummary', () => {
         playwright: supervisor('failed', '1.65.0'),
         mcp: supervisor('running', '0.0.85'),
       },
-      nativeInput: null,
+      nativeInput: { available: false, reason: 'not here' },
     });
     expect(text).toMatch(/FAILED, see the log above \(1\.65\.0\)/);
     expect(text).toMatch(/native input +off$/);
