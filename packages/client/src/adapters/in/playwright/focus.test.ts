@@ -29,15 +29,19 @@ function setup(evaluated: unknown = geometry, bridgeFocuses = false) {
       calls.push('reload');
       return Promise.resolve();
     },
+    bringToFront: () => {
+      calls.push('page.bringToFront');
+      return Promise.resolve();
+    },
   };
   return { calls, input, page };
 }
 
 describe('focusPage', () => {
-  it('lets the bridge bring the window to the front: no click, no reload', async () => {
+  it('lets the bridge bring the window to the front, then focuses the page: no click, no reload', async () => {
     const { calls, input, page } = setup(geometry, true);
     await focusPage(input, page);
-    expect(calls).toEqual(['bringToFront']);
+    expect(calls).toEqual(['bringToFront', 'page.bringToFront']);
   });
 
   it('otherwise clicks the top-left corner of the content, then reloads', async () => {

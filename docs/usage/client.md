@@ -157,7 +157,7 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `record(fn, { firstWithin?, quietFor?, timeout? })` | `{ result, entries, truncated }` | Run `fn` and return everything spoken while it ran and after it: waits up to `firstWithin` ms (default 2000) for the first speech, then until nothing new was said for `quietFor` ms (default 500), and moves the cursor to the end. Empty `entries`: nothing was said within `firstWithin`. `truncated: true`: some of it was dropped because the bridge's buffer was full, so `entries` is incomplete (raise `buffer.maxEntries`). Throws `SpeechTimeoutError` if speech goes on until `timeout` (default 10000 ms); its `entries` are everything recorded until then. |
 | `mark(label)` | `SpeechEntry` | Insert a marker. Its `seq` can be used as `since`. |
 | `findMarker(label, { session? })` | `SpeechEntry \| undefined` | The newest marker with this label (API 1.20), in `session` (an id, `'current'` or `'active'`) or in all entries. For a step marked in another process. `undefined` if there is none, also when it was dropped or cleared. |
-| `setFocus(page, { target? })` | `void` | Make the page's browser window the OS foreground window. Without `target`, the bridge brings it forward if it started the browser (`bringToFront`); otherwise, and with `target`, a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
+| `setFocus(page, { target? })` | `void` | Make the page's browser window the OS foreground window. Without `target`, the bridge brings it forward if it started the browser (`bringToFront`), then the page's own `bringToFront()` (if it has one) moves the keyboard focus into it; otherwise, and with `target`, a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
 | `bringToFront(page)` | `{ title, pid } \| null` | Ask the bridge to bring the page's window to the front (API 1.21), found by a marker in `document.title` ([how](native-input.md#bringing-the-browser-to-the-front)). `null` when the bridge can't (a browser it didn't start, not on Windows). Throws `BridgeHttpError` `FOCUS_FAILED` when Windows refused. |
 | `focusMcpBrowser()` | `{ title, pid }` | Bring Playwright MCP's browser window to the front (API 1.21). `NOT_FOUND` before MCP opened its browser. |
 | `click({ x, y }, { button? })` | `void` | Native click at screen coordinates in physical pixels (`POST /api/v1/input/click`). |
@@ -257,7 +257,8 @@ The fixture:
   `headless: false`, so `page` opens visibly in the VM's desktop session where the screen reader runs,
 - gives the browser window OS-level focus before each test, so native keys reach the page: the
   bridge [brings it to the front](native-input.md#bringing-the-browser-to-the-front) (it started the
-  browser). Where it can't, the fixture reads where the page content starts, clicks its top-left
+  browser), then `page.bringToFront()` moves the keyboard focus from the browser's toolbar into the
+  page. Where it can't, the fixture reads where the page content starts, clicks its top-left
   corner with a [native click](native-input.md), and reloads the page, so the click leaves no trace
   in it (turn off with `speechCaptureFocus: false`, needed where the bridge has no native input).
   Pages the test opens later need `setFocus()` again,

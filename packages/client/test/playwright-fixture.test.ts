@@ -105,6 +105,10 @@ describe('focusPage', () => {
         inputInjector.calls.push('reload');
         return Promise.resolve();
       },
+      bringToFront: () => {
+        inputInjector.calls.push('page.bringToFront');
+        return Promise.resolve();
+      },
     };
     await focusPage(client, page);
     expect(inputInjector.calls).toEqual(['click left 109,143', 'reload']);

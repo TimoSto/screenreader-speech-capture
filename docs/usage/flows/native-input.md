@@ -38,7 +38,8 @@ sequenceDiagram
 
 The screen reader follows the OS foreground window, which `page.bringToFront()` doesn't change. If
 the bridge started the browser (its Playwright server or MCP), it finds the window by a title
-marker and brings it forward itself. Otherwise the client computes a click point and the bridge
+marker and brings it forward itself; then `page.bringToFront()` moves the keyboard focus from the
+browser's toolbar into the page. Otherwise the client computes a click point and the bridge
 clicks there. Details: [Bringing the browser to the front](../native-input.md#bringing-the-browser-to-the-front).
 
 ```mermaid
@@ -60,6 +61,8 @@ sequenceDiagram
     SR->>SR: reads the new foreground window
     B-->>C: 200 {"title": "sr-focus-k3x9 - Chromium", "pid": 4242}
     C->>Br: document.title = original title
+    C->>Br: page.bringToFront(): keyboard focus from the toolbar into the page
+    SR->>SR: reads the focused page
     Note over C,B: fallback, on 404 or 409 INPUT_DISABLED<br/>(a browser the bridge didn't start, not Windows)
     C->>Br: page.evaluate: screenX/Y, outer − inner size, devicePixelRatio
     Br-->>C: window geometry

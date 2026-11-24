@@ -64,15 +64,21 @@ makes a window of a browser the bridge started the foreground window, without a 
    input thread of the window that is. It answers `200 { "title", "pid" }` once the window is in
    front.
 
-The screen reader follows the foreground window, and the browser puts the focus back where it was
-in the page. Unlike a click, this doesn't depend on display scaling or where the title bar is.
+The screen reader follows the foreground window. Unlike a click, this doesn't depend on display
+scaling or where the title bar is. The browser restores the focus its window had, which can be its
+toolbar (a new blank tab focuses the address bar, and `page.goto` doesn't move it), so Tab and
+native keys would land there. `setFocus(page)` and the [fixture](client.md#playwright-fixture)
+therefore also call Playwright's `page.bringToFront()`, which moves the keyboard focus into the
+page. The CLI's `focus` (for agents) can't: it has no page.
 
 **Which window.** MCP usually has one browser window: without `title`, the front-most one of its
 tree. The Playwright server can run several browsers at once, each with several windows. So
 `setFocus(page)` and the fixture put a unique marker into `document.title` for a moment
 (`sr-focus-<random>`). The browser shows it in the window title, and the client sends it as
 `title`. The bridge waits up to 2 seconds for it to show up, then the client puts the page title
-back.
+back. The window comes to the front while the marker is its title, so the screen reader announces
+it: expect a line like `sr-focus-kgx42azq - Google Chrome` (with the screen reader's word for
+window) at the start of each fixture test's speech. Restoring the title isn't announced.
 
 **Answers.** `404 NOT_FOUND`: the service isn't running, MCP hasn't opened its browser yet (it does
 on its first browser tool call), or no window has `title` (a browser the bridge didn't start). The

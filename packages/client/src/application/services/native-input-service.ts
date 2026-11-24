@@ -93,7 +93,11 @@ export class NativeInputService implements NativeInput {
   }
 
   async setFocus(page: FocusablePage, options: SetFocusOptions = {}): Promise<void> {
-    if (options.target === undefined && (await this.bringToFront(page))) return;
+    if (options.target === undefined && (await this.bringToFront(page))) {
+      // The browser restores its window's focus, maybe the address bar: move it into the page.
+      await page.bringToFront?.();
+      return;
+    }
     const geometry = parseWindowGeometry(await page.evaluate(READ_GEOMETRY_SCRIPT));
     const box = options.target === undefined ? undefined : await options.target.boundingBox();
     if (box === null) {
