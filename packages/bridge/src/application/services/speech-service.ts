@@ -58,7 +58,10 @@ export class SpeechService implements RecordSpeech, SpeechUseCases {
   }
 
   /** Wipes the buffer and the ended sessions, or one scope. The current session stays current. */
-  clear(session?: SessionFilter): void {
+  clear(filter?: SessionFilter): void {
+    // `active`: the current session's scope, or everything when none is current.
+    const session =
+      filter === 'active' ? (this.deps.log.resolveFilter(filter) ?? undefined) : filter;
     if (session === undefined) {
       this.deps.log.clear();
       this.deps.events.publish({ type: 'clear' });

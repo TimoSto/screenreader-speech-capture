@@ -2,7 +2,7 @@
 openapi: 3.1.0
 info:
   title: screenreader-speech-capture bridge API
-  version: '1.22'
+  version: '1.23'
   summary: Capture what a screen reader says and read it over HTTP.
   description: |
     REST + Server-Sent Events API of the bridge. `info.version` is the API version that
@@ -35,7 +35,7 @@ info:
     (the bridge records the speech the input causes and answers `200` with `InputCapture`). 1.20
     added `GET /markers/latest` (the newest marker with a label, for a `since`). 1.21 added
     `POST /input/focus` and the `FOCUS_FAILED` error code. 1.22 added the `X-SR-Speech-Api-Version`
-    response header.
+    response header. 1.23 added `session=active`.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -117,7 +117,7 @@ paths:
         - name: session
           in: query
           required: false
-          description: 'Only clear this scope: the id of the current session, `current`, or `none`. Without it everything is wiped.'
+          description: 'Only clear this scope: the id of the current session, `current`, `active` (the current session, or everything when none is current; since 1.23) or `none`. Without it everything is wiped.'
           schema:
             oneOf:
               - type: integer
@@ -125,6 +125,7 @@ paths:
               - type: string
                 enum:
                   - current
+                  - active
                   - none
       responses:
         '204':
@@ -632,8 +633,10 @@ components:
       in: query
       description: |
         Only entries of this session: its `id`, `current` for the session that is current
-        when the request arrives (it is not followed to later sessions), or `none` for the
-        entries recorded outside any session (`sessionId: null`, since 1.5).
+        when the request arrives (it is not followed to later sessions), `active` for the same or,
+        when no session is current, every entry instead of a 404 (since 1.23), or `none` for the
+        entries recorded outside any session (`sessionId: null`, since 1.5). On `DELETE /speech`,
+        `active` without a current session clears everything.
       schema:
         oneOf:
           - type: integer
@@ -641,6 +644,7 @@ components:
           - type: string
             enum:
               - current
+              - active
               - none
     ConfigView:
       name: view

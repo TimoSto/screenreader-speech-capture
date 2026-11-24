@@ -323,11 +323,13 @@ export class SpeechCaptureService implements SpeechCapture {
 
   /**
    * The session id a wait is limited to: `'current'` becomes the session current now, and stays
-   * that one for the whole wait, even if another session starts meanwhile.
+   * that one for the whole wait, even if another session starts meanwhile. `'active'` too, or no
+   * limit when none is current.
    */
   private async resolveSession(ref: SessionRef | undefined): Promise<number | undefined> {
-    if (ref !== 'current') return ref;
+    if (ref !== 'current' && ref !== 'active') return ref;
     const { current } = (await this.deps.api.status()).session;
+    if (ref === 'active') return current?.id;
     // The answer the bridge gives a read with `session=current`.
     if (!current) throw new BridgeHttpError(404, 'NOT_FOUND', 'No session is current');
     return current.id;

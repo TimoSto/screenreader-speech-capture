@@ -100,19 +100,15 @@ export function sessionOption(values: Values): SessionRef | undefined {
 
 /**
  * The session `speech`, `text` and `wait` read: `--session <id|current>`, nothing with `--all`,
- * otherwise the current session. Without an option it is the current session's id, not
- * `'current'`, so with none current it reads the whole buffer instead of answering 404. An explicit
- * `--session current` stays `'current'`: with none current that is the bridge's `NOT_FOUND`.
+ * otherwise `active`: the current session, or the whole buffer when none is current, resolved by
+ * the bridge in the same request (API 1.23). An explicit `--session current` stays `'current'`:
+ * with none current that is the bridge's `NOT_FOUND`.
  */
-export async function scope(
-  values: Values,
-  speech: SpeechCapture,
-): Promise<SessionRef | undefined> {
+export function scope(values: Values): SessionRef | undefined {
   const session = sessionOption(values);
   if (values.all && session !== undefined) throw new UsageError('Use either --session or --all.');
   if (session !== undefined) return session;
-  if (values.all) return undefined;
-  return (await speech.status()).session.current?.id;
+  return values.all ? undefined : 'active';
 }
 
 /** A required integer option, may be negative (a screen left of the primary one): `--x=-5`. */
@@ -161,7 +157,9 @@ export async function resolveSince(
       ? 'the buffer'
       : session === 'current'
         ? 'the current session'
-        : `session ${session}`;
+        : session === 'active'
+          ? 'the current session (or the buffer, without one)'
+          : `session ${session}`;
   throw new UsageError(
     `No marker "${since.label}" in ${where} (or it was dropped from the buffer). ` +
       `Set it first with: ${NAME} mark "${since.label}"`,

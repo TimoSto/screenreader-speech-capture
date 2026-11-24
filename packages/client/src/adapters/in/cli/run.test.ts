@@ -279,7 +279,11 @@ describe('speech commands', () => {
     expect((await cli(['text', '--since', 'mark:step-2'], fake)).stdout).toBe(
       'Checkout, heading level 1\n',
     );
-    expect(fake.api.calls).toContain('latest marker step-2');
+    // One request each: the bridge resolves the scope (`active`), the version comes with the answer.
+    expect(fake.api.calls.slice(-2)).toEqual([
+      'latest marker step-2 session=active',
+      'list 3 session=active',
+    ]);
     const json = await cli(['speech', '--since', 'mark: step-2 ', '--json'], fake);
     expect(JSON.parse(json.stdout)).toMatchObject({
       entries: [{ text: 'Checkout, heading level 1' }],
@@ -295,11 +299,13 @@ describe('speech commands', () => {
     fake.api.speak('in the session');
     const missing = await cli(['text', '--since', 'mark:step-1'], fake);
     expect(missing.code).toBe(EXIT.usage);
-    expect(missing.stderr).toContain('No marker "step-1" in session 1');
+    expect(missing.stderr).toContain(
+      'No marker "step-1" in the current session (or the buffer, without one)',
+    );
     expect(missing.stderr).toContain('mark "step-1"');
     const all = await cli(['text', '--since', 'mark:step-1', '--all'], fake);
     expect(all).toMatchObject({ code: EXIT.ok, stdout: 'in the session\n' });
-    expect(fake.api.calls).toContain('latest marker step-1 session=1');
+    expect(fake.api.calls).toContain('latest marker step-1 session=active');
     expect(fake.api.calls).toContain('latest marker step-1');
   });
 

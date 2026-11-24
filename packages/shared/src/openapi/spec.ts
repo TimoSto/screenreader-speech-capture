@@ -40,7 +40,7 @@ and \`GET /config/overrides\`. 1.19 added \`capture\` to \`POST /input/click\` a
 (the bridge records the speech the input causes and answers \`200\` with \`InputCapture\`). 1.20
 added \`GET /markers/latest\` (the newest marker with a label, for a \`since\`). 1.21 added
 \`POST /input/focus\` and the \`FOCUS_FAILED\` error code. 1.22 added the \`X-SR-Speech-Api-Version\`
-response header.
+response header. 1.23 added \`session=active\`.
 
 Every error has the same body (\`ErrorBody\`). Clients must handle unknown error codes as errors
 of their HTTP status.
@@ -161,11 +161,11 @@ of \`GET /speech/stream\` then names the scope.
           in: 'query',
           required: false,
           description:
-            'Only clear this scope: the id of the current session, `current`, or `none`. Without it everything is wiped.',
+            'Only clear this scope: the id of the current session, `current`, `active` (the current session, or everything when none is current; since 1.23) or `none`. Without it everything is wiped.',
           schema: {
             oneOf: [
               { type: 'integer', minimum: 1 },
-              { type: 'string', enum: ['current', 'none'] },
+              { type: 'string', enum: ['current', 'active', 'none'] },
             ],
           },
         },
@@ -887,8 +887,10 @@ export const PARAMETERS = {
     name: 'session',
     in: 'query',
     description: `Only entries of this session: its \`id\`, \`current\` for the session that is current
-when the request arrives (it is not followed to later sessions), or \`none\` for the
-entries recorded outside any session (\`sessionId: null\`, since 1.5).
+when the request arrives (it is not followed to later sessions), \`active\` for the same or,
+when no session is current, every entry instead of a 404 (since 1.23), or \`none\` for the
+entries recorded outside any session (\`sessionId: null\`, since 1.5). On \`DELETE /speech\`,
+\`active\` without a current session clears everything.
 `,
     schema: {
       oneOf: [
@@ -898,7 +900,7 @@ entries recorded outside any session (\`sessionId: null\`, since 1.5).
         },
         {
           type: 'string',
-          enum: ['current', 'none'],
+          enum: ['current', 'active', 'none'],
         },
       ],
     },

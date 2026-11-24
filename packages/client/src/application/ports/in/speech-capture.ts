@@ -6,7 +6,8 @@ import type { SpeechMatch } from '../../../domain/text-match.js';
 export interface ClearOptions {
   /**
    * Clear only this scope: the current session (its id or `'current'`) or `'none'` (the speech
-   * outside any session). The session keeps running. Needs bridge API 1.17.
+   * outside any session). The session keeps running. Needs bridge API 1.17. `'active'`: the
+   * current session, or everything when none is current.
    */
   session?: SessionRef | 'none' | undefined;
 }
@@ -24,8 +25,9 @@ export interface GetSpeechOptions {
    */
   allowTruncated?: boolean | undefined;
   /**
-   * Only entries of this session: its `id`, or `'current'` (the session current when the request
-   * arrives). Default: all entries.
+   * Only entries of this session: its `id`, `'current'` (the session current when the request
+   * arrives), or `'active'` (the current one, or all entries when none is current). Default: all
+   * entries.
    */
   session?: SessionRef | undefined;
 }
@@ -38,8 +40,9 @@ export interface GetTextOptions {
   /** As for `getSpeech`: return what is left instead of throwing `SpeechTruncatedError`. */
   allowTruncated?: boolean | undefined;
   /**
-   * Only entries of this session: its `id`, or `'current'` (the session current when the request
-   * arrives). Default: all entries.
+   * Only entries of this session: its `id`, `'current'` (the session current when the request
+   * arrives), or `'active'` (the current one, or all entries when none is current). Default: all
+   * entries.
    */
   session?: SessionRef | undefined;
 }
@@ -52,14 +55,15 @@ export interface WaitOptions {
   /** Ignore case and extra whitespace (strings and regular expressions). */
   normalize?: boolean | undefined;
   /**
-   * Only entries of this session: its `id`, or `'current'` (the session current when the wait
-   * starts; it stays that one even if another session starts meanwhile). Default: all entries.
+   * Only entries of this session: its `id`, `'current'` (the session current when the wait
+   * starts; it stays that one even if another session starts meanwhile), or `'active'` (the same,
+   * or all entries when none is current). Default: all entries.
    */
   session?: SessionRef | undefined;
 }
 
 export interface FindMarkerOptions {
-  /** Only this session's markers: its `id`, or `'current'`. Default: all entries. */
+  /** Only this session's markers: its `id`, `'current'` or `'active'`. Default: all entries. */
   session?: SessionRef | undefined;
 }
 

@@ -29,8 +29,11 @@ export interface StartedSession extends Session {
   replaced: Session | null;
 }
 
-/** A session `id`, or `'current'`: the session that is current when the request arrives. */
-export type SessionRef = number | 'current';
+/**
+ * A session `id`, `'current'`: the session that is current when the request arrives, or
+ * `'active'`: the current session, or all entries when none is current (bridge API 1.23).
+ */
+export type SessionRef = number | 'current' | 'active';
 
 /** The sessions still in the bridge's buffer plus the current one, newest first. */
 export interface SessionList {

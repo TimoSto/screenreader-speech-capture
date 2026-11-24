@@ -121,7 +121,9 @@ export class FakeBridgeApi implements BridgeApi {
     const failure = this.fail();
     if (failure) return failure;
     let sessionId: number | undefined;
-    if (session !== undefined) {
+    // `active`: the current session, or no filter when none is current (API 1.23).
+    if (session === 'active') sessionId = this.current?.id;
+    else if (session !== undefined) {
       sessionId = session === 'current' ? this.current?.id : session;
       if (sessionId === undefined || !this.allSessions.some((s) => s.id === sessionId)) {
         return Promise.reject(new BridgeHttpError(404, 'NOT_FOUND', 'No such session'));
@@ -142,8 +144,13 @@ export class FakeBridgeApi implements BridgeApi {
     this.calls.push(session === undefined ? 'clear' : `clear ${String(session)}`);
     const failure = this.fail();
     if (failure) return failure;
-    if (session !== undefined) {
-      const id = session === 'none' ? null : session === 'current' ? this.current?.id : session;
+    if (session !== undefined && (session !== 'active' || this.current)) {
+      const id =
+        session === 'none'
+          ? null
+          : session === 'current' || session === 'active'
+            ? this.current?.id
+            : session;
       if (id === undefined) {
         return Promise.reject(new BridgeHttpError(404, 'NOT_FOUND', 'No session is current'));
       }
@@ -176,7 +183,7 @@ export class FakeBridgeApi implements BridgeApi {
     this.calls.push(`latest marker ${label}${session === undefined ? '' : ` session=${session}`}`);
     const failure = this.fail();
     if (failure) return failure;
-    const sessionId = session === 'current' ? this.current?.id : session;
+    const sessionId = session === 'current' || session === 'active' ? this.current?.id : session;
     if (session === 'current' && sessionId === undefined) {
       return Promise.reject(new BridgeHttpError(404, 'NOT_FOUND', 'No session is current'));
     }
