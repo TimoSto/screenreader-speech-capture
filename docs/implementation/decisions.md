@@ -95,6 +95,16 @@ first). They don't poll, and they don't use `GET /speech/wait`:
 `GET /speech/wait` stays as a convenience for `curl` and agents without the client; it is not the
 reference behaviour for the client.
 
+The CLI's `wait` uses the same path, although it only sends a string or a regex the bridge's wait
+could take. The bridge's wait would save no request: the CLI still asks `GET /status` for its
+default scope (the current session, or the whole buffer when none is current, which
+`session=current` can't express) and the version check, and the stream is open long before the
+screen reader speaks, so a match isn't reported any sooner. And it would be worse: one long request
+of up to 300 s (`timeoutMs` is capped) fails when the link drops, where the feed reconnects with
+`Last-Event-ID`; a `since` from an earlier bridge run waits until the timeout instead of getting
+`truncated` and the whole buffer; and its `omitted` would have to be mapped onto the CLI's
+`truncated`, which means something else.
+
 ## Settings apply on the next start
 
 `PUT /api/v1/config` only saves; every setting takes effect on the next start of the bridge, and
