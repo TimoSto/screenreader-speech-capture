@@ -33,8 +33,8 @@ test('the page title and heading are announced', async ({ page, speech }) => {
 });
 
 test('a focused input is announced with its name and role', async ({ page, speech }) => {
-  await page.keyboard.press("Tab")
-  await speech.waitForOutput(/Name Eingabefeld Leer/, {normalize: true}); // role wording depends on the screen reader's language; also found if it arrived before this line
+  await page.keyboard.press('Tab');
+  await speech.waitForOutput(/Name Eingabefeld Leer/, { normalize: true }); // role wording depends on the screen reader's language; also found if it arrived before this line
 });
 
 test('Tab moves to the next control and announces it', async ({ page, speech }) => {
