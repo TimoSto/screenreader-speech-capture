@@ -29,13 +29,10 @@ import type { Clock } from '../ports/out/clock.js';
 import { startLiveFeed } from './live-feed.js';
 import { silenceFailure } from './silence.js';
 import { speechEvents } from './speech-events.js';
-import { VersionGate } from './version-gate.js';
 
 interface SpeechCaptureServiceDeps {
   api: BridgeApi;
   clock: Clock;
-  /** The HTTP API version this client was built for (`API_VERSION` from the shared contract). */
-  apiVersion: string;
 }
 
 /** Largest `limit` the bridge accepts for `GET /api/v1/speech`. */
@@ -72,11 +69,7 @@ export class SpeechCaptureService implements SpeechCapture {
    * moves the cursor if none happened since it started: the explicit move wins.
    */
   #moves = 0;
-  readonly #gate: VersionGate;
-
-  constructor(private readonly deps: SpeechCaptureServiceDeps) {
-    this.#gate = new VersionGate(deps.api, deps.apiVersion);
-  }
+  constructor(private readonly deps: SpeechCaptureServiceDeps) {}
 
   cursor(): number {
     return this.#cursor;
@@ -115,7 +108,6 @@ export class SpeechCaptureService implements SpeechCapture {
   async getSpeech(options: GetSpeechOptions = {}): Promise<SpeechEntry[]> {
     // Read when the call starts, so a cursor move after it doesn't change this read.
     const since = options.since ?? this.#cursor;
-    await this.compatible();
     const { entries, truncated } = await this.fetchSince(since, options.session);
     const wanted = options.includeMarkers ? entries : entries.filter(isSpeech);
     const result = options.limit === undefined ? wanted : wanted.slice(0, options.limit);
@@ -134,7 +126,6 @@ export class SpeechCaptureService implements SpeechCapture {
   }
 
   async clear(options: ClearOptions = {}): Promise<void> {
-    await this.compatible();
     if (options.session !== undefined) {
       // One scope: the session goes on and the cursor stays, `seq` only rises.
       await this.deps.api.clear(options.session);
@@ -146,7 +137,6 @@ export class SpeechCaptureService implements SpeechCapture {
   }
 
   async startSession(name: string, options: StartSessionOptions = {}): Promise<StartedSession> {
-    await this.compatible();
     const session = await this.deps.api.startSession({ name, run: options.run });
     // Everything after `startSeq` belongs to the session (or a later one).
     this.#moveTo(session.startSeq);
@@ -154,22 +144,18 @@ export class SpeechCaptureService implements SpeechCapture {
   }
 
   async endSession(): Promise<void> {
-    await this.compatible();
     await this.deps.api.endSession();
   }
 
   async deleteSession(id: number): Promise<void> {
-    await this.compatible();
     await this.deps.api.deleteSession(id);
   }
 
   async sessions(): Promise<SessionList> {
-    await this.compatible();
     return this.deps.api.listSessions();
   }
 
   async mark(label: string): Promise<SpeechEntry> {
-    await this.compatible();
     return this.deps.api.mark(label);
   }
 
@@ -177,14 +163,11 @@ export class SpeechCaptureService implements SpeechCapture {
     label: string,
     options: FindMarkerOptions = {},
   ): Promise<SpeechEntry | undefined> {
-    await this.compatible();
     return (await this.deps.api.latestMarker(label, options.session)) ?? undefined;
   }
 
   async status(): Promise<BridgeStatus> {
-    const status = await this.deps.api.status();
-    this.#gate.passed(status.bridge.apiVersion);
-    return status;
+    return this.deps.api.status();
   }
 
   async waitForReady(options: ReadyOptions = {}): Promise<BridgeStatus> {
@@ -213,7 +196,6 @@ export class SpeechCaptureService implements SpeechCapture {
   async waitForOutput(match: SpeechMatch, options: WaitOptions = {}): Promise<SpeechEntry> {
     const test = toMatcher(match, options);
     const start = this.#start(options);
-    await this.compatible();
     const entry = await this.search(
       start.options,
       (entries) => entries.find(test),
@@ -230,7 +212,6 @@ export class SpeechCaptureService implements SpeechCapture {
     if (matches.length === 0) throw new TypeError('waitForSequence needs at least one match');
     const matchers = matches.map((m) => toMatcher(m, options));
     const start = this.#start(options);
-    await this.compatible();
     let found: SpeechEntry[] = [];
     const result = await this.search(
       start.options,
@@ -249,7 +230,6 @@ export class SpeechCaptureService implements SpeechCapture {
   async waitForSilence(options: SilenceOptions = {}): Promise<void> {
     const quietFor = options.quietFor ?? DEFAULTS.quietFor;
     const timeout = options.timeout ?? DEFAULTS.silenceTimeout;
-    await this.compatible();
     const settled = await this.settle({ since: await this.endSeq(), quietFor, timeout });
     if (!settled.silent)
       throw new SpeechTimeoutError(silenceFailure(quietFor, timeout), settled.seen);
@@ -260,7 +240,6 @@ export class SpeechCaptureService implements SpeechCapture {
     const timeout = options.timeout ?? DEFAULTS.silenceTimeout;
     const firstWithin = options.firstWithin ?? DEFAULTS.firstWithin;
     const moves = this.#moves;
-    await this.compatible();
     const start = await this.endSeq();
     const result = await fn();
     // Followed from `start`, so speech spoken while `fn` ran counts as the first speech too.
@@ -276,11 +255,7 @@ export class SpeechCaptureService implements SpeechCapture {
 
   onSpeech(listener: (entry: SpeechEntry) => void, options: OnSpeechOptions = {}): () => void {
     const { api, clock } = this.deps;
-    return startLiveFeed(
-      { api, clock, ensureCompatible: () => this.compatible() },
-      listener,
-      options,
-    );
+    return startLiveFeed({ api, clock }, listener, options);
   }
 
   /**
@@ -314,11 +289,6 @@ export class SpeechCaptureService implements SpeechCapture {
     // compare with `now()`. Nothing spoken at all is silence, whatever `firstWithin` was.
     const silent = lastSpeech === undefined || lastSpeech + quietFor <= start + timeout;
     return { silent, seen };
-  }
-
-  /** Checks the API version once. A failed check is repeated on the next call. */
-  private compatible(): Promise<void> {
-    return this.#gate.ensure();
   }
 
   /** The `seq` of the newest entry in the buffer, 0 if it is empty. */
@@ -421,7 +391,7 @@ export class SpeechCaptureService implements SpeechCapture {
     timer.set(ms);
     try {
       const events = speechEvents(
-        { api, clock, ensureCompatible: () => this.compatible() },
+        { api, clock },
         { since: from.since, session: from.session, signal: feed.signal },
       );
       for await (const event of events) {

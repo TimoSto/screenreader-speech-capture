@@ -11,8 +11,6 @@ import type { Clock } from '../ports/out/clock.js';
 export interface SpeechEventsDeps {
   api: BridgeApi;
   clock: Clock;
-  /** Resolves once the bridge speaks a compatible API version; runs before every connect. */
-  ensureCompatible: () => Promise<void>;
 }
 
 export interface SpeechEventsOptions {
@@ -56,7 +54,7 @@ export async function* speechEvents(
   deps: SpeechEventsDeps,
   options: SpeechEventsOptions,
 ): AsyncGenerator<SpeechFeedEvent> {
-  const { api, clock, ensureCompatible } = deps;
+  const { api, clock } = deps;
   const { session, signal } = options;
   const backoff = new Backoff();
   /**
@@ -69,8 +67,6 @@ export async function* speechEvents(
     const connectedAt = clock.now();
     let lost: Error;
     try {
-      // Checked on reconnects too: a restarted bridge may be another version.
-      await ensureCompatible();
       const events = api.streamSpeech({
         lastEventId,
         signal,

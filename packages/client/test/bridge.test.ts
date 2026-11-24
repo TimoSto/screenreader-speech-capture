@@ -1,4 +1,5 @@
 // The client against a real bridge (real TCP + HTTP sockets), fed like the socket voice.
+import { API_VERSION_HEADER } from '@screenreader-speech-capture/shared';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import http from 'node:http';
 import os from 'node:os';
@@ -51,9 +52,13 @@ async function cli(args: string[]) {
 }
 
 /** A server that answers every request with `status` and `body`. */
-async function stub(status: number, body: string): Promise<string> {
+async function stub(
+  status: number,
+  body: string,
+  headers: Record<string, string> = {},
+): Promise<string> {
   const server = http.createServer((_req, res) => {
-    res.writeHead(status, { 'content-type': 'application/json' }).end(body);
+    res.writeHead(status, { 'content-type': 'application/json', ...headers }).end(body);
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   onTestFinished(() => new Promise<void>((resolve) => server.close(() => resolve())));
@@ -169,7 +174,7 @@ describe('library', () => {
       code: 'HTTP_ERROR',
     });
 
-    const v2 = await stub(200, JSON.stringify({ bridge: { apiVersion: '2.0' } }));
+    const v2 = await stub(200, JSON.stringify({ entries: [] }), { [API_VERSION_HEADER]: '2.0' });
     await expect(new SpeechCaptureClient({ baseUrl: v2, env }).getSpeech()).rejects.toThrow(
       IncompatibleBridgeError,
     );

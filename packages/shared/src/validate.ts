@@ -22,9 +22,6 @@ export function checkDto<S extends DtoSchema>(schema: S, value: unknown): DtoChe
   return { ok: false, field: v.getDotPath(issue) ?? '(body)', message: issue.message };
 }
 
-/** Just enough of `GET /status` to check the API version before anything else. */
-export const ApiVersionSchema = v.object({ bridge: v.object({ apiVersion: v.string() }) });
-
 /**
  * An error body as a client must accept it: like `ErrorBodySchema`, but with any `code`, since
  * new codes may come in minor versions.

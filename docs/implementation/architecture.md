@@ -206,7 +206,9 @@ only, `INPUT_DISABLED`), and users' fakes of `SpeechCapture` shouldn't grow with
 in **screen coordinates**. `setFocus` takes a structural `FocusablePage` (`evaluate(expression)`,
 which a Playwright `Page` satisfies) and an optional `FocusTarget` (`boundingBox()`, a `Locator`), so
 `@playwright/test` never becomes a type dependency of the core. `SpeechCaptureClient` implements both
-ports (the speech one and this one) and forwards to two services that share a `VersionGate`.
+ports (the speech one and this one) and forwards to two services that share one `FetchBridgeApi`,
+which checks the API version of every answer
+([decision](decisions.md#the-client-checks-the-api-version-on-every-answer)).
 
 The fixture (the `./playwright` subpath, a driving adapter) reads the window geometry from the
 `Page` (see [Native input](../usage/native-input.md)) and calls `NativeInput`. A pure domain function

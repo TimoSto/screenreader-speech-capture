@@ -15,7 +15,7 @@ import { SpeechCaptureService } from './speech-capture-service.js';
 function setup() {
   const api = new FakeBridgeApi();
   const clock = new FakeClock();
-  const sr = new SpeechCaptureService({ api, clock, apiVersion: '1.4' });
+  const sr = new SpeechCaptureService({ api, clock });
   return { api, clock, sr };
 }
 
@@ -163,7 +163,7 @@ describe('waitForOutput', () => {
     clock.at(300, () => api.speak('Dialog, Settings'));
     expect(await sr.waitForOutput(/dialog/i)).toMatchObject({ text: 'Dialog, Settings' });
     expect(clock.now()).toBe(300);
-    expect(api.calls).toEqual(['status', 'list 0', 'stream 1']);
+    expect(api.calls).toEqual(['list 0', 'stream 1']);
     expect(api.openStreams).toBe(0);
   });
 
@@ -499,7 +499,7 @@ describe('sessions', () => {
       ['two', false],
       ['one', false],
     ]);
-    expect(api.calls).toEqual(['status', 'start one', 'start two', 'end', 'sessions']);
+    expect(api.calls).toEqual(['start one', 'start two', 'end', 'sessions']);
   });
 
   it('deleteSession deletes an ended session and keeps the cursor', async () => {
@@ -510,7 +510,7 @@ describe('sessions', () => {
     await sr.deleteSession(1);
     expect((await sr.sessions()).sessions.map((s) => s.name)).toEqual(['two']);
     expect(sr.cursor()).toBe(cursor);
-    expect(api.calls).toEqual(['status', 'start one', 'start two', 'delete 1', 'sessions']);
+    expect(api.calls).toEqual(['start one', 'start two', 'delete 1', 'sessions']);
     await expect(sr.deleteSession(2)).rejects.toMatchObject({ status: 400 });
   });
 
@@ -584,31 +584,23 @@ describe('bridge restart', () => {
 });
 
 describe('version check', () => {
-  it('runs once before the first call', async () => {
+  it('needs no status call before the first request: every answer carries the version', async () => {
     const { api, sr } = setup();
     await sr.getSpeech();
     await sr.getSpeech();
-    expect(api.calls.filter((c) => c === 'status')).toHaveLength(1);
+    expect(api.calls).toEqual(['list 0', 'list 0']);
   });
 
-  it('accepts another minor version and rejects another major version', async () => {
+  it('accepts another minor version and rejects another major version on any answer', async () => {
     const { api, sr } = setup();
     api.apiVersion = '1.7';
-    await expect(sr.status()).resolves.toBeTruthy();
+    await expect(sr.getSpeech()).resolves.toEqual([]);
     api.apiVersion = '2.0';
-    const error = await sr.status().catch((e: unknown) => e);
+    const error = await sr.clear().catch((e: unknown) => e);
     expect(error).toBeInstanceOf(IncompatibleBridgeError);
-    expect(error).toMatchObject({ bridgeApiVersion: '2.0', clientApiVersion: '1.4' });
-  });
-
-  it('is repeated after a failure', async () => {
-    const { api, sr } = setup();
-    api.apiVersion = '2.0';
-    await expect(sr.clear()).rejects.toThrow(IncompatibleBridgeError);
-    expect(api.calls).not.toContain('clear');
+    expect(error).toMatchObject({ bridgeApiVersion: '2.0' });
     api.apiVersion = '1.0';
-    await sr.clear();
-    expect(api.calls).toContain('clear');
+    await expect(sr.clear()).resolves.toBeUndefined();
   });
 });
 
@@ -636,12 +628,12 @@ describe('waitForReady', () => {
 });
 
 describe('onSpeech', () => {
-  it('checks the version, then delivers live speech; the cursor stays', async () => {
+  it('delivers live speech; the cursor stays', async () => {
     const { api, sr } = setup();
     const log: string[] = [];
     const stop = sr.onSpeech((entry) => log.push(entry.text));
     await vi.waitFor(() => expect(api.openStreams).toBe(1));
-    expect(api.calls).toEqual(['status', 'stream null']);
+    expect(api.calls).toEqual(['stream null']);
     api.speak('Submit, button');
     await vi.waitFor(() => expect(log).toEqual(['Submit, button']));
     expect(sr.cursor()).toBe(0);

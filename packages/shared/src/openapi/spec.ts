@@ -12,6 +12,9 @@ export const INFO = {
   summary: 'Capture what a screen reader says and read it over HTTP.',
   description: `REST + Server-Sent Events API of the bridge. \`info.version\` is the API version that
 \`GET /status\` reports as \`bridge.apiVersion\` (\`<major>.<minor>\`; minor versions only add things).
+Every answer under \`/api/v1\`, errors and streams included, also carries it in the
+\`X-SR-Speech-Api-Version\` response header (since 1.22), so a client checks it on each answer
+instead of asking \`GET /status\` first.
 The prose reference is \`docs/usage/http-api.md\`. The types match \`packages/shared\`.
 
 This file describes the endpoints the bridge serves today.
@@ -36,7 +39,8 @@ the \`INPUT_DISABLED\` error code again. 1.15 added \`outsideEntries\` to \`GET 
 and \`GET /config/overrides\`. 1.19 added \`capture\` to \`POST /input/click\` and \`POST /input/keys\`
 (the bridge records the speech the input causes and answers \`200\` with \`InputCapture\`). 1.20
 added \`GET /markers/latest\` (the newest marker with a label, for a \`since\`). 1.21 added
-\`POST /input/focus\` and the \`FOCUS_FAILED\` error code.
+\`POST /input/focus\` and the \`FOCUS_FAILED\` error code. 1.22 added the \`X-SR-Speech-Api-Version\`
+response header.
 
 Every error has the same body (\`ErrorBody\`). Clients must handle unknown error codes as errors
 of their HTTP status.

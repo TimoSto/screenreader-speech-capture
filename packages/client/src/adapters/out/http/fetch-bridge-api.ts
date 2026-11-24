@@ -2,7 +2,7 @@ import {
   AnyErrorBodySchema,
   API_PREFIX,
   API_VERSION,
-  ApiVersionSchema,
+  API_VERSION_HEADER,
   FocusedWindowSchema,
   LatestMarkerSchema,
   API_LIMITS,
@@ -86,9 +86,6 @@ export class FetchBridgeApi implements BridgeApi {
   async status(): Promise<BridgeStatus> {
     const response = await this.request('GET', '/status');
     const body: unknown = await response.json();
-    // Checked before the rest: another major version may answer in another shape.
-    const version = checkDto(ApiVersionSchema, body);
-    if (version.ok) checkApiVersion(version.value.bridge.apiVersion, API_VERSION);
     return toStatus(parseBody(StatusSchema, body, response.status, 'GET /status'));
   }
 
@@ -290,6 +287,11 @@ export class FetchBridgeApi implements BridgeApi {
     } catch (error) {
       throw new BridgeUnreachableError(base, { cause: error });
     }
+    // Every answer carries the bridge's API version (since 1.22): checked before the body, which
+    // another major version may shape differently (docs/usage/http-api.md#versioning). Without
+    // the header, the bridge is older than 1.22 and so speaks major 1.
+    const version = response.headers.get(API_VERSION_HEADER);
+    if (version !== null) checkApiVersion(version, API_VERSION);
     if (!response.ok) throw await toHttpError(response);
     return response;
   }

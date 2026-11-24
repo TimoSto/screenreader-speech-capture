@@ -26,23 +26,23 @@ function setup(apiVersion = '1.14') {
   return {
     api,
     clock,
-    service: new NativeInputService({ api, apiVersion: '1.14', random: () => 'abc' }),
+    service: new NativeInputService({ api, random: () => 'abc' }),
   };
 }
 
 describe('NativeInputService', () => {
-  it('checks the version once, then sends the click and the keys', async () => {
+  it('sends the click and the keys, one request each', async () => {
     const { api, service } = setup();
     await service.click({ x: 1, y: 2 });
     await service.click({ x: 3, y: 4 }, { button: 'right' });
     await service.pressKeys(['h', 'h'], { delayMs: 10 });
-    expect(api.calls).toEqual(['status', 'click left 1,2', 'click right 3,4', 'keys h h delay=10']);
+    expect(api.calls).toEqual(['click left 1,2', 'click right 3,4', 'keys h h delay=10']);
   });
 
   it('refuses an incompatible bridge', async () => {
     const { api, service } = setup('2.0');
     await expect(service.pressKeys('a')).rejects.toBeInstanceOf(IncompatibleBridgeError);
-    expect(api.calls).toEqual(['status']);
+    expect(api.calls).toEqual(['keys a']);
   });
 
   it("setFocus lets the bridge bring a test browser's window to the front by a title marker", async () => {
@@ -50,7 +50,7 @@ describe('NativeInputService', () => {
     const page = new FakePage(geometry);
     api.windows = [{ target: 'playwright', pid: 7, titleOf: () => `${page.title} - Chromium` }];
     await service.setFocus(page);
-    expect(api.calls).toEqual(['status', 'focus playwright "sr-focus-abc"']);
+    expect(api.calls).toEqual(['focus playwright "sr-focus-abc"']);
     // The marker was in the title while the bridge looked, then the title came back.
     expect(page.titles).toEqual(['sr-focus-abc', 'Checkout']);
   });
@@ -84,7 +84,7 @@ describe('NativeInputService', () => {
     const { api, service } = setup();
     api.windows = [{ target: 'mcp', pid: 9, titleOf: () => 'Shop - Chromium' }];
     await expect(service.focusMcpBrowser()).resolves.toEqual({ title: 'Shop - Chromium', pid: 9 });
-    expect(api.calls).toEqual(['status', 'focus mcp']);
+    expect(api.calls).toEqual(['focus mcp']);
   });
 
   it('setFocus clicks the title bar from the page geometry', async () => {
@@ -92,7 +92,7 @@ describe('NativeInputService', () => {
     const page = new FakePage(geometry);
     await service.setFocus(page);
     // The bridge has no window for it (a browser it didn't start): the click is the fallback.
-    expect(api.calls).toEqual(['status', 'focus playwright "sr-focus-abc"', 'click left 600,62']);
+    expect(api.calls).toEqual(['focus playwright "sr-focus-abc"', 'click left 600,62']);
   });
 
   it('setFocus clicks the centre of the target', async () => {
@@ -129,7 +129,7 @@ describe('NativeInputService', () => {
     });
     expect(recording).toMatchObject({ startSeq: 1, truncated: false });
     expect(recording.entries.map((e) => e.text)).toEqual(['Heading level 1']);
-    expect(api.calls).toEqual(['status', 'keys h delay=0']);
+    expect(api.calls).toEqual(['keys h delay=0']);
     expect(api.captures).toEqual([
       { quietForMs: 100, firstWithinMs: 300, timeoutMs: 2000, settleMs: 50 },
     ]);
@@ -139,7 +139,7 @@ describe('NativeInputService', () => {
     const { api, service } = setup();
     const recording = await service.recordClick({ x: 1, y: 2 }, { firstWithin: 100 });
     expect(recording).toEqual({ entries: [], truncated: false, startSeq: 0 });
-    expect(api.calls).toEqual(['status', 'click left 1,2']);
+    expect(api.calls).toEqual(['click left 1,2']);
   });
 
   it('rejects with SpeechTimeoutError and the speech when it does not pause', async () => {

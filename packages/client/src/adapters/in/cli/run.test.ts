@@ -65,11 +65,11 @@ function fakeSpeech() {
   const urls: (string | undefined)[] = [];
   const speech = (url: string | undefined): SpeechCapture => {
     urls.push(url);
-    return new SpeechCaptureService({ api, clock, apiVersion: '1.3' });
+    return new SpeechCaptureService({ api, clock });
   };
   const input = (url: string | undefined): NativeInput => {
     urls.push(url);
-    return new NativeInputService({ api, apiVersion: '1.3' });
+    return new NativeInputService({ api });
   };
   return { api, clock, urls, speech, input };
 }
@@ -766,14 +766,14 @@ describe('native input commands', () => {
     expect(text).toMatchObject({ code: EXIT.ok, stdout: 'Checkout, heading level 1\n' });
   });
 
-  it('press --capture lets the bridge capture: one request after the version check', async () => {
+  it('press --capture lets the bridge capture: one request', async () => {
     const fake = speaking('Checkout, heading level 1');
     const result = await cli(
       ['press', 'h', '--capture', '--settle', '300', '--quiet-for', '200', '--json'],
       fake,
     );
     expect(result.code).toBe(EXIT.ok);
-    expect(fake.api.calls).toEqual(['status', 'keys h']);
+    expect(fake.api.calls).toEqual(['keys h']);
     expect(fake.api.captures).toEqual([
       { quietForMs: 200, firstWithinMs: undefined, timeoutMs: undefined, settleMs: 300 },
     ]);
