@@ -219,7 +219,7 @@ async function act(
     if (!(error instanceof SpeechTimeoutError)) throw error;
     // Its message already says when speech was dropped from the bridge's full buffer.
     captured = { entries: error.entries, truncated: error.truncated, status: 'timeout' };
-    failure = `${error.message}; the action has happened`;
+    failure = `${error.reason}; the action has happened`;
   }
   // Text mode prints nothing for no speech, rather than an empty line.
   if (json || captured.entries.length > 0) print(captured);

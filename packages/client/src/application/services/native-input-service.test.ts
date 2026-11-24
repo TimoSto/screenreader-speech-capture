@@ -160,7 +160,7 @@ describe('NativeInputService', () => {
       .recordKeys('h', { quietFor: 100, timeout: 500 })
       .catch((e: unknown) => e);
     expect(error).toBeInstanceOf(SpeechTimeoutError);
-    expect((error as SpeechTimeoutError).message).toBe(
+    expect((error as SpeechTimeoutError).reason).toBe(
       'Speech did not pause for 100 ms within 500 ms',
     );
     expect((error as SpeechTimeoutError).entries.length).toBeGreaterThan(5);

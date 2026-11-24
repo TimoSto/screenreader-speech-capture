@@ -208,7 +208,7 @@ stop();
 | Error | When |
 |---|---|
 | `SpeechTruncatedError` | `getSpeech` / `getText` without `allowTruncated`: some of the speech asked for was dropped because the bridge's buffer was full. `entries` holds what is left; the message suggests raising `buffer.maxEntries`. |
-| `SpeechTimeoutError` | A wait ended without a match. `entries` holds the speech seen while waiting. `truncated: true` if speech the wait should have looked at was dropped because the bridge's buffer was full: the match may have been among it. The message then says so and suggests raising `buffer.maxEntries`. |
+| `SpeechTimeoutError` | A wait ended without a match. `entries` holds the speech seen while waiting; the message lists the last 20 of them (or says no speech arrived), so a test report shows what was said instead, and `reason` is the message without them. `truncated: true` if speech the wait should have looked at was dropped because the bridge's buffer was full: the match may have been among it. The message then says so and suggests raising `buffer.maxEntries`. |
 | `BridgeNotReadyError` | `waitForReady` timed out. |
 | `BridgeUnreachableError` | No connection to the bridge (wrong URL, bridge not running, network). |
 | `BridgeHttpError` | The bridge answered with an [error](http-api.md#errors): `status`, `code`, `details`. |

@@ -3,8 +3,10 @@ import {
   BridgeHttpError,
   BridgeUnreachableError,
   IncompatibleBridgeError,
+  SEEN_IN_MESSAGE,
   SpeechTimeoutError,
 } from './errors.js';
+import type { SpeechEntry } from './speech-entry.js';
 
 describe('client errors', () => {
   it('BridgeUnreachableError names the socket error code fetch wraps', () => {
@@ -45,9 +47,44 @@ describe('client errors', () => {
   it('SpeechTimeoutError adds the buffer hint only when speech was dropped', () => {
     const plain = new SpeechTimeoutError('No speech matched "x" within 5 ms', []);
     expect(plain.truncated).toBe(false);
-    expect(plain.message).toBe('No speech matched "x" within 5 ms');
+    expect(plain.reason).toBe('No speech matched "x" within 5 ms');
     const dropped = new SpeechTimeoutError('No speech matched "x" within 5 ms', [], true);
-    expect(dropped.message).toMatch(/; some speech was dropped .*raise buffer\.maxEntries\)$/);
+    expect(dropped.reason).toMatch(/; some speech was dropped .*raise buffer\.maxEntries\)$/);
+  });
+
+  it('SpeechTimeoutError lists the speech seen in its message, the last ones only', () => {
+    const entry = (
+      seq: number,
+      text: string,
+      kind: SpeechEntry['kind'] = 'speech',
+    ): SpeechEntry => ({
+      seq,
+      kind,
+      text,
+      receivedAt: '2026-01-01T00:00:00.000Z',
+      source: 'tcp',
+      voice: null,
+      connectionId: null,
+      sessionId: null,
+    });
+    expect(new SpeechTimeoutError('No speech matched "x" within 5 ms', []).message).toBe(
+      'No speech matched "x" within 5 ms. No speech arrived.',
+    );
+    expect(
+      new SpeechTimeoutError('No speech matched "x" within 5 ms', [
+        entry(3, 'Kontakt Überschrift Ebene 1'),
+        entry(4, 'm', 'marker'),
+      ]).message,
+    ).toBe(
+      'No speech matched "x" within 5 ms. Speech seen (2):\n' +
+        '  #3 Kontakt Überschrift Ebene 1\n  #4 [marker] m',
+    );
+    const many = Array.from({ length: SEEN_IN_MESSAGE + 5 }, (_, i) => entry(i + 1, `e${i + 1}`));
+    const lines = new SpeechTimeoutError('x', many).message.split('\n');
+    expect(lines[0]).toBe(`x. Speech seen (${SEEN_IN_MESSAGE + 5}):`);
+    expect(lines[1]).toBe('  … 5 earlier (in error.entries)');
+    expect(lines[2]).toBe('  #6 e6');
+    expect(lines).toHaveLength(SEEN_IN_MESSAGE + 2);
   });
 
   it('every error has its class name', () => {
