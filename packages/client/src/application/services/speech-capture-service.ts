@@ -12,6 +12,7 @@ import { isSpeech, type SpeechEntry } from '../../domain/speech-entry.js';
 import { advanceSequence, toMatcher, type SpeechMatch } from '../../domain/text-match.js';
 import type {
   ClearOptions,
+  FindMarkerOptions,
   GetSpeechOptions,
   GetTextOptions,
   OnSpeechOptions,
@@ -170,6 +171,14 @@ export class SpeechCaptureService implements SpeechCapture {
   async mark(label: string): Promise<SpeechEntry> {
     await this.compatible();
     return this.deps.api.mark(label);
+  }
+
+  async findMarker(
+    label: string,
+    options: FindMarkerOptions = {},
+  ): Promise<SpeechEntry | undefined> {
+    await this.compatible();
+    return (await this.deps.api.latestMarker(label, options.session)) ?? undefined;
   }
 
   async status(): Promise<BridgeStatus> {

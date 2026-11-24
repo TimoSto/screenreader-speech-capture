@@ -2,7 +2,7 @@
 openapi: 3.1.0
 info:
   title: screenreader-speech-capture bridge API
-  version: '1.19'
+  version: '1.20'
   summary: Capture what a screen reader says and read it over HTTP.
   description: |
     REST + Server-Sent Events API of the bridge. `info.version` is the API version that
@@ -29,7 +29,8 @@ info:
     the `INPUT_DISABLED` error code again. 1.15 added `outsideEntries` to `GET /sessions`. 1.16 added `DELETE /sessions`. 1.17 added the `session` parameter of `DELETE /speech` and the
     `sessionId` in the `data` of a scoped `clear` event. 1.18 added the `view` parameter of `GET /config`
     and `GET /config/overrides`. 1.19 added `capture` to `POST /input/click` and `POST /input/keys`
-    (the bridge records the speech the input causes and answers `200` with `InputCapture`).
+    (the bridge records the speech the input causes and answers `200` with `InputCapture`). 1.20
+    added `GET /markers/latest` (the newest marker with a label, for a `since`).
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -310,6 +311,38 @@ paths:
                 $ref: '#/components/schemas/SpeechEntry'
         '400':
           $ref: '#/components/responses/InvalidRequest'
+  /markers/latest:
+    get:
+      tags:
+        - speech
+      operationId: latestMarker
+      summary: Find the newest marker with a label
+      description: |
+        The newest marker whose text is `label` (since API 1.20), so a caller that only knows the label it
+        marked a step with can read from there: pass the marker's `seq` as `since`. The label is
+        trimmed and compared exactly. `null` when the scope has no such marker, also when it was
+        dropped from the full buffer or cleared.
+      parameters:
+        - name: label
+          in: query
+          required: true
+          description: 'The marker text to look for: not empty, at most 1000 characters (trimmed).'
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 1000
+        - $ref: '#/components/parameters/Session'
+      responses:
+        '200':
+          description: The marker, or `null`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LatestMarker'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '404':
+          $ref: '#/components/responses/SessionNotFound'
   /input/click:
     post:
       tags:
@@ -726,6 +759,17 @@ components:
             - step 3
       required:
         - label
+    LatestMarker:
+      type: object
+      properties:
+        marker:
+          anyOf:
+            - $ref: '#/components/schemas/SpeechEntry'
+            - type: 'null'
+          description: The newest marker with that label in the scope, `null` if there is none.
+      required:
+        - marker
+      description: The answer of `GET /markers/latest`. Added in API 1.20.
     ClickRequest:
       type: object
       properties:

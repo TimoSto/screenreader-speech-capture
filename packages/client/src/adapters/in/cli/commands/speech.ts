@@ -18,8 +18,10 @@ import {
   expectArgs,
   intArg,
   optionalInt,
+  resolveSince,
   scope,
   sessionOption,
+  sinceOption,
 } from '../options.js';
 
 // The commands that talk to the bridge. Each one's `help` is also its usage error.
@@ -170,11 +172,14 @@ export const speech: Command = {
     expectArgs(args, 0, SPEECH.usage);
     const client = speech();
     // Options are checked before the bridge is asked for the current session.
+    const since = sinceOption(values);
+    const limit = optionalInt(values, 'limit', 1);
+    const session = await scope(values, client);
     const options = {
-      since: optionalInt(values, 'since', 0) ?? 0,
-      limit: optionalInt(values, 'limit', 1),
+      since: (await resolveSince(since, client, session)) ?? 0,
+      limit,
       includeMarkers: values['include-markers'] ?? false,
-      session: await scope(values, client),
+      session,
     };
     const read = await readAll(io, () => client.getSpeech(options));
     out('speech', read, read.entries.map(formatEntry).join('\n'));
@@ -193,10 +198,9 @@ export const text: Command = {
   async run(args, { values, speech, out, io }) {
     expectArgs(args, 0, TEXT.usage);
     const client = speech();
-    const options = {
-      since: optionalInt(values, 'since', 0) ?? 0,
-      session: await scope(values, client),
-    };
+    const since = sinceOption(values);
+    const session = await scope(values, client);
+    const options = { since: (await resolveSince(since, client, session)) ?? 0, session };
     // `getText` is `getSpeech` joined; reading the entries keeps what is left on truncation.
     const { entries, truncated } = await readAll(io, () => client.getSpeech(options));
     const joined = entries.map((e) => e.text).join(values.separator ?? '\n');
@@ -211,8 +215,8 @@ const WAIT: HelpLine = {
   description: [
     'Wait until speech contains <text> (or matches the regex);',
     'also finds speech that arrived before the call (default timeout 5000).',
-    'It searches the whole session: pass --since <seq> (from mark) to see',
-    'only newer speech, or use press --capture',
+    'It searches the whole session: pass --since <seq> or --since mark:<label>',
+    '(from mark) to see only newer speech, or use press --capture',
   ],
 };
 
@@ -231,11 +235,14 @@ export const wait: Command = {
       }
     }
     const client = speech();
+    const since = sinceOption(values);
+    const timeout = optionalInt(values, 'timeout', 0);
+    const session = await scope(values, client);
     const options = {
-      since: optionalInt(values, 'since', 0) ?? 0,
-      timeout: optionalInt(values, 'timeout', 0),
+      since: (await resolveSince(since, client, session)) ?? 0,
+      timeout,
       normalize: values.normalize ?? false,
-      session: await scope(values, client),
+      session,
     };
     try {
       const entry = await client.waitForOutput(match, options);
@@ -279,7 +286,10 @@ export const waitSilence: Command = {
 
 const MARK: HelpLine = {
   usage: 'mark <label>',
-  description: ['Insert a marker and print its seq, for --since'],
+  description: [
+    'Insert a marker and print its seq, for --since; --since mark:<label>',
+    'reads from the newest marker with that label (no seq to keep)',
+  ],
 };
 
 export const mark: Command = {
@@ -307,10 +317,10 @@ export const tail: Command = {
   help: [TAIL],
   async run(args, { values, speech, out, io, json }) {
     expectArgs(args, 0, TAIL.usage);
-    const since = optionalInt(values, 'since', 0);
     const client = speech();
     // Unreachable or incompatible: exit 2 at once, like every other command. Later connection
-    // problems are retried.
+    // problems are retried. `tail` follows every session, so a marker is looked for everywhere.
+    const since = await resolveSince(sinceOption(values), client, undefined);
     await client.status();
     const signal = io.interrupt();
     return new Promise<number>((resolve) => {

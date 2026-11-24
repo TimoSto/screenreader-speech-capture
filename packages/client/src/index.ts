@@ -14,6 +14,7 @@ export type {
 } from './application/ports/in/manage-client-config.js';
 export type {
   ClearOptions,
+  FindMarkerOptions,
   GetSpeechOptions,
   GetTextOptions,
   OnSpeechOptions,

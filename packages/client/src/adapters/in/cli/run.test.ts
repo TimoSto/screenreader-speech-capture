@@ -253,6 +253,46 @@ describe('speech commands', () => {
     expect(fake.api.calls.filter((call) => call.startsWith('clear'))).toEqual([]);
   });
 
+  it('--since mark:<label> reads after the newest marker with that label', async () => {
+    const fake = fakeSpeech();
+    await cli(['mark', 'step-2'], fake);
+    fake.api.speak('first try');
+    await cli(['mark', 'step-2'], fake);
+    fake.api.speak('Checkout, heading level 1');
+    expect((await cli(['text', '--since', 'mark:step-2'], fake)).stdout).toBe(
+      'Checkout, heading level 1\n',
+    );
+    expect(fake.api.calls).toContain('latest marker step-2');
+    const json = await cli(['speech', '--since', 'mark: step-2 ', '--json'], fake);
+    expect(JSON.parse(json.stdout)).toMatchObject({
+      entries: [{ text: 'Checkout, heading level 1' }],
+    });
+    const waited = await cli(['wait', 'Checkout', '--since', 'mark:step-2', '--json'], fake);
+    expect(JSON.parse(waited.stdout)).toMatchObject({ matched: true, entry: { seq: 4 } });
+  });
+
+  it('--since mark:<label> looks in the scope that is read', async () => {
+    const fake = fakeSpeech();
+    await cli(['mark', 'step-1'], fake);
+    await cli(['session', 'start', 'task'], fake);
+    fake.api.speak('in the session');
+    const missing = await cli(['text', '--since', 'mark:step-1'], fake);
+    expect(missing.code).toBe(EXIT.usage);
+    expect(missing.stderr).toContain('No marker "step-1" in session 1');
+    expect(missing.stderr).toContain('mark "step-1"');
+    const all = await cli(['text', '--since', 'mark:step-1', '--all'], fake);
+    expect(all).toMatchObject({ code: EXIT.ok, stdout: 'in the session\n' });
+    expect(fake.api.calls).toContain('latest marker step-1 session=1');
+    expect(fake.api.calls).toContain('latest marker step-1');
+  });
+
+  it('--since mark: needs a label', async () => {
+    const fake = fakeSpeech();
+    const result = await cli(['text', '--since', 'mark:', '--json'], fake);
+    expect(result.code).toBe(EXIT.usage);
+    expect(fake.api.calls).toEqual([]);
+  });
+
   it('clear, mark, speech and text; --since takes a marker seq', async () => {
     const fake = fakeSpeech();
     fake.api.speak('old');

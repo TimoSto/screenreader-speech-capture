@@ -23,6 +23,7 @@ import {
   StartSessionResponseSchema,
 } from './session.js';
 import {
+  LatestMarkerSchema,
   MarkerRequestSchema,
   SpeechEntrySchema,
   SpeechListSchema,
@@ -38,6 +39,7 @@ export const API_SCHEMAS: Record<string, GenericSchema> = {
   SpeechEntry: SpeechEntrySchema,
   SpeechList: SpeechListSchema,
   MarkerRequest: MarkerRequestSchema,
+  LatestMarker: LatestMarkerSchema,
   ClickRequest: ClickRequestSchema,
   KeysRequest: KeysRequestSchema,
   CaptureOptions: CaptureOptionsSchema,

@@ -1,10 +1,16 @@
 import type { SpeechUseCases } from '../../../../application/ports/in/speech.js';
 import type { Logger } from '../../../../application/ports/out/logger.js';
+import { invalidField } from '../../../../domain/errors.js';
 import type {
   WaitForSpeech,
   WaitResult,
 } from '../../../../application/ports/in/wait-for-speech.js';
-import { toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from '../dto/speech.js';
+import {
+  toLatestMarkerDto,
+  toSpeechEntryDto,
+  toSpeechListDto,
+  toWaitResultDto,
+} from '../dto/speech.js';
 import {
   booleanParam,
   intParam,
@@ -46,6 +52,11 @@ export function speechRoutes(router: Router, deps: SpeechRoutesDeps): void {
     .add('POST', '/markers', async ({ req, res }) => {
       const label = stringField(await jsonBody(req), 'label');
       sendJson(res, 201, toSpeechEntryDto(speech.addMarker(label)));
+    })
+    .add('GET', '/markers/latest', ({ res, url }) => {
+      const label = stringParam(url, 'label');
+      if (label === undefined) throw invalidField('label', 'is required');
+      sendJson(res, 200, toLatestMarkerDto(speech.latestMarker(label, sessionParam(url))));
     })
     .add('GET', '/speech/wait', async ({ res, url }) => {
       const controller = new AbortController();

@@ -3,6 +3,7 @@ import {
   API_PREFIX,
   API_VERSION,
   ApiVersionSchema,
+  LatestMarkerSchema,
   API_LIMITS,
   checkDto,
   CLIENT_HEADER,
@@ -108,6 +109,17 @@ export class FetchBridgeApi implements BridgeApi {
   async mark(label: string): Promise<SpeechEntry> {
     const body: MarkerRequestDto = { label };
     return toEntry(await this.json(SpeechEntrySchema, 'POST', '/markers', { body }));
+  }
+
+  async latestMarker(label: string, session?: SessionRef): Promise<SpeechEntry | null> {
+    const query = new URLSearchParams({ label });
+    if (session !== undefined) query.set('session', String(session));
+    const { marker } = await this.json(
+      LatestMarkerSchema,
+      'GET',
+      `/markers/latest?${query.toString()}`,
+    );
+    return marker && toEntry(marker);
   }
 
   async startSession(request: { name: string; run?: string | undefined }): Promise<StartedSession> {

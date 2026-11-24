@@ -164,6 +164,23 @@ export class FakeBridgeApi implements BridgeApi {
     return this.fail() ?? Promise.resolve(this.add('marker', label));
   }
 
+  latestMarker(label: string, session?: SessionRef): Promise<SpeechEntry | null> {
+    this.calls.push(`latest marker ${label}${session === undefined ? '' : ` session=${session}`}`);
+    const failure = this.fail();
+    if (failure) return failure;
+    const sessionId = session === 'current' ? this.current?.id : session;
+    if (session === 'current' && sessionId === undefined) {
+      return Promise.reject(new BridgeHttpError(404, 'NOT_FOUND', 'No session is current'));
+    }
+    const found = this.entries.findLast(
+      (e) =>
+        e.kind === 'marker' &&
+        e.text === label.trim() &&
+        (sessionId === undefined || e.sessionId === sessionId),
+    );
+    return Promise.resolve(found ?? null);
+  }
+
   startSession(request: { name: string; run?: string | undefined }): Promise<StartedSession> {
     this.calls.push(`start ${request.name}`);
     const failure = this.fail();

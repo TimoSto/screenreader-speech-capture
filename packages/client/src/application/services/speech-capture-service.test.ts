@@ -647,4 +647,13 @@ describe('onSpeech', () => {
     expect(sr.cursor()).toBe(0);
     stop();
   });
+
+  it('findMarker returns the newest marker with the label, or undefined', async () => {
+    const { api, sr } = setup();
+    await sr.mark('step');
+    const newest = await sr.mark('step');
+    expect(await sr.findMarker('step')).toEqual(newest);
+    expect(await sr.findMarker('other')).toBeUndefined();
+    expect(api.calls).toContain('latest marker other');
+  });
 });

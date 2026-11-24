@@ -171,6 +171,20 @@ describe('FetchBridgeApi requests', () => {
     ]);
   });
 
+  it('looks up the newest marker with a label', async () => {
+    const marker = { ...entryDto, kind: 'marker' as const, text: 'step 2' };
+    const { fetch, calls } = fakeFetch((call) =>
+      json({ marker: call.url.includes('session') ? null : marker }),
+    );
+    const bridge = api(fetch);
+    expect(await bridge.latestMarker('step 2')).toEqual(marker);
+    expect(await bridge.latestMarker('a&b', 'current')).toBeNull();
+    expect(calls.map((c) => c.url)).toEqual([
+      'http://vm:5151/api/v1/markers/latest?label=step+2',
+      'http://vm:5151/api/v1/markers/latest?label=a%26b&session=current',
+    ]);
+  });
+
   it('posts a capture and maps its answer', async () => {
     const answer = {
       status: 'silent',

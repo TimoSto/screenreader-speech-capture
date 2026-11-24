@@ -9,6 +9,7 @@ import { FetchBridgeApi } from './adapters/out/http/fetch-bridge-api.js';
 import type { ManageClientConfig } from './application/ports/in/manage-client-config.js';
 import type {
   ClearOptions,
+  FindMarkerOptions,
   GetSpeechOptions,
   GetTextOptions,
   OnSpeechOptions,
@@ -157,6 +158,10 @@ export class SpeechCaptureClient implements SpeechCapture, NativeInput {
 
   mark(label: string): Promise<SpeechEntry> {
     return this.#service.mark(label);
+  }
+
+  findMarker(label: string, options?: FindMarkerOptions): Promise<SpeechEntry | undefined> {
+    return this.#service.findMarker(label, options);
   }
 
   status(): Promise<BridgeStatus> {

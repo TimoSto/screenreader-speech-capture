@@ -58,6 +58,11 @@ export interface WaitOptions {
   session?: SessionRef | undefined;
 }
 
+export interface FindMarkerOptions {
+  /** Only this session's markers: its `id`, or `'current'`. Default: all entries. */
+  session?: SessionRef | undefined;
+}
+
 export interface StartSessionOptions {
   /** Label that groups sessions, for example one per test run. */
   run?: string | undefined;
@@ -155,6 +160,12 @@ export interface SpeechCapture {
   sessions(): Promise<SessionList>;
   /** Inserts a marker. Its `seq` can be used as `since`. */
   mark(label: string): Promise<SpeechEntry>;
+  /**
+   * The newest marker with this label (API 1.20), so a step marked in another process can be read
+   * from its `seq`. With `session`, only in that session (`'current'`: the current one); all
+   * entries without it. `undefined` if there is none, also when it was dropped or cleared.
+   */
+  findMarker(label: string, options?: FindMarkerOptions): Promise<SpeechEntry | undefined>;
   /** Bridge health and versions. */
   status(): Promise<BridgeStatus>;
   /**

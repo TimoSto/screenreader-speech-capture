@@ -44,7 +44,8 @@ describe('helpText', () => {
   it('shows the typical agent loop and explains seq', () => {
     expect(help).toContain('Typical use (one session per task, then per step):');
     expect(help).toMatch(/^ {2}press h --capture --json +a screen reader command/m);
-    expect(help).toMatch(/^ {2}text --since <seq> --json +what was said after the marker$/m);
+    expect(help).toMatch(/^ {2}text --since mark:step-2 --json +what was said after the marker$/m);
+    expect(help).toContain('--since mark:<label>');
     expect(help).toContain('seq: every entry (speech or marker) gets a number that only grows.');
   });
 

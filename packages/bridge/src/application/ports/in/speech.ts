@@ -77,4 +77,10 @@ export interface SpeechUseCases {
   clear(session?: SessionFilter): void;
   /** Inserts a marker. `INVALID_REQUEST` for an empty or too long label. */
   addMarker(label: string): SpeechEntry;
+  /**
+   * The newest marker whose text is `label` (trimmed), in the scope of `session` (all entries
+   * without it), `null` if there is none. Rejects like `addMarker` for a bad label, and with
+   * `NOT_FOUND` like `list` for the session.
+   */
+  latestMarker(label: string, session?: SessionFilter): SpeechEntry | null;
 }

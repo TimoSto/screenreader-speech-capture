@@ -68,12 +68,14 @@ export class SpeechService implements RecordSpeech, SpeechUseCases {
   }
 
   addMarker(label: string): SpeechEntry {
-    const text = label.trim();
-    if (text === '') throw invalidField('label', 'must not be empty');
-    if (text.length > MAX_MARKER_LENGTH) {
-      throw invalidField('label', `must be at most ${MAX_MARKER_LENGTH} characters`);
-    }
+    const text = markerLabel(label);
     return this.add({ kind: 'marker', text, source: 'api', voice: null, connectionId: null });
+  }
+
+  latestMarker(label: string, session?: SessionFilter): SpeechEntry | null {
+    const text = markerLabel(label);
+    const sessionId = this.deps.log.resolveFilter(session);
+    return this.deps.log.latestMarker(text, sessionId) ?? null;
   }
 
   private add(entry: Omit<SpeechDraft, 'receivedAt'>): SpeechEntry {
@@ -81,4 +83,14 @@ export class SpeechService implements RecordSpeech, SpeechUseCases {
     this.deps.events.publish({ type: 'entry', entry: stored });
     return stored;
   }
+}
+
+/** A marker label: trimmed, not empty, at most `MAX_MARKER_LENGTH` characters. */
+function markerLabel(label: string): string {
+  const text = label.trim();
+  if (text === '') throw invalidField('label', 'must not be empty');
+  if (text.length > MAX_MARKER_LENGTH) {
+    throw invalidField('label', `must be at most ${MAX_MARKER_LENGTH} characters`);
+  }
+  return text;
 }

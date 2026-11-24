@@ -55,6 +55,11 @@ export interface BridgeApi {
    */
   clear(session?: SessionRef | 'none'): Promise<void>;
   mark(label: string): Promise<SpeechEntry>;
+  /**
+   * `GET /api/v1/markers/latest` (API 1.20): the newest marker with this label, in `session`'s
+   * scope (all entries without it), `null` if there is none.
+   */
+  latestMarker(label: string, session?: SessionRef): Promise<SpeechEntry | null>;
   /** `POST /api/v1/sessions` (API 1.3): the new session is current, the previous one ends. */
   startSession(request: { name: string; run?: string | undefined }): Promise<StartedSession>;
   /** `POST /api/v1/sessions/end` (API 1.3). */
