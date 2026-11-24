@@ -341,6 +341,8 @@ seq 340-342`), or `{ sessions, currentId }` with `--json`. Without a current ses
 If some of the speech `speech` or `text` asks for was dropped because the bridge's buffer was full,
 they print what is left, warn on stderr and still exit `0`; with `--json` they add
 `"truncated": true`.
+When there is no speech to show, they print nothing on stdout (the empty result with `--json`),
+`no speech` on stderr, and exit `0`.
 
 With `--json`, `wait` prints `{ "matched": true, "entry": {...} }`, or on timeout
 `{ "matched": false, "entries": [...], "truncated": false }` with the speech seen, and
