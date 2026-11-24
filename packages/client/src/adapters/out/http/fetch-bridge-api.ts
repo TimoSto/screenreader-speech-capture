@@ -3,8 +3,10 @@ import {
   API_PREFIX,
   API_VERSION,
   ApiVersionSchema,
+  API_LIMITS,
   checkDto,
   CLIENT_HEADER,
+  InputCaptureSchema,
   SessionListSchema,
   SessionSchema,
   SpeechEntrySchema,
@@ -16,7 +18,9 @@ import {
   type KeysRequestDto,
   type MarkerRequestDto,
   type ServiceStatusDto,
+  type CaptureOptionsDto,
   type ClickRequestDto,
+  type InputCaptureDto,
   type SessionDto,
   type SpeechEntryDto,
   type StartSessionRequestDto,
@@ -24,6 +28,8 @@ import {
 } from '@screenreader-speech-capture/shared';
 import type {
   BridgeApi,
+  CaptureRequest,
+  InputCapture,
   SpeechPage,
   StreamEvent,
 } from '../../../application/ports/out/bridge-api.js';
@@ -122,23 +128,40 @@ export class FetchBridgeApi implements BridgeApi {
   }
 
   async click(request: ScreenPoint & { button?: MouseButton | undefined }): Promise<void> {
-    const body: ClickRequestDto = {
-      x: request.x,
-      y: request.y,
-      ...(request.button === undefined ? {} : { button: request.button }),
-    };
-    await this.request('POST', '/input/click', { body });
+    await this.request('POST', '/input/click', { body: clickBody(request) });
   }
 
   async pressKeys(request: {
     keys: string | readonly string[];
     delayMs?: number | undefined;
   }): Promise<void> {
-    const body: KeysRequestDto = {
-      keys: typeof request.keys === 'string' ? request.keys : [...request.keys],
-      ...(request.delayMs === undefined ? {} : { delayMs: request.delayMs }),
-    };
-    await this.request('POST', '/input/keys', { body });
+    await this.request('POST', '/input/keys', { body: keysBody(request) });
+  }
+
+  async captureClick(
+    request: ScreenPoint & { button?: MouseButton | undefined; capture: CaptureRequest },
+  ): Promise<InputCapture> {
+    const body: ClickRequestDto = { ...clickBody(request), capture: captureBody(request.capture) };
+    return toInputCapture(
+      await this.json(InputCaptureSchema, 'POST', '/input/click', {
+        body,
+        signal: captureTimeout(request.capture),
+      }),
+    );
+  }
+
+  async captureKeys(request: {
+    keys: string | readonly string[];
+    delayMs?: number | undefined;
+    capture: CaptureRequest;
+  }): Promise<InputCapture> {
+    const body: KeysRequestDto = { ...keysBody(request), capture: captureBody(request.capture) };
+    return toInputCapture(
+      await this.json(InputCaptureSchema, 'POST', '/input/keys', {
+        body,
+        signal: captureTimeout(request.capture),
+      }),
+    );
   }
 
   async listSessions(): Promise<SessionList> {
@@ -263,6 +286,47 @@ function parseBody<S extends DtoSchema>(
     INVALID_RESPONSE,
     `The bridge answered ${what} with an unexpected body: ${checked.field}: ${checked.message}`,
   );
+}
+
+function clickBody(request: ScreenPoint & { button?: MouseButton | undefined }): ClickRequestDto {
+  return {
+    x: request.x,
+    y: request.y,
+    ...(request.button === undefined ? {} : { button: request.button }),
+  };
+}
+
+function keysBody(request: {
+  keys: string | readonly string[];
+  delayMs?: number | undefined;
+}): KeysRequestDto {
+  return {
+    keys: typeof request.keys === 'string' ? request.keys : [...request.keys],
+    ...(request.delayMs === undefined ? {} : { delayMs: request.delayMs }),
+  };
+}
+
+function captureBody(capture: CaptureRequest): CaptureOptionsDto {
+  const body: CaptureOptionsDto = {};
+  for (const key of ['quietForMs', 'firstWithinMs', 'timeoutMs', 'settleMs'] as const) {
+    const value = capture[key];
+    if (value !== undefined) body[key] = value;
+  }
+  return body;
+}
+
+/**
+ * A capture answers after the speech paused: up to `settleMs` (at most `timeoutMs`) before the
+ * input and `timeoutMs` after it, plus the usual time for the request itself.
+ */
+function captureTimeout(capture: CaptureRequest): AbortSignal {
+  const timeout = capture.timeoutMs ?? API_LIMITS.capture.timeoutMs.default;
+  const settle = Math.min(capture.settleMs ?? 0, timeout);
+  return AbortSignal.timeout(settle + timeout + REQUEST_TIMEOUT_MS);
+}
+
+function toInputCapture(dto: InputCaptureDto): InputCapture {
+  return { ...dto, entries: dto.entries.map(toEntry) };
 }
 
 async function toHttpError(response: Response): Promise<BridgeHttpError> {

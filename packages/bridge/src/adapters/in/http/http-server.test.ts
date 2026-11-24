@@ -21,6 +21,7 @@ function server(ui?: UiHandler) {
     config: unused,
     sessions: unused,
     input: unused,
+    captures: unused,
     logger,
     ...(ui ? { ui } : {}),
   });

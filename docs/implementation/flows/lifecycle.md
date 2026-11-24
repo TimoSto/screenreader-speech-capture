@@ -52,7 +52,7 @@ if the one before failed; the child services go last and their whole process tre
 sequenceDiagram
     participant Sig as Signal handler<br/>(adapters/in/cli)
     participant LC as BridgeLifecycleService
-    participant W as Pending waits
+    participant W as Pending waits<br/>and input captures
     participant HTTP as HttpServer
     participant TCP as TcpListener
     participant CS as ChildServicesService
@@ -60,7 +60,7 @@ sequenceDiagram
 
     Sig->>LC: stop("SIGINT")
     LC->>LC: state "stopping", log "stopping (SIGINT)"
-    LC->>W: shutdown(): pending waits answer 503
+    LC->>W: shutdown(): pending waits and captures answer 503
     LC->>HTTP: stop (no new connections, SSE streams end)
     LC->>TCP: stop
     LC->>CS: stopAll()

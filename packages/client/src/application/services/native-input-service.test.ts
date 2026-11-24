@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FakeBridgeApi } from '../../../test/fakes.js';
-import { IncompatibleBridgeError } from '../../domain/errors.js';
+import { FakeBridgeApi, FakeClock } from '../../../test/fakes.js';
+import { IncompatibleBridgeError, SpeechTimeoutError } from '../../domain/errors.js';
 import { FocusError } from '../../domain/native-input.js';
 import { NativeInputService } from './native-input-service.js';
 
@@ -16,8 +16,10 @@ const geometry = {
 
 function setup(apiVersion = '1.14') {
   const api = new FakeBridgeApi();
+  const clock = new FakeClock();
+  api.clock = clock;
   api.apiVersion = apiVersion;
-  return { api, service: new NativeInputService({ api, apiVersion: '1.14' }) };
+  return { api, clock, service: new NativeInputService({ api, apiVersion: '1.14' }) };
 }
 
 describe('NativeInputService', () => {
@@ -60,5 +62,45 @@ describe('NativeInputService', () => {
       service.setFocus({ evaluate: () => Promise.resolve({ screenX: 'x' }) }),
     ).rejects.toBeInstanceOf(FocusError);
     expect(api.calls.filter((call) => call.startsWith('click'))).toEqual([]);
+  });
+
+  it('recordKeys sends the keys with a capture and returns the speech after them', async () => {
+    const { api, service } = setup();
+    api.speak('earlier');
+    const pressKeys = api.pressKeys.bind(api);
+    api.pressKeys = (request) => pressKeys(request).then(() => api.speak('Heading level 1'));
+    const recording = await service.recordKeys('h', {
+      delayMs: 0,
+      quietFor: 100,
+      firstWithin: 300,
+      timeout: 2000,
+      settle: 50,
+    });
+    expect(recording).toMatchObject({ startSeq: 1, truncated: false });
+    expect(recording.entries.map((e) => e.text)).toEqual(['Heading level 1']);
+    expect(api.calls).toEqual(['status', 'keys h delay=0']);
+    expect(api.captures).toEqual([
+      { quietForMs: 100, firstWithinMs: 300, timeoutMs: 2000, settleMs: 50 },
+    ]);
+  });
+
+  it('recordClick returns an empty recording when nothing is said', async () => {
+    const { api, service } = setup();
+    const recording = await service.recordClick({ x: 1, y: 2 }, { firstWithin: 100 });
+    expect(recording).toEqual({ entries: [], truncated: false, startSeq: 0 });
+    expect(api.calls).toEqual(['status', 'click left 1,2']);
+  });
+
+  it('rejects with SpeechTimeoutError and the speech when it does not pause', async () => {
+    const { api, clock, service } = setup();
+    for (let t = 0; t < 2000; t += 50) clock.at(t, () => api.speak(`tick ${t}`));
+    const error = await service
+      .recordKeys('h', { quietFor: 100, timeout: 500 })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(SpeechTimeoutError);
+    expect((error as SpeechTimeoutError).message).toBe(
+      'Speech did not pause for 100 ms within 500 ms',
+    );
+    expect((error as SpeechTimeoutError).entries.length).toBeGreaterThan(5);
   });
 });

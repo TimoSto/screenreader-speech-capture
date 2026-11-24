@@ -101,4 +101,32 @@ describe('NativeInputService', () => {
     expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected', 'fulfilled']);
     expect(events).toEqual(['start a', 'end a', 'start b', 'start c', 'end c']);
   });
+
+  it('runs beforeInject in the queue, right before the input', async () => {
+    const { service, injector } = setup();
+    const first = service.pressKeys({ keys: 'a' });
+    const second = service.click(
+      { x: 1, y: 2 },
+      { beforeInject: () => void injector.calls.push('before click') },
+    );
+    await Promise.all([first, second]);
+    expect(injector.calls).toEqual(['tap a', 'before click', 'click left 1,2']);
+  });
+
+  it('sends nothing when beforeInject rejects', async () => {
+    const { service, injector } = setup();
+    await expect(
+      service.pressKeys({ keys: 'a' }, { beforeInject: () => Promise.reject(new Error('no')) }),
+    ).rejects.toThrow('no');
+    expect(injector.calls).toEqual([]);
+  });
+
+  it('checks the request before beforeInject runs', async () => {
+    const { service } = setup();
+    let ran = false;
+    await expect(
+      service.pressKeys({ keys: 'Nope' }, { beforeInject: () => void (ran = true) }),
+    ).rejects.toMatchObject({ code: 'INVALID_REQUEST' });
+    expect(ran).toBe(false);
+  });
 });

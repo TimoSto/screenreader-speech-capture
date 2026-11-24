@@ -26,6 +26,7 @@ import type {
 import type { BridgeApi } from '../ports/out/bridge-api.js';
 import type { Clock } from '../ports/out/clock.js';
 import { startLiveFeed } from './live-feed.js';
+import { silenceFailure } from './silence.js';
 import { speechEvents } from './speech-events.js';
 import { VersionGate } from './version-gate.js';
 
@@ -49,9 +50,10 @@ function remember(seen: SpeechEntry[], entries: SpeechEntry[]): void {
 
 const DEFAULTS = {
   timeout: 5000,
-  quietFor: 500,
-  silenceTimeout: 10_000,
-  firstWithin: 2000,
+  // The same as a capture on the bridge (`NativeInput.recordKeys`).
+  quietFor: API_LIMITS.capture.quietForMs.default,
+  silenceTimeout: API_LIMITS.capture.timeoutMs.default,
+  firstWithin: API_LIMITS.capture.firstWithinMs.default,
   readyTimeout: 120_000,
 };
 
@@ -450,10 +452,6 @@ class Timer {
   stop(): void {
     this.#controller?.abort();
   }
-}
-
-function silenceFailure(quietFor: number, timeout: number): string {
-  return `Speech did not pause for ${quietFor} ms within ${timeout} ms`;
 }
 
 function describe(match: SpeechMatch): string {

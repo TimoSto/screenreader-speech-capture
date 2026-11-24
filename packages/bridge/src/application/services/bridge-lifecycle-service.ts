@@ -8,8 +8,8 @@ import type { Logger } from '../ports/out/logger.js';
 
 interface BridgeLifecycleDeps {
   state: BridgeStateControl;
-  /** Pending waits, which answer before the HTTP server closes their connections. */
-  waits: Shutdown;
+  /** Pending waits and input captures, which answer before the HTTP server closes their connections. */
+  pending: readonly Shutdown[];
   /** Starts the enabled child services; resolves once each is running or has failed. */
   startServices: () => Promise<void>;
   /** Stopped in this order (docs/usage/operations.md#shutdown). */
@@ -40,11 +40,11 @@ export class BridgeLifecycleService implements BridgeLifecycle {
   }
 
   private async shutdown(reason: string | undefined): Promise<void> {
-    const { state, waits, stopOrder, logger } = this.deps;
+    const { state, pending, stopOrder, logger } = this.deps;
     state.setState('stopping');
     logger.info(reason === undefined ? 'stopping' : `stopping (${reason})`);
-    // Pending waits answer 503 before the HTTP server closes their connections.
-    waits.shutdown();
+    // Pending waits and captures answer 503 before the HTTP server closes their connections.
+    for (const part of pending) part.shutdown();
     // Each part stops even if the one before it failed. The child services go last; their whole
     // process tree is killed.
     const errors: unknown[] = [];

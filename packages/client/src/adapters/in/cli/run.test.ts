@@ -52,6 +52,7 @@ function fakeConfig(overrides: Partial<ManageClientConfig> = {}) {
 function fakeSpeech() {
   const api = new FakeBridgeApi();
   const clock = new FakeClock();
+  api.clock = clock;
   const urls: (string | undefined)[] = [];
   const speech = (url: string | undefined): SpeechCapture => {
     urls.push(url);
@@ -622,6 +623,19 @@ describe('native input commands', () => {
     expect(text).toMatchObject({ code: EXIT.ok, stdout: 'Checkout, heading level 1\n' });
   });
 
+  it('press --capture lets the bridge capture: one request after the version check', async () => {
+    const fake = speaking('Checkout, heading level 1');
+    const result = await cli(
+      ['press', 'h', '--capture', '--settle', '300', '--quiet-for', '200', '--json'],
+      fake,
+    );
+    expect(result.code).toBe(EXIT.ok);
+    expect(fake.api.calls).toEqual(['status', 'keys h']);
+    expect(fake.api.captures).toEqual([
+      { quietForMs: 200, firstWithinMs: undefined, timeoutMs: undefined, settleMs: 300 },
+    ]);
+  });
+
   it('click --capture prints the speech the click caused', async () => {
     const fake = speaking('Checkout - Browser', 'Main landmark');
     const result = await cli(['click', '--x', '1', '--y', '2', '--capture', '--json'], fake);
@@ -740,10 +754,11 @@ describe('native input commands', () => {
     });
   });
 
-  it('--quiet-for and --timeout only go with --capture', async () => {
+  it('--quiet-for, --timeout and --settle only go with --capture', async () => {
     const fake = fakeSpeech();
     for (const args of [
       ['press', 'h', '--quiet-for', '100'],
+      ['press', 'h', '--settle', '100'],
       ['click', '--x', '1', '--y', '1', '--timeout', '100'],
     ]) {
       const result = await cli(args, fake);

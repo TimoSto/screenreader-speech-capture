@@ -38,11 +38,11 @@ sequenceDiagram
     loop each step
         alt screen reader command
             A->>CLI: press h --capture --json
-            CLI->>B: GET /api/v1/status (buffer ends at seq 119)
-            CLI->>B: POST /api/v1/input/keys
+            CLI->>B: POST /api/v1/input/keys {"keys": "h", "capture": {}}
+            Note over B: buffer ends at seq 119, then the key
             SR->>B: speech (TCP :4449)
-            CLI->>B: follow the stream until 500 ms quiet
-            CLI->>B: GET /api/v1/speech?since=119
+            Note over B: until 500 ms quiet (by receivedAt)
+            B-->>CLI: {"status": "silent", "startSeq": 119, "entries": […]}
             CLI-->>A: {"pressed": true, "entries": […], "truncated": false}, exit 0 (or 1)
         else page interaction
             A->>CLI: mark step-1

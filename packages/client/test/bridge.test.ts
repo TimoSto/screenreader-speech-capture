@@ -359,6 +359,38 @@ describe('native input', () => {
     ]);
   });
 
+  it('recordKeys and press --capture get the speech the bridge captured', async () => {
+    const injector = new RecordingInputInjector();
+    const { url, client, say } = await bridge({}, injector);
+    await say('before');
+    // The screen reader answers the key while the bridge captures.
+    const tap = injector.keyTap.bind(injector);
+    injector.keyTap = (key) => {
+      void say(`pressed ${key}`);
+      return tap(key);
+    };
+    const recording = await client().recordKeys('h', { quietFor: 100 });
+    expect(recording.entries.map((e) => e.text)).toEqual(['pressed h']);
+    expect(recording.truncated).toBe(false);
+
+    const result = await cli([
+      'press',
+      'k',
+      '--capture',
+      '--quiet-for',
+      '100',
+      '--json',
+      '--url',
+      url,
+    ]);
+    expect(result.code).toBe(EXIT.ok);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      pressed: true,
+      silent: true,
+      entries: [{ text: 'pressed k' }],
+    });
+  });
+
   it('the CLI exits 2 on INPUT_DISABLED', async () => {
     const b = await start({}, { inputInjector: new DisabledInputInjector('no robotjs') });
     const url = `http://127.0.0.1:${b.httpPort}`;

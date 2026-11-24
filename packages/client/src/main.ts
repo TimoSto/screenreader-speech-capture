@@ -23,6 +23,8 @@ import type {
 import type {
   ClickOptions,
   FocusablePage,
+  InputRecording,
+  InputRecordOptions,
   NativeInput,
   PressKeysOptions,
   SetFocusOptions,
@@ -100,6 +102,20 @@ export class SpeechCaptureClient implements SpeechCapture, NativeInput {
 
   pressKeys(keys: string | readonly string[], options?: PressKeysOptions): Promise<void> {
     return this.#input.pressKeys(keys, options);
+  }
+
+  recordClick(
+    point: ScreenPoint,
+    options?: ClickOptions & InputRecordOptions,
+  ): Promise<InputRecording> {
+    return this.#input.recordClick(point, options);
+  }
+
+  recordKeys(
+    keys: string | readonly string[],
+    options?: PressKeysOptions & InputRecordOptions,
+  ): Promise<InputRecording> {
+    return this.#input.recordKeys(keys, options);
   }
 
   setFocus(page: FocusablePage, options?: SetFocusOptions): Promise<void> {

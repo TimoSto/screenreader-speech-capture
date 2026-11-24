@@ -116,6 +116,16 @@ export function optionalNumberField(body: unknown, name: string): number | undef
   return field(body, name) === undefined ? undefined : numberField(body, name);
 }
 
+/** An optional field of a JSON body that is a JSON object. */
+export function optionalObjectField(body: unknown, name: string): object | undefined {
+  const value = field(body, name);
+  if (value === undefined) return undefined;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw invalidField(name, 'must be an object');
+  }
+  return value;
+}
+
 /** A required field that is a string or an array of strings. */
 export function keysField(body: unknown, name: string): string | string[] {
   const value = field(body, name);

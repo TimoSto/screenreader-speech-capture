@@ -34,6 +34,23 @@ So the bridge has no locks, leases or per-client state:
 - The Playwright server, Playwright MCP and the web UI share the same screen reader. Use one at a
   time.
 
+## Captures of native input run on the bridge
+
+`POST /input/keys` and `POST /input/click` take a `capture` (API 1.19); the CLI's `--capture` and
+the library's `recordKeys` / `recordClick` use it. The bridge reads the start `seq` inside the input
+queue right before the input, follows the speech after it and times the silence from the entries'
+`receivedAt` ([usage](../usage/native-input.md#capturing-the-speech-an-input-causes)).
+
+Why: a capture is only correct if "start read" and "input sent" happen in that order with nothing
+in between, which only the bridge can guarantee. The client did it with a status read one round
+trip before the input (foreign or trailing speech in between counted as the input's), timed the
+silence on its own clock (SSE jitter looked like pauses), and needed five requests and a stream.
+This doesn't contradict [Client waits read the live feed](#client-waits-read-the-live-feed): that
+is about matching with predicates; a capture has none. `record(fn)` stays in the client for actions
+the bridge doesn't send (Playwright input). `settleMs` presses after `timeoutMs` even if the speech
+didn't pause, so a chatty page can't block the input forever; the trailing speech then shows in the
+answer.
+
 ## Client waits read the live feed
 
 The client's waits (`waitForOutput`, `waitForSequence`, `waitForSilence`) follow the **SSE live

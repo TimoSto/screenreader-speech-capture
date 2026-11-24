@@ -1,5 +1,7 @@
 import type {
   BridgeApi,
+  CaptureRequest,
+  InputCapture,
   SpeechPage,
   StreamEvent,
 } from '../src/application/ports/out/bridge-api.js';
@@ -90,6 +92,10 @@ export class FakeBridgeApi implements BridgeApi {
   private readonly streams = new Set<FakeStream>();
   /** Makes the next calls reject with these errors, one per call. */
   failures: Error[] = [];
+  /** The virtual time captures (`captureKeys`, `captureClick`) run on. */
+  clock: FakeClock | undefined;
+  /** The `capture` of every capture request, oldest first. */
+  readonly captures: CaptureRequest[] = [];
 
   /** Records a speech entry, as if the screen reader said `text`. */
   speak(...texts: string[]): void {
@@ -231,6 +237,55 @@ export class FakeBridgeApi implements BridgeApi {
       `keys ${keys}${request.delayMs === undefined ? '' : ` delay=${request.delayMs}`}`,
     );
     return this.fail() ?? Promise.resolve();
+  }
+
+  captureClick(
+    request: { x: number; y: number; button?: string | undefined } & { capture: CaptureRequest },
+  ): Promise<InputCapture> {
+    return this.capture(request.capture, () => this.click(request));
+  }
+
+  captureKeys(request: {
+    keys: string | readonly string[];
+    delayMs?: number | undefined;
+    capture: CaptureRequest;
+  }): Promise<InputCapture> {
+    return this.capture(request.capture, () => this.pressKeys(request));
+  }
+
+  /**
+   * Like the bridge: the start before the input, then the speech after it until it paused for
+   * `quietForMs`, none came within `firstWithinMs`, or `timeoutMs` ran out (in 10 ms steps of
+   * virtual time). `settleMs` is only recorded.
+   */
+  private async capture(capture: CaptureRequest, send: () => Promise<void>): Promise<InputCapture> {
+    const clock = this.clock;
+    if (!clock) throw new Error('FakeBridgeApi.clock is needed for a capture');
+    this.captures.push(capture);
+    const { quietForMs = 500, firstWithinMs = 2000, timeoutMs = 10_000 } = capture;
+    const startSeq = this.seq;
+    await send();
+    const start = clock.now();
+    const end = start + timeoutMs;
+    const spoken = () => this.entries.filter((e) => e.seq > startSeq && e.kind === 'speech');
+    let seen = 0;
+    let last: number | undefined;
+    for (;;) {
+      const count = spoken().length;
+      if (count > seen) {
+        seen = count;
+        last = clock.now();
+      }
+      const deadline = Math.min(
+        last === undefined ? start + firstWithinMs : last + quietForMs,
+        end,
+      );
+      if (clock.now() >= deadline) break;
+      await clock.sleep(Math.min(10, deadline - clock.now()));
+    }
+    const status =
+      last === undefined ? 'no-speech' : last + quietForMs <= end ? 'silent' : 'timeout';
+    return { status, startSeq, entries: spoken(), omitted: 0, truncated: false };
   }
 
   async *streamSpeech(options: {

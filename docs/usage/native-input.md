@@ -43,6 +43,45 @@ Modifiers are `Control`, `Shift`, `Alt`, `Win`. `Insert` and `CapsLock` also wor
 because NVDA and JAWS use them as their screen reader key: they are held down with `keyToggle`
 while the other keys are pressed.
 
+## Capturing the speech an input causes
+
+Both endpoints take an optional `capture` object (since API 1.19). With it, the bridge sends the
+input, records the speech the screen reader says about it, and answers `200` with that speech
+instead of `204`. This is what the CLI's `--capture` and the library's `recordKeys` / `recordClick`
+use ([client](client.md#functions)):
+
+```bash
+curl -X POST $VM/api/v1/input/keys -H 'content-type: application/json' \
+  -d '{"keys":"h","capture":{"quietForMs":500}}'
+# → {"status":"silent","startSeq":4711,"entries":[{"seq":4712,"text":"Heading level 1, Welcome",…}],
+#    "omitted":0,"truncated":false}
+```
+
+| `capture` field | Default | Meaning |
+|---|---|---|
+| `firstWithinMs` | 2000 (max 300000) | How long the first speech may take after the input. |
+| `quietForMs` | 500 (1 to 60000) | The capture ends when nothing was spoken for this long. |
+| `timeoutMs` | 10000 (max 300000) | Longest capture, counted from the input. |
+| `settleMs` | 0 (max 60000) | Before the input, wait until nothing was spoken for this long, so speech still trailing from the previous step isn't captured. Waits at most `timeoutMs`, then sends the input anyway. |
+
+The answer's `status` is `silent` (speech came and paused), `no-speech` (nothing within
+`firstWithinMs`) or `timeout` (speech went on until `timeoutMs`; `entries` holds what was said until
+then). All three are results: the input was sent. `entries` are the speech entries after `startSeq`
+(no markers, the first 10000; `omitted` counts the rest), `truncated` says that some were dropped
+from the full buffer.
+
+Why on the bridge, not in the client:
+
+- **The start is exact.** The bridge reads the newest `seq` inside the input queue, right before the
+  input. No other input, and no speech that arrived before the input, gets into the capture; a
+  client would read it one round trip earlier.
+- **Silence is timed where the speech arrives**, from the entries' `receivedAt`, so network jitter
+  on the way to the client doesn't look like a pause or like speech.
+- **One request** instead of a status read, the input, a live feed and a read.
+
+`settleMs` holds the input queue while it waits, so other input waits too. A client that hangs up
+ends the capture; a shutdown answers `503`.
+
 **Caveats:**
 
 - The bridge must run **non-elevated in the logged-in user session**. Windows (UIPI) blocks input

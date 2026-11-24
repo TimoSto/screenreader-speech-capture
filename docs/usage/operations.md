@@ -33,8 +33,8 @@ The bridge stops gracefully on Ctrl+C (`SIGINT`), Ctrl+Break (`SIGBREAK`, Window
 console window (`SIGHUP`) and `SIGTERM`. The bridge log names the signal
 (`[bridge] INFO stopping (SIGINT)`). The bridge:
 
-1. stops accepting new HTTP and TCP connections and ends open SSE streams and `wait` requests
-   (they get `503`),
+1. stops accepting new HTTP and TCP connections and ends open SSE streams, `wait` requests and
+   input requests with `capture` (they get `503`),
 2. stops the child services and **kills their whole process tree**. On Windows, killing a process
    does not kill its children, so without this the browsers started by the Playwright server would
    stay open. The bridge uses `taskkill /T /F /PID <pid>`, limited to 5 seconds. On Linux
