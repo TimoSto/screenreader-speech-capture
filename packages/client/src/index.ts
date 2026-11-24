@@ -43,12 +43,8 @@ export {
   type MouseButton,
   type ScreenPoint,
 } from './domain/native-input.js';
-export {
-  DEFAULT_BRIDGE_URL,
-  normalizeBridgeUrl,
-  URL_ENV,
-  type ValueSource,
-} from './domain/bridge-url.js';
+export { DEFAULT_BRIDGE_URL, normalizeBridgeUrl, URL_ENV } from './domain/bridge-url.js';
+export type { ValueSource } from './domain/config-value.js';
 export type { ClientConfig, ConfigKey } from './domain/client-config.js';
 export {
   BridgeHttpError,

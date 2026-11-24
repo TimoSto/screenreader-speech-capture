@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_BRIDGE_URL,
-  normalizeBridgeUrl,
-  overridesStored,
-  pickBridgeUrl,
-} from './bridge-url.js';
+import { DEFAULT_BRIDGE_URL, URL_SETTING, normalizeBridgeUrl } from './bridge-url.js';
+import { overridesStored, pickValue } from './config-value.js';
 import { ClientConfigError } from './errors.js';
 
 describe('normalizeBridgeUrl', () => {
@@ -21,33 +17,33 @@ describe('normalizeBridgeUrl', () => {
   );
 });
 
-describe('pickBridgeUrl', () => {
+describe('pickValue for the bridge URL', () => {
   const all = { explicit: 'http://explicit:1/', env: 'http://env:1', stored: 'http://stored:1' };
 
   it('prefers the explicit value', () => {
-    expect(pickBridgeUrl(all)).toEqual({ value: 'http://explicit:1', source: 'explicit' });
+    expect(pickValue(URL_SETTING, all)).toEqual({ value: 'http://explicit:1', source: 'explicit' });
   });
 
   it('then SR_SPEECH_URL', () => {
-    expect(pickBridgeUrl({ ...all, explicit: undefined })).toEqual({
+    expect(pickValue(URL_SETTING, { ...all, explicit: undefined })).toEqual({
       value: 'http://env:1',
       source: 'env',
     });
   });
 
   it('then the stored value', () => {
-    expect(pickBridgeUrl({ stored: all.stored, explicit: '', env: '' })).toEqual({
+    expect(pickValue(URL_SETTING, { stored: all.stored, explicit: '', env: '' })).toEqual({
       value: 'http://stored:1',
       source: 'config',
     });
   });
 
   it('then the default', () => {
-    expect(pickBridgeUrl({})).toEqual({ value: DEFAULT_BRIDGE_URL, source: 'default' });
+    expect(pickValue(URL_SETTING, {})).toEqual({ value: DEFAULT_BRIDGE_URL, source: 'default' });
   });
 
   it('names SR_SPEECH_URL when it is invalid', () => {
-    expect(() => pickBridgeUrl({ env: 'nope' })).toThrow(/SR_SPEECH_URL/);
+    expect(() => pickValue(URL_SETTING, { env: 'nope' })).toThrow(/SR_SPEECH_URL/);
   });
 
   it('overridesStored tells when the stored value cannot win', () => {

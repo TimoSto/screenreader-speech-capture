@@ -1,31 +1,45 @@
-import { normalizeBridgeUrl } from './bridge-url.js';
+import { URL_SETTING, normalizeBridgeUrl } from './bridge-url.js';
+import type { Setting } from './config-value.js';
 import { ClientConfigError } from './errors.js';
+import { OUTPUT_SETTING, parseOutputFormat, type OutputFormat } from './output-format.js';
 
 /** Settings stored in the client's config file. */
 export interface ClientConfig {
   url?: string;
+  /** The CLI's output without `--json`. */
+  output?: OutputFormat;
 }
 
-/** A change to the stored config: a value sets the key, `undefined` removes it. */
-export type ClientConfigPatch = { [K in keyof ClientConfig]-?: ClientConfig[K] | undefined };
+/** A change to the stored config: a value sets the key, `undefined` removes it, others stay. */
+export type ClientConfigPatch = { [K in keyof ClientConfig]?: ClientConfig[K] | undefined };
 
 /** Checks the parsed content of a config file. `origin` names the file in errors. */
 export function parseClientConfig(raw: unknown, origin: string): ClientConfig {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
     throw new ClientConfigError(`The client config file ${origin} must contain a JSON object`);
   }
-  const { url } = raw as Record<string, unknown>;
-  if (url === undefined) return {};
-  if (typeof url !== 'string') {
-    throw new ClientConfigError(`"url" in the client config file ${origin} must be a string`);
+  const { url, output } = raw as Record<string, unknown>;
+  const config: ClientConfig = {};
+  if (url !== undefined) {
+    if (typeof url !== 'string') {
+      throw new ClientConfigError(`"url" in the client config file ${origin} must be a string`);
+    }
+    config.url = normalizeBridgeUrl(url, `"url" in ${origin}`);
   }
-  return { url: normalizeBridgeUrl(url, `"url" in ${origin}`) };
+  if (output !== undefined) {
+    if (typeof output !== 'string') {
+      throw new ClientConfigError(`"output" in the client config file ${origin} must be a string`);
+    }
+    config.output = parseOutputFormat(output, `"output" in ${origin}`);
+  }
+  return config;
 }
 
-/** Keys the client config stores, each with the check that normalises a value before saving. */
+/** Keys the client config stores: each one's env variable, default and check. */
 export const CONFIG_KEYS = {
-  url: (value: string) => normalizeBridgeUrl(value),
-} as const satisfies Record<keyof ClientConfig, (value: string) => string>;
+  url: URL_SETTING,
+  output: OUTPUT_SETTING,
+} as const satisfies Record<keyof ClientConfig, Setting>;
 
 export type ConfigKey = keyof typeof CONFIG_KEYS;
 

@@ -169,7 +169,8 @@ export const ConfigValueOutput = v.object({
   source: v.pipe(
     v.picklist(['explicit', 'env', 'config', 'default']),
     v.description(
-      'Where it comes from: `--url`, `SR_SPEECH_URL`, the config file, or the default.',
+      'Where it comes from: the flag (`--url`, `--json`), the environment variable ' +
+        '(`SR_SPEECH_URL`, `SR_SPEECH_OUTPUT`), the config file, or the default.',
     ),
   ),
 });
@@ -179,7 +180,7 @@ const setResult = {
   value: v.pipe(v.string(), v.description('The value as saved, normalised.')),
   shadowedBy: v.pipe(
     v.optional(v.literal('env')),
-    v.description('Set when `SR_SPEECH_URL` hides the saved value.'),
+    v.description('Set when the environment variable of the key hides the saved value.'),
   ),
 };
 
@@ -305,6 +306,35 @@ export const CliErrorOutput = v.pipe(
   }),
   v.description('A failed command (exit code 1 to 4).'),
 );
+
+const jsonSchema = v.pipe(v.record(v.string(), v.unknown()), v.description('A JSON Schema.'));
+
+/** `--help --json` (and `<command> --help --json`, with only that command). */
+export const HelpOutput = v.object({
+  name: v.string(),
+  version: v.string(),
+  commands: v.array(
+    v.object({
+      name: v.string(),
+      usage: v.array(v.object({ usage: v.string(), description: v.string() })),
+      options: v.pipe(
+        v.array(v.object({ name: v.string(), type: v.picklist(['string', 'boolean']) })),
+        v.description('The options it takes besides the global ones.'),
+      ),
+      outputs: v.pipe(
+        v.record(v.string(), jsonSchema),
+        v.description('What it prints with --json, by the command as typed (`session start`).'),
+      ),
+    }),
+  ),
+  globalOptions: v.array(v.object({ name: v.string(), flag: v.string(), description: v.string() })),
+  error: v.pipe(jsonSchema, v.description('What a failed command prints with --json.')),
+  exitCodes: v.record(v.string(), v.number()),
+  env: v.pipe(
+    v.record(v.string(), v.string()),
+    v.description('The environment variables the CLI reads.'),
+  ),
+});
 
 export type CliError = v.InferOutput<typeof CliErrorOutput>;
 

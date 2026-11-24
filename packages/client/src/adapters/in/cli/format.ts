@@ -1,4 +1,5 @@
-import { URL_ENV, type ValueSource } from '../../../domain/bridge-url.js';
+import { CONFIG_KEYS, type ConfigKey } from '../../../domain/client-config.js';
+import type { ValueSource } from '../../../domain/config-value.js';
 import type { BridgeStatus } from '../../../domain/bridge-status.js';
 import type { Session } from '../../../domain/session.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
@@ -8,12 +9,22 @@ export const TRUNCATED_WARNING =
   "some speech was dropped because the bridge's buffer was full " +
   '(raise buffer.maxEntries); showing what is left.';
 
-export const SOURCE_LABEL: Record<ValueSource, string> = {
-  explicit: '--url',
-  env: URL_ENV,
-  config: 'config file',
-  default: 'default',
-};
+/** The flag that sets each config key for one call. */
+const FLAG: Record<ConfigKey, string> = { url: '--url', output: '--json' };
+
+/** Where a config value comes from, as `config get` and `config list` show it. */
+export function sourceLabel(key: ConfigKey, source: ValueSource): string {
+  switch (source) {
+    case 'explicit':
+      return FLAG[key];
+    case 'env':
+      return CONFIG_KEYS[key].env;
+    case 'config':
+      return 'config file';
+    case 'default':
+      return 'default';
+  }
+}
 
 export function formatEntry(entry: SpeechEntry): string {
   return entry.kind === 'marker'

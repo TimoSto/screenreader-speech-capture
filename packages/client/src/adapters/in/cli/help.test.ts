@@ -1,7 +1,7 @@
 import { KEY_ALIASES, MODIFIER_KEYS, NAMED_KEYS } from '@screenreader-speech-capture/shared';
 import { describe, expect, it } from 'vitest';
 import { COMMANDS } from './commands/index.js';
-import { helpText } from './help.js';
+import { commandHelp, helpText } from './help.js';
 import { GLOBAL_OPTIONS } from './options.js';
 
 const help = helpText();
@@ -69,7 +69,7 @@ describe('helpText', () => {
   });
 
   it('separates the config commands with a blank line', () => {
-    const at = lines.findIndex((line) => line.startsWith('  config set url'));
+    const at = lines.findIndex((line) => line.startsWith('  config set'));
     expect(lines[at - 1]).toBe('');
   });
 
@@ -96,3 +96,30 @@ it.each(Object.entries(COMMANDS))(
     expect([...shown].sort()).toEqual([...command.options].sort());
   },
 );
+
+describe('commandHelp', () => {
+  it.each(Object.entries(COMMANDS))(
+    '"%s" shows its own usage rows and options',
+    (name, command) => {
+      const text = commandHelp(name, command);
+      expect(text).toMatch(/^Usage:\n/);
+      for (const { usage } of command.help) expect(text).toContain(`  ${usage}`);
+      for (const option of command.options)
+        expect(text).toMatch(new RegExp(`^  --${option}\\b`, 'm'));
+      for (const { flag } of GLOBAL_OPTIONS) expect(text).toContain(`  ${flag}`);
+      expect(text).not.toContain('Commands:');
+      expect(text.split('\n').filter((line) => line.length > 100)).toEqual([]);
+    },
+  );
+
+  it('shows a value for string options, none for flags', () => {
+    const text = commandHelp('press', COMMANDS.press!);
+    expect(text).toContain('  --timeout <value>');
+    expect(text).toMatch(/^ {2}--capture$/m);
+  });
+
+  it('lists the key names for press only', () => {
+    expect(commandHelp('press', COMMANDS.press!)).toContain('Keys for press');
+    expect(commandHelp('click', COMMANDS.click!)).not.toContain('Keys for press');
+  });
+});

@@ -249,6 +249,9 @@ importers:
       '@screenreader-speech-capture/shared':
         specifier: workspace:*
         version: link:../shared
+      '@valibot/to-json-schema':
+        specifier: 1.8.0
+        version: 1.8.0(valibot@1.5.0(typescript@6.0.3))
       publint:
         specifier: 0.3.25
         version: 0.3.25

@@ -1,7 +1,7 @@
-import type { ValueSource } from '../../../domain/bridge-url.js';
+import type { ValueSource } from '../../../domain/config-value.js';
 import type { ConfigKey } from '../../../domain/client-config.js';
 
-/** Values passed for this call only (`--url`, `baseUrl`). They win over everything else. */
+/** Values passed for this call only (`--url`, `--json`, `baseUrl`). They win over everything else. */
 export type ExplicitValues = Partial<Record<ConfigKey, string | undefined>>;
 
 export interface ConfigValue {
@@ -15,7 +15,7 @@ export interface SetResult {
   key: ConfigKey;
   /** The value as saved, normalised. */
   value: string;
-  /** Set when a higher source hides the saved value (today: `SR_SPEECH_URL`). */
+  /** Set when the key's environment variable (`SR_SPEECH_URL`, …) hides the saved value. */
   shadowedBy?: 'env';
 }
 
