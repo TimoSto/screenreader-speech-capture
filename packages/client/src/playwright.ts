@@ -36,8 +36,9 @@ export interface NativeInputFixtures {
   /** Presses one chord (`'Insert+T'`) or a sequence (`['h', 'h']`) as native keys. */
   pressKeys: (keys: string | readonly string[], options?: PressKeysOptions) => Promise<void>;
   /**
-   * Gives the page's browser window OS-level focus: a native click on the top-left corner of the
-   * page content, then a reload of the page.
+   * Gives the page's browser window OS-level focus: the bridge brings it to the front
+   * (docs/usage/native-input.md#bringing-the-browser-to-the-front); where it can't, a native
+   * click on the top-left corner of the page content, then a reload of the page.
    */
   setFocus: () => Promise<void>;
 }
