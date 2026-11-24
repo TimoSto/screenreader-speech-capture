@@ -17,7 +17,7 @@ export async function createWindowSystem(logger: Logger): Promise<WindowSystem> 
   try {
     const module = (await import('koffi')) as unknown as { default?: KoffiApi } & KoffiApi;
     const windows = new Win32WindowSystem(bindWin32(module.default ?? module));
-    logger.debug('bringing windows to the front is available (koffi)');
+    logger.info('bringing windows to the front is available (koffi)');
     return windows;
   } catch (error) {
     const reason = `koffi could not be loaded (${error instanceof Error ? error.message : String(error)})`;
