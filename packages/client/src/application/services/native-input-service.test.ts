@@ -53,6 +53,16 @@ describe('NativeInputService', () => {
     expect(api.calls).toEqual(['focus playwright "sr-focus-abc"']);
     // The marker was in the title while the bridge looked, then the title came back.
     expect(page.titles).toEqual(['sr-focus-abc', 'Checkout']);
+    // Then the keyboard focus moves from the browser's toolbar into the page.
+    expect(page.focused).toBe(1);
+  });
+
+  it('setFocus works with a page without bringToFront', async () => {
+    const { api, service } = setup();
+    const fake = new FakePage(geometry);
+    api.windows = [{ target: 'playwright', pid: 7, titleOf: () => `${fake.title} - Chromium` }];
+    await service.setFocus({ evaluate: (expression) => fake.evaluate(expression) });
+    expect(api.calls).toEqual(['focus playwright "sr-focus-abc"']);
   });
 
   it('bringToFront answers the window, or null when the bridge cannot focus it', async () => {
@@ -93,6 +103,7 @@ describe('NativeInputService', () => {
     await service.setFocus(page);
     // The bridge has no window for it (a browser it didn't start): the click is the fallback.
     expect(api.calls).toEqual(['focus playwright "sr-focus-abc"', 'click left 600,62']);
+    expect(page.focused).toBe(0);
   });
 
   it('setFocus clicks the centre of the target', async () => {
