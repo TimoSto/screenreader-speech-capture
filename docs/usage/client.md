@@ -35,7 +35,7 @@ For Playwright tests against a bridge on a VM ([VM setup](vm-setup.md#checklist)
    `<version>` must be **exactly** the bridge's Playwright version: the one in `status`
    (`playwright.version`), set with `--playwright-version` on the bridge
    ([Version](playwright-mcp.md#version)).
-3. No browser install on the test machine: the browser runs on the VM.
+3. No browser install on the test machine necessary: the browser runs on the VM.
 4. Point the client at the bridge: `npx screenreader-speech-capture-client config set url http://<vm>:5151`,
    or `SR_SPEECH_URL` in CI ([Bridge URL](#bridge-url)). `npx screenreader-speech-capture-client status`
    checks it.
