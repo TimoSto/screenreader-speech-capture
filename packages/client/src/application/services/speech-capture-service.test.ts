@@ -219,7 +219,10 @@ describe('waitForOutput', () => {
     clock.at(100, () => api.speak('two'));
     const error = await sr.waitForOutput('three', { timeout: 1000 }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(SpeechTimeoutError);
-    expect((error as SpeechTimeoutError).message).toBe('No speech matched "three" within 1000 ms');
+    expect((error as SpeechTimeoutError).reason).toBe('No speech matched "three" within 1000 ms');
+    expect((error as SpeechTimeoutError).message).toBe(
+      'No speech matched "three" within 1000 ms. Speech seen (2):\n  #1 one\n  #2 two',
+    );
     expect(texts((error as SpeechTimeoutError).entries)).toEqual(['one', 'two']);
     expect(clock.now()).toBe(1000);
     expect(sr.cursor()).toBe(0);
@@ -258,7 +261,7 @@ describe('waitForSequence', () => {
     const { api, sr } = setup();
     api.speak('a b');
     const error = await sr.waitForSequence(['a', 'b'], { timeout: 100 }).catch((e: unknown) => e);
-    expect((error as Error).message).toBe(
+    expect((error as SpeechTimeoutError).reason).toBe(
       'Only 1 of 2 matches occurred in order (next: "b") within 100 ms',
     );
   });
@@ -351,7 +354,9 @@ describe('record', () => {
       .record(() => api.speak('during'), { quietFor: 300, timeout: 1000 })
       .catch((e: unknown) => e);
     expect(error).toBeInstanceOf(SpeechTimeoutError);
-    expect((error as Error).message).toBe('Speech did not pause for 300 ms within 1000 ms');
+    expect((error as SpeechTimeoutError).reason).toBe(
+      'Speech did not pause for 300 ms within 1000 ms',
+    );
     const recorded = texts((error as SpeechTimeoutError).entries);
     expect(recorded.slice(0, 2)).toEqual(['during', 'tick 100']);
     expect(recorded).not.toContain('before');
@@ -376,7 +381,7 @@ describe('speech dropped from the bridge buffer', () => {
     const error = await failure(sr.waitForOutput('never', { since: 0, timeout: 100 }));
     expect(error).toBeInstanceOf(SpeechTimeoutError);
     expect(error.truncated).toBe(true);
-    expect(error.message).toBe(`No speech matched "never" within 100 ms; ${TRUNCATED_HINT}`);
+    expect(error.reason).toBe(`No speech matched "never" within 100 ms; ${TRUNCATED_HINT}`);
     expect(texts(error.entries)).toEqual(['three']);
   });
 
@@ -385,7 +390,7 @@ describe('speech dropped from the bridge buffer', () => {
     api.speak('one');
     const error = await failure(sr.waitForOutput('never', { timeout: 100 }));
     expect(error.truncated).toBe(false);
-    expect(error.message).toBe('No speech matched "never" within 100 ms');
+    expect(error.reason).toBe('No speech matched "never" within 100 ms');
   });
 
   it('says so for a sequence too', async () => {

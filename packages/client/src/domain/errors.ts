@@ -1,20 +1,39 @@
 import type { SpeechEntry } from './speech-entry.js';
 
+/** The last entries a {@link SpeechTimeoutError} message lists; `entries` holds them all. */
+export const SEEN_IN_MESSAGE = 20;
+
 /**
  * A wait ended without a match. `entries` holds the speech seen while waiting, oldest first.
  * `truncated`: some of the speech it should have looked at was dropped because the bridge's
- * buffer was full, so the match may have been among it.
+ * buffer was full, so the match may have been among it. `reason` is the message without the
+ * speech; `message` lists the last {@link SEEN_IN_MESSAGE} entries too, so a test report shows
+ * what was said instead.
  */
 export class SpeechTimeoutError extends Error {
   override name = 'SpeechTimeoutError';
+  readonly reason: string;
 
   constructor(
     message: string,
     readonly entries: SpeechEntry[],
     readonly truncated = false,
   ) {
-    super(truncated ? `${message}; ${TRUNCATED_HINT}` : message);
+    const reason = truncated ? `${message}; ${TRUNCATED_HINT}` : message;
+    super(`${reason}. ${seenSpeech(entries)}`);
+    this.reason = reason;
   }
+}
+
+function seenSpeech(entries: SpeechEntry[]): string {
+  if (entries.length === 0) return 'No speech arrived.';
+  const shown = entries.slice(-SEEN_IN_MESSAGE);
+  const earlier = entries.length - shown.length;
+  const lines = shown.map(
+    ({ seq, kind, text }) => `  #${seq} ${kind === 'marker' ? '[marker] ' : ''}${text}`,
+  );
+  if (earlier > 0) lines.unshift(`  … ${earlier} earlier (in error.entries)`);
+  return `Speech seen (${entries.length}):\n${lines.join('\n')}`;
 }
 
 /**
