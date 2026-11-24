@@ -39,7 +39,9 @@ calls `/api/v1/input/click`.
 | Give the screen reader a command (next heading, read title, elements list) | Native: `speech.pressKeys('h')`, `speech.pressKeys('Insert+T')` |
 | Before either: make the browser the foreground window | `speech.setFocus(page)`: the bridge brings the window forward if it started the browser, otherwise a title-bar click. The [Playwright fixture](client.md#playwright-fixture) does it automatically with its own `setFocus()` (its fallback: a click on the top-left corner of the page content, then a reload). An agent (Playwright MCP) runs the CLI's [`focus`](client.md#cli-for-agents) without options; `focus --script` / `--geometry` is the click fallback |
 
-**Key names** (`/api/v1/input/keys`): keys are joined with `+` for chords (`Insert+T`, `Control+Home`)
+## Key names
+
+For `POST /api/v1/input/keys`, keys are joined with `+` for chords (`Insert+T`, `Control+Home`)
 and passed as an array for sequences (`["h", "h", "Insert+Down"]`). Names follow robotjs
 (`a`–`z`, `0`–`9`, `enter`, `tab`, `escape`, `up`, `down`, `left`, `right`, `home`, `end`,
 `pageup`, `pagedown`, `f1`–`f12`, `space`, `backspace`, `delete`, `insert`, `capslock`), case-insensitive. `Ctrl`, `Esc`, `Return`, `Del`, `Ins`, `PgUp`, `PgDn`, `Windows` and `Meta` are accepted as aliases. A name the bridge doesn't know answers `400 INVALID_REQUEST` with `details.field` `keys`, before any key is sent. The rule is part of the contract (`packages/shared/src/key-chord.ts`): the CLI's `press` checks the keys with it before sending (a usage error, exit `3`) and lists the names in `--help`. A request holds at most 100 chords; `delayMs` (default 50, at most 10000) pauses between them.
