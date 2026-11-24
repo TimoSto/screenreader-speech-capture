@@ -8,14 +8,14 @@ For people who set up the VM, write tests or run agents against the bridge.
 
 | Doc | What it covers |
 |---|---|
-| [VM setup](usage/vm-setup.md) | Requirements, socket voice, NVDA / JAWS setup, running the bridge on the VM |
+| [VM setup](usage/vm-setup.md) | Setup checklist, requirements and what is verified, installing the bridge, socket voice, NVDA / JAWS setup, preparing and running the VM |
 | [Speech capture](usage/speech-capture.md) | What the socket voice sends, the buffer, sessions |
 | [HTTP API](usage/http-api.md) | Data model, endpoints, errors, versioning ([OpenAPI](usage/openapi.yaml)) |
 | [Test client](usage/client.md) | Library, cursor, Playwright fixture, CLI and exit codes |
 | [Native input](usage/native-input.md) | Real clicks and key presses: when Playwright input isn't enough |
 | [Remote Playwright & MCP](usage/playwright-mcp.md) | The Playwright server and Playwright MCP run by the bridge |
 | [Agents](usage/agents.md) | Agent loop with the CLI, agent skill (partly planned) |
-| [Web UI](usage/web-ui.md) | Live log, settings, setup page (planned) |
+| [Web UI](usage/web-ui.md) | Sessions, live log, settings (partly planned), actions and setup page (planned) |
 | [Configuration](usage/configuration.md) | CLI flags, environment variables, config file |
 | [Operations](usage/operations.md) | Startup, shutdown, crash recovery, logging |
 | [Troubleshooting](usage/troubleshooting.md) | Common problems and fixes |

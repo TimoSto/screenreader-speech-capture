@@ -25,6 +25,27 @@ optional peer dependency, needed only for the fixture; `setFocus(page)` of the l
 pnpm add -D screenreader-speech-capture-client
 ```
 
+### Setting up a test project
+
+For Playwright tests against a bridge on a VM ([VM setup](vm-setup.md#checklist) done):
+
+1. Node ≥ 20 on the machine that runs the tests.
+2. Install the client and its companions, pinned:
+   `pnpm add -D screenreader-speech-capture-client@x.y.z @playwright/test@<version> @types/node`.
+   `<version>` must be **exactly** the bridge's Playwright version: the one in `status`
+   (`playwright.version`), set with `--playwright-version` on the bridge
+   ([Version](playwright-mcp.md#version)).
+3. No browser install on the test machine necessary: the browser runs on the VM.
+4. Point the client at the bridge: `npx screenreader-speech-capture-client config set url http://<vm>:5151`,
+   or `SR_SPEECH_URL` in CI ([Bridge URL](#bridge-url)). `npx screenreader-speech-capture-client status`
+   checks it.
+5. `playwright.config.ts`: `workers: 1`, and `channel: 'chrome'` or `'msedge'` if those are installed on
+   the VM ([Playwright fixture](#playwright-fixture)).
+6. Import `test` and `expect` from `screenreader-speech-capture-client/playwright` instead of
+   `@playwright/test`. The [example project](../../examples/playwright) has all of this.
+
+For CI, see [Running in CI](#running-in-ci).
+
 ## Bridge URL
 
 Set the bridge URL once per user, and the CLI, the library and the fixture all use it:

@@ -6,11 +6,17 @@ The bridge runs on a Windows VM next to the screen reader. It receives the speec
 
 ## Quick start
 
+On the Windows machine, in a normal (non-elevated) prompt of the logged-in user:
+
 ```bash
-npx screenreader-speech-capture
+npm i -g screenreader-speech-capture@<version>
+screenreader-speech-capture
 ```
 
-Run it in the interactive user session of the Windows machine, with the socket voice selected in the screen reader.
+Pin the version and install globally rather than using `npx`, which picks up new versions on every
+start. It needs Node.js ≥ 22.12, the [socket voice](https://github.com/TimoSto/screenreader-speech-capture/blob/main/docs/usage/vm-setup.md#socket-voice-setup)
+selected in NVDA or JAWS, and internet access on the first start (it installs Playwright and Chromium).
+Follow the [setup checklist](https://github.com/TimoSto/screenreader-speech-capture/blob/main/docs/usage/vm-setup.md#checklist).
 
 ## Links
 
