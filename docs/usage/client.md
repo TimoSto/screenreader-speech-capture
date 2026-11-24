@@ -221,7 +221,7 @@ stop();
 // tests/form.spec.ts
 import { test, expect } from 'screenreader-speech-capture-client/playwright';
 
-test('submit button is announced', async ({ page, speech, pressKeys }) => {
+test('submit button is announced', async ({ page, speech, recordKeys }) => {
   await page.goto('https://example.org/form');
 
   // Playwright input: focus changes are announced
@@ -231,9 +231,9 @@ test('submit button is announced', async ({ page, speech, pressKeys }) => {
   const { entries } = await speech.record(() => page.keyboard.press('Tab'));
   expect(entries.map((e) => e.text)).toContain('Name, edit, blank');
 
-  // Native input: a screen reader command (NVDA browse mode, next heading)
-  await pressKeys('h');
-  await speech.waitForOutput(/heading, level 2/);
+  // Native input: a screen reader command (NVDA browse mode, next heading), and what it said
+  const heading = await recordKeys('h');
+  expect(heading.entries.map((e) => e.text).join(' ')).toMatch(/heading, level 2/);
 });
 ```
 
@@ -262,8 +262,9 @@ The fixture:
   in it (turn off with `speechCaptureFocus: false`, needed where the bridge has no native input).
   Pages the test opens later need `setFocus()` again,
 - provides the [native input](native-input.md) as fixtures: `click(point, options?)` (screen
-  coordinates in physical pixels), `pressKeys(keys, options?)` and `setFocus()` (the same, for the
-  test's `page`),
+  coordinates in physical pixels), `pressKeys(keys, options?)`, `recordKeys(keys, options?)` (the
+  keys plus the speech they cause, recorded on the bridge, like [`recordKeys`](#functions) of the
+  library) and `setFocus()` (the same, for the test's `page`),
 - starts a [session](speech-capture.md#sessions) per test before it runs (`startSession`, named
   after the test's title path, with one `run` label per Playwright run) and ends it after the test.
   It doesn't clear the buffer, so earlier tests stay visible in the [web UI](web-ui.md#context-pane),

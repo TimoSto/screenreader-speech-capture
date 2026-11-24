@@ -36,7 +36,7 @@ calls `/api/v1/input/click`.
 | Goal | Use |
 |---|---|
 | Interact with the page (Tab, type, Enter on a button) | Playwright: `page.keyboard.press('Tab')` |
-| Give the screen reader a command (next heading, read title, elements list) | Native: `speech.pressKeys('h')`, `speech.pressKeys('Insert+T')` |
+| Give the screen reader a command (next heading, read title, elements list) | Native: `pressKeys('h')`, or `recordKeys('Insert+T')` to also get what it said (fixtures; the library has the same functions) |
 | Before either: make the browser the foreground window | `speech.setFocus(page)`: the bridge brings the window forward if it started the browser, otherwise a title-bar click. The [Playwright fixture](client.md#playwright-fixture) does it automatically with its own `setFocus()` (its fallback: a click on the top-left corner of the page content, then a reload). An agent (Playwright MCP) runs the CLI's [`focus`](client.md#cli-for-agents) without options; `focus --script` / `--geometry` is the click fallback |
 
 ## Key names

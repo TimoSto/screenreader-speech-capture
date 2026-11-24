@@ -26,7 +26,7 @@ with another `--playwright-version` needs the same version here
 | File | Test |
 |---|---|
 | `tests/announcements.spec.ts` | The page title and heading on load, a focused button, `Tab` to the next control, a live region update. |
-| `tests/native-input.spec.ts` | A screen reader command (`h`, next heading) as a native key, and `setFocus` bringing the window to the front. |
+| `tests/native-input.spec.ts` | A screen reader command (`h`, next heading) as a native key with `recordKeys`, which returns what it caused, and `setFocus` bringing the window to the front. |
 
 - `workers: 1` and `channel: 'chrome'` in `playwright.config.ts`: one screen reader, one foreground
   window, the browser real users run.
