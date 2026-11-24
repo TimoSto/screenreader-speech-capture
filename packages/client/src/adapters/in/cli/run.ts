@@ -5,6 +5,7 @@ import { EXIT, type CliIo, type Context } from './command.js';
 import { COMMANDS } from './commands/index.js';
 import { reportError } from './errors.js';
 import { commandHelp, helpText } from './help.js';
+import { helpJson } from './help-json.js';
 import { OPTIONS, UsageError, checkOptions } from './options.js';
 
 export { EXIT, type CliIo } from './command.js';
@@ -40,9 +41,12 @@ async function dispatch(
   const [name, ...args] = positionals;
   const command = name !== undefined && Object.hasOwn(COMMANDS, name) ? COMMANDS[name] : undefined;
   if (values.help) {
-    if (name === undefined) io.stdout(helpText());
-    else if (command === undefined) throw new UsageError(`Unknown command "${name}".`);
-    else io.stdout(commandHelp(name, command));
+    if (name !== undefined && command === undefined) {
+      throw new UsageError(`Unknown command "${name}".`);
+    }
+    const only = name !== undefined && command !== undefined ? { name, command } : undefined;
+    if (values.json) io.stdout(`${JSON.stringify(helpJson(io.version, only))}\n`);
+    else io.stdout(only ? commandHelp(only.name, only.command) : helpText());
     return EXIT.ok;
   }
   if (values.version) {

@@ -20,7 +20,9 @@ import {
 } from '../../../domain/errors.js';
 import { READ_GEOMETRY_SCRIPT, clickPoint } from '../../../domain/native-input.js';
 import { createClientConfig } from '../../../main.js';
+import { COMMANDS } from './commands/index.js';
 import { NAME } from './options.js';
+import { CLI_OUTPUT } from './output.js';
 import { EXIT, runCli } from './run.js';
 
 /** Records calls and returns canned answers, so only parsing and output are tested here. */
@@ -566,6 +568,27 @@ it('<command> --help shows only that command, even with arguments that would not
   expect((await run(['session', 'start', '-h'])).stdout).toContain('session list');
   expect((await run(['wait', '--help', '--limit', 'x'])).code).toBe(EXIT.ok);
   expect(await run(['nope', '--help'])).toMatchObject({ code: EXIT.usage, stdout: '' });
+});
+
+it('--help --json describes every command and its --json output', async () => {
+  const all = await run(['--help', '--json']);
+  expect(all.code).toBe(EXIT.ok);
+  const help = JSON.parse(all.stdout) as {
+    version: string;
+    commands: { name: string; outputs: Record<string, Record<string, unknown>> }[];
+  };
+  expect(help.version).toBe('1.2.3');
+  expect(help.commands.map((c) => c.name).sort()).toEqual(Object.keys(COMMANDS).sort());
+  const outputs = help.commands.flatMap((c) => Object.keys(c.outputs));
+  expect(outputs.sort()).toEqual(Object.keys(CLI_OUTPUT).sort());
+  expect(help.commands.find((c) => c.name === 'speech')?.outputs.speech).toMatchObject({
+    type: 'object',
+    required: expect.arrayContaining(['entries', 'truncated']) as unknown,
+  });
+
+  const wait = JSON.parse((await run(['wait', '--help', '--json'])).stdout) as typeof help;
+  expect(wait.commands.map((c) => c.name)).toEqual(['wait']);
+  expect(Object.keys(wait.commands[0]!.outputs)).toEqual(['wait']);
 });
 
 it('config never creates a bridge client', async () => {

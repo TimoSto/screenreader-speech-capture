@@ -8,10 +8,11 @@ const common: UserConfig = {
   tsconfig: 'tsconfig.build.json',
   // `shared` is private and never published: bundle it into the client.
   // `valibot` comes in with `shared` (the API contract's schemas), so users don't install it.
+  // `@valibot/to-json-schema` turns the CLI's output schemas into JSON Schema for `--help --json`.
   // Anything else that would end up in the bundle fails the build.
   deps: {
     alwaysBundle: [/^@screenreader-speech-capture\/shared/],
-    onlyBundle: ['valibot'],
+    onlyBundle: ['valibot', '@valibot/to-json-schema'],
   },
 };
 
