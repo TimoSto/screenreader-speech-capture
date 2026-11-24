@@ -2,6 +2,27 @@
 
 How to prepare the Windows machine or VM: requirements, the socket voice, the screen reader, and how to run the bridge there.
 
+> **Not yet checked end to end on a real VM.** The steps follow the components' sources and docs;
+> the smoke test that verifies them (NVDA + socket voice + Chrome) is part of
+> [M7](../ROADMAP.md#m7-distribution-). See [Verified so far](#verified-so-far).
+
+## Checklist
+
+In this order (*admin* = an elevated prompt, everything else as the normal user):
+
+1. Install [Node.js](#requirements) ≥ 22.12 (the LTS installer from nodejs.org, or
+   `winget install OpenJS.NodeJS.LTS`).
+2. *Admin:* [install and register the socket voice](#socket-voice-setup).
+3. [Install the bridge](#install-the-bridge), pinned, and start it once: the first start downloads
+   Playwright and Chromium.
+4. *Admin:* [open the firewall](#firewall) for port 5151, and check it from the test machine.
+5. Install NVDA or JAWS and [select the socket voice](#screen-reader-setup).
+6. [Check the setup](#checking-the-setup): speech arrives, and `status` shows a voice connection
+   and native input.
+7. [Prepare the VM](#prepare-the-vm): auto-logon, no lock, 100 % scaling, no notifications, the
+   bridge and the screen reader start at sign-in.
+8. Optional: take a VM snapshot, to reset to before every CI run.
+
 ## Requirements
 
 On the Windows machine or VM that runs the screen reader:
@@ -14,9 +35,43 @@ On the Windows machine or VM that runs the screen reader:
 | JAWS **or** NVDA | Both can use SAPI 5 voices. JAWS without a license runs in 40-minute demo mode (see [Running on the VM](#running-on-the-vm)). |
 | [`text-to-socket-engine`](https://www.npmjs.com/package/text-to-socket-engine) | The SAPI 5 voice that forwards speech text over TCP. Registering it needs an administrator prompt (see [Socket voice setup](#socket-voice-setup)). |
 | Playwright browsers | Playwright's Chromium is installed automatically ([Install](playwright-mcp.md#install)). Branded Chrome / Edge are recommended; install them yourself (their installers need administrator rights). |
-| [`@jitsi/robotjs`](https://www.npmjs.com/package/@jitsi/robotjs) | Native mouse / keyboard input. A dependency of the bridge with prebuilt Windows binaries, so no build tools are needed. |
+| Internet access on the first start | The bridge installs the configured Playwright version from the npm registry and downloads Chromium for the Playwright server and for MCP (possibly two builds, a few hundred MB each). Behind a proxy, set npm's proxy settings and `HTTPS_PROXY`. Later starts need no network. |
+| [`@jitsi/robotjs`](https://www.npmjs.com/package/@jitsi/robotjs) | Native keys and clicks. An **optional** dependency with prebuilt Windows binaries, installed with the bridge; no build tools needed. Without it the bridge still runs, and the input endpoints answer `INPUT_DISABLED`. |
+| [`koffi`](https://koffi.dev/) | Bringing a browser window to the front (`focus`, `setFocus`). Also **optional** and installed with the bridge, prebuilt. Without it clients fall back to a native click. |
+
+Whether the two optional packages loaded shows in `input` of `npx screenreader-speech-capture-client status`
+(`native` and `focus`, each with the `reason` when it is off) and in the `[native-input]` line of the bridge log.
+
+**Administrator rights** are needed only for registering the voice, the firewall rule and installing
+Chrome / Edge. The bridge itself must run **without** them ([why](#run-in-the-user-session-not-as-a-service)).
 
 For development you also need [pnpm](https://pnpm.io/) (see [Development](../implementation/development.md)).
+
+### Verified so far
+
+| Part | Status |
+|---|---|
+| Bridge, API, client, CLI, Playwright server and MCP supervision | Tested in CI on Linux, with a fake speech sender instead of the voice. |
+| Socket voice wire format | Read from the engine's source ([internals](../implementation/text-to-socket-engine/README.md)). |
+| NVDA / JAWS with the socket voice, native input, bringing windows to the front | Not yet checked on a real VM ([M7](../ROADMAP.md#m7-distribution-)): including whether `Insert` and `CapsLock` work as held modifiers. |
+| Windows versions | Windows 10 and 11 are the target; no version is verified yet. |
+
+Reports of setups that work, or don't, are welcome as issues.
+
+## Install the bridge
+
+In a **normal** (non-elevated) prompt, install a pinned version globally and start it:
+
+```powershell
+npm i -g screenreader-speech-capture@x.y.z    # the version you tested with; see the npm page for the newest
+screenreader-speech-capture
+```
+
+The first start installs Playwright and Chromium in the background (the bridge log shows
+`[playwright-server]` and `[playwright-mcp]` output; `status --wait-ready` waits for it), and prints
+the URLs it can be reached at. A global install, not `npx`: `npx` looks the package up on every
+start and picks up new versions without notice. The `npm warn install-scripts` line is expected
+([below](#the-install-scripts-warning)). Update by installing the new version the same way.
 
 ## Socket voice setup
 
@@ -81,6 +136,11 @@ reg add "HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens\voiceDe\Attributes" /v Lan
 The UI has the same instructions under **Setup**. In both screen readers, select the voice
 **"Text To Socket 127.0.0.1:4449"** (or the display name of a voice you added).
 
+Check the screen reader's **bitness**: a 64-bit screen reader only sees the 64-bit voice
+registration, a 32-bit one only the 32-bit one. `text-to-socket-engine-register` registers both,
+but a voice added later with `add-voice` or a registry change (as for the German voice) may need
+both views ([bitness](../implementation/text-to-socket-engine/quirks.md#bitness)).
+
 ### NVDA
 
 1. Open the NVDA menu (`NVDA+N`) → **Preferences** → **Settings…** → **Speech**.
@@ -90,6 +150,7 @@ The UI has the same instructions under **Setup**. In both screen readers, select
    - **Keyboard** category: turn off *Speak typed characters* and *Speak typed words*.
    - **Speech** category: set *Punctuation/symbol level* to the level your tests expect.
 5. Optional: save this as a separate NVDA **configuration profile** so you can switch back to an audible voice.
+6. **General** category: turn on *Start NVDA after I sign in*, so NVDA runs after a VM restart.
 
 ### JAWS
 
@@ -100,12 +161,27 @@ The UI has the same instructions under **Setup**. In both screen readers, select
    (PC Cursor, Keyboard, Message, …) so that all speech is captured.
 4. Save the profile. Make it the default only on the test VM.
 5. Optional: lower verbosity (**Settings Center** → *Verbosity*) to match what your tests expect.
+6. Let JAWS start at sign-in (**Settings Center** or the Startup Wizard: *Automatically start JAWS*
+   after signing in; the label differs between JAWS versions), so it runs after a VM restart.
 
 ### Checking the setup
 
 With the bridge running, press a key that makes the screen reader speak (for example
 `Insert+T` to read the window title). The text should appear within a few milliseconds in
-`npx screenreader-speech-capture-client tail` (or the [web UI](web-ui.md) once it exists). `GET /api/v1/status` should list at least one entry in `tcp.connections`.
+`npx screenreader-speech-capture-client tail`, or on the Monitor page of the [web UI](web-ui.md)
+(`http://localhost:5151/ui/`). Then, from the machine that runs the tests:
+
+```bash
+npx screenreader-speech-capture-client status --url http://<vm-ip>:5151
+```
+
+It should show at least one voice connection (`tcp.connections`), native input and focus as
+available (`input`), and the Playwright server and MCP as `running` once their first install is
+done. A native key press through the bridge checks the whole chain, keyboard hook included:
+
+```bash
+npx screenreader-speech-capture-client press Insert+T --capture --url http://<vm-ip>:5151
+```
 
 The exact text depends on the screen reader, its version and its verbosity settings. Phrases like
 `"Submit, button"` in these docs are only examples.
@@ -143,13 +219,20 @@ the warning, allow the script: `npm i -g --allow-scripts=@jitsi/robotjs screenre
 (once) or `npm config set allow-scripts=@jitsi/robotjs --location=user` (for all global installs).
 The bridge's own Playwright install runs with `--ignore-scripts` and prints nothing.
 
+### Prepare the VM
+
 Set up the VM like this:
 
 - log on automatically, turn off the screen lock and the screen saver, so the session stays
   interactive and unlocked,
 - a fixed screen resolution with **100 % display scaling** (for native clicks),
 - don't connect over RDP and then disconnect: a disconnected RDP session has no active desktop.
-  Use the hypervisor console, or VNC.
+  Use the hypervisor console, or VNC,
+- turn off **notifications** (Settings → System → Notifications, or *Do not disturb* / Focus
+  assist): a toast takes the focus, gets spoken and lands in the recording,
+- pause or schedule **Windows Update**, so it doesn't restart the VM during a run,
+- start the bridge ([above](#run-in-the-user-session-not-as-a-service)) and the screen reader
+  ([NVDA](#nvda), [JAWS](#jaws)) at sign-in.
 
 ### Screen reader licensing
 

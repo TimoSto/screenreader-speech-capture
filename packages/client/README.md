@@ -7,10 +7,12 @@ It talks to the bridge's HTTP API so your tests and agents can wait for and chec
 ## Install
 
 ```bash
-npm install --save-dev screenreader-speech-capture-client
+npm install --save-dev screenreader-speech-capture-client@<version>
 ```
 
-Your project needs `@types/node`. `@playwright/test` is a peer dependency.
+Node.js ≥ 20. Your project needs `@types/node`. `@playwright/test` is an optional peer dependency, needed
+only for the Playwright fixture; its version must be exactly the bridge's Playwright version. See
+[Setting up a test project](https://github.com/TimoSto/screenreader-speech-capture/blob/main/docs/usage/client.md#setting-up-a-test-project).
 
 ## Links
 

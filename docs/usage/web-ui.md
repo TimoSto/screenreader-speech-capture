@@ -2,9 +2,14 @@
 
 The web UI served by the bridge, for people watching, driving and configuring it.
 
-> **Planned ([M5](../ROADMAP.md#m5-web-ui-)), mostly not implemented yet.** This page describes the design. So far the
-> bridge serves only a start page at `/` that shows the bridge's version and state. Until the
-> rest lands, follow the speech with `npx screenreader-speech-capture-client tail`.
+> **Partly implemented ([M5](../ROADMAP.md#m5-web-ui-)).** Working today: the status chips with a
+> refresh button, the [context pane](#context-pane) (sessions), the [live log](#live-log) with
+> markers, clear and delete, and on the [Settings](#settings) page the color theme and the TCP port.
+> The rest of this page is design and marked *(planned)*: the status panel, the actions panel, the
+> other settings and the Setup page's check.
+
+The UI is at `http://<vm>:5151/ui/` (`/` leads there): **Monitor** (`/ui/`), **Settings**
+(`/ui/settings`) and **Setup** (`/ui/setup`).
 
 The bridge serves a web UI at `http://<vm>:5151/`. It is for **people**: watching what the screen
 reader says while a test or an agent runs, exploring a page by hand, and setting up the VM. Tests
@@ -36,7 +41,7 @@ the Playwright server and MCP state with versions, whether native input is enabl
 current session. It turns red when no voice has connected yet, and amber when a service is
 `crashed` or `failed`.
 
-Selecting the status bar opens the **status panel** with everything from
+Selecting the status bar opens the **status panel** *(planned)* with everything from
 [`GET /api/v1/status`](http-api.md#endpoints):
 
 - bridge version, API version and state,
@@ -54,9 +59,9 @@ status bar; it does not poll. It needs no endpoint of its own.
 Lists the [sessions](speech-capture.md#sessions) still in the buffer, so you can tell test runs
 and agent tasks apart.
 
-- Sessions are listed newest first, grouped by `run` when they have one. Each shows its name, start
+- Sessions are listed newest first (grouping by `run` is *(planned)*). Each shows its name, start
   time, duration and number of entries. The current session has a "live" badge.
-- At the top: **All** (the whole buffer) and **Outside sessions** (entries with `sessionId: null`).
+- **Outside sessions** lists the entries with `sessionId: null`. An **All** entry (the whole buffer) is *(planned)*.
 - **Selecting** a session shows only its entries in the live log, and the URL keeps the selection
   (`?session=7`), so it can be shared or bookmarked.
 - **Follow current session** (on by default) switches the selection when a new session starts.
@@ -114,6 +119,8 @@ Planned, not implemented yet *(planned, [M5](../ROADMAP.md#m5-web-ui-))*:
   and a gap row when the bridge reports `truncated: true`.
 
 ## Actions
+
+*(planned, [M5](../ROADMAP.md#m5-web-ui-))*
 
 The actions panel sends [native input](native-input.md) through the bridge, the same as
 `press` and `click` in the CLI. It shows the reason when the bridge answers `INPUT_DISABLED`.
@@ -173,6 +180,8 @@ size, log file, Playwright version, and native input on/off, with the same patte
   switched on and off with their `enabled` setting; there are no start / stop buttons.
 
 ## Setup
+
+*(planned, [M5](../ROADMAP.md#m5-web-ui-); the page exists but has no content yet)*
 
 The [socket voice](vm-setup.md#socket-voice-setup) and [screen reader](vm-setup.md#screen-reader-setup) instructions
 from these docs, plus a **check** button. It inserts a marker, asks you to make the screen

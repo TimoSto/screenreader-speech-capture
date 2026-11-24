@@ -58,7 +58,7 @@ flowchart LR
 ## What it does
 
 - **Records speech** from NVDA or JAWS, one entry per spoken phrase, with timestamps.
-- **HTTP API + live stream** to read, wait for and clear the recorded speech, plus a **web UI** to watch them (UI planned, [M5](docs/ROADMAP.md#m5-web-ui-)).
+- **HTTP API + live stream** to read, wait for and clear the recorded speech, plus a **web UI** to watch them by session (more of the UI is planned, [M5](docs/ROADMAP.md#m5-web-ui-)).
 - **Test client**: a TypeScript library with a Playwright fixture (`waitForOutput('Submit, button')`) and a CLI for scripts and AI agents.
 - **Remote browser** on the screen reader's machine through a Playwright server and Playwright MCP.
 - **Native input** for screen reader commands (`Insert+T`, browse mode `H`) that Playwright can't send.
@@ -72,15 +72,16 @@ On the Windows VM:
 npm install -g text-to-socket-engine
 text-to-socket-engine-register
 
-# 2. the bridge (normal, non-elevated user session)
-npm i -g screenreader-speech-capture
+# 2. the bridge (normal, non-elevated user session), pinned
+npm i -g screenreader-speech-capture@<version>
 screenreader-speech-capture
 ```
 
 3. In NVDA or JAWS, select the voice **"Text To Socket 127.0.0.1:4449"**.
-4. Make the screen reader speak and watch the text arrive live with
-   `npx screenreader-speech-capture-client tail` (the web UI at <http://localhost:5151> comes with
-   M5).
+4. Make the screen reader speak and watch the text arrive live in the web UI at
+   <http://localhost:5151>, or with `npx screenreader-speech-capture-client tail`.
+
+The full list (firewall, VM settings, checks) is the [setup checklist](docs/usage/vm-setup.md#checklist).
 
 In your test project (see the [Playwright fixture](docs/usage/client.md#playwright-fixture) and the
 [example tests](examples/playwright)):
