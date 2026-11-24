@@ -1,5 +1,10 @@
-import type { ServiceStatusDto, StatusDto } from '@screenreader-speech-capture/shared';
+import type {
+  InputAvailabilityDto,
+  ServiceStatusDto,
+  StatusDto,
+} from '@screenreader-speech-capture/shared';
 import type { Status } from '../../../../application/ports/in/get-status.js';
+import type { Availability } from '../../../../domain/availability.js';
 import type { ServiceName, ServiceStatus } from '../../../../domain/child-service.js';
 import { toSessionDto } from './session.js';
 
@@ -16,7 +21,13 @@ export function toServiceStatusDto(service: ServiceStatus): ServiceStatusDto {
   };
 }
 
-export function toStatusDto({ bridge, tcp, buffer, services, session }: Status): StatusDto {
+export function toInputAvailabilityDto(availability: Availability): InputAvailabilityDto {
+  return availability.available
+    ? { available: true, backend: availability.backend, reason: null }
+    : { available: false, backend: null, reason: availability.reason };
+}
+
+export function toStatusDto({ bridge, tcp, buffer, services, session, input }: Status): StatusDto {
   // Every child service is a top-level field of the API. A new `ServiceName` fails to compile
   // here until it is added, with the contract: exposing a service is an API change.
   const children = {
@@ -52,6 +63,10 @@ export function toStatusDto({ bridge, tcp, buffer, services, session }: Status):
     session: {
       current: session.current === null ? null : toSessionDto(session.current),
       count: session.count,
+    },
+    input: {
+      native: toInputAvailabilityDto(input.native),
+      focus: toInputAvailabilityDto(input.focus),
     },
   };
 }

@@ -31,7 +31,7 @@ import {
   SpeechListSchema,
   WaitResultSchema,
 } from './speech.js';
-import { ServiceStatusSchema, StatusSchema } from './status.js';
+import { InputAvailabilitySchema, ServiceStatusSchema, StatusSchema } from './status.js';
 
 /**
  * Every schema of the API by its name in `docs/usage/openapi.yaml` (`components.schemas`), which
@@ -56,6 +56,7 @@ export const API_SCHEMAS: Record<string, GenericSchema> = {
   Config: ConfigSchema,
   ConfigPatch: ConfigPatchSchema,
   ConfigOverrides: ConfigOverridesSchema,
+  InputAvailability: InputAvailabilitySchema,
   ServiceStatus: ServiceStatusSchema,
   ServiceConfigPatch: ServiceConfigPatchSchema,
   ServiceConfig: ServiceConfigSchema,

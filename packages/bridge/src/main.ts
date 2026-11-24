@@ -6,7 +6,6 @@ import { HttpServer } from './adapters/in/http/http-server.js';
 import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { FsConfigStore } from './adapters/out/fs-config/fs-config-store.js';
-import { DisabledInputInjector } from './adapters/out/input/disabled-input-injector.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
 import { defaultConfigFile } from './adapters/out/platform/paths.js';
 import type { ManageSessions } from './application/ports/in/manage-sessions.js';
@@ -146,8 +145,9 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     pinned: new Map([...configFields(overrides).keys()].map((field) => [field, sourceOf(field)])),
   });
   const supervisors = createSupervisors(config, seams, log);
+  const windows = seams.windowSystem ?? (await createWindowSystem(log.for('native-input')));
   const focus = new WindowFocusService({
-    windows: seams.windowSystem ?? (await createWindowSystem(log.for('native-input'))),
+    windows,
     queue: input,
     services: supervisors,
     clock,
@@ -169,6 +169,8 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     version,
     apiVersion: API_VERSION,
     startedAt,
+    injector,
+    windows,
   });
   const ui = createUiMount(seams.uiDir ?? shippedUiDir(), log.for('web-ui'));
   const http = new HttpServer({
@@ -200,7 +202,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
         ports,
         supervisors,
         webUi: ui !== undefined,
-        nativeInput: injector instanceof DisabledInputInjector ? null : 'robotjs',
+        nativeInput: injector.availability,
         tookMs: clock.now().getTime() - startedAt.getTime(),
       }),
     logger: bridgeLogger,

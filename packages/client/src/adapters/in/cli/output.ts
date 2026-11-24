@@ -101,6 +101,18 @@ const ServiceStatusOutput = v.object({
   ),
 });
 
+const InputAvailabilityOutput = v.object({
+  available: v.boolean(),
+  backend: v.pipe(
+    v.nullable(v.string()),
+    v.description('The library that does it, `null` when not available.'),
+  ),
+  reason: v.pipe(
+    v.nullable(v.string()),
+    v.description('Why it is not available, `null` when it is.'),
+  ),
+});
+
 const bridgeStatusEntries = {
   bridge: v.object({
     version: v.string(),
@@ -126,6 +138,13 @@ const bridgeStatusEntries = {
   playwright: ServiceStatusOutput,
   mcp: ServiceStatusOutput,
   session: v.object({ current: v.nullable(SessionOutput), count: integer(0) }),
+  input: v.pipe(
+    v.object({
+      native: v.pipe(InputAvailabilityOutput, v.description('`press`, `click`.')),
+      focus: v.pipe(InputAvailabilityOutput, v.description('`focus` without options.')),
+    }),
+    v.description('Native input on the bridge. Off: those commands fail with `INPUT_DISABLED`.'),
+  ),
 };
 
 export const BridgeStatusOutput = v.pipe(

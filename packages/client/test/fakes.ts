@@ -493,6 +493,10 @@ export class FakeBridgeApi implements BridgeApi {
         current: this.current ? { ...this.current } : null,
         count: this.allSessions.length,
       },
+      input: {
+        native: { available: true, backend: 'robotjs', reason: null },
+        focus: { available: true, backend: 'koffi', reason: null },
+      },
     };
   }
 }

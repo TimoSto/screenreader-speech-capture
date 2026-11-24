@@ -1,5 +1,6 @@
 import type { MouseButton } from '../../../application/ports/in/send-native-input.js';
 import type { InputInjector } from '../../../application/ports/out/input-injector.js';
+import type { Availability } from '../../../domain/availability.js';
 import { AppError } from '../../../domain/errors.js';
 
 /**
@@ -7,7 +8,11 @@ import { AppError } from '../../../domain/errors.js';
  * every call fails with `INPUT_DISABLED`, so the rest of the bridge keeps working.
  */
 export class DisabledInputInjector implements InputInjector {
-  constructor(private readonly reason: string) {}
+  readonly availability: Availability;
+
+  constructor(private readonly reason: string) {
+    this.availability = { available: false, reason };
+  }
 
   click(_x: number, _y: number, _button: MouseButton): Promise<void> {
     return this.fail();

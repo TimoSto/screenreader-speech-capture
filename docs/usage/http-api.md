@@ -76,7 +76,7 @@ with every run.
 | `POST /api/v1/input/keys` `{ "keys": "Insert+T" \| ["h", "h"], "delayMs": 50 }` | Native key presses: one chord, or a sequence with `delayMs` between them. `capture` as for `click`. |
 | `GET /api/v1/config` / `PUT /api/v1/config` | Read or update the configuration. `PUT` takes any subset as `application/json`, saves it to the config file and answers with the configuration the next start will use; `GET` answers with the one in use, and `GET ?view=saved` (since API 1.18) with the one the next start will use, so a client can tell a setting that is saved but not applied yet (it differs between the two views). A saved setting takes effect on the next start of the bridge. See [Changing settings](configuration.md#changing-settings). |
 | `GET /api/v1/config/overrides` | The settings a flag or environment variable sets (since API 1.18): `{ "overrides": { "tcp.port": "--tcp-port" } }`, empty if none. They win over the config file on every start, so saving them has no effect. |
-| `GET /api/v1/status` | Bridge and API version, when the bridge started (`startedAt`), state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, current session. |
+| `GET /api/v1/status` | Bridge and API version, when the bridge started (`startedAt`), state (`starting` / `ready` / `stopping`), TCP connections, buffer size, Playwright / MCP process state and versions, current session, whether native input and focus work on this machine (`input`, since 1.24). |
 
 `GET /api/v1/status` example:
 
@@ -98,7 +98,11 @@ with every run.
   "buffer": { "size": 120, "maxEntries": 10000, "firstSeq": 223, "lastSeq": 342 },
   "playwright": { "state": "running", "version": "1.65.0", "port": 3000, "restarts": 0, "exitCode": null },
   "mcp": { "state": "running", "version": "0.0.85", "port": 8931, "restarts": 0, "exitCode": null },
-  "session": { "current": { "id": 7, "name": "checkout test", "run": null, "client": null, "startedAt": "2026-11-07T14:02:55.000Z", "endedAt": null, "startSeq": 339, "firstSeq": 340, "lastSeq": 342, "entries": 3 }, "count": 12 }
+  "session": { "current": { "id": 7, "name": "checkout test", "run": null, "client": null, "startedAt": "2026-11-07T14:02:55.000Z", "endedAt": null, "startSeq": 339, "firstSeq": 340, "lastSeq": 342, "entries": 3 }, "count": 12 },
+  "input": {
+    "native": { "available": true, "backend": "robotjs", "reason": null },
+    "focus": { "available": true, "backend": "koffi", "reason": null }
+  }
 }
 ```
 

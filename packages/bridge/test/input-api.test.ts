@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { API_PREFIX, checkDto, InputCaptureSchema } from '@screenreader-speech-capture/shared';
+import {
+  API_PREFIX,
+  checkDto,
+  InputCaptureSchema,
+  type StatusDto,
+} from '@screenreader-speech-capture/shared';
 import { DisabledInputInjector } from '../src/adapters/out/input/disabled-input-injector.js';
 import { RecordingInputInjector } from './fakes.js';
 import { send, start } from './helpers.js';
@@ -69,6 +74,12 @@ describe('native input API', () => {
         error: { code: 'INPUT_DISABLED', message: 'Native input is not available: no robotjs' },
       });
     }
+    const status = await fetch(`http://127.0.0.1:${bridge.httpPort}${API_PREFIX}/status`);
+    expect(((await status.json()) as StatusDto).input.native).toEqual({
+      available: false,
+      backend: null,
+      reason: 'no robotjs',
+    });
   });
 
   it('answers with the speech the keys caused when asked to capture', async () => {

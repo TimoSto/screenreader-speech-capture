@@ -1,4 +1,5 @@
 import type { AppWindow, WindowSystem } from '../../../application/ports/out/window-system.js';
+import type { Availability } from '../../../domain/availability.js';
 import { AppError } from '../../../domain/errors.js';
 
 /**
@@ -6,7 +7,11 @@ import { AppError } from '../../../domain/errors.js';
  * every call fails with `INPUT_DISABLED`, so the rest of the bridge keeps working.
  */
 export class DisabledWindowSystem implements WindowSystem {
-  constructor(private readonly reason: string) {}
+  readonly availability: Availability;
+
+  constructor(private readonly reason: string) {
+    this.availability = { available: false, reason };
+  }
 
   processTree(_rootPid: number): Promise<Set<number>> {
     return this.fail();

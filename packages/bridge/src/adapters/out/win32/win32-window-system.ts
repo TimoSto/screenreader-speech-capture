@@ -1,4 +1,5 @@
 import type { AppWindow, WindowSystem } from '../../../application/ports/out/window-system.js';
+import type { Availability } from '../../../domain/availability.js';
 import type { Hwnd, Win32 } from './win32.js';
 
 /**
@@ -9,6 +10,8 @@ import type { Hwnd, Win32 } from './win32.js';
  * thread.
  */
 export class Win32WindowSystem implements WindowSystem {
+  readonly availability: Availability = { available: true, backend: 'koffi' };
+
   constructor(private readonly win32: Win32) {}
 
   processTree(rootPid: number): Promise<Set<number>> {
