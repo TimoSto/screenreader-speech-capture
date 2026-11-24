@@ -30,17 +30,30 @@ sequenceDiagram
 
 ## A page request
 
+The bridge's UI mount (`composition/ui.ts`) redirects `/` to `/ui/` and marks a request from the
+bridge's own machine with `x-sr-bridge-local: 1` (stripped from every other request), so the UI can
+[hide its log from the local screen reader](../decisions.md#a-ui-opened-on-the-bridges-machine-hides-its-log-from-the-screen-reader).
+`hooks.server.ts` builds a `BridgeApi` per request.
+
 ```mermaid
 sequenceDiagram
     participant B as Browser
     participant H as HttpServer<br/>(adapters/in/http)
-    participant UI as SvelteKit handler<br/>(BFF)
+    participant M as UI mount<br/>(composition/ui.ts)
+    participant UI as SvelteKit handler<br/>(BFF, hooks.server.ts)
     participant API as HttpServer<br/>/api/v1 (same process)
 
     B->>H: GET /
     H->>H: checkAccess (Host, origin)
-    H->>UI: not /api/v1, no proxy path → ui(req, res)
-    UI->>API: GET http://127.0.0.1:port/api/v1/status (bridge-api.ts)
+    H->>M: not /api/v1, no proxy path
+    M-->>B: 302 Location: /ui/
+    B->>H: GET /ui/
+    H->>H: checkAccess
+    H->>M: not /api/v1, no proxy path
+    M->>M: set x-sr-bridge-local: 1 if the peer is this machine, else remove it
+    M->>UI: handler(req, res)
+    UI->>UI: handle: locals.local, locals.bridge (BridgeApi on event.fetch)
+    UI->>API: GET http://127.0.0.1:port/api/v1/status (lib/server/bridge-api.ts)
     API-->>UI: StatusDto
     UI->>UI: checkDto(StatusSchema) (mismatch → 502)
     UI-->>B: HTML (server-rendered)

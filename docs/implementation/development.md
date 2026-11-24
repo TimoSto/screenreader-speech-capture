@@ -37,14 +37,71 @@ project and links into `docs/`.
 
 - **Domain / application:** unit tests against in-memory fakes of the driven ports (fake clock,
   the real `SpeechLog`, fake input injector), with no sockets or processes involved.
-- **Adapters:** integration tests per adapter (real TCP socket, real HTTP server, temporary config dir).
-  The robotjs adapter is tested with a fake robotjs module here, and with the real one only on Windows.
-- **Client:** library and CLI tested against a real bridge fed by `fake-speech`, covering
-  the cursor, timeouts and exit codes. `setFocus` coordinate maths (`clickPoint`) is unit-tested.
-- **UI** *(partly done, [M5](../ROADMAP.md#m5-web-ui-))*: `lib/core` logic is unit-tested in node (`*.test.ts`). Components are tested in real Chromium with Vitest browser mode and `vitest-browser-svelte` (`*.svelte.test.ts` next to each component, in its own folder), because they use `@material/web` custom elements that jsdom does not run faithfully. They get plain props, no store or adapter. Install the browser once with `pnpm --filter @screenreader-speech-capture/ui exec playwright install chromium`. End-to-end tests against a bridge
-  fed by `fake-speech`.
+- **Bridge integration:** `packages/bridge/test/*.test.ts` start a real bridge (real TCP and HTTP
+  sockets, temporary config dir) through `test/helpers.ts`. `startBridge` takes `TestSeams`
+  (`composition/test-seams.ts`): fake clock, recording input injector and window system, short SSE
+  ping, a temp Playwright dir. Test bridges run with Playwright and MCP off (`testOverrides`); the
+  service tests pass `playwrightLaunch` / `mcpLaunch` to run `test/fixtures/fake-service.mjs`
+  instead, so nothing is installed. The robotjs adapter is tested with a fake robotjs module here,
+  and with the real one only on Windows.
+- **Contract:** `adapters/in/http/dto/contract.test.ts` checks every DTO mapper's output against
+  the schemas in `shared`; `shared/src/openapi/openapi.test.ts` fails when `openapi.yaml` drifts.
+- **Client:** unit tests use `packages/client/test/fakes.ts` (a fake bridge and a virtual clock), so
+  the cursor, waits, reconnects and timeouts run without sockets or real time.
+  `test/bridge.test.ts` runs the library against a real bridge through the bridge's test helpers,
+  and every CLI `--json` output is checked against its schema (`test/cli-output.ts`). The
+  coordinate maths (`clickPoint`, `contentCornerPoint`) is unit-tested.
+- **UI** *(partly done, [M5](../ROADMAP.md#m5-web-ui-))*: `lib/core` logic is unit-tested in node (`*.test.ts`). Components are tested in real Chromium with Vitest browser mode and `vitest-browser-svelte` (`*.svelte.test.ts` next to each component, in its own folder), because they use `@material/web` custom elements that jsdom does not run faithfully. They get plain props, no store or adapter. Install the browser once with `pnpm --filter @screenreader-speech-capture/ui exec playwright install chromium`. The bridge's `test/web-ui.test.ts` checks that the built UI is mounted. End-to-end tests of the UI against a bridge
+  fed by `fake-speech` *(planned)*.
 - **Smoke test on a real VM:** NVDA + socket voice + Chrome, checking one focus announcement and one
   native screen reader command (`Insert+T`).
+
+## Recipes
+
+Checklists for the common changes. Each step links to where its rule lives.
+
+**A new endpoint, or a new field** (for example `GET /markers/latest`, #217):
+
+1. `packages/shared`: the DTO as a valibot schema (`XSchema`, list it in `schemas.ts`), limits in
+   `limits.ts`, the path and its prose in `openapi/spec.ts`; bump the minor `API_VERSION`
+   (`api-version.ts`). Run `pnpm openapi` ([contract](decisions.md#the-api-contract-is-valibot-schemas)).
+2. Bridge, inside out: the rule in `domain/` (often `SpeechLog`), the method on an in-port in
+   `application/ports/in/`, its service, then the route in `adapters/in/http/routes/` and the
+   mapper in `adapters/in/http/dto/` (covered by `contract.test.ts`). Expected failures throw an
+   `AppError` ([Errors](architecture.md#errors)). A new driven dependency is a new out-port, wired in
+   `main.ts` / `composition/`.
+3. Client: `BridgeApi` (port) and `FetchBridgeApi` (checks the answer with the schema), the
+   service, the in-port (`SpeechCapture` or `NativeInput`), `SpeechCaptureClient` in `main.ts`
+   (forwarding by hand) and `index.ts` for new public types.
+4. Docs: the row in [HTTP API](../usage/http-api.md#endpoints) with "since API 1.x", the client's
+   [functions table](../usage/client.md#functions), and a flow if the sequence is new.
+
+**A new CLI command or option:** the command in `adapters/in/cli/commands/` (registered in
+`commands/index.ts`), its help lines, and a valibot schema for its `--json` output in `output.ts`
+(`out(command, json, text)` accepts only what it describes; `--help --json` derives from it). Test the
+output with `test/cli-output.ts`, then the [Commands](../usage/client.md#commands) section.
+
+**A new bridge setting:** the field in `ConfigPatchSchema` (`shared/src/config.ts`), the type and
+default in `bridge/src/domain/config/`, a row in `SETTINGS` (`adapters/in/cli/options.ts`; the
+environment variable is derived from the flag), then
+[Configuration](../usage/configuration.md). It takes effect on the next start
+([decision](decisions.md#settings-apply-on-the-next-start)).
+
+## Debugging
+
+- **Run one test:** `pnpm test packages/bridge/src/domain/speech-log.test.ts` (no `--`, which would
+  run everything), or `pnpm test -t "name of the test"`.
+- **See what the bridge does:** `SR_SPEECH_LOG_LEVEL=debug pnpm dev` logs every HTTP request and
+  every received line (the lines only to the log file; `SR_SPEECH_CONSOLE_SPEECH=1` puts them on the
+  console too). The log file is `screenreader-speech-capture/logs/bridge.log` under `%LOCALAPPDATA%`
+  (Windows) or `$XDG_STATE_HOME` / `~/.local/state` ([Logging](../usage/operations.md#logging)).
+- **Feed speech by hand:** `pnpm fake-speech --port 4449`, or `nc` as above; watch it with
+  `npx screenreader-speech-capture-client tail` or `curl -N localhost:5151/api/v1/speech/stream`.
+- **UI component tests fail to resolve `tslib`:** a stale Vite cache; delete
+  `packages/ui/node_modules/.vite`.
+- **Against the VM:** run the bridge on the VM, point the client or `pnpm dev:ui` at it
+  (`SR_SPEECH_URL`, `SR_BRIDGE_API_URL`), and keep the console of the VM visible: native input needs an
+  unlocked desktop ([VM setup](../usage/vm-setup.md#running-on-the-vm)).
 
 ## CI & releases
 

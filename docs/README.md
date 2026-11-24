@@ -41,11 +41,11 @@ For contributors: how the bridge and client are built and why.
 
 | Doc | What it covers |
 |---|---|
-| [Architecture](implementation/architecture.md) | Monorepo, hexagonal bridge and client, UI structure |
+| [Architecture](implementation/architecture.md) | Monorepo, hexagonal bridge and client, UI structure, shared contract, error path, runtime model (queues, backpressure, bounds) |
 | [TCP capture](implementation/tcp-capture.md) | Listener, framing and decoding, from line to speech entry |
 | [text-to-socket-engine internals](implementation/text-to-socket-engine/README.md) | Source walkthrough of the third-party SAPI voice: COM server, voice registration, speak and TCP redirect, build, quirks |
-| [Decisions](implementation/decisions.md) | Choices that rarely change and why (Node.js, not Go) |
-| [Development](implementation/development.md) | Building, testing without Windows, CI and releases |
+| [Decisions](implementation/decisions.md) | Choices that rarely change and why, grouped by area, with the PR of each |
+| [Development](implementation/development.md) | Building, testing without Windows, recipes (endpoint, CLI command, setting), debugging, CI and releases |
 | [Simplification candidates](implementation/simplification-candidates.md) | Backlog of parts to drop or simplify, and why |
 
 ### Implementation flows
@@ -53,6 +53,8 @@ For contributors: how the bridge and client are built and why.
 | Flows | What they show |
 |---|---|
 | [Capture](implementation/flows/capture.md) | Socket voice → parser → speech log → readers |
+| [SSE replay](implementation/flows/sse-replay.md) | Subscribe before reading, pacing and backpressure, entries dropped during a replay |
+| [Native input](implementation/flows/input.md) | The input queue, a key press with capture, bringing a window to the front |
 | [Lifecycle](implementation/flows/lifecycle.md) | Startup order and shutdown |
 | [Config](implementation/flows/config.md) | `PUT /config` through the layers |
 | [Child services](implementation/flows/child-services.md) | Install, spawn, crash restarts with backoff, giving up |

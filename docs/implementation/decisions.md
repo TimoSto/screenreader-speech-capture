@@ -1,8 +1,57 @@
 # Decisions
 
 Choices that shape the project and rarely change, with the reasons behind them. The code layout,
-which changes with refactors, is in [Architecture](architecture.md). One entry per decision, newest
-last. Once there are several, they can move to one file each in `docs/decisions/`.
+which changes with refactors, is in [Architecture](architecture.md). One entry per decision, added at
+the end. The contents group them by area and name the PR that made each one; later PRs may have
+refined it (`git log -S '<heading>' -- docs/implementation/decisions.md`).
+
+**Platform and process**
+
+- [Node.js, not Go](#nodejs-not-go) ([#87](https://github.com/TimoSto/screenreader-speech-capture/pull/87))
+- [One consumer per VM](#one-consumer-per-vm) ([#88](https://github.com/TimoSto/screenreader-speech-capture/pull/88))
+- [Child process trees are killed by the bridge, not the OS](#child-process-trees-are-killed-by-the-bridge-not-the-os) ([#130](https://github.com/TimoSto/screenreader-speech-capture/pull/130))
+- [The bridge is the single way in](#the-bridge-is-the-single-way-in) ([#114](https://github.com/TimoSto/screenreader-speech-capture/pull/114))
+- [Settings apply on the next start](#settings-apply-on-the-next-start) ([#139](https://github.com/TimoSto/screenreader-speech-capture/pull/139))
+
+**API and contract**
+
+- [The API contract is valibot schemas](#the-api-contract-is-valibot-schemas) ([#119](https://github.com/TimoSto/screenreader-speech-capture/pull/119))
+- [The client checks only the major API version](#the-client-checks-only-the-major-api-version) ([#103](https://github.com/TimoSto/screenreader-speech-capture/pull/103))
+- [The client checks the API version on every answer](#the-client-checks-the-api-version-on-every-answer) ([#224](https://github.com/TimoSto/screenreader-speech-capture/pull/224))
+- [`seq` keeps rising across restarts](#seq-keeps-rising-across-restarts) ([#101](https://github.com/TimoSto/screenreader-speech-capture/pull/101))
+- [Deleting a session is a 400 for the current one, and sends no event](#deleting-a-session-is-a-400-for-the-current-one-and-sends-no-event) ([#174](https://github.com/TimoSto/screenreader-speech-capture/pull/174))
+- [Clearing one scope is `DELETE /speech?session=`](#clearing-one-scope-is-delete-speechsession) ([#176](https://github.com/TimoSto/screenreader-speech-capture/pull/176))
+
+**Capture, buffer and live feed**
+
+- [The socket voice stays the only capture source](#the-socket-voice-stays-the-only-capture-source) ([#123](https://github.com/TimoSto/screenreader-speech-capture/pull/123))
+- [The speech log owns the buffer and session rules](#the-speech-log-owns-the-buffer-and-session-rules) ([#106](https://github.com/TimoSto/screenreader-speech-capture/pull/106))
+- [Sessions warn instead of locking](#sessions-warn-instead-of-locking) ([#112](https://github.com/TimoSto/screenreader-speech-capture/pull/112))
+- [The SSE replay follows the reader](#the-sse-replay-follows-the-reader) ([#113](https://github.com/TimoSto/screenreader-speech-capture/pull/113))
+- [A stream announces where it starts](#a-stream-announces-where-it-starts) ([#128](https://github.com/TimoSto/screenreader-speech-capture/pull/128))
+- [Client waits read the live feed](#client-waits-read-the-live-feed) ([#92](https://github.com/TimoSto/screenreader-speech-capture/pull/92))
+- [A wait's regex is not sandboxed](#a-waits-regex-is-not-sandboxed) ([#131](https://github.com/TimoSto/screenreader-speech-capture/pull/131))
+
+**Native input**
+
+- [Captures of native input run on the bridge](#captures-of-native-input-run-on-the-bridge) ([#216](https://github.com/TimoSto/screenreader-speech-capture/pull/216))
+- [The bridge focuses browser windows it started](#the-bridge-focuses-browser-windows-it-started) ([#218](https://github.com/TimoSto/screenreader-speech-capture/pull/218))
+
+**Code structure**
+
+- [Services stay where they hold a rule](#services-stay-where-they-hold-a-rule) ([#135](https://github.com/TimoSto/screenreader-speech-capture/pull/135))
+
+**Web UI**
+
+- [The web UI is a SvelteKit BFF inside the bridge process](#the-web-ui-is-a-sveltekit-bff-inside-the-bridge-process) ([#145](https://github.com/TimoSto/screenreader-speech-capture/pull/145))
+- [The UI's server build is self-contained](#the-uis-server-build-is-self-contained) ([#168](https://github.com/TimoSto/screenreader-speech-capture/pull/168))
+- [The UI uses SvelteKit's experimental remote functions](#the-ui-uses-sveltekits-experimental-remote-functions) ([#203](https://github.com/TimoSto/screenreader-speech-capture/pull/203))
+- [The speech table follows live scopes over SSE and reads ended sessions once](#the-speech-table-follows-live-scopes-over-sse-and-reads-ended-sessions-once) ([#172](https://github.com/TimoSto/screenreader-speech-capture/pull/172))
+- [The speech table is a real `<table>`](#the-speech-table-is-a-real-table) ([#172](https://github.com/TimoSto/screenreader-speech-capture/pull/172))
+- [The UI builds its own lists instead of using `md-list`](#the-ui-builds-its-own-lists-instead-of-using-md-list) ([#159](https://github.com/TimoSto/screenreader-speech-capture/pull/159))
+- [The add-marker action only shows where the marker would land](#the-add-marker-action-only-shows-where-the-marker-would-land) ([#173](https://github.com/TimoSto/screenreader-speech-capture/pull/173))
+- [The UI theme lives in the browser, not in the bridge config](#the-ui-theme-lives-in-the-browser-not-in-the-bridge-config) ([#179](https://github.com/TimoSto/screenreader-speech-capture/pull/179))
+- [A UI opened on the bridge's machine hides its log from the screen reader](#a-ui-opened-on-the-bridges-machine-hides-its-log-from-the-screen-reader) ([#192](https://github.com/TimoSto/screenreader-speech-capture/pull/192))
 
 ## Node.js, not Go
 
@@ -177,10 +226,12 @@ a while, [Versioning](../usage/http-api.md#versioning)) or answers 404 there, so
 something else than intended. The header is checked before the body because another major version
 may shape it differently. A missing header means a bridge older than 1.22, which speaks major 1.
 
-## Bridge and client are released together
+## The client checks only the major API version
 
-The client only checks the bridge's **major** API version. It used to also require a minimum minor
-version (`MIN_BRIDGE_API`) and planned per-function checks (`requireApiVersion`) for features an
+The client only checks the bridge's **major** API version. The packages are versioned and
+published independently ([Releases](development.md#releases)), but users install bridge and client
+from the same release, so a client never meets an older minor version in practice. It used to also
+require a minimum minor version (`MIN_BRIDGE_API`) and planned per-function checks (`requireApiVersion`) for features an
 older bridge lacks. Bridge and client are installed from the same release, so those checks
 guarded a combination nobody runs, and they made every API addition a compatibility question.
 Settings and status fields of features that don't exist yet (`input.enabled`, `--no-input`,
@@ -211,7 +262,6 @@ leave it locked, and every later start would need a forced takeover. Instead cli
 themselves (`X-SR-Speech-Client`), and the bridge warns when one ends or replaces another one's
 session, and returns the replaced session from `POST /sessions`. A lease that expires could
 come later if parallel workers become a real use case.
-
 
 ## Deleting a session is a 400 for the current one, and sends no event
 
@@ -401,7 +451,6 @@ The mockup draws the rows as a `div` grid with an `aria-hidden` column header. A
 one. The time and seq columns are as wide as their text (`seq` is a 13-digit number), and the seq column
 is hidden in a narrow log. The sticky header needs `border-collapse: separate`, or its borders scroll away.
 
-
 ## The add-marker action only shows where the marker would land
 
 `POST /api/v1/markers` has no session parameter: the bridge files a marker under the current session,
@@ -410,7 +459,6 @@ current session, and in "Outside sessions" while no session is current. In "Outs
 session is live, and in an ended session, it is hidden: the marker would appear in a different log than
 the one on screen. A button that is there but does something else would be worse than none.
 
-
 ## The UI theme lives in the browser, not in the bridge config
 
 The color theme (light, dark, high contrast, dark high contrast) is a property of the person and the
@@ -418,7 +466,6 @@ browser looking at the UI, not of the bridge, and several browsers can open the 
 in `localStorage` (`sr-theme`) and the bridge config and API don't know about it. An inline script in
 `app.html` applies it before the first paint. `prefers-color-scheme` is ignored on purpose: the UI starts
 light, and a high-contrast need is an explicit choice.
-
 
 ## A UI opened on the bridge's machine hides its log from the screen reader
 

@@ -2,7 +2,7 @@
 
 How the code is organised. Why it is written in Node.js is in [Decisions](decisions.md#nodejs-not-go).
 
-Flows: [capture](flows/capture.md), [lifecycle](flows/lifecycle.md), [config](flows/config.md), [child services](flows/child-services.md).
+Flows: [capture](flows/capture.md), [SSE replay](flows/sse-replay.md), [native input](flows/input.md), [lifecycle](flows/lifecycle.md), [config](flows/config.md), [child services](flows/child-services.md), [web UI](flows/web-ui.md).
 
 ## Monorepo
 
@@ -41,9 +41,10 @@ flowchart LR
     subgraph OUT["Driven adapters"]
         MEM["out/memory<br/>event bus"]
         CFG["out/fs-config<br/>config.json"]
-        SUP["out/process, out/playwright, out/mcp<br/>process supervisors"]
+        SUP["out/process, out/playwright, out/mcp, out/npm<br/>process supervisors + installs"]
         ROBOT["out/robotjs<br/>InputInjector"]
         WIN["out/win32<br/>WindowSystem (koffi)"]
+        OFF["out/input<br/>disabled fallbacks"]
         LOG["out/log<br/>bridge log"]
         CLK["out/clock"]
     end
@@ -61,26 +62,35 @@ flowchart LR
     CFG -. implements port .-> APP
     SUP -. implements port .-> APP
     ROBOT -. implements port .-> APP
+    WIN -. implements port .-> APP
+    OFF -. implements port .-> APP
     CLK -. implements port .-> APP
 ```
 
 ```
 packages/bridge/src/
-  domain/            SpeechLog (the buffer and the sessions, with their rules), SeqCursor (a
-                     follower's position: no duplicate between replay and live), SpeechEntry,
-                     Session, CaptureState (listener and connections for the status), Config,
-                     child services (settings from the config, reachability, crash policy),
-                     KeyChord (key-name parsing + validation). Pure, no I/O.
+  domain/            Pure, no I/O:
+                     SpeechLog (the buffer and the sessions, with their rules; speech-buffer and
+                     seq-queue are its data structures), SeqCursor (a follower's position: no
+                     duplicate between replay and live), SpeechEntry, SpeechEvent, Session,
+                     CaptureState (listener and connections for the status), Config (defaults,
+                     merge = validation), child services (settings, reachability, crash policy),
+                     KeyChord (key-name parsing), text-match (wait matching), version (exact npm
+                     versions), availability (input / focus on or off and why), AppError + codes
   application/
-    ports/in/        driving ports (use cases): RecordSpeech, TrackCapture, SpeechUseCases (list, watch, clear,
-                     mark), ResizeBuffer, WaitForSpeech, ManageSessions, SendNativeInput,
-                     ManageConfig, GetStatus, ChildServices (start, apply a config change,
-                     stop, reachability), BridgeLifecycle (ready, shutdown order)
+    ports/in/        driving ports (use cases): RecordSpeech, TrackCapture, SpeechUseCases (list,
+                     watch, clear, mark, latest marker), WaitForSpeech, ManageSessions,
+                     SendNativeInput (+ InputQueue), CaptureInput, FocusWindow, ManageConfig,
+                     GetStatus, ChildServices (start, stop, reachability), BridgeLifecycle
     ports/out/       driven ports: SpeechEventBus, ConfigStore, ProcessSupervisor, InputInjector,
                      WindowSystem, Logger, Clock
-    services/        use-case implementations (only depend on domain + ports)
-    shared/          helpers several services use: option checks, followLog (buffer replay
-                     then live events, paced, no gap: watch and wait)
+    services/        use-case implementations (only depend on domain + ports): SpeechService,
+                     SessionService, WaitForSpeechService, NativeInputService (the input queue),
+                     InputCaptureService, WindowFocusService, ConfigService, StatusService,
+                     ChildServicesService, BridgeLifecycleService, TranscriptService (speech
+                     lines to the log at debug)
+    shared/          helpers several services use: option checks, abort helpers, followLog
+                     (buffer replay then live events, paced, no gap: watch, wait, capture)
   adapters/
     in/tcp/          socket listener + wire-format parsers → RecordSpeech;
                      reports its listener and connections → TrackCapture
@@ -97,16 +107,19 @@ packages/bridge/src/
     out/fs-config/   config.json in %APPDATA%
     out/process/     generic supervisor (ProcessSupervisor): spawn, readiness, restarts
                      with backoff, process-tree kill
+    out/npm/         per-version npm install into a temp folder, renamed when complete
     out/playwright/  the Playwright server on that supervisor (installs the configured version)
     out/mcp/         supervisor for Playwright MCP
     out/robotjs/     InputInjector on @jitsi/robotjs (mouse click, key chords)
     out/win32/       WindowSystem on koffi + user32 (process tree, top-level windows, foreground)
+    out/input/       DisabledInputInjector, DisabledWindowSystem: answer INPUT_DISABLED with the reason
     out/log/         bridge log: console + file, prefixes, colours, rotation
     out/clock/       system clock
     out/platform/    default file locations (config, log, Playwright cache) on shared `appDir`
   main.ts            composition root: startBridge, the only place adapters are wired to ports
-  composition/       its helpers: config loading, logging, building the supervisors and the
-                     proxy routes, listener start order.
+  composition/       its helpers: config loading, logging, building the services, supervisors
+                     and proxy routes, loading robotjs / koffi / the UI, listener start order,
+                     `TestSeams` (what tests may replace).
                      Rules belong in the services; this only constructs and connects
   bin/cli.ts         executable: parses argv (adapters/in/cli), starts main.ts
 ```
@@ -173,17 +186,23 @@ can't drift from it (see [Test client](../usage/client.md)).
 
 ```
 packages/client/src/
-  domain/              bridge URL validation + precedence, config keys, speech entry model,
-                       text matching + normalize, API version compatibility, errors
+  domain/              bridge URL validation + precedence, config keys, output format, speech
+                       entry and session model, bridge status, feed events, text matching +
+                       normalize, API version compatibility, window geometry → click point, errors
   application/
-    ports/in/          ManageClientConfig, SpeechCapture (the library's functions)
+    ports/in/          ManageClientConfig, SpeechCapture (the library's functions), NativeInput
     ports/out/         ClientConfigStore, BridgeApi, Clock
     services/          ClientConfigService, SpeechCaptureService (cursor, waits on the live feed),
-                       live feed (onSpeech: SSE with reconnect and backoff)
+                       NativeInputService (keys, clicks, captures, focus), speech-events (the SSE
+                       follower with reconnect, backoff and Last-Event-ID, shared by waits and
+                       onSpeech), live feed (onSpeech)
   adapters/
     in/cli/            argv → in-ports → stdout + exit code; parsing and output only
+    in/playwright/     the fixture (`./playwright` subpath) and focusPage (bring to front,
+                       else click + reload)
     out/fs-config/     client.json in %APPDATA% / ~/.config, atomic writes
-    out/http/          BridgeApi on fetch (REST + SSE parser), DTO ↔ domain mapping
+    out/http/          BridgeApi on fetch (REST + SSE parser), DTO ↔ domain mapping, the API
+                       version header check on every answer
     out/clock/         system clock
   main.ts              composition root: createClientConfig(env) and SpeechCaptureClient, the only
                        place that knows the concrete adapters and reads process.env
@@ -210,12 +229,13 @@ ports (the speech one and this one) and forwards to two services that share one 
 which checks the API version of every answer
 ([decision](decisions.md#the-client-checks-the-api-version-on-every-answer)).
 
-The fixture (the `./playwright` subpath, a driving adapter) reads the window geometry from the
-`Page` (see [Native input](../usage/native-input.md)) and calls `NativeInput`. A pure domain function
-`clickPoint(geometry, target?)` does the math, so it is unit-tested without a browser. The fixture
-can still expose one `speech` object composed from both ports. To avoid a hand-written forwarding
-method per function in `main.ts`, generate the delegation (a small `delegate()` helper or a
-`Proxy`) or expose the services through a factory.
+The fixture (the `./playwright` subpath, a driving adapter) first asks `NativeInput.bringToFront`
+(the bridge finds the window by a title marker). Where that returns `null`, `focusPage` reads the
+window geometry from the `Page` (see [Native input](../usage/native-input.md)), clicks the corner
+of the page content and reloads. Pure domain functions (`clickPoint(geometry, target?)`,
+`contentCornerPoint`) do the math, so they are unit-tested without a browser.
+`SpeechCaptureClient` forwards each method by hand to one of the two services, so its public type
+is exactly the two ports.
 
 ## The web UI: a SvelteKit BFF
 
@@ -328,6 +348,8 @@ error there, so those lines reach the log file and never block on the console. W
 `pnpm dev:ui` (the Vite dev server) works next to `pnpm dev`. See the
 [flow](flows/web-ui.md).
 
+## Shared contract
+
 `packages/shared` holds only the **API contract**: the DTOs as valibot schemas, the protocol limits
 and a check function ([decisions](decisions.md#the-api-contract-is-valibot-schemas)). Each hexagon
 owns its own domain model and maps to and from the DTOs in its HTTP adapter. Its two pieces of behaviour are part of the contract, so
@@ -339,3 +361,61 @@ It also has one Node-only entry, `@screenreader-speech-capture/shared/platform-p
 resolves the per-user config, state and cache folders (`%APPDATA%` / `%LOCALAPPDATA%` on Windows,
 XDG elsewhere). It is shared because the bridge's `config.json` and the client's `client.json` must
 sit in the same folder, and kept out of the main entry so the UI's bundle stays free of `node:*`.
+
+## Errors
+
+One path from the bridge's domain to the agent's exit code:
+
+| Where | What |
+|---|---|
+| Bridge domain (`domain/errors.ts`) | `AppError(code, message, details?)` for every expected failure. `code` is one of `ErrorCode`, the same set as `ERROR_CODES` in `shared` (a type-level test keeps them equal). Services and the domain throw it; `invalidField(field, …)` sets `details.field`. |
+| Bridge HTTP adapter (`adapters/in/http/errors.ts`) | `sendError` maps an `AppError` to `ERROR_STATUS[code]` (`shared/src/errors.ts`) and the [error body](../usage/http-api.md#errors). Anything else is `500 INTERNAL` with a generic message; the stack goes only to the bridge log. A stream that already sent its headers is destroyed instead. |
+| Driven adapters | Report facts; only the disabled fallbacks (`out/input`) throw an `AppError`: `INPUT_DISABLED` with the load error as the reason. `WindowSystem.bringToFront` returns `false` when Windows refused, and `WindowFocusService` turns that into `FOCUS_FAILED` (no such window: `NOT_FOUND`). The proxy answers `SERVICE_UNAVAILABLE` for a service that isn't running. Any other thrown error stays plain and becomes `INTERNAL`. |
+| Client (`domain/errors.ts`, `adapters/out/http`) | `FetchBridgeApi` turns an error body into `BridgeHttpError` (`status`, `code`, `details`), a failed `fetch` into `BridgeUnreachableError`, another major API version into `IncompatibleBridgeError`, and an answer that doesn't match its schema into `BridgeHttpError` `INVALID_RESPONSE`. Waits throw `SpeechTimeoutError` / `SpeechTruncatedError` with the entries seen. |
+| CLI (`adapters/in/cli/errors.ts`) | A table maps each error class to its JSON `type` and exit code (`UsageError`, `ClientConfigError` → 3; `BridgeUnreachableError`, `BridgeHttpError`, `IncompatibleBridgeError` → 2; anything else `InternalError` → 4). Timeouts are not errors there: commands catch them and print a result with `status` and exit 1 ([usage](../usage/client.md#results-and-errors)). |
+
+A new error code is a minor API version: add it to `ERROR_CODES` and `ERROR_STATUS` in `shared`,
+to `ErrorCode` in the bridge, and to the table in [HTTP API → Errors](../usage/http-api.md#errors).
+Clients treat an unknown code as an error of its HTTP status.
+
+## Runtime model
+
+The bridge is one Node process with one event loop: TCP capture, the HTTP API, the SSE streams, the
+proxies and the web UI's server code all share it. Speech capture must never wait long behind
+something else, so long work is cut into steps and a few things are serialised on purpose.
+
+**Serialised:**
+
+| Queue | Where | Why |
+|---|---|---|
+| Input queue | `NativeInputService` (a promise chain, `InputQueue` port) | A click, a chord, a focus and a capture's `beforeInject` (settle, start `seq`) never interleave, so a capture's start is exact ([flow](flows/input.md), [decision](decisions.md#captures-of-native-input-run-on-the-bridge)). `settleMs` holds the queue while it waits. |
+| Config updates | `ConfigService` (a promise chain) | Each `PUT /config` starts from the `saved` result of the one before and writes the file once ([flow](flows/config.md)). |
+| One speech log | `SpeechLog` (synchronous) | `seq`, session ids and the cap are assigned in one synchronous call per entry, so the order of `seq` is the order of arrival. |
+
+**Cut into steps** (so capture runs in between):
+
+- A replay (`followLog`) reads the log in pages of `REPLAY_PAGE` (500) and calls `pace` after each
+  entry. For SSE, `SseHub.pace` waits for `drain` while the client hasn't read what was written,
+  and yields with `setImmediate` every 256 frames; the bridge's wait and the capture yield every
+  256 entries (`composition/pace.ts`) ([flow](flows/sse-replay.md),
+  [decision](decisions.md#the-sse-replay-follows-the-reader)).
+- A live SSE client that stops reading is destroyed once more than 1 MiB is queued for it
+  (`SSE_MAX_BUFFERED_BYTES`); it reconnects with `Last-Event-ID`.
+- A wait's `regex` runs synchronously on each entry and is not sandboxed: a catastrophic pattern
+  blocks the loop ([decision](decisions.md#a-waits-regex-is-not-sandboxed)).
+
+**Bounds** (what one client or one sender can make the bridge hold):
+
+| What | Limit | Set in |
+|---|---|---|
+| Speech entries | `buffer.maxEntries` (default 10 000, at most 1 000 000), oldest dropped in O(1) | config, `CONFIG_LIMITS` |
+| One TCP line | `tcp.maxLineBytes` (default 64 KiB, at most 16 MiB), cut and logged | config, `CONFIG_LIMITS` |
+| Queued SSE bytes per live client | 1 MiB, then the stream is closed | `SSE_MAX_BUFFERED_BYTES` |
+| A replay in memory | one page (500 entries) | `REPLAY_PAGE` |
+| Entries in a wait's timeout answer | the last 1000 seen, plus `omitted` | `API_LIMITS.wait.seen` |
+| Entries in a capture answer | the first 10 000, plus `omitted` | `API_LIMITS.capture.entries` |
+| A request body | 1 MiB | `MAX_BODY_BYTES` in `request.ts` |
+
+Child services (Playwright server, MCP, their browsers) are separate processes: a crash there
+never takes the event loop down, and the supervisor kills their whole tree
+([decision](decisions.md#child-process-trees-are-killed-by-the-bridge-not-the-os)).
