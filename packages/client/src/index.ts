@@ -39,6 +39,7 @@ export type {
 export {
   FocusError,
   type ElementBox,
+  type FocusedWindow,
   type MouseButton,
   type ScreenPoint,
 } from './domain/native-input.js';

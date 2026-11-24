@@ -794,6 +794,25 @@ describe('native input commands', () => {
     devicePixelRatio: 1.5,
   };
 
+  it("focus without options lets the bridge bring MCP's browser to the front", async () => {
+    const fake = fakeSpeech();
+    fake.api.windows = [{ target: 'mcp', pid: 9, titleOf: () => 'Shop - Chromium' }];
+    const json = await cli(['focus', '--json'], fake);
+    expect(JSON.parse(json.stdout)).toEqual({
+      focused: true,
+      window: { title: 'Shop - Chromium', pid: 9 },
+    });
+    expect(fake.api.calls).toContain('focus mcp');
+    expect((await cli(['focus'], fake)).stdout).toBe('Focused "Shop - Chromium"\n');
+    expect(fake.api.calls.filter((call) => call.startsWith('click'))).toEqual([]);
+  });
+
+  it('focus without options exits 2 when MCP has no browser window', async () => {
+    const result = await cli(['focus'], fakeSpeech());
+    expect(result.code).toBe(EXIT.bridge);
+    expect(result.stderr).toContain('NOT_FOUND');
+  });
+
   it('focus --script prints the function for MCP browser_evaluate, without the bridge', async () => {
     const fake = fakeSpeech();
     const result = await cli(['focus', '--script', '--json'], fake);
@@ -826,7 +845,8 @@ describe('native input commands', () => {
   });
 
   it.each([
-    [['focus']],
+    [['focus', '--capture']],
+    [['focus', '--quiet-for', '100']],
     [['focus', '--script', '--geometry', '{}']],
     [['focus', '--script', '--capture']],
     [['focus', '--geometry', 'not json']],

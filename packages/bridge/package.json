@@ -36,6 +36,7 @@
     "@playwright/mcp": "0.0.85"
   },
   "optionalDependencies": {
-    "@jitsi/robotjs": "0.6.24"
+    "@jitsi/robotjs": "0.6.24",
+    "koffi": "3.3.7"
   }
 }

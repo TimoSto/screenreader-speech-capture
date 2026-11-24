@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { bundledMcp } from '../src/adapters/out/mcp/playwright-mcp.js';
 import type { Prepare } from '../src/adapters/out/process/types.js';
 import type { Bridge } from '../src/main.js';
+import { FakeWindowSystem } from './fakes.js';
 import { accepts, eventually, freePort, start } from './helpers.js';
 
 const FAKE_SERVICE = path.resolve(import.meta.dirname, 'fixtures/fake-service.mjs');
@@ -41,11 +42,21 @@ async function putConfig(bridge: Bridge, patch: object): Promise<number> {
   return response.status;
 }
 
-async function startWithMcp(pidFile?: string) {
+async function startWithMcp(pidFile?: string, windowSystem?: FakeWindowSystem) {
   const port = await freePort();
-  const bridge = await start({ mcp: { enabled: true, port } }, { mcpLaunch: fakeLaunch(pidFile) });
+  const bridge = await start(
+    { mcp: { enabled: true, port } },
+    { mcpLaunch: fakeLaunch(pidFile), ...(windowSystem ? { windowSystem } : {}) },
+  );
   return { bridge, port };
 }
+
+const focus = (bridge: Bridge, body: object) =>
+  fetch(api(bridge, '/input/focus'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 
 const ready = (bridge: Bridge) =>
   eventually(
@@ -96,5 +107,39 @@ describe('Playwright MCP service', () => {
     await bridge.stop();
 
     expect(alive(pid)).toBe(false);
+  });
+
+  it('POST /input/focus brings a window of the MCP process tree to the front', async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'sr-mcp-'));
+    dirs.push(dir);
+    const pidFile = path.join(dir, 'service.pid');
+    const windows = new FakeWindowSystem();
+    const { bridge } = await startWithMcp(pidFile, windows);
+    await ready(bridge);
+    const pid = Number(await readFile(pidFile, 'utf8'));
+    // The browser MCP launched, below the service process.
+    windows.parents.set(pid + 1, pid);
+    windows.addWindow(4242, 'Editor');
+    windows.addWindow(pid + 1, 'Checkout - Chromium');
+
+    const res = await focus(bridge, { target: 'mcp' });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ title: 'Checkout - Chromium', pid: pid + 1 });
+    expect(windows.focused.map((w) => w.title)).toEqual(['Checkout - Chromium']);
+
+    const other = await focus(bridge, { target: 'playwright' });
+    expect(other.status).toBe(404);
+    windows.refuse = true;
+    const refused = await focus(bridge, { target: 'mcp' });
+    expect(refused.status).toBe(409);
+    expect(await refused.json()).toMatchObject({ error: { code: 'FOCUS_FAILED' } });
+  });
+
+  it('POST /input/focus answers INPUT_DISABLED where windows cannot be managed', async () => {
+    const { bridge } = await startWithMcp();
+    await ready(bridge);
+    const res = await focus(bridge, { target: 'mcp' });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: { code: 'INPUT_DISABLED' } });
   });
 });

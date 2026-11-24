@@ -14,18 +14,22 @@ out:
 | Screen reader commands: NVDA browse mode `H` / `K` / arrows, `Insert+T`, `Insert+F7`, JAWS virtual cursor | **No** | The screen reader catches these keys with a keyboard hook *before* the browser gets them. Synthetic browser keys skip that hook. |
 | Making the browser the active window | **No** | `page.bringToFront()` only switches tabs. The screen reader follows the **OS foreground window**. |
 
-So the bridge has two native-input endpoints, both built on
-[`@jitsi/robotjs`](https://github.com/jitsi/robotjs) (a maintained robotjs fork with prebuilt binaries):
+So the bridge has three native-input endpoints:
 
-- **`POST /api/v1/input/click`** does a real mouse click at screen coordinates. The browser window becomes
-  the foreground window, and the screen reader starts reading it. After that, Playwright input works as usual.
-- **`POST /api/v1/input/keys`** sends real key presses, for screen reader commands.
+- **`POST /api/v1/input/focus`** brings the window of a browser the bridge started (Playwright MCP's,
+  or one its Playwright server launched for a test) to the front, so the screen reader reads it. See
+  [Bringing the browser to the front](#bringing-the-browser-to-the-front).
+- **`POST /api/v1/input/click`** does a real mouse click at screen coordinates, built on
+  [`@jitsi/robotjs`](https://github.com/jitsi/robotjs) (a maintained robotjs fork with prebuilt
+  binaries). A click also makes a window the foreground window: the fallback for browsers the bridge
+  didn't start.
+- **`POST /api/v1/input/keys`** sends real key presses (robotjs), for screen reader commands.
 
-The bridge doesn't own the page, so it doesn't know where the browser window is. The
-**client calculates the coordinates**. `setFocus(page)` reads `window.screenX/Y`, the difference
-between the outer and inner window size, and `devicePixelRatio` through `page.evaluate`. From those
-it computes a safe click point: the window's title bar by default, or the centre of a `target`
-element you pass. Then it calls `/api/v1/input/click`.
+For the click fallback the **client calculates the coordinates**, because the bridge doesn't know
+where that window is. `setFocus(page)` reads `window.screenX/Y`, the difference between the outer and
+inner window size, and `devicePixelRatio` through `page.evaluate`. From those it computes a click
+point: the window's title bar by default, or the centre of a `target` element you pass. Then it
+calls `/api/v1/input/click`.
 
 **Which keys to use:**
 
@@ -33,7 +37,7 @@ element you pass. Then it calls `/api/v1/input/click`.
 |---|---|
 | Interact with the page (Tab, type, Enter on a button) | Playwright: `page.keyboard.press('Tab')` |
 | Give the screen reader a command (next heading, read title, elements list) | Native: `speech.pressKeys('h')`, `speech.pressKeys('Insert+T')` |
-| Before either: make the browser the foreground window | `speech.setFocus(page)` (title bar). The [Playwright fixture](client.md#playwright-fixture) does it automatically with its own `setFocus()`: a click on the top-left corner of the page content, then a reload. An agent without a `page` (Playwright MCP) uses the CLI's [`focus`](client.md#cli-for-agents): the same script and title-bar click, with the script run through MCP's `browser_evaluate` |
+| Before either: make the browser the foreground window | `speech.setFocus(page)`: the bridge brings the window forward if it started the browser, otherwise a title-bar click. The [Playwright fixture](client.md#playwright-fixture) does it automatically with its own `setFocus()` (its fallback: a click on the top-left corner of the page content, then a reload). An agent (Playwright MCP) runs the CLI's [`focus`](client.md#cli-for-agents) without options; `focus --script` / `--geometry` is the click fallback |
 
 **Key names** (`/api/v1/input/keys`): keys are joined with `+` for chords (`Insert+T`, `Control+Home`)
 and passed as an array for sequences (`["h", "h", "Insert+Down"]`). Names follow robotjs
@@ -42,6 +46,39 @@ and passed as an array for sequences (`["h", "h", "Insert+Down"]`). Names follow
 Modifiers are `Control`, `Shift`, `Alt`, `Win`. `Insert` and `CapsLock` also work as modifiers,
 because NVDA and JAWS use them as their screen reader key: they are held down with `keyToggle`
 while the other keys are pressed.
+
+## Bringing the browser to the front
+
+`POST /api/v1/input/focus` `{ "target": "mcp" | "playwright", "title"?: "…" }` (since API 1.21)
+makes a window of a browser the bridge started the foreground window, without a click:
+
+1. The bridge supervises Playwright MCP and the Playwright server, so it knows their process ids.
+   The browsers they launch are processes below them.
+2. It lists the visible top-level windows, front to back, and keeps those owned by a process of
+   that tree that have a title. With `title`, only the ones whose title contains it.
+3. It restores the window if it is minimised and makes it the foreground window. Windows only lets
+   a background process do that in some cases, so the bridge first taps Alt (it is then the process
+   that sent the last input), and if the window still isn't in front, tries again attached to the
+   input thread of the window that is. It answers `200 { "title", "pid" }` once the window is in
+   front.
+
+The screen reader follows the foreground window, and the browser puts the focus back where it was
+in the page. Unlike a click, this doesn't depend on display scaling or where the title bar is.
+
+**Which window.** MCP usually has one browser window: without `title`, the front-most one of its
+tree. The Playwright server can run several browsers at once, each with several windows. So
+`setFocus(page)` and the fixture put a unique marker into `document.title` for a moment
+(`sr-focus-<random>`). The browser shows it in the window title, and the client sends it as
+`title`. The bridge waits up to 2 seconds for it to show up, then the client puts the page title
+back.
+
+**Answers.** `404 NOT_FOUND`: the service isn't running, MCP hasn't opened its browser yet (it does
+on its first browser tool call), or no window has `title` (a browser the bridge didn't start). The
+client then falls back to the click. `409 INPUT_DISABLED`: not on Windows, or the optional
+dependency [`koffi`](https://koffi.dev/) (which calls the Win32 functions) could not be loaded; the
+client falls back too. `409 FOCUS_FAILED`: Windows refused, for example on a locked desktop; that is
+an error, not a fallback. The request runs in the input queue, so a focus and a key press never
+interleave.
 
 ## Capturing the speech an input causes
 
@@ -89,8 +126,8 @@ ends the capture; a shutdown answers `503`.
 - Use a fixed screen resolution and **100 % display scaling** on the VM. With other scaling
   the client corrects for `devicePixelRatio`, but browser zoom and multi-monitor setups can still
   move the click point.
-- Native input goes to whatever window is in the foreground. Call `setFocus` again after anything
-  that could steal focus (a new window, a dialog, the MCP browser).
+- Native input goes to whatever window is in the foreground. Call `setFocus` (or `focus` in the
+  CLI) again after anything that could steal focus (a new window, a dialog, the MCP browser).
 
 **When input is not available** (not on Windows, or robotjs failed to load), the bridge still starts,
 logs why under `[native-input]`, and both endpoints answer `409 INPUT_DISABLED` with the reason in

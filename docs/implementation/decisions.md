@@ -34,6 +34,33 @@ So the bridge has no locks, leases or per-client state:
 - The Playwright server, Playwright MCP and the web UI share the same screen reader. Use one at a
   time.
 
+## The bridge focuses browser windows it started
+
+`POST /input/focus` (API 1.21) brings a window of Playwright MCP's or the Playwright server's
+browsers to the front natively, instead of a click computed from the page's geometry
+([usage](../usage/native-input.md#bringing-the-browser-to-the-front)). The CLI's `focus` and the
+client's `setFocus` / fixture use it first; the click stays as the fallback.
+
+Why: the click guessed the title bar from `outerHeight - innerHeight` and `devicePixelRatio`, which
+breaks with other display scaling or a maximised window, and an agent needed three tool calls
+(`focus --script` → MCP `browser_evaluate` → `focus --geometry`). The bridge supervises both
+services, so their browsers are in process trees it knows.
+
+- **koffi, not PowerShell.** The Win32 calls (`EnumWindows`, `SetForegroundWindow`, …) run in
+  process through koffi, an FFI library with prebuilt binaries, in about a millisecond. A
+  PowerShell call starts a process and compiles its `Add-Type` block each time (0.5 to 1 s). koffi
+  is an optional dependency like robotjs: without it, or not on Windows, the endpoint answers
+  `INPUT_DISABLED` and clients fall back to the click.
+- **A title marker for tests.** The Playwright server runs a browser per connection and a window
+  per context, so "the server's window" is ambiguous. The client puts a unique marker into
+  `document.title` and the bridge matches it in the window title. The browser's process id (through
+  CDP) would only work for Chromium and still not tell a browser's windows apart.
+- **The foreground lock.** Windows lets a background process take the foreground only in some
+  cases. The bridge taps Alt first (it is then the last input sender), then tries once more attached
+  to the foreground window's input thread. `AllowSetForegroundWindow` doesn't help: it lets another
+  process take the foreground. Whether this holds with NVDA and JAWS running is checked on the VM
+  ([M7](../ROADMAP.md#m7-distribution-)).
+
 ## Captures of native input run on the bridge
 
 `POST /input/keys` and `POST /input/click` take a `capture` (API 1.19); the CLI's `--capture` and

@@ -19,10 +19,8 @@ screenreader-speech-capture-client config set output json                   # on
 screenreader-speech-capture-client session start "audit checkout page"      # once per task
 
 # Before the first screen reader command, and again after anything that could steal focus
-# (a new window, a dialog): bring the MCP browser to the foreground. Run the printed function
-# with Playwright MCP's browser_evaluate and pass what it returns:
-screenreader-speech-capture-client focus --script
-screenreader-speech-capture-client focus --geometry '{"screenX":0,"screenY":0,…}'
+# (a new window, a dialog): bring the MCP browser to the foreground (after MCP opened a page).
+screenreader-speech-capture-client focus
 
 # A screen reader command: one call presses the key and prints what it caused.
 screenreader-speech-capture-client press h --capture --json      # → judge the entries
@@ -60,8 +58,8 @@ It teaches an agent how to use the CLI:
 - the loop: `press … --capture` for screen reader commands, **mark → act → wait-silence →
   text --since** for Playwright MCP actions,
 - when to use Playwright MCP input and when to use `press` (screen reader commands),
-- that the browser must be in the foreground first (`focus --script` → MCP `browser_evaluate` →
-  `focus --geometry`), and when to do that again,
+- that the browser must be in the foreground first (`focus`, after MCP opened a page), when to
+  do that again, and the `--script` / `--geometry` fallback,
 - the exit codes, and that the exact wording depends on the screen reader and its verbosity.
 
 Install it into a project (or into `~/.claude/skills/` for all projects):
