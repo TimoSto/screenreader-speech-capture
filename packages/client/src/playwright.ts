@@ -46,6 +46,11 @@ export interface NativeInputFixtures {
     keys: string | readonly string[],
     options?: PressKeysOptions & InputRecordOptions,
   ) => Promise<InputRecording>;
+  /** `click` plus the speech the click causes, recorded on the bridge like `recordKeys`. */
+  recordClick: (
+    point: ScreenPoint,
+    options?: ClickOptions & InputRecordOptions,
+  ) => Promise<InputRecording>;
   /**
    * Gives the page's browser window OS-level focus: the bridge brings it to the front
    * (docs/usage/native-input.md#bringing-the-browser-to-the-front); where it can't, a native
@@ -116,6 +121,9 @@ export const test = base.extend<Fixtures, Workers>({
   },
   recordKeys: async ({ speechClient }, use) => {
     await use((keys, options) => speechClient.recordKeys(keys, options));
+  },
+  recordClick: async ({ speechClient }, use) => {
+    await use((point, options) => speechClient.recordClick(point, options));
   },
   setFocus: async ({ speechClient, page }, use) => {
     await use(() => focusPage(speechClient, page));

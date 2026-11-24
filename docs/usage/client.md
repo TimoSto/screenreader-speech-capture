@@ -262,9 +262,9 @@ The fixture:
   in it (turn off with `speechCaptureFocus: false`, needed where the bridge has no native input).
   Pages the test opens later need `setFocus()` again,
 - provides the [native input](native-input.md) as fixtures: `click(point, options?)` (screen
-  coordinates in physical pixels), `pressKeys(keys, options?)`, `recordKeys(keys, options?)` (the
-  keys plus the speech they cause, recorded on the bridge, like [`recordKeys`](#functions) of the
-  library) and `setFocus()` (the same, for the test's `page`),
+  coordinates in physical pixels), `pressKeys(keys, options?)`, `recordKeys(keys, options?)` and
+  `recordClick(point, options?)` (the input plus the speech it causes, recorded on the bridge, like
+  [`recordKeys` / `recordClick`](#functions) of the library) and `setFocus()` (the same, for the test's `page`),
 - starts a [session](speech-capture.md#sessions) per test before it runs (`startSession`, named
   after the test's title path, with one `run` label per Playwright run) and ends it after the test.
   It doesn't clear the buffer, so earlier tests stay visible in the [web UI](web-ui.md#context-pane),
