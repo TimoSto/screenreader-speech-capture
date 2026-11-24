@@ -49,6 +49,12 @@ export interface FocusTarget {
  */
 export interface FocusablePage {
   evaluate(expression: string): Promise<unknown>;
+  /**
+   * Playwright's `page.bringToFront()`: after the bridge brought the window to the front, moves
+   * the browser's keyboard focus from its toolbar (a blank tab focuses the address bar) into the
+   * page (docs/usage/native-input.md#bringing-the-browser-to-the-front). Skipped if missing.
+   */
+  bringToFront?(): Promise<void>;
 }
 
 export interface SetFocusOptions {

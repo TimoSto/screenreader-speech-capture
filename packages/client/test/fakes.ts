@@ -510,8 +510,15 @@ export class FakePage {
   /** Every title it had, oldest first. */
   readonly titles: string[] = [];
   reloads = 0;
+  /** How often `bringToFront()` (Playwright's, the keyboard focus into the page) was called. */
+  focused = 0;
 
   constructor(private readonly geometry: unknown = {}) {}
+
+  bringToFront(): Promise<void> {
+    this.focused++;
+    return Promise.resolve();
+  }
 
   evaluate(expression: string): Promise<unknown> {
     if (expression === 'document.title') return Promise.resolve(this.title);
