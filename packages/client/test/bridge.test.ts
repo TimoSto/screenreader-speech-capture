@@ -491,7 +491,9 @@ describe('CLI', () => {
     await say('old');
     const mark = await cli(['mark', 'step-1', '--url', url]);
     expect(mark.code).toBe(EXIT.ok);
-    const seq = mark.stdout.trim();
+    // `#<seq> [marker] step-1`: --since takes the `#<seq>` as printed.
+    expect(mark.stdout).toMatch(/^#\d+ \[marker\] step-1\n$/);
+    const seq = mark.stdout.split(' ')[0]!;
     await say('Submit, button');
 
     const found = await cli([

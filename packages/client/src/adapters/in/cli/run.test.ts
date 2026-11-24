@@ -322,7 +322,7 @@ describe('speech commands', () => {
     expect((await cli(['clear', '--all'], fake)).stdout).toBe('Speech buffer cleared.\n');
     fake.api.speak('one');
     const mark = await cli(['mark', 'step 1'], fake);
-    expect(mark.stdout).toBe('3\n');
+    expect(mark.stdout).toBe('#3 [marker] step 1\n');
     expect(JSON.parse((await cli(['mark', 'x', '--json'], fake)).stdout)).toMatchObject({
       seq: 4,
       kind: 'marker',
@@ -339,6 +339,7 @@ describe('speech commands', () => {
     };
     expect(json.entries.map((e) => e.text)).toEqual(['three']);
     expect((await cli(['text', '--since', '3'], fake)).stdout).toBe('two\nthree\n');
+    expect((await cli(['text', '--since', '#3'], fake)).stdout).toBe('two\nthree\n');
     expect(JSON.parse((await cli(['text', '--json', '--separator', ' '], fake)).stdout)).toEqual({
       text: 'one two three',
       truncated: false,

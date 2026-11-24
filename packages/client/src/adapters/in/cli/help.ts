@@ -70,7 +70,8 @@ Typical use (one session per task, then per step):
   session end
 
 seq: every entry (speech or marker) gets a number that only grows. --since <seq> means
-"only entries after this one"; take it from mark or from an entry's seq. --since mark:<label>
+"only entries after this one"; take it from an entry's #<seq> (mark prints one; #4712 and
+4712 are the same). --since mark:<label>
 starts after the newest marker with that label in the scope that is read, so no number has to
 be kept between calls (exit 3 if there is none).
 

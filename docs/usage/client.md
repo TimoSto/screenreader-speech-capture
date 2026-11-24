@@ -294,7 +294,8 @@ So `wait "button"` also matches what an *earlier* step said: use `mark` and `--s
 a smaller range, or `--capture` on `press` / `click` (below) to get exactly the speech an action
 caused.
 
-`--since` (on `speech`, `text`, `wait` and `tail`) takes a `seq` or `mark:<label>`: the newest
+`--since` (on `speech`, `text`, `wait` and `tail`) takes a `seq` (also as printed, `#4712`) or
+`mark:<label>`: the newest
 marker with that label in the scope the command reads (the bridge looks it up with
 `GET /markers/latest`; `tail` looks in the whole buffer). `mark step-2` in one call and
 `text --since mark:step-2` in a later one need no number in between. No such marker (never set,
@@ -314,7 +315,7 @@ npx screenreader-speech-capture-client speech [--since <seq>] [--limit <n>] [--i
 npx screenreader-speech-capture-client text [--since <seq>] [--separator <s>] [--session <id|current> | --all]
 npx screenreader-speech-capture-client wait "Submit, button" [--regex] [--normalize] [--timeout 5000] [--since <seq>] [--session <id|current> | --all]
 npx screenreader-speech-capture-client wait-silence [--quiet-for 500] [--timeout 10000]
-npx screenreader-speech-capture-client mark "before tab"   # prints the marker's seq; later: --since "mark:before tab"
+npx screenreader-speech-capture-client mark "before tab"   # prints "#<seq> [marker] before tab"; later: --since "mark:before tab"
 npx screenreader-speech-capture-client focus                # bring Playwright MCP's browser to the front
 npx screenreader-speech-capture-client focus --script       # fallback: the function to run with Playwright MCP's browser_evaluate
 npx screenreader-speech-capture-client focus --geometry '<its JSON result>' [--capture]   # … then click the browser's title bar
@@ -394,8 +395,8 @@ With `--json`, `wait` prints `{ "status": "matched", "entry": {...} }`, or on ti
 `truncated: true` if some of it was dropped because the bridge's buffer was full. `wait-silence`
 prints `{ "status": "silent" }`, or on timeout the same `timeout` result. On a timeout, stderr lists the speech seen, and if one of those entries
 matches when case and extra whitespace are ignored, a hint to use `--normalize`.
-`mark` prints the marker's `seq`, or the whole entry
-with `--json`.
+`mark` prints the marker as `speech --include-markers` does (`#4712 [marker] step-2`), or the
+whole entry with `--json`.
 
 `focus` brings the browser Playwright MCP drives to the foreground, for
 [native input](native-input.md): the bridge finds the window of the browser it started and brings
