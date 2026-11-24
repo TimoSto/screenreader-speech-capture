@@ -5,7 +5,7 @@ import type {
   StatusDto,
   WaitResultDto,
 } from '@screenreader-speech-capture/shared';
-import { API_VERSION } from '@screenreader-speech-capture/shared';
+import { API_VERSION, API_VERSION_HEADER } from '@screenreader-speech-capture/shared';
 import { once } from 'node:events';
 import net from 'node:net';
 import { describe, expect, it } from 'vitest';
@@ -63,6 +63,19 @@ async function openStream(bridge: Bridge, headers: Record<string, string> = {}) 
 }
 
 describe('HTTP API', () => {
+  it('sends the API version on every answer: JSON, errors and the stream', async () => {
+    const bridge = await start();
+    const answers = [
+      await fetch(api(bridge, '/speech')),
+      await fetch(api(bridge, '/nope')),
+      await fetch(api(bridge, '/speech?since=x')),
+    ];
+    for (const answer of answers) expect(answer.headers.get(API_VERSION_HEADER)).toBe(API_VERSION);
+    const stream = await openStream(bridge);
+    expect(stream.response.headers.get(API_VERSION_HEADER)).toBe(API_VERSION);
+    stream.close();
+  });
+
   it('lists speech as DTOs and clears it, with seq counting on', async () => {
     const bridge = await start();
     await send(bridge.tcpPort, 'voice=dev\r\none\r\ntwo\r\n');

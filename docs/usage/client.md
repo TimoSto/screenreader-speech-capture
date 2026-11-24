@@ -14,7 +14,7 @@ to the bridge's HTTP API and contains:
 - a **CLI** (`screenreader-speech-capture-client`) with the same functions, for AI agents and shell scripts,
 - an **agent skill** (see [Agent skill](agents.md#agent-skill)) *(planned, [M6](../ROADMAP.md#m6-agents-))*.
 
-On its first call, the client checks the bridge's API version and throws `IncompatibleBridgeError`
+On every answer, the client checks the bridge's API version (a response header) and throws `IncompatibleBridgeError`
 if the major version differs (see [Versioning](http-api.md#versioning)). The client's package
 version doesn't have to match the bridge's.
 

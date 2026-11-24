@@ -11,6 +11,8 @@ import type { FocusedWindow, FocusTarget } from '../src/domain/native-input.js';
 import type { SpeechFeedEvent } from '../src/domain/feed-event.js';
 import type { Session, SessionList, SessionRef, StartedSession } from '../src/domain/session.js';
 import type { SpeechEntry } from '../src/domain/speech-entry.js';
+import { API_VERSION } from '@screenreader-speech-capture/shared';
+import { checkApiVersion } from '../src/domain/api-version.js';
 import { BridgeHttpError } from '../src/domain/errors.js';
 
 /**
@@ -441,9 +443,20 @@ export class FakeBridgeApi implements BridgeApi {
     this.current = undefined;
   }
 
+  /**
+   * The next of `failures`, or an `IncompatibleBridgeError` for another major `apiVersion`, as
+   * `FetchBridgeApi` checks the version header of every answer.
+   */
   private fail(): Promise<never> | undefined {
     const error = this.failures.shift();
-    return error ? Promise.reject(error) : undefined;
+    if (error) return Promise.reject(error);
+    try {
+      checkApiVersion(this.apiVersion, API_VERSION);
+    } catch (incompatible) {
+      if (incompatible instanceof Error) return Promise.reject(incompatible);
+      throw incompatible;
+    }
+    return undefined;
   }
 
   private snapshot(): BridgeStatus {

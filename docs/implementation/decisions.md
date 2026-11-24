@@ -98,7 +98,7 @@ reference behaviour for the client.
 The CLI's `wait` uses the same path, although it only sends a string or a regex the bridge's wait
 could take. The bridge's wait would save no request: the CLI still asks `GET /status` for its
 default scope (the current session, or the whole buffer when none is current, which
-`session=current` can't express) and the version check, and the stream is open long before the
+`session=current` can't express), and the stream is open long before the
 screen reader speaks, so a match isn't reported any sooner. And it would be worse: one long request
 of up to 300 s (`timeoutMs` is capped) fails when the link drops, where the feed reconnects with
 `Last-Event-ID`; a `since` from an earlier bridge run waits until the timeout instead of getting
@@ -163,6 +163,19 @@ The same check closes a hole in the `seq` rule above: a `Last-Event-ID` higher t
 bridge handed out (from a run whose clock was ahead) is a gap, not a position to wait for, so the
 bridge sends `truncated` and the whole buffer instead of dropping every new entry as already
 delivered. `GET /speech/wait` doesn't do that: its `since` keeps its meaning of "after this `seq`".
+
+## The client checks the API version on every answer
+
+Every answer under `/api/v1` carries `X-SR-Speech-Api-Version` (API 1.22), and `FetchBridgeApi`
+checks it before it reads the body. Before, the services asked `GET /status` once before their
+first request (`VersionGate`). For the library that was one request per process, but every CLI call
+is a new process, so every command paid a round trip for the check.
+
+Checking the answer instead of asking first is as safe: the client only calls `/api/v1` paths, and
+a bridge of another major version either still serves them compatibly (it serves both prefixes for
+a while, [Versioning](../usage/http-api.md#versioning)) or answers 404 there, so no request can do
+something else than intended. The header is checked before the body because another major version
+may shape it differently. A missing header means a bridge older than 1.22, which speaks major 1.
 
 ## Bridge and client are released together
 

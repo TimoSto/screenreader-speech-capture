@@ -172,7 +172,11 @@ status.
   it changes, and its semver covers its own surface (for the bridge also CLI flags and the config
   file). Whether a client works with a bridge depends only on `apiVersion`, not on the package
   versions.
-- The client checks `apiVersion` on its first call:
+- Every answer under `/api/v1`, errors and the SSE stream included, carries the API version in
+  the `X-SR-Speech-Api-Version` response header (since 1.22). The client checks it on every
+  answer, before reading the body, instead of asking `GET /status` first. An answer without the
+  header comes from a bridge older than 1.22, which speaks major version 1.
+- The client checks the version of every answer:
   - **different major version:** error (`IncompatibleBridgeError`, CLI exit code `2`),
   - **another minor version:** works, no warning. Install the bridge and the client from the same
     release; the client doesn't check for features an older bridge lacks.

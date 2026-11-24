@@ -20,15 +20,12 @@ import type {
 } from '../ports/in/native-input.js';
 import type { BridgeApi, CaptureRequest, InputCapture } from '../ports/out/bridge-api.js';
 import { silenceFailure } from './silence.js';
-import { VersionGate } from './version-gate.js';
 
 interface NativeInputServiceDeps {
   api: Pick<
     BridgeApi,
     'status' | 'click' | 'pressKeys' | 'captureClick' | 'captureKeys' | 'focusWindow'
   >;
-  /** The HTTP API version this client was built for (`API_VERSION` from the shared contract). */
-  apiVersion: string;
   /** The unique part of a title marker. Default: random. */
   random?: (() => string) | undefined;
 }
@@ -40,19 +37,13 @@ const randomPart = () => Math.random().toString(36).slice(2, 10);
 
 /** {@link NativeInput} on the bridge's native input endpoints (docs/usage/native-input.md). */
 export class NativeInputService implements NativeInput {
-  readonly #gate: VersionGate;
-
-  constructor(private readonly deps: NativeInputServiceDeps) {
-    this.#gate = new VersionGate(deps.api, deps.apiVersion);
-  }
+  constructor(private readonly deps: NativeInputServiceDeps) {}
 
   async click(point: ScreenPoint, options: ClickOptions = {}): Promise<void> {
-    await this.#gate.ensure();
     await this.deps.api.click({ x: point.x, y: point.y, button: options.button });
   }
 
   async pressKeys(keys: string | readonly string[], options: PressKeysOptions = {}): Promise<void> {
-    await this.#gate.ensure();
     await this.deps.api.pressKeys({ keys, delayMs: options.delayMs });
   }
 
@@ -60,7 +51,6 @@ export class NativeInputService implements NativeInput {
     point: ScreenPoint,
     options: ClickOptions & InputRecordOptions = {},
   ): Promise<InputRecording> {
-    await this.#gate.ensure();
     const capture = await this.deps.api.captureClick({
       x: point.x,
       y: point.y,
@@ -74,7 +64,6 @@ export class NativeInputService implements NativeInput {
     keys: string | readonly string[],
     options: PressKeysOptions & InputRecordOptions = {},
   ): Promise<InputRecording> {
-    await this.#gate.ensure();
     const capture = await this.deps.api.captureKeys({
       keys,
       delayMs: options.delayMs,
@@ -84,12 +73,10 @@ export class NativeInputService implements NativeInput {
   }
 
   async focusMcpBrowser(): Promise<FocusedWindow> {
-    await this.#gate.ensure();
     return this.deps.api.focusWindow({ target: 'mcp' });
   }
 
   async bringToFront(page: FocusablePage): Promise<FocusedWindow | null> {
-    await this.#gate.ensure();
     const marker = focusMarker((this.deps.random ?? randomPart)());
     const original: unknown = await page.evaluate('document.title');
     await page.evaluate(`document.title = ${JSON.stringify(marker)}`);

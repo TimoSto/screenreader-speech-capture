@@ -1,6 +1,6 @@
 import http from 'node:http';
 import type { Duplex } from 'node:stream';
-import { API_PREFIX } from '@screenreader-speech-capture/shared';
+import { API_PREFIX, API_VERSION, API_VERSION_HEADER } from '@screenreader-speech-capture/shared';
 import type { GetStatus } from '../../../application/ports/in/get-status.js';
 import type { ManageConfig } from '../../../application/ports/in/manage-config.js';
 import type { ManageSessions } from '../../../application/ports/in/manage-sessions.js';
@@ -149,6 +149,8 @@ export class HttpServer {
     try {
       const url = parseUrl(req.url);
       path = url.pathname;
+      // On every API answer, errors and streams included: the client checks it on each one.
+      if (isApiPath(url.pathname)) res.setHeader(API_VERSION_HEADER, API_VERSION);
       const route = this.proxy.match(url.pathname);
       this.checkAccess(req, route !== undefined);
       if (route) this.proxy.forward(route, req, res, url);

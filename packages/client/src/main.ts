@@ -1,7 +1,6 @@
 // Composition root: the only place that knows the concrete adapters
 // (docs/implementation/architecture.md).
 import { hostname } from 'node:os';
-import { API_VERSION } from '@screenreader-speech-capture/shared';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { FsClientConfigStore } from './adapters/out/fs-config/fs-client-config-store.js';
 import { clientConfigFile } from './adapters/out/fs-config/paths.js';
@@ -90,12 +89,8 @@ export class SpeechCaptureClient implements SpeechCapture, NativeInput {
       baseUrl: this.#resolveUrl,
       clientName: options.clientName ?? `${hostname()} pid ${process.pid}`,
     });
-    this.#service = new SpeechCaptureService({
-      api,
-      clock: new SystemClock(),
-      apiVersion: API_VERSION,
-    });
-    this.#input = new NativeInputService({ api, apiVersion: API_VERSION });
+    this.#service = new SpeechCaptureService({ api, clock: new SystemClock() });
+    this.#input = new NativeInputService({ api });
   }
 
   click(point: ScreenPoint, options?: ClickOptions): Promise<void> {

@@ -1,4 +1,5 @@
 import type { SessionDto, SpeechEntryDto, StatusDto } from '@screenreader-speech-capture/shared';
+import { API_VERSION_HEADER } from '@screenreader-speech-capture/shared';
 import { describe, expect, it } from 'vitest';
 import type { StreamEvent } from '../../../application/ports/out/bridge-api.js';
 import {
@@ -227,9 +228,27 @@ describe('FetchBridgeApi requests', () => {
     ]);
   });
 
-  it('rejects a bridge with another major API version before reading its status', async () => {
-    const { fetch } = fakeFetch(() => json({ bridge: { apiVersion: '2.0' } }));
-    await expect(api(fetch).status()).rejects.toBeInstanceOf(IncompatibleBridgeError);
+  it('checks the version header of every answer before its body, errors included', async () => {
+    const v2 = (body: unknown, status = 200) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'content-type': 'application/json', [API_VERSION_HEADER]: '2.0' },
+      });
+    await expect(api(fakeFetch(() => v2({ other: true })).fetch).status()).rejects.toBeInstanceOf(
+      IncompatibleBridgeError,
+    );
+    await expect(
+      api(fakeFetch(() => v2({ error: { code: 'NOT_FOUND' } }, 404)).fetch).clear(),
+    ).rejects.toBeInstanceOf(IncompatibleBridgeError);
+    const v1 = new Response(JSON.stringify(statusDto('1.0')), {
+      headers: { 'content-type': 'application/json', [API_VERSION_HEADER]: '1.9' },
+    });
+    expect((await api(fakeFetch(() => v1).fetch).status()).bridge.apiVersion).toBe('1.0');
+  });
+
+  it('accepts an answer without the header: a bridge before API 1.22 speaks major 1', async () => {
+    const { fetch } = fakeFetch(() => json(statusDto('1.0')));
+    await expect(api(fetch).status()).resolves.toBeTruthy();
   });
 
   it('accepts a bridge with an older minor API version', async () => {
