@@ -84,7 +84,7 @@ with every run.
 {
   "bridge": {
     "version": "0.3.0",
-    "apiVersion": "1.13",
+    "apiVersion": "1.24",
     "state": "ready",
     "startedAt": "2026-11-07T14:00:58.000Z"
   },

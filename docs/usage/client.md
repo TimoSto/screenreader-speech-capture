@@ -255,6 +255,24 @@ The fixture:
 > Use **Chrome / Edge** (`channel`) or Playwright's Chromium. For Firefox and WebKit, see
 > [Limitations](limitations.md#browsers).
 
+### Running in CI
+
+A CI job that runs screen reader tests against a VM, in this order:
+
+1. Make sure the VM is fresh where it needs to be: an unlicensed JAWS stops talking after about 40
+   minutes, so reset the snapshot or restart Windows before the run
+   ([Screen reader licensing](vm-setup.md#screen-reader-licensing)). The bridge runs in the
+   logged-in, unlocked user session ([Running on the VM](vm-setup.md#running-on-the-vm)).
+2. Set `SR_SPEECH_URL=http://<vm>:5151` in the job's environment ([Bridge URL](#bridge-url)).
+3. Wait for the bridge: `npx screenreader-speech-capture-client status --wait-ready` (exit `1`: not
+   ready in time, `2`: not reachable). Its output shows whether the screen reader is connected
+   (`tcp.connections`) and whether native input works (`input`).
+4. Run Playwright with `workers: 1` and the client's Playwright version matching the bridge's
+   ([Version](playwright-mcp.md#version)). The fixture starts a session per test with one `run`
+   label for the whole run.
+5. Keep the Playwright report as a job artifact: every test has its speech transcript attached
+   (`speechCaptureAttach`).
+
 ## CLI for agents
 
 The CLI command has the same name as the package, `screenreader-speech-capture-client`.
