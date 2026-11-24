@@ -4,7 +4,7 @@ import type { SpeechCapture } from '../../../application/ports/in/speech-capture
 import { EXIT, type CliIo, type Context } from './command.js';
 import { COMMANDS } from './commands/index.js';
 import { reportError } from './errors.js';
-import { helpText } from './help.js';
+import { commandHelp, helpText } from './help.js';
 import { OPTIONS, UsageError, checkOptions } from './options.js';
 
 export { EXIT, type CliIo } from './command.js';
@@ -37,8 +37,12 @@ async function dispatch(
   }
   const { values, positionals } = parsed;
   state.json = values.json;
+  const [name, ...args] = positionals;
+  const command = name !== undefined && Object.hasOwn(COMMANDS, name) ? COMMANDS[name] : undefined;
   if (values.help) {
-    io.stdout(helpText());
+    if (name === undefined) io.stdout(helpText());
+    else if (command === undefined) throw new UsageError(`Unknown command "${name}".`);
+    else io.stdout(commandHelp(name, command));
     return EXIT.ok;
   }
   if (values.version) {
@@ -46,9 +50,7 @@ async function dispatch(
     return EXIT.ok;
   }
 
-  const [name, ...args] = positionals;
   if (name === undefined) throw new UsageError('Missing command.');
-  const command = Object.hasOwn(COMMANDS, name) ? COMMANDS[name] : undefined;
   if (command === undefined) throw new UsageError(`Unknown command "${name}".`);
   checkOptions(name, command.options, values);
 

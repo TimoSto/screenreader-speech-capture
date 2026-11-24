@@ -558,6 +558,16 @@ it('--help and --version', async () => {
   expect((await run(['--version'])).stdout).toBe('1.2.3\n');
 });
 
+it('<command> --help shows only that command, even with arguments that would not parse', async () => {
+  const press = await run(['press', '--help']);
+  expect(press.code).toBe(EXIT.ok);
+  expect(press.stdout).toMatch(/^Usage:\n {2}press <keys\.\.\.>/);
+  expect(press.stdout).not.toContain('Commands:');
+  expect((await run(['session', 'start', '-h'])).stdout).toContain('session list');
+  expect((await run(['wait', '--help', '--limit', 'x'])).code).toBe(EXIT.ok);
+  expect(await run(['nope', '--help'])).toMatchObject({ code: EXIT.usage, stdout: '' });
+});
+
 it('config never creates a bridge client', async () => {
   const fake = fakeSpeech();
   fake.speech = (): SpeechCapture => {
