@@ -1,5 +1,9 @@
 import { createTextTest } from '@screenreader-speech-capture/shared';
-import { SpeechTimeoutError, SpeechTruncatedError } from '../../../../domain/errors.js';
+import {
+  BridgeNotReadyError,
+  SpeechTimeoutError,
+  SpeechTruncatedError,
+} from '../../../../domain/errors.js';
 import type { SpeechEntry } from '../../../../domain/speech-entry.js';
 import type { CliIo } from '../command.js';
 import { EXIT, type Command, type HelpLine } from '../command.js';
@@ -37,17 +41,28 @@ const STATUS: HelpLine = {
 export const status: Command = {
   options: ['wait-ready', 'timeout'],
   help: [STATUS],
-  async run(args, { values, speech, out }) {
+  async run(args, { values, speech, out, io, json }) {
     expectArgs(args, 0, STATUS.usage);
     const timeout = optionalInt(values, 'timeout', 0);
     if (!values['wait-ready'] && timeout !== undefined) {
       throw new UsageError('--timeout needs --wait-ready.');
     }
-    const result = values['wait-ready']
-      ? await speech().waitForReady({ timeout })
-      : await speech().status();
-    out('status', result, formatStatus(result));
-    return EXIT.ok;
+    if (!values['wait-ready']) {
+      const result = await speech().status();
+      out('status', result, formatStatus(result));
+      return EXIT.ok;
+    }
+    try {
+      const result = await speech().waitForReady({ timeout });
+      out('status', { status: 'ready', ...result }, formatStatus(result));
+      return EXIT.ok;
+    } catch (error) {
+      // Not ready in time is a result (exit 1), not an error object.
+      if (!(error instanceof BridgeNotReadyError)) throw error;
+      if (json) out('status', { status: 'not-ready', reason: error.message }, '');
+      io.stderr(`${NAME}: ${error.message}\n`);
+      return EXIT.timeout;
+    }
   },
 };
 
@@ -251,15 +266,11 @@ export const wait: Command = {
     };
     try {
       const entry = await client.waitForOutput(match, options);
-      out('wait', { matched: true, entry }, formatEntry(entry));
+      out('wait', { status: 'matched', entry }, formatEntry(entry));
       return EXIT.ok;
     } catch (error) {
       if (!(error instanceof SpeechTimeoutError)) throw error;
-      // Without --json, the timeout is only the message on stderr.
-      if (json) {
-        out('wait', { matched: false, entries: error.entries, truncated: error.truncated }, '');
-      }
-      io.stderr(`${NAME}: ${error.message}.${seenText(error.entries)}\n`);
+      printTimeout(io, json, error, (result) => out('wait', result, ''));
       // The wording depends on the screen reader and its verbosity: point at --normalize when it
       // is what made the difference.
       const normalized = values.normalize ? undefined : createTextTest(match, true);
@@ -278,13 +289,18 @@ const WAIT_SILENCE: HelpLine = {
 export const waitSilence: Command = {
   options: ['quiet-for', 'timeout'],
   help: [WAIT_SILENCE],
-  async run(args, { values, speech, out }) {
+  async run(args, { values, speech, out, io, json }) {
     expectArgs(args, 0, WAIT_SILENCE.usage);
     const quietFor = optionalInt(values, 'quiet-for', 1);
     const timeout = optionalInt(values, 'timeout', 0);
-    // A timeout is a SpeechTimeoutError: exit 1, reported like every other error.
-    await speech().waitForSilence({ quietFor, timeout });
-    out('wait-silence', { silent: true }, 'Silent.');
+    try {
+      await speech().waitForSilence({ quietFor, timeout });
+    } catch (error) {
+      if (!(error instanceof SpeechTimeoutError)) throw error;
+      printTimeout(io, json, error, (result) => out('wait-silence', result, ''));
+      return EXIT.timeout;
+    }
+    out('wait-silence', { status: 'silent' }, 'Silent.');
     return EXIT.ok;
   },
 };
@@ -377,4 +393,18 @@ async function readAll(
     io.stderr(`${NAME}: ${TRUNCATED_WARNING}\n`);
     return { entries: error.entries, truncated: true };
   }
+}
+
+/**
+ * A wait that timed out: a result with `status: 'timeout'` and the speech seen (exit 1), only
+ * with --json; the message and that speech always go to stderr.
+ */
+function printTimeout(
+  io: CliIo,
+  json: boolean,
+  error: SpeechTimeoutError,
+  print: (result: { status: 'timeout'; entries: SpeechEntry[]; truncated: boolean }) => void,
+): void {
+  if (json) print({ status: 'timeout', entries: error.entries, truncated: error.truncated });
+  io.stderr(`${NAME}: ${error.message}.${seenText(error.entries)}\n`);
 }

@@ -37,12 +37,12 @@ describe('CLI output schemas', () => {
   });
 
   it('reject a shape that differs, for example a wait timeout without truncated', () => {
-    expect(checkDto(CLI_OUTPUT.wait, { matched: false, entries: [] })).toMatchObject({
+    expect(checkDto(CLI_OUTPUT.wait, { status: 'timeout', entries: [] })).toMatchObject({
       ok: false,
       field: 'truncated',
     });
     expect(
-      checkDto(CLI_OUTPUT.wait, { matched: false, entries: [], truncated: false }),
+      checkDto(CLI_OUTPUT.wait, { status: 'timeout', entries: [], truncated: false }),
     ).toMatchObject({ ok: true });
   });
 

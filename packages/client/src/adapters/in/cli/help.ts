@@ -28,7 +28,8 @@ function globalOptions(): string {
 
 const EXIT_CODES = `Exit codes: 0 success, 1 timeout / no match, 2 bridge not reachable, HTTP error or
 incompatible bridge, 3 invalid usage or config, 4 internal error (a bug in this client).
-With --json, a failed command prints {"error":{"type","message",...}} on stdout.`;
+With --json, exit 1 prints the command's result with a "status" (timeout, not-ready) and the
+data seen; a failed command (2-4) prints {"error":{"type","message",...}} on stdout.`;
 
 /** `<command> --help`: its usage rows and the options it takes. */
 export function commandHelp(name: string, command: Command): string {

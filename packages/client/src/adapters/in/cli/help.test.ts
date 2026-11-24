@@ -81,7 +81,8 @@ describe('helpText', () => {
 
   it('ends with the exit codes, the --json error object and a newline', () => {
     expect(help).toContain('4 internal error');
-    expect(help).toMatch(/a failed command prints \{"error":.* on stdout\.\n$/);
+    expect(help).toMatch(/a failed command \(2-4\) prints \{"error":.* on stdout\.\n$/);
+    expect(help).toContain('exit 1 prints the command\'s result with a "status"');
   });
 });
 

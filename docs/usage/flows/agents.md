@@ -42,7 +42,7 @@ sequenceDiagram
             SR->>B: speech (TCP :4449)
             Note over B: until 500 ms quiet (by receivedAt)
             B-->>CLI: {"status": "silent", "startSeq": 119, "entries": […]}
-            CLI-->>A: {"pressed": true, "entries": […], "truncated": false}, exit 0 (or 1)
+            CLI-->>A: {"pressed": true, "status": "silent", "entries": […], "truncated": false}, exit 0 (or 1: "timeout")
         else page interaction
             A->>CLI: mark step-1
             CLI->>B: POST /api/v1/markers

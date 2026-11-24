@@ -171,11 +171,11 @@ function geometryOf(raw: string): WindowGeometry {
   }
 }
 
-/** What `--capture` recorded; `silent: false` when the speech went on until `--timeout`. */
+/** What `--capture` recorded; `status` as the bridge reports it (docs/usage/native-input.md). */
 interface Captured {
   entries: SpeechEntry[];
   truncated: boolean;
-  silent: boolean;
+  status: 'silent' | 'no-speech' | 'timeout';
 }
 
 /**
@@ -183,7 +183,7 @@ interface Captured {
  * bridge sends the input and records the speech after it until silence
  * (docs/usage/native-input.md#capturing-the-speech-an-input-causes), so speech of earlier steps
  * can't be mistaken for its result; hands it to `print` and returns the exit code. Speech that
- * doesn't pause is a result too (`silent: false`, exit 1): what was said is what the caller has
+ * doesn't pause is a result too (`status: 'timeout'`, exit 1): what was said is what the caller has
  * to judge.
  */
 async function act(
@@ -209,12 +209,16 @@ async function act(
   let failure: string | undefined;
   try {
     const recording = await record({ firstWithin, quietFor, timeout, settle });
-    captured = { entries: recording.entries, truncated: recording.truncated, silent: true };
+    captured = {
+      entries: recording.entries,
+      truncated: recording.truncated,
+      status: recording.entries.length === 0 ? 'no-speech' : 'silent',
+    };
     if (captured.truncated) io.stderr(`${NAME}: ${TRUNCATED_WARNING}\n`);
   } catch (error) {
     if (!(error instanceof SpeechTimeoutError)) throw error;
     // Its message already says when speech was dropped from the bridge's full buffer.
-    captured = { entries: error.entries, truncated: error.truncated, silent: false };
+    captured = { entries: error.entries, truncated: error.truncated, status: 'timeout' };
     failure = `${error.message}; the action has happened`;
   }
   // Text mode prints nothing for no speech, rather than an empty line.
