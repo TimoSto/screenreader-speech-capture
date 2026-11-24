@@ -168,7 +168,7 @@ const SPEECH: HelpLine = {
 export const speech: Command = {
   options: ['since', 'limit', 'include-markers', 'session', 'all'],
   help: [SPEECH],
-  async run(args, { values, speech, out, io }) {
+  async run(args, { values, json, speech, out, io }) {
     expectArgs(args, 0, SPEECH.usage);
     const client = speech();
     // Options are checked before the bridge is asked for the current session.
@@ -182,7 +182,10 @@ export const speech: Command = {
       session,
     };
     const read = await readAll(io, () => client.getSpeech(options));
-    out('speech', read, read.entries.map(formatEntry).join('\n'));
+    if (json || read.entries.length > 0) {
+      out('speech', read, read.entries.map(formatEntry).join('\n'));
+    }
+    if (read.entries.length === 0) io.stderr(`${NAME}: no speech.\n`);
     return EXIT.ok;
   },
 };
@@ -195,7 +198,7 @@ const TEXT: HelpLine = {
 export const text: Command = {
   options: ['since', 'separator', 'session', 'all'],
   help: [TEXT],
-  async run(args, { values, speech, out, io }) {
+  async run(args, { values, json, speech, out, io }) {
     expectArgs(args, 0, TEXT.usage);
     const client = speech();
     const since = sinceOption(values);
@@ -204,7 +207,9 @@ export const text: Command = {
     // `getText` is `getSpeech` joined; reading the entries keeps what is left on truncation.
     const { entries, truncated } = await readAll(io, () => client.getSpeech(options));
     const joined = entries.map((e) => e.text).join(values.separator ?? '\n');
-    out('text', { text: joined, truncated }, joined);
+    // Text mode prints nothing for no speech, rather than an empty line.
+    if (json || entries.length > 0) out('text', { text: joined, truncated }, joined);
+    if (entries.length === 0) io.stderr(`${NAME}: no speech.\n`);
     return EXIT.ok;
   },
 };

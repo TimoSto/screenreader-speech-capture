@@ -20,6 +20,7 @@ import {
 } from '../../../domain/errors.js';
 import { READ_GEOMETRY_SCRIPT, clickPoint } from '../../../domain/native-input.js';
 import { createClientConfig } from '../../../main.js';
+import { NAME } from './options.js';
 import { EXIT, runCli } from './run.js';
 
 /** Records calls and returns canned answers, so only parsing and output are tested here. */
@@ -225,7 +226,10 @@ describe('speech commands', () => {
     expect(JSON.parse((await cli(['clear', '--outside', '--json'], fake)).stdout)).toEqual({
       cleared: true,
     });
-    expect((await cli(['text', '--all'], fake)).stdout).toBe('\n');
+    expect(await cli(['text', '--all'], fake)).toMatchObject({
+      stdout: '',
+      stderr: `${NAME}: no speech.\n`,
+    });
     expect(fake.api.calls).toEqual(expect.arrayContaining(['clear current', 'clear none']));
     expect((await cli(['session', 'list'], fake)).stdout).toContain('#1 one: current');
     expect((await cli(['clear', '--session', '1'], fake)).stdout).toBe(
@@ -318,6 +322,25 @@ describe('speech commands', () => {
     expect((await cli(['text', '--since', '3'], fake)).stdout).toBe('two\nthree\n');
     expect(JSON.parse((await cli(['text', '--json', '--separator', ' '], fake)).stdout)).toEqual({
       text: 'one two three',
+      truncated: false,
+    });
+  });
+
+  it('speech and text print nothing on stdout for no speech, and say so on stderr', async () => {
+    const fake = fakeSpeech();
+    for (const command of ['speech', 'text']) {
+      expect(await cli([command], fake)).toMatchObject({
+        code: EXIT.ok,
+        stdout: '',
+        stderr: `${NAME}: no speech.\n`,
+      });
+    }
+    expect(JSON.parse((await cli(['speech', '--json'], fake)).stdout)).toEqual({
+      entries: [],
+      truncated: false,
+    });
+    expect(JSON.parse((await cli(['text', '--json'], fake)).stdout)).toEqual({
+      text: '',
       truncated: false,
     });
   });
