@@ -112,6 +112,15 @@ describe('ChildProcessSupervisor', () => {
     expect(logger.lines).toContain('info starting playwright 9.9.9');
   });
 
+  it('has a pid only while running', async () => {
+    const { supervisor } = await setup(fake());
+    expect(supervisor.pid()).toBeNull();
+    await supervisor.start();
+    expect(supervisor.pid()).toEqual(expect.any(Number));
+    await supervisor.stop();
+    expect(supervisor.pid()).toBeNull();
+  });
+
   it('restarts after crashes and fails after 5 in a row', async () => {
     const { supervisor, logger } = await setup(fake('--exit', '3'));
 

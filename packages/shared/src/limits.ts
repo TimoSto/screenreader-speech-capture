@@ -25,6 +25,8 @@ export const API_LIMITS = {
     delayMs: { default: 50, max: 10_000 },
     /** Most chords in one request. */
     maxKeys: 100,
+    /** Longest `title` of `POST /input/focus`. */
+    focusTitleLength: 200,
   },
   /**
    * `capture` of `POST /input/click` and `POST /input/keys` (and the client's `record()`, which

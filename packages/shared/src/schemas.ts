@@ -13,6 +13,8 @@ import { ErrorBodySchema, ErrorCodeSchema } from './errors.js';
 import {
   CaptureOptionsSchema,
   ClickRequestSchema,
+  FocusedWindowSchema,
+  FocusRequestSchema,
   InputCaptureSchema,
   KeysRequestSchema,
 } from './input.js';
@@ -44,6 +46,8 @@ export const API_SCHEMAS: Record<string, GenericSchema> = {
   KeysRequest: KeysRequestSchema,
   CaptureOptions: CaptureOptionsSchema,
   InputCapture: InputCaptureSchema,
+  FocusRequest: FocusRequestSchema,
+  FocusedWindow: FocusedWindowSchema,
   Session: SessionSchema,
   StartSessionResponse: StartSessionResponseSchema,
   SessionList: SessionListSchema,

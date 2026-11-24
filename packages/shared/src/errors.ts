@@ -6,6 +6,7 @@ export const ERROR_CODES = [
   'NOT_FOUND',
   'FORBIDDEN',
   'INPUT_DISABLED',
+  'FOCUS_FAILED',
   'SERVICE_UNAVAILABLE',
   'INTERNAL',
 ] as const;
@@ -18,6 +19,7 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   NOT_FOUND: 404,
   FORBIDDEN: 403,
   INPUT_DISABLED: 409,
+  FOCUS_FAILED: 409,
   SERVICE_UNAVAILABLE: 503,
   INTERNAL: 500,
 };
@@ -37,7 +39,7 @@ export const ErrorBodySchema = v.pipe(
   }),
   v.description(
     'Body of every error response. HTTP status per code: `INVALID_REQUEST` 400, `FORBIDDEN` ' +
-      '403, `INPUT_DISABLED` 409, `NOT_FOUND` 404 (also for unknown endpoints), ' +
+      '403, `INPUT_DISABLED` 409, `FOCUS_FAILED` 409 (since 1.21), `NOT_FOUND` 404 (also for unknown endpoints), ' +
       '`SERVICE_UNAVAILABLE` 503, `INTERNAL` 500.',
   ),
 );

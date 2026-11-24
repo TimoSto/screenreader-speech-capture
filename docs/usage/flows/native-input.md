@@ -36,9 +36,10 @@ sequenceDiagram
 
 ## Bring the browser to the front
 
-The screen reader follows the OS foreground window, which `page.bringToFront()` doesn't change. The
-bridge doesn't know where the window is, so the client computes the click point and the bridge
-clicks there.
+The screen reader follows the OS foreground window, which `page.bringToFront()` doesn't change. If
+the bridge started the browser (its Playwright server or MCP), it finds the window by a title
+marker and brings it forward itself. Otherwise the client computes a click point and the bridge
+clicks there. Details: [Bringing the browser to the front](../native-input.md#bringing-the-browser-to-the-front).
 
 ```mermaid
 sequenceDiagram
@@ -46,10 +47,20 @@ sequenceDiagram
     participant C as Client library
     participant Br as Browser (page)
     participant B as Bridge :5151
-    participant OS as Windows input
+    participant OS as Windows (user32)
     participant SR as NVDA / JAWS
 
     T->>C: setFocus(page)
+    C->>Br: document.title = "sr-focus-k3x9"
+    C->>B: POST /api/v1/input/focus {"target": "playwright", "title": "sr-focus-k3x9"}
+    B->>OS: processes below the Playwright server, their top-level windows
+    OS-->>B: "sr-focus-k3x9 - Chromium" (pid 4242), …
+    B->>OS: Alt tap, SetForegroundWindow
+    OS->>Br: browser window becomes foreground
+    SR->>SR: reads the new foreground window
+    B-->>C: 200 {"title": "sr-focus-k3x9 - Chromium", "pid": 4242}
+    C->>Br: document.title = original title
+    Note over C,B: fallback, on 404 or 409 INPUT_DISABLED<br/>(a browser the bridge didn't start, not Windows)
     C->>Br: page.evaluate: screenX/Y, outer − inner size, devicePixelRatio
     Br-->>C: window geometry
     Note over C: click point = title bar<br/>(or the centre of target), in physical pixels

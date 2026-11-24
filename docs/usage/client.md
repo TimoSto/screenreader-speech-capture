@@ -120,7 +120,9 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `record(fn, { firstWithin?, quietFor?, timeout? })` | `{ result, entries, truncated }` | Run `fn` and return everything spoken while it ran and after it: waits up to `firstWithin` ms (default 2000) for the first speech, then until nothing new was said for `quietFor` ms (default 500), and moves the cursor to the end. Empty `entries`: nothing was said within `firstWithin`. `truncated: true`: some of it was dropped because the bridge's buffer was full, so `entries` is incomplete (raise `buffer.maxEntries`). Throws `SpeechTimeoutError` if speech goes on until `timeout` (default 10000 ms); its `entries` are everything recorded until then. |
 | `mark(label)` | `SpeechEntry` | Insert a marker. Its `seq` can be used as `since`. |
 | `findMarker(label, { session? })` | `SpeechEntry \| undefined` | The newest marker with this label (API 1.20), in `session` (an id or `'current'`) or in all entries. For a step marked in another process. `undefined` if there is none, also when it was dropped or cleared. |
-| `setFocus(page, { target? })` | `void` | Make the page's browser window the OS foreground window with a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
+| `setFocus(page, { target? })` | `void` | Make the page's browser window the OS foreground window. Without `target`, the bridge brings it forward if it started the browser (`bringToFront`); otherwise, and with `target`, a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
+| `bringToFront(page)` | `{ title, pid } \| null` | Ask the bridge to bring the page's window to the front (API 1.21), found by a marker in `document.title` ([how](native-input.md#bringing-the-browser-to-the-front)). `null` when the bridge can't (a browser it didn't start, not on Windows). Throws `BridgeHttpError` `FOCUS_FAILED` when Windows refused. |
+| `focusMcpBrowser()` | `{ title, pid }` | Bring Playwright MCP's browser window to the front (API 1.21). `NOT_FOUND` before MCP opened its browser. |
 | `click({ x, y }, { button? })` | `void` | Native click at screen coordinates in physical pixels (`POST /api/v1/input/click`). |
 | `pressKeys(keys, { delayMs? })` | `void` | Native key presses, for screen reader commands (`'Insert+T'`, `['h', 'h']`). |
 | `recordKeys(keys, { delayMs?, firstWithin?, quietFor?, timeout?, settle? })` | `{ entries, truncated, startSeq }` | `pressKeys` plus the speech it caused, recorded by the bridge ([Capturing the speech an input causes](native-input.md#capturing-the-speech-an-input-causes), API 1.19): like `record(() => pressKeys(keys))` with the same defaults, but the start is taken right before the keys and the silence is timed where the speech arrives. `settle` ms (default 0) first waits for that much silence. Throws `SpeechTimeoutError` like `record`. Doesn't move the cursor. |
@@ -216,14 +218,15 @@ The fixture:
 - sets Playwright's `connectOptions.wsEndpoint` to the bridge's Playwright server
   (`ws://<bridge>/playwright`, [Remote Playwright & MCP](playwright-mcp.md)) and forces
   `headless: false`, so `page` opens visibly in the VM's desktop session where the screen reader runs,
-- gives the browser window OS-level focus before each test, so native keys reach the page: it reads
-  where the page content starts, clicks its top-left corner with a [native click](native-input.md),
-  and reloads the page, so the click leaves no trace in it (turn off with
-  `speechCaptureFocus: false`, needed where the bridge has no native input). Pages the test opens
-  later need `setFocus()` again,
+- gives the browser window OS-level focus before each test, so native keys reach the page: the
+  bridge [brings it to the front](native-input.md#bringing-the-browser-to-the-front) (it started the
+  browser). Where it can't, the fixture reads where the page content starts, clicks its top-left
+  corner with a [native click](native-input.md), and reloads the page, so the click leaves no trace
+  in it (turn off with `speechCaptureFocus: false`, needed where the bridge has no native input).
+  Pages the test opens later need `setFocus()` again,
 - provides the [native input](native-input.md) as fixtures: `click(point, options?)` (screen
-  coordinates in physical pixels), `pressKeys(keys, options?)` and `setFocus()` (the same corner
-  click and reload, for the test's `page`),
+  coordinates in physical pixels), `pressKeys(keys, options?)` and `setFocus()` (the same, for the
+  test's `page`),
 - starts a [session](speech-capture.md#sessions) per test before it runs (`startSession`, named
   after the test's title path, with one `run` label per Playwright run) and ends it after the test.
   It doesn't clear the buffer, so earlier tests stay visible in the [web UI](web-ui.md#context-pane),
@@ -291,8 +294,9 @@ npx screenreader-speech-capture-client text [--since <seq>] [--separator <s>] [-
 npx screenreader-speech-capture-client wait "Submit, button" [--regex] [--normalize] [--timeout 5000] [--since <seq>] [--session <id|current> | --all]
 npx screenreader-speech-capture-client wait-silence [--quiet-for 500] [--timeout 10000]
 npx screenreader-speech-capture-client mark "before tab"   # prints the marker's seq; later: --since "mark:before tab"
-npx screenreader-speech-capture-client focus --script       # the function to run with Playwright MCP's browser_evaluate
-npx screenreader-speech-capture-client focus --geometry '<its JSON result>' [--capture]   # click the browser's title bar
+npx screenreader-speech-capture-client focus                # bring Playwright MCP's browser to the front
+npx screenreader-speech-capture-client focus --script       # fallback: the function to run with Playwright MCP's browser_evaluate
+npx screenreader-speech-capture-client focus --geometry '<its JSON result>' [--capture]   # … then click the browser's title bar
 npx screenreader-speech-capture-client click --x 640 --y 12  # native click (negative: --x=-5)
 npx screenreader-speech-capture-client press "Insert+T"      # native keys, several args = sequence (--delay <ms>)
 npx screenreader-speech-capture-client press h --capture [--first-within 2000] [--quiet-for 500] [--timeout 10000] [--settle 0]   # … and print the speech it caused (also click)
@@ -350,8 +354,12 @@ matches when case and extra whitespace are ignored, a hint to use `--normalize`.
 `mark` prints the marker's `seq`, or the whole entry
 with `--json`.
 
-`focus` brings a browser the CLI has no `page` of (the one Playwright MCP drives) to the
-foreground, for [native input](native-input.md). `focus --script` prints the function `setFocus`
+`focus` brings the browser Playwright MCP drives to the foreground, for
+[native input](native-input.md): the bridge finds the window of the browser it started and brings
+it to the front ([how](native-input.md#bringing-the-browser-to-the-front)), and the command prints
+`{ "focused": true, "window": { "title", "pid" } }`. Before MCP opened its browser that is
+`NOT_FOUND` (exit `2`). For a browser the bridge didn't start, or a bridge without window support,
+there is the click fallback: `focus --script` prints the function `setFocus`
 evaluates (`{ "script": "() => ({…})" }` with `--json`). Run it with MCP's `browser_evaluate` and
 pass its result to `focus --geometry '<json>'`, which clicks the middle of the window's title bar,
 like `setFocus(page)`, and prints `{ "focused": true, "point": { "x": …, "y": … } }`. A value that

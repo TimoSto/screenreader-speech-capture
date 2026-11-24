@@ -11,11 +11,16 @@ export interface ReloadablePage extends FocusablePage {
 }
 
 /**
- * Gives the page's browser window OS-level focus (docs/usage/client.md#playwright-fixture):
- * clicks the top-left corner of the page content with a native click, then reloads the page, so
- * the click leaves no trace in it.
+ * Gives the page's browser window OS-level focus (docs/usage/client.md#playwright-fixture): the
+ * bridge brings it to the front if it started the browser (`bringToFront`). Otherwise a native
+ * click on the top-left corner of the page content, then a reload, so the click leaves no trace
+ * in it.
  */
-export async function focusPage(input: Pick<NativeInput, 'click'>, page: ReloadablePage) {
+export async function focusPage(
+  input: Pick<NativeInput, 'click' | 'bringToFront'>,
+  page: ReloadablePage,
+) {
+  if (await input.bringToFront(page)) return;
   const geometry = parseWindowGeometry(await page.evaluate(READ_GEOMETRY_SCRIPT));
   await input.click(contentCornerPoint(geometry));
   await page.reload();

@@ -1,7 +1,12 @@
 import type { BridgeStatus } from '../../../domain/bridge-status.js';
 import type { SpeechFeedEvent } from '../../../domain/feed-event.js';
 import type { SessionList, SessionRef, StartedSession } from '../../../domain/session.js';
-import type { MouseButton, ScreenPoint } from '../../../domain/native-input.js';
+import type {
+  FocusedWindow,
+  FocusTarget,
+  MouseButton,
+  ScreenPoint,
+} from '../../../domain/native-input.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 
 /** One page of `GET /api/v1/speech`. */
@@ -75,6 +80,11 @@ export interface BridgeApi {
     keys: string | readonly string[];
     delayMs?: number | undefined;
   }): Promise<void>;
+  /**
+   * `POST /api/v1/input/focus` (API 1.21): brings a window of a browser the bridge started to the
+   * front; with `title`, one whose title contains it.
+   */
+  focusWindow(request: { target: FocusTarget; title?: string | undefined }): Promise<FocusedWindow>;
   /** `POST /api/v1/input/click` with `capture` (API 1.19): the click and the speech it caused. */
   captureClick(
     request: ScreenPoint & { button?: MouseButton | undefined; capture: CaptureRequest },

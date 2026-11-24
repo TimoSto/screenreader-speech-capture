@@ -4,6 +4,7 @@ import { type KeyChord, parseKeyChord } from '../../domain/key-chord.js';
 import type {
   ClickRequest,
   InputHooks,
+  InputQueue,
   PressKeysRequest,
   SendNativeInput,
 } from '../ports/in/send-native-input.js';
@@ -40,7 +41,7 @@ function parseKeys(keys: string | readonly string[]): KeyChord[] {
  * anything is sent. All requests share one queue, so a click and a chord (or two sequences) never
  * interleave. Modifiers of a chord are released again even when a key fails.
  */
-export class NativeInputService implements SendNativeInput {
+export class NativeInputService implements SendNativeInput, InputQueue {
   private queue: Promise<unknown> = Promise.resolve();
 
   constructor(private readonly deps: NativeInputServiceDeps) {}
@@ -90,8 +91,12 @@ export class NativeInputService implements SendNativeInput {
     }
   }
 
+  exclusive<T>(task: () => Promise<T>): Promise<T> {
+    return this.enqueue(task);
+  }
+
   /** Runs `task` after the earlier ones; a failed task doesn't stop the later ones. */
-  private enqueue(task: () => Promise<void>): Promise<void> {
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
     const run = this.queue.then(task);
     this.queue = run.catch(() => undefined);
     return run;

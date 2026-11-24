@@ -32,8 +32,8 @@ ${GLOBAL_OPTIONS.map((o) => `  ${o.flag.padEnd(width)}${o.description}`).join('\
 
 Typical use (one session per task, then per step):
   session start "audit checkout"   once per task; reads then see only this session
-  focus --script                   once, and again when focus moved: run the printed function
-                                   with MCP browser_evaluate, then focus --geometry '<result>'
+  focus                            once, and again when focus moved: brings the MCP browser
+                                   to the front (fallback: focus --script / --geometry)
   press h --capture --json         a screen reader command and the speech it caused
   mark step-2                      before an action in another tool (Playwright MCP)
   wait-silence                     after that action: until the screen reader is quiet

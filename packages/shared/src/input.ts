@@ -158,3 +158,47 @@ export const KeysRequestSchema = v.pipe(
 
 /** `POST /api/v1/input/keys` */
 export type KeysRequestDto = v.InferOutput<typeof KeysRequestSchema>;
+
+export const FOCUS_TARGETS = ['mcp', 'playwright'] as const;
+
+export const FocusRequestSchema = v.pipe(
+  v.object({
+    target: v.pipe(
+      v.picklist(FOCUS_TARGETS),
+      v.description(
+        'Whose browser: `mcp` (Playwright MCP) or `playwright` (the Playwright server, for tests).',
+      ),
+    ),
+    title: v.pipe(
+      v.optional(
+        v.pipe(v.string(), v.minLength(1), v.maxLength(API_LIMITS.input.focusTitleLength)),
+      ),
+      v.description(
+        'Only a window whose title contains this text, for example a marker the caller put into ' +
+          '`document.title`. Without it, the front-most window of the target.',
+      ),
+    ),
+  }),
+  v.description(
+    '`POST /input/focus`: bring a browser window the bridge started to the front. Added in API 1.21.',
+  ),
+);
+
+/** `POST /api/v1/input/focus` */
+export type FocusRequestDto = v.InferOutput<typeof FocusRequestSchema>;
+
+export const FocusedWindowSchema = v.pipe(
+  v.object({
+    title: v.pipe(v.string(), v.description('The window title.')),
+    pid: v.pipe(
+      v.number(),
+      v.integer(),
+      v.minValue(1),
+      v.description('The process that owns the window.'),
+    ),
+  }),
+  v.description('The window `POST /input/focus` brought to the front. Added in API 1.21.'),
+);
+
+/** The answer of `POST /api/v1/input/focus`. */
+export type FocusedWindowDto = v.InferOutput<typeof FocusedWindowSchema>;

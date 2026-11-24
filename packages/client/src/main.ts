@@ -37,7 +37,7 @@ import { playwrightEndpoint } from './domain/playwright-endpoint.js';
 import { URL_ENV } from './domain/bridge-url.js';
 import type { BridgeStatus } from './domain/bridge-status.js';
 import type { SessionList, StartedSession } from './domain/session.js';
-import type { ScreenPoint } from './domain/native-input.js';
+import type { FocusedWindow, ScreenPoint } from './domain/native-input.js';
 import type { SpeechEntry } from './domain/speech-entry.js';
 import type { SpeechMatch } from './domain/text-match.js';
 
@@ -121,6 +121,14 @@ export class SpeechCaptureClient implements SpeechCapture, NativeInput {
 
   setFocus(page: FocusablePage, options?: SetFocusOptions): Promise<void> {
     return this.#input.setFocus(page, options);
+  }
+
+  bringToFront(page: FocusablePage): Promise<FocusedWindow | null> {
+    return this.#input.bringToFront(page);
+  }
+
+  focusMcpBrowser(): Promise<FocusedWindow> {
+    return this.#input.focusMcpBrowser();
   }
 
   /** WebSocket URL of the bridge's Playwright server, for `browserType.connect()`. */

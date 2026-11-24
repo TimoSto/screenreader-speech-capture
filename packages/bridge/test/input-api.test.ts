@@ -119,4 +119,21 @@ describe('native input API', () => {
     const res = await post(bridge.httpPort, '/input/keys', { keys: 'a', capture: {} });
     expect(res.status).toBe(409);
   });
+
+  it('POST /input/focus checks the body and answers 404 when the service is not running', async () => {
+    const bridge = await start({}, { inputInjector: new RecordingInputInjector() });
+    const bad = await post(bridge.httpPort, '/input/focus', { target: 'firefox' });
+    expect(bad.status).toBe(400);
+    expect(await bad.json()).toMatchObject({ error: { details: { field: 'target' } } });
+    const longTitle = await post(bridge.httpPort, '/input/focus', {
+      target: 'playwright',
+      title: 'x'.repeat(201),
+    });
+    expect(longTitle.status).toBe(400);
+    const res = await post(bridge.httpPort, '/input/focus', { target: 'mcp' });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toMatchObject({
+      error: { code: 'NOT_FOUND', message: 'Playwright MCP is not running' },
+    });
+  });
 });

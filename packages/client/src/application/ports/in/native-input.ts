@@ -1,4 +1,9 @@
-import type { ElementBox, MouseButton, ScreenPoint } from '../../../domain/native-input.js';
+import type {
+  ElementBox,
+  FocusedWindow,
+  MouseButton,
+  ScreenPoint,
+} from '../../../domain/native-input.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import type { RecordOptions } from './speech-capture.js';
 
@@ -78,6 +83,25 @@ export interface NativeInput {
     keys: string | readonly string[],
     options?: PressKeysOptions & InputRecordOptions,
   ): Promise<InputRecording>;
-  /** Makes the page's browser window the foreground window with a native click. */
+  /**
+   * Makes the page's browser window the foreground window. Without `target`, the bridge brings
+   * the window forward itself if it started the browser (a test browser of its Playwright server,
+   * API 1.21); otherwise, and with `target`, a native click on the title bar or on `target`.
+   */
   setFocus(page: FocusablePage, options?: SetFocusOptions): Promise<void>;
+  /**
+   * Asks the bridge to bring the page's window to the front (API 1.21,
+   * docs/usage/native-input.md#bringing-the-browser-to-the-front): puts a marker into
+   * `document.title` for a moment, so the bridge finds this page's window among its Playwright
+   * server's browsers. `null` when the bridge can't (a browser it didn't start, not on Windows),
+   * so the caller can fall back to a click. Rejects with `BridgeHttpError` `FOCUS_FAILED` when
+   * Windows refused.
+   */
+  bringToFront(page: FocusablePage): Promise<FocusedWindow | null>;
+  /**
+   * Brings Playwright MCP's browser window to the front (API 1.21). Rejects with
+   * `BridgeHttpError` `NOT_FOUND` (MCP not running, or no browser yet), `INPUT_DISABLED` or
+   * `FOCUS_FAILED`.
+   */
+  focusMcpBrowser(): Promise<FocusedWindow>;
 }

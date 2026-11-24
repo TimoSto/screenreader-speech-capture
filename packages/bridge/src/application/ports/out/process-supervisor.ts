@@ -15,4 +15,9 @@ export interface ProcessSupervisor {
   /** Stops it and its child processes. Resolves when they have exited. */
   stop(): Promise<void>;
   status(): ServiceStatus;
+  /**
+   * The process id of the service while it is `running` (the root of its process tree, for
+   * example to find the windows of the browsers it started), otherwise `null`.
+   */
+  pid(): number | null;
 }

@@ -1,10 +1,13 @@
 // The client against a real bridge (real TCP + HTTP sockets), fed like the socket voice.
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import http from 'node:http';
+import os from 'node:os';
+import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { DisabledInputInjector } from '../../bridge/src/adapters/out/input/disabled-input-injector.js';
-import { RecordingInputInjector } from '../../bridge/test/fakes.js';
-import { freePort, send, start } from '../../bridge/test/helpers.js';
+import { FakeWindowSystem, RecordingInputInjector } from '../../bridge/test/fakes.js';
+import { eventually, freePort, send, start } from '../../bridge/test/helpers.js';
 import { SystemClock } from '../../bridge/src/adapters/out/clock/system-clock.js';
 import { EXIT, runCli } from '../src/adapters/in/cli/run.js';
 import { expectCliOutput } from './cli-output.js';
@@ -400,6 +403,42 @@ describe('native input', () => {
       silent: true,
       entries: [{ text: 'pressed k' }],
     });
+  });
+
+  it("focus brings the window of the bridge's MCP browser to the front", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'sr-focus-'));
+    onTestFinished(() => rm(dir, { recursive: true, force: true }));
+    const pidFile = path.join(dir, 'service.pid');
+    const fakeService = new URL('../../bridge/test/fixtures/fake-service.mjs', import.meta.url);
+    const windows = new FakeWindowSystem();
+    const b = await start(
+      { mcp: { enabled: true, port: await freePort() } },
+      {
+        windowSystem: windows,
+        mcpLaunch: ({ port }) =>
+          Promise.resolve({
+            command: process.execPath,
+            args: [fakeService.pathname, '--port', String(port), '--pid', pidFile],
+          }),
+      },
+    );
+    const url = `http://127.0.0.1:${b.httpPort}`;
+    const sr = new SpeechCaptureClient({ baseUrl: url, env });
+    await eventually(
+      () => sr.status(),
+      (status) => status.mcp.state === 'running',
+      300,
+    );
+    const pid = Number(await readFile(pidFile, 'utf8'));
+    windows.addWindow(pid, 'Shop - Chromium');
+
+    const result = await cli(['focus', '--json', '--url', url]);
+    expect(result.code).toBe(EXIT.ok);
+    expect(JSON.parse(result.stdout)).toEqual({
+      focused: true,
+      window: { title: 'Shop - Chromium', pid },
+    });
+    expect(windows.focused).toHaveLength(1);
   });
 
   it('the CLI exits 2 on INPUT_DISABLED', async () => {

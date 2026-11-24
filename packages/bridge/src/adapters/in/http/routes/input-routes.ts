@@ -4,12 +4,13 @@ import type {
   CaptureOptions,
   InputCaptureResult,
 } from '../../../../application/ports/in/capture-input.js';
+import type { FocusTarget, FocusWindow } from '../../../../application/ports/in/focus-window.js';
 import type {
   MouseButton,
   SendNativeInput,
 } from '../../../../application/ports/in/send-native-input.js';
 import { invalidField } from '../../../../domain/errors.js';
-import { toInputCaptureDto } from '../dto/input.js';
+import { toFocusedWindowDto, toInputCaptureDto } from '../dto/input.js';
 import {
   jsonBody,
   keysField,
@@ -17,6 +18,7 @@ import {
   optionalNumberField,
   optionalObjectField,
   optionalStringField,
+  stringField,
 } from '../request.js';
 import { sendJson, sendNoContent } from '../response.js';
 import type { Router } from '../router.js';
@@ -24,6 +26,7 @@ import type { Router } from '../router.js';
 interface InputRoutesDeps {
   input: SendNativeInput;
   captures: CaptureInput;
+  focus: FocusWindow;
 }
 
 /** The `capture` object of an input request, `undefined` without one. */
@@ -76,9 +79,21 @@ async function answer(
   sendJson(res, 200, toInputCaptureDto(result));
 }
 
-/** `POST /input/click`, `POST /input/keys` (docs/usage/http-api.md#endpoints). */
-export function inputRoutes(router: Router, { input, captures }: InputRoutesDeps): void {
+/** `POST /input/click`, `POST /input/keys`, `POST /input/focus` (docs/usage/http-api.md#endpoints). */
+export function inputRoutes(router: Router, { input, captures, focus }: InputRoutesDeps): void {
   router
+    .add('POST', '/input/focus', async ({ req, res }) => {
+      const body = await jsonBody(req);
+      const target = stringField(body, 'target');
+      if (target !== 'mcp' && target !== 'playwright') {
+        throw invalidField('target', 'must be mcp or playwright');
+      }
+      const focused = await focus.focus({
+        target: target satisfies FocusTarget,
+        title: optionalStringField(body, 'title'),
+      });
+      sendJson(res, 200, toFocusedWindowDto(focused));
+    })
     .add('POST', '/input/click', async ({ req, res }) => {
       const body = await jsonBody(req);
       const button = optionalStringField(body, 'button');

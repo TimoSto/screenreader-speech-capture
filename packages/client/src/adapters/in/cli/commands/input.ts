@@ -96,10 +96,18 @@ export const press: Command = {
   },
 };
 
+const FOCUS_MCP: HelpLine = {
+  usage: 'focus',
+  description: [
+    "Bring Playwright MCP's browser window to the front, before press: the",
+    'bridge finds the window of the browser it started (Windows; API 1.21)',
+  ],
+};
+
 const FOCUS: HelpLine = {
   usage: `focus (--script | --geometry <json>) ${CAPTURE_USAGE}`,
   description: [
-    'Bring the browser to the foreground, before press: run the --script',
+    'The fallback for a browser the bridge did not start: run the --script',
     "function with Playwright MCP's browser_evaluate and pass its result as",
     '--geometry; clicks the middle of the title bar;',
     ...CAPTURE_HELP,
@@ -111,13 +119,20 @@ export const FOCUS_SCRIPT = `() => ${READ_GEOMETRY_SCRIPT}`;
 
 export const focus: Command = {
   options: ['script', 'geometry', ...CAPTURE_OPTIONS],
-  help: [FOCUS],
+  help: [FOCUS_MCP, FOCUS],
   async run(args, ctx) {
     const { values, input, out } = ctx;
     expectArgs(args, 0, FOCUS.usage);
-    // Exactly one of --script and --geometry.
-    if (Boolean(values.script) === (values.geometry !== undefined)) {
+    if (values.script && values.geometry !== undefined) {
       throw new UsageError(`Usage: ${NAME} ${FOCUS.usage}`);
+    }
+    if (!values.script && values.geometry === undefined) {
+      if (CAPTURE_OPTIONS.some((option) => values[option] !== undefined)) {
+        throw new UsageError('--capture and its options go with --geometry.');
+      }
+      const window = await input().focusMcpBrowser();
+      out('focus', { focused: true, window }, `Focused "${window.title}"`);
+      return EXIT.ok;
     }
     if (values.script) {
       if (values.capture) throw new UsageError('--capture goes with --geometry, not --script.');

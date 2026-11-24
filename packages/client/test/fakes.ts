@@ -7,6 +7,7 @@ import type {
 } from '../src/application/ports/out/bridge-api.js';
 import type { Clock } from '../src/application/ports/out/clock.js';
 import type { BridgeStatus } from '../src/domain/bridge-status.js';
+import type { FocusedWindow, FocusTarget } from '../src/domain/native-input.js';
 import type { SpeechFeedEvent } from '../src/domain/feed-event.js';
 import type { Session, SessionList, SessionRef, StartedSession } from '../src/domain/session.js';
 import type { SpeechEntry } from '../src/domain/speech-entry.js';
@@ -96,6 +97,11 @@ export class FakeBridgeApi implements BridgeApi {
   clock: FakeClock | undefined;
   /** The `capture` of every capture request, oldest first. */
   readonly captures: CaptureRequest[] = [];
+  /**
+   * The browser windows `focusWindow` can find, front to back. A `title` is looked up while the
+   * request runs: `titleOf` reads it then (a page's `document.title`, for example).
+   */
+  windows: { target: FocusTarget; pid: number; titleOf: () => string }[] = [];
 
   /** Records a speech entry, as if the screen reader said `text`. */
   speak(...texts: string[]): void {
@@ -254,6 +260,24 @@ export class FakeBridgeApi implements BridgeApi {
       `keys ${keys}${request.delayMs === undefined ? '' : ` delay=${request.delayMs}`}`,
     );
     return this.fail() ?? Promise.resolve();
+  }
+
+  focusWindow(request: {
+    target: FocusTarget;
+    title?: string | undefined;
+  }): Promise<FocusedWindow> {
+    this.calls.push(
+      `focus ${request.target}${request.title === undefined ? '' : ` "${request.title}"`}`,
+    );
+    const failure = this.fail();
+    if (failure) return failure;
+    const found = this.windows.find(
+      (w) =>
+        w.target === request.target &&
+        (request.title === undefined || w.titleOf().includes(request.title)),
+    );
+    if (!found) return Promise.reject(new BridgeHttpError(404, 'NOT_FOUND', 'No such window'));
+    return Promise.resolve({ title: found.titleOf(), pid: found.pid });
   }
 
   captureClick(
@@ -450,5 +474,34 @@ export class FakeBridgeApi implements BridgeApi {
         count: this.allSessions.length,
       },
     };
+  }
+}
+
+/**
+ * A browser page as `setFocus` and the fixture use it: `document.title` can be read and set, the
+ * geometry script answers `geometry`, `reload` is counted.
+ */
+export class FakePage {
+  title = 'Checkout';
+  /** Every title it had, oldest first. */
+  readonly titles: string[] = [];
+  reloads = 0;
+
+  constructor(private readonly geometry: unknown = {}) {}
+
+  evaluate(expression: string): Promise<unknown> {
+    if (expression === 'document.title') return Promise.resolve(this.title);
+    const set = /^document\.title = (".*")$/.exec(expression);
+    if (set) {
+      this.title = JSON.parse(set[1]!) as string;
+      this.titles.push(this.title);
+      return Promise.resolve(this.title);
+    }
+    return Promise.resolve(this.geometry);
+  }
+
+  reload(): Promise<void> {
+    this.reloads++;
+    return Promise.resolve();
   }
 }

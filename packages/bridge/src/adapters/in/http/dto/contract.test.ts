@@ -5,6 +5,7 @@ import {
   ConfigOverridesSchema,
   ConfigSchema,
   type DtoSchema,
+  FocusedWindowSchema,
   InputCaptureSchema,
   LatestMarkerSchema,
   SessionListSchema,
@@ -19,7 +20,7 @@ import { describe, expect, it } from 'vitest';
 import { entry, session, status } from '../../../../../test/dto-fixtures.js';
 import { DEFAULT_CONFIG } from '../../../../domain/config/index.js';
 import { toConfigDto, toConfigOverridesDto } from './config.js';
-import { toInputCaptureDto } from './input.js';
+import { toFocusedWindowDto, toInputCaptureDto } from './input.js';
 import { toSessionDto, toSessionListDto, toStartSessionResponseDto } from './session.js';
 import { toLatestMarkerDto, toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from './speech.js';
 import { toStatusDto } from './status.js';
@@ -54,6 +55,11 @@ const cases: [string, DtoSchema, unknown][] = [
       omitted: 1,
       truncated: true,
     }),
+  ],
+  [
+    'focused window',
+    FocusedWindowSchema,
+    toFocusedWindowDto({ title: 'Checkout - Chromium', pid: 4242 }),
   ],
   ['ended session', SessionSchema, toSessionDto(session(new Date('2026-11-12T10:00:00Z')))],
   [

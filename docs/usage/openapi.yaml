@@ -2,7 +2,7 @@
 openapi: 3.1.0
 info:
   title: screenreader-speech-capture bridge API
-  version: '1.20'
+  version: '1.21'
   summary: Capture what a screen reader says and read it over HTTP.
   description: |
     REST + Server-Sent Events API of the bridge. `info.version` is the API version that
@@ -30,7 +30,8 @@ info:
     `sessionId` in the `data` of a scoped `clear` event. 1.18 added the `view` parameter of `GET /config`
     and `GET /config/overrides`. 1.19 added `capture` to `POST /input/click` and `POST /input/keys`
     (the bridge records the speech the input causes and answers `200` with `InputCapture`). 1.20
-    added `GET /markers/latest` (the newest marker with a label, for a `since`).
+    added `GET /markers/latest` (the newest marker with a label, for a `since`). 1.21 added
+    `POST /input/focus` and the `FOCUS_FAILED` error code.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -399,6 +400,43 @@ paths:
           $ref: '#/components/responses/InvalidRequest'
         '409':
           $ref: '#/components/responses/InputDisabled'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /input/focus:
+    post:
+      tags:
+        - input
+      operationId: focusWindow
+      summary: Bring a browser window to the front
+      description: |
+        Makes a window of a browser the bridge started (Playwright MCP's, or one the Playwright server launched for a test) the foreground window, so the screen reader reads it and native keys reach it (since 1.21, `docs/usage/native-input.md#bringing-the-browser-to-the-front`). The bridge looks for visible top-level windows of the service's process tree, front to back; with `title`, only one whose title contains it (it waits up to 2 seconds for the title, which the browser updates a moment after `document.title` changes). Runs in the input queue. Windows only. The body must be sent as `application/json`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FocusRequest'
+      responses:
+        '200':
+          description: The window that is now in front.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FocusedWindow'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '404':
+          description: 'No such window: the service is not running, has not opened a browser yet, or no window title contains `title`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: '`INPUT_DISABLED`: the bridge cannot manage windows here (not Windows, or `koffi` could not be loaded). `FOCUS_FAILED`: Windows refused to bring the window to the front.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
   /sessions:
@@ -885,6 +923,37 @@ components:
         - omitted
         - truncated
       description: The answer of `POST /input/click` and `POST /input/keys` with `capture`. Added in API 1.19.
+    FocusRequest:
+      type: object
+      properties:
+        target:
+          enum:
+            - mcp
+            - playwright
+          type: string
+          description: 'Whose browser: `mcp` (Playwright MCP) or `playwright` (the Playwright server, for tests).'
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Only a window whose title contains this text, for example a marker the caller put into `document.title`. Without it, the front-most window of the target.
+      required:
+        - target
+      description: '`POST /input/focus`: bring a browser window the bridge started to the front. Added in API 1.21.'
+    FocusedWindow:
+      type: object
+      properties:
+        title:
+          type: string
+          description: The window title.
+        pid:
+          type: integer
+          minimum: 1
+          description: The process that owns the window.
+      required:
+        - title
+        - pid
+      description: The window `POST /input/focus` brought to the front. Added in API 1.21.
     Session:
       type: object
       properties:
@@ -1466,6 +1535,7 @@ components:
         - NOT_FOUND
         - FORBIDDEN
         - INPUT_DISABLED
+        - FOCUS_FAILED
         - SERVICE_UNAVAILABLE
         - INTERNAL
       type: string
@@ -1490,7 +1560,7 @@ components:
             - message
       required:
         - error
-      description: 'Body of every error response. HTTP status per code: `INVALID_REQUEST` 400, `FORBIDDEN` 403, `INPUT_DISABLED` 409, `NOT_FOUND` 404 (also for unknown endpoints), `SERVICE_UNAVAILABLE` 503, `INTERNAL` 500.'
+      description: 'Body of every error response. HTTP status per code: `INVALID_REQUEST` 400, `FORBIDDEN` 403, `INPUT_DISABLED` 409, `FOCUS_FAILED` 409 (since 1.21), `NOT_FOUND` 404 (also for unknown endpoints), `SERVICE_UNAVAILABLE` 503, `INTERNAL` 500.'
     WaitResult:
       oneOf:
         - type: object

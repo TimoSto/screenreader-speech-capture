@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { FakeBridgeApi, FakeClock } from '../../../test/fakes.js';
-import { IncompatibleBridgeError, SpeechTimeoutError } from '../../domain/errors.js';
+import { FakeBridgeApi, FakeClock, FakePage } from '../../../test/fakes.js';
+import {
+  BridgeHttpError,
+  IncompatibleBridgeError,
+  SpeechTimeoutError,
+} from '../../domain/errors.js';
 import { FocusError } from '../../domain/native-input.js';
 import { NativeInputService } from './native-input-service.js';
 
@@ -19,7 +23,11 @@ function setup(apiVersion = '1.14') {
   const clock = new FakeClock();
   api.clock = clock;
   api.apiVersion = apiVersion;
-  return { api, clock, service: new NativeInputService({ api, apiVersion: '1.14' }) };
+  return {
+    api,
+    clock,
+    service: new NativeInputService({ api, apiVersion: '1.14', random: () => 'abc' }),
+  };
 }
 
 describe('NativeInputService', () => {
@@ -37,11 +45,54 @@ describe('NativeInputService', () => {
     expect(api.calls).toEqual(['status']);
   });
 
+  it("setFocus lets the bridge bring a test browser's window to the front by a title marker", async () => {
+    const { api, service } = setup();
+    const page = new FakePage(geometry);
+    api.windows = [{ target: 'playwright', pid: 7, titleOf: () => `${page.title} - Chromium` }];
+    await service.setFocus(page);
+    expect(api.calls).toEqual(['status', 'focus playwright "sr-focus-abc"']);
+    // The marker was in the title while the bridge looked, then the title came back.
+    expect(page.titles).toEqual(['sr-focus-abc', 'Checkout']);
+  });
+
+  it('bringToFront answers the window, or null when the bridge cannot focus it', async () => {
+    const { api, service } = setup();
+    const page = new FakePage(geometry);
+    api.windows = [{ target: 'playwright', pid: 7, titleOf: () => `${page.title} - Chromium` }];
+    expect(await service.bringToFront(page)).toEqual({
+      title: 'sr-focus-abc - Chromium',
+      pid: 7,
+    });
+    api.windows = [];
+    expect(await service.bringToFront(page)).toBeNull();
+    api.failures = [new BridgeHttpError(409, 'INPUT_DISABLED', 'not on Windows')];
+    expect(await service.bringToFront(page)).toBeNull();
+    expect(page.title).toBe('Checkout');
+  });
+
+  it('setFocus does not click when Windows refused: FOCUS_FAILED propagates', async () => {
+    const { api, service } = setup();
+    const page = new FakePage(geometry);
+    await service.focusMcpBrowser().catch(() => undefined); // passes the version check
+    api.failures = [new BridgeHttpError(409, 'FOCUS_FAILED', 'refused')];
+    await expect(service.setFocus(page)).rejects.toMatchObject({ code: 'FOCUS_FAILED' });
+    expect(api.calls.filter((call) => call.startsWith('click'))).toEqual([]);
+    expect(page.title).toBe('Checkout');
+  });
+
+  it("focusMcpBrowser brings MCP's browser to the front", async () => {
+    const { api, service } = setup();
+    api.windows = [{ target: 'mcp', pid: 9, titleOf: () => 'Shop - Chromium' }];
+    await expect(service.focusMcpBrowser()).resolves.toEqual({ title: 'Shop - Chromium', pid: 9 });
+    expect(api.calls).toEqual(['status', 'focus mcp']);
+  });
+
   it('setFocus clicks the title bar from the page geometry', async () => {
     const { api, service } = setup();
-    const page = { evaluate: () => Promise.resolve(geometry) };
+    const page = new FakePage(geometry);
     await service.setFocus(page);
-    expect(api.calls).toContain('click left 600,62');
+    // The bridge has no window for it (a browser it didn't start): the click is the fallback.
+    expect(api.calls).toEqual(['status', 'focus playwright "sr-focus-abc"', 'click left 600,62']);
   });
 
   it('setFocus clicks the centre of the target', async () => {
