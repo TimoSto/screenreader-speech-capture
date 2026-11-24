@@ -328,10 +328,32 @@ Exit codes, so agents can branch on them without parsing output:
 | Code | Meaning |
 |---|---|
 | `0` | Success (for `wait`: match found) |
-| `1` | Timeout / no match (also `status --wait-ready`, `wait-silence`, and `--capture` when the speech didn't pause) |
+| `1` | Timeout / no match (also `status --wait-ready`, `wait-silence`, and `--capture` when the speech didn't pause): a [result with a `status`](#results-and-errors), not an error |
 | `2` | Bridge not reachable, HTTP error, or incompatible bridge version |
 | `3` | Invalid usage or invalid client config |
 | `4` | Internal error: a bug in the client (the stack goes to stderr; please report it) |
+
+### Results and errors
+
+One rule tells what a command's exit code comes with:
+
+| Exit code | Meaning | With `--json` |
+|---|---|---|
+| `0` | Success. | The command's result. |
+| `1` | An expected outcome that isn't success: a wait timed out, the bridge wasn't ready in time. | The command's result, with a `status` that says what happened, and the data seen. |
+| `2`–`4` | Something went wrong. | An [error object](#errors-with---json). |
+
+The commands that wait put a `status` in their result:
+
+| Command | `status` with exit `0` | `status` with exit `1` |
+|---|---|---|
+| `wait` | `matched` (with `entry`) | `timeout` (with the `entries` seen and `truncated`) |
+| `wait-silence` | `silent` | `timeout` (with the `entries` seen and `truncated`) |
+| `press` / `click` / `focus --geometry` with `--capture` | `silent`, or `no-speech` when nothing was said | `timeout` (with what was said until then) |
+| `status --wait-ready` | `ready` (with the bridge status) | `not-ready` (with the `reason`) |
+
+Without `--json`, an exit `1` prints nothing on stdout (except `--capture`, which prints what was
+said) and the message on stderr.
 
 ### Errors with `--json`
 
@@ -350,12 +372,10 @@ its output (and `tail` ends with it as its last line). The message also goes to 
 | `BridgeUnreachableError` | `2` | No connection: wrong URL, bridge not running, network. Retrying (or `status --wait-ready`) may help. |
 | `BridgeHttpError` | `2` | The bridge refused the request. Also has `status`, `code` (for example `INPUT_DISABLED`, `NOT_FOUND`, `INVALID_REQUEST`) and, if sent, `details` (for example `field`) from the [error](http-api.md#errors). Retrying the same call won't help. |
 | `IncompatibleBridgeError` | `2` | Another major API version: install matching versions. |
-| `BridgeNotReadyError` | `1` | `status --wait-ready` timed out. |
-| `SpeechTimeoutError` | `1` | `wait-silence` timed out: speech went on (stderr lists the speech seen). |
 | `InternalError` | `4` | A bug in the client. |
 
-`wait` and `--capture` are the exceptions: their timeout is a result, `{ "matched": false, … }`
-and `{ "silent": false, … }` (see below), not an error object. The schema is `CliErrorOutput` in `packages/client/src/adapters/in/cli/output.ts`.
+A timeout is never an error object but a [result](#results-and-errors). The schema is
+`CliErrorOutput` in `packages/client/src/adapters/in/cli/output.ts`.
 
 `session start` prints the new session's id (the whole session with `--json`). `session list`
 prints one line per session, newest first (`#7 checkout test (run nightly-42): current, 3 entries,
@@ -368,10 +388,10 @@ they print what is left, warn on stderr and still exit `0`; with `--json` they a
 When there is no speech to show, they print nothing on stdout (the empty result with `--json`),
 `no speech` on stderr, and exit `0`.
 
-With `--json`, `wait` prints `{ "matched": true, "entry": {...} }`, or on timeout
-`{ "matched": false, "entries": [...], "truncated": false }` with the speech seen, and
-`truncated: true` if some of it was dropped because the bridge's buffer was full (the shapes
-follow [`GET /speech/wait`](http-api.md#endpoints), which reports `omitted` instead). On a timeout, stderr lists the speech seen, and if one of those entries
+With `--json`, `wait` prints `{ "status": "matched", "entry": {...} }`, or on timeout
+`{ "status": "timeout", "entries": [...], "truncated": false }` with the speech seen, and
+`truncated: true` if some of it was dropped because the bridge's buffer was full. `wait-silence`
+prints `{ "status": "silent" }`, or on timeout the same `timeout` result. On a timeout, stderr lists the speech seen, and if one of those entries
 matches when case and extra whitespace are ignored, a hint to use `--normalize`.
 `mark` prints the marker's `seq`, or the whole entry
 with `--json`.
@@ -393,13 +413,13 @@ request ([`recordKeys` / `recordClick`](#functions)): it notes where the buffer 
 the input, waits up to `--first-within` ms (default 2000) for the screen reader to start
 talking, then until nothing was spoken for `--quiet-for` ms (default 500, all at most `--timeout`,
 default 10000), and the command prints the speech from that point on, one line per entry, or
-`{ "pressed": true, "entries": [...], "truncated": false, "silent": true }` with `--json`. Speech
+`{ "pressed": true, "entries": [...], "truncated": false, "status": "silent" }` with `--json`. Speech
 from before the action can't get in; `--settle <ms>` also keeps out speech that is still trailing
 from the previous step, by waiting for that much silence before the input. Raise `--first-within` for actions the screen reader is slow
-to announce (a page load, a dialog). When nothing was said, stdout stays empty (`"entries": []`
-with `--json`) and stderr says `no speech after the action`. If the speech doesn't pause in time,
+to announce (a page load, a dialog). When nothing was said, stdout stays empty (`"status": "no-speech"`
+and `"entries": []` with `--json`) and stderr says `no speech after the action`. If the speech doesn't pause in time,
 the action has still happened: the command prints what was said until then with
-`"silent": false`, the timeout on stderr, and exits with `1`.
+`"status": "timeout"`, the timeout on stderr, and exits with `1`.
 
 `tail` is for people watching (agents use `wait`, `wait-silence` or `--capture`). It prints each entry as it arrives (`#12 Submit, button`, markers included) until Ctrl+C or
 `SIGTERM`, then exits with `0`. A closed pipe (`tail --json | head -3`) ends it too, once the next

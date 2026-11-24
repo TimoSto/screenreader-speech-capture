@@ -101,33 +101,35 @@ const ServiceStatusOutput = v.object({
   ),
 });
 
-export const BridgeStatusOutput = v.pipe(
-  v.object({
-    bridge: v.object({
-      version: v.string(),
-      apiVersion: v.pipe(v.string(), v.description('`<major>.<minor>` of the HTTP API.')),
-      state: v.picklist(['starting', 'ready', 'stopping']),
-      startedAt: timestamp('ISO 8601, UTC. When this bridge run started.'),
-    }),
-    tcp: v.object({
-      listening: v.boolean(),
-      host: v.string(),
-      port: integer(0),
-      encoding: v.string(),
-      connections: v.array(
-        v.object({ id: integer(1), voice: v.nullable(v.string()), connectedAt: v.string() }),
-      ),
-    }),
-    buffer: v.object({
-      size: integer(0),
-      maxEntries: integer(1),
-      firstSeq: nullableInteger(1),
-      lastSeq: nullableInteger(1),
-    }),
-    playwright: ServiceStatusOutput,
-    mcp: ServiceStatusOutput,
-    session: v.object({ current: v.nullable(SessionOutput), count: integer(0) }),
+const bridgeStatusEntries = {
+  bridge: v.object({
+    version: v.string(),
+    apiVersion: v.pipe(v.string(), v.description('`<major>.<minor>` of the HTTP API.')),
+    state: v.picklist(['starting', 'ready', 'stopping']),
+    startedAt: timestamp('ISO 8601, UTC. When this bridge run started.'),
   }),
+  tcp: v.object({
+    listening: v.boolean(),
+    host: v.string(),
+    port: integer(0),
+    encoding: v.string(),
+    connections: v.array(
+      v.object({ id: integer(1), voice: v.nullable(v.string()), connectedAt: v.string() }),
+    ),
+  }),
+  buffer: v.object({
+    size: integer(0),
+    maxEntries: integer(1),
+    firstSeq: nullableInteger(1),
+    lastSeq: nullableInteger(1),
+  }),
+  playwright: ServiceStatusOutput,
+  mcp: ServiceStatusOutput,
+  session: v.object({ current: v.nullable(SessionOutput), count: integer(0) }),
+};
+
+export const BridgeStatusOutput = v.pipe(
+  v.object(bridgeStatusEntries),
   v.description('Bridge health, as `GET /api/v1/status` reports it.'),
 );
 
@@ -151,11 +153,13 @@ const captured = {
     ),
   ),
   truncated: v.pipe(v.boolean(), v.description(TRUNCATED_READ)),
-  silent: v.pipe(
-    v.boolean(),
+  status: v.pipe(
+    v.picklist(['silent', 'no-speech', 'timeout']),
     v.description(
-      '`false`: the speech went on until --timeout (exit code 1); `entries` is what was said ' +
-        'until then. The action has happened either way.',
+      '`silent`: speech came and paused for --quiet-for ms. `no-speech`: nothing was said ' +
+        'within --first-within ms (`entries` is empty). `timeout` (exit code 1): the speech went ' +
+        'on until --timeout; `entries` is what was said until then. The action has happened in ' +
+        'every case.',
     ),
   ),
 };
@@ -184,9 +188,38 @@ const setResult = {
   ),
 };
 
-/** Every command's `--json` output, by the command as typed. */
+/** `timeout` (exit code 1) of `wait` and `wait-silence`: the speech seen while waiting. */
+const timedOut = {
+  status: v.literal('timeout'),
+  entries: v.pipe(v.array(SpeechEntryOutput), v.description('The speech seen while waiting.')),
+  truncated: v.pipe(
+    v.boolean(),
+    v.description(
+      "Speech the wait should have looked at was dropped because the bridge's buffer was full.",
+    ),
+  ),
+};
+
+/**
+ * Every command's `--json` output, by the command as typed. An expected outcome that isn't
+ * success (a wait that timed out) is a result with a `status` and exit code 1, never an error
+ * object (docs/usage/client.md#results-and-errors).
+ */
 export const CLI_OUTPUT = {
-  status: BridgeStatusOutput,
+  status: v.pipe(
+    v.union([
+      BridgeStatusOutput,
+      v.object({ status: v.literal('ready'), ...bridgeStatusEntries }),
+      v.object({
+        status: v.literal('not-ready'),
+        reason: v.pipe(v.string(), v.description('What the last attempt saw.')),
+      }),
+    ]),
+    v.description(
+      'The bridge status. With --wait-ready, it has `status: "ready"`, or `status: "not-ready"` ' +
+        '(exit code 1) when the bridge was not ready within --timeout.',
+    ),
+  ),
   'session start': StartedSessionOutput,
   'session end': v.object({ ended: v.literal(true) }),
   'session delete': v.object({ deleted: v.literal(true) }),
@@ -201,25 +234,16 @@ export const CLI_OUTPUT = {
     truncated: v.pipe(v.boolean(), v.description(TRUNCATED_READ)),
   }),
   wait: v.pipe(
-    v.variant('matched', [
-      v.object({ matched: v.literal(true), entry: SpeechEntryOutput }),
-      v.object({
-        matched: v.literal(false),
-        entries: v.pipe(
-          v.array(SpeechEntryOutput),
-          v.description('The speech seen while waiting.'),
-        ),
-        truncated: v.pipe(
-          v.boolean(),
-          v.description(
-            "Speech the wait should have looked at was dropped because the bridge's buffer was full.",
-          ),
-        ),
-      }),
+    v.variant('status', [
+      v.object({ status: v.literal('matched'), entry: SpeechEntryOutput }),
+      v.object(timedOut),
     ]),
     v.description('The match, or on timeout (exit code 1) the speech seen.'),
   ),
-  'wait-silence': v.object({ silent: v.literal(true) }),
+  'wait-silence': v.pipe(
+    v.variant('status', [v.object({ status: v.literal('silent') }), v.object(timedOut)]),
+    v.description('Silence, or on timeout (exit code 1) the speech seen.'),
+  ),
   mark: SpeechEntryOutput,
   click: v.union([
     v.object({ clicked: v.literal(true) }),
@@ -266,8 +290,8 @@ export const CLI_OUTPUT = {
 
 /**
  * What every command prints with `--json` when it fails (instead of its own output), next to the
- * message on stderr. `wait` reports a timeout with its own `matched: false` instead, and
- * `--capture` with `silent: false`.
+ * message on stderr: something went wrong (exit code 2 to 4). A timeout is not an error but a
+ * result with `status` (exit code 1).
  */
 export const CliErrorOutput = v.pipe(
   v.object({
@@ -279,8 +303,6 @@ export const CliErrorOutput = v.pipe(
           'BridgeUnreachableError',
           'BridgeHttpError',
           'IncompatibleBridgeError',
-          'BridgeNotReadyError',
-          'SpeechTimeoutError',
           'InternalError',
         ]),
         v.description(
@@ -304,7 +326,7 @@ export const CliErrorOutput = v.pipe(
       ),
     }),
   }),
-  v.description('A failed command (exit code 1 to 4).'),
+  v.description('A failed command (exit code 2 to 4).'),
 );
 
 const jsonSchema = v.pipe(v.record(v.string(), v.unknown()), v.description('A JSON Schema.'));

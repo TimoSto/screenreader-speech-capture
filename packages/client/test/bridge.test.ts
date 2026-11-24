@@ -400,7 +400,7 @@ describe('native input', () => {
     expect(result.code).toBe(EXIT.ok);
     expect(JSON.parse(result.stdout)).toMatchObject({
       pressed: true,
-      silent: true,
+      status: 'silent',
       entries: [{ text: 'pressed k' }],
     });
   });
@@ -501,7 +501,7 @@ describe('CLI', () => {
     ]);
     expect(found.code).toBe(EXIT.ok);
     expect(JSON.parse(found.stdout)).toMatchObject({
-      matched: true,
+      status: 'matched',
       entry: { text: 'Submit, button' },
     });
     expect((await cli(['text', '--since', seq, '--url', url])).stdout).toBe('Submit, button\n');

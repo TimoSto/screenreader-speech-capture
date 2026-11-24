@@ -1,13 +1,10 @@
 import {
   BridgeHttpError,
-  BridgeNotReadyError,
   BridgeUnreachableError,
   ClientConfigError,
   IncompatibleBridgeError,
-  SpeechTimeoutError,
 } from '../../../domain/errors.js';
 import { EXIT, type CliIo } from './command.js';
-import { seenText } from './format.js';
 import { NAME, UsageError } from './options.js';
 import type { CliError } from './output.js';
 
@@ -23,8 +20,6 @@ const EXPECTED: readonly [new (...args: never[]) => Error, ErrorType, number][] 
   [BridgeUnreachableError, 'BridgeUnreachableError', EXIT.bridge],
   [BridgeHttpError, 'BridgeHttpError', EXIT.bridge],
   [IncompatibleBridgeError, 'IncompatibleBridgeError', EXIT.bridge],
-  [BridgeNotReadyError, 'BridgeNotReadyError', EXIT.timeout],
-  [SpeechTimeoutError, 'SpeechTimeoutError', EXIT.timeout],
 ];
 
 export interface DescribedError {
@@ -47,12 +42,7 @@ export function describeError(error: unknown): DescribedError {
     };
   }
   const [, type, exit] = known;
-  const hint =
-    error instanceof UsageError
-      ? '\nRun with --help to see the commands.'
-      : error instanceof SpeechTimeoutError
-        ? `.${seenText(error.entries)}`
-        : '';
+  const hint = error instanceof UsageError ? '\nRun with --help to see the commands.' : '';
   const http =
     error instanceof BridgeHttpError
       ? {

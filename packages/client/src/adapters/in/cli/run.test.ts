@@ -208,7 +208,7 @@ describe('speech commands', () => {
       expect(result.code).toBe(EXIT.ok);
       outputs.push(JSON.parse(result.stdout) as unknown);
     }
-    expect(outputs).toEqual([{ ended: true }, { cleared: true }, { silent: true }]);
+    expect(outputs).toEqual([{ ended: true }, { cleared: true }, { status: 'silent' }]);
   });
 
   it('status --wait-ready waits; a timeout exits 1', async () => {
@@ -220,6 +220,11 @@ describe('speech commands', () => {
     const late = await cli(['status', '--wait-ready', '--timeout', '600'], fake);
     expect(late.code).toBe(EXIT.timeout);
     expect(late.stderr).toContain('not ready within 600 ms: state is stopping');
+    expect(late.stdout).toBe('');
+    fake.api.state = 'ready';
+    const json = await cli(['status', '--wait-ready', '--json'], fake);
+    expect(JSON.parse(json.stdout)).toMatchObject({ status: 'ready', bridge: { state: 'ready' } });
+    expect(JSON.parse((await cli(['status', '--json'], fake)).stdout)).not.toHaveProperty('status');
   });
 
   it('clear --session and --outside clear one scope and keep the session running', async () => {
@@ -280,7 +285,7 @@ describe('speech commands', () => {
       entries: [{ text: 'Checkout, heading level 1' }],
     });
     const waited = await cli(['wait', 'Checkout', '--since', 'mark:step-2', '--json'], fake);
-    expect(JSON.parse(waited.stdout)).toMatchObject({ matched: true, entry: { seq: 4 } });
+    expect(JSON.parse(waited.stdout)).toMatchObject({ status: 'matched', entry: { seq: 4 } });
   });
 
   it('--since mark:<label> looks in the scope that is read', async () => {
@@ -375,7 +380,7 @@ describe('speech commands', () => {
     expect((await cli(['wait', 'Submit'], fake)).code).toBe(EXIT.ok);
     expect((await cli(['wait', 'submit, button', '--normalize'], fake)).code).toBe(EXIT.ok);
     const json = await cli(['wait', '^sub.*button$', '--regex', '--normalize', '--json'], fake);
-    expect(JSON.parse(json.stdout)).toMatchObject({ matched: true, entry: { seq: 1 } });
+    expect(JSON.parse(json.stdout)).toMatchObject({ status: 'matched', entry: { seq: 1 } });
   });
 
   it('wait exits 1 on timeout and shows the speech seen', async () => {
@@ -387,7 +392,7 @@ describe('speech commands', () => {
       'No speech matched "Submit" within 200 ms. Speech seen:\n  #1 Name, edit',
     );
     const json = await cli(['wait', 'Submit', '--timeout', '0', '--json', '--since', '1'], fake);
-    expect(JSON.parse(json.stdout)).toEqual({ matched: false, entries: [], truncated: false });
+    expect(JSON.parse(json.stdout)).toEqual({ status: 'timeout', entries: [], truncated: false });
     expect(json.stderr).toContain('No speech arrived.');
   });
 
@@ -397,7 +402,7 @@ describe('speech commands', () => {
     const json = await cli(['wait', 'submit, button', '--timeout', '0', '--json'], fake);
     expect(json.code).toBe(EXIT.timeout);
     expect(json.stderr).toContain('Hint: with --normalize it matches #1 Submit,  Button.');
-    expect(JSON.parse(json.stdout)).toMatchObject({ matched: false });
+    expect(JSON.parse(json.stdout)).toMatchObject({ status: 'timeout' });
 
     expect((await cli(['wait', 'Cancel', '--timeout', '0'], fake)).stderr).not.toContain('Hint');
     expect(
@@ -869,7 +874,7 @@ describe('native input commands', () => {
     );
     expect(result.code).toBe(EXIT.timeout);
     const output = JSON.parse(result.stdout) as { entries: { text: string }[] };
-    expect(output).toMatchObject({ pressed: true, silent: false, truncated: false });
+    expect(output).toMatchObject({ pressed: true, status: 'timeout', truncated: false });
     expect(output.entries.length).toBeGreaterThan(10);
     expect(result.stderr).toContain('Speech did not pause for 100 ms within 1000 ms');
     expect(fake.api.calls).toContain('keys h');
@@ -889,13 +894,16 @@ describe('native input commands', () => {
     api.pressKeys = (request) =>
       pressKeys(request).then(() => clock.at(clock.now() + 1500, () => api.speak('Dialog')));
     const late = await cli(['press', 'Enter', '--capture', '--json'], fake);
-    expect(JSON.parse(late.stdout)).toMatchObject({ entries: [{ text: 'Dialog' }], silent: true });
+    expect(JSON.parse(late.stdout)).toMatchObject({
+      entries: [{ text: 'Dialog' }],
+      status: 'silent',
+    });
 
     const early = await cli(
       ['press', 'Enter', '--capture', '--first-within', '500', '--json'],
       fake,
     );
-    expect(JSON.parse(early.stdout)).toMatchObject({ entries: [], silent: true });
+    expect(JSON.parse(early.stdout)).toMatchObject({ entries: [], status: 'no-speech' });
   });
 
   it('press --capture says so when nothing was spoken', async () => {
@@ -908,7 +916,7 @@ describe('native input commands', () => {
       pressed: true,
       entries: [],
       truncated: false,
-      silent: true,
+      status: 'no-speech',
     });
   });
 
@@ -1129,12 +1137,16 @@ describe('errors', () => {
     });
   });
 
-  it('timeouts of status --wait-ready and wait-silence print an error object, exit 1', async () => {
+  it('timeouts of status --wait-ready and wait-silence print a result with status, exit 1', async () => {
     const fake = fakeSpeech();
     fake.api.state = 'starting';
     const ready = await cli(['status', '--wait-ready', '--timeout', '300', '--json'], fake);
     expect(ready.code).toBe(EXIT.timeout);
-    expect(errorOf(ready.stdout)).toMatchObject({ type: 'BridgeNotReadyError' });
+    expect(JSON.parse(ready.stdout)).toEqual({
+      status: 'not-ready',
+      reason: 'The bridge was not ready within 300 ms: state is starting',
+    });
+    expect(ready.stderr).toContain('not ready within 300 ms');
 
     fake.api.state = 'ready';
     for (let t = 0; t < 5000; t += 50)
@@ -1144,7 +1156,11 @@ describe('errors', () => {
       fake,
     );
     expect(busy.code).toBe(EXIT.timeout);
-    expect(errorOf(busy.stdout)).toMatchObject({ type: 'SpeechTimeoutError' });
+    expect(JSON.parse(busy.stdout)).toMatchObject({
+      status: 'timeout',
+      entries: expect.arrayContaining([expect.objectContaining({ text: 'x' })]) as unknown,
+      truncated: false,
+    });
     expect(busy.stderr).toContain('1000 ms');
   });
 
