@@ -21,12 +21,14 @@ test('the screen reader jumps to the next heading', async ({ page: p, speech, pr
   expect(entries.map((e) => e.text).join(' ')).toMatch(/heading/i);
 });
 
-test('setFocus reloads the page and it is announced again', async ({
+test('setFocus brings the window to the front and it is announced', async ({
   page: p,
   setFocus,
   speech,
 }) => {
   await p.goto(pageUrl);
-  await setFocus(); // reloads the page
+  // The bridge brings the window to the front, and the screen reader announces it with its
+  // title. Where the bridge can't, the fallback clicks and reloads, which announces it too.
+  await setFocus();
   await speech.waitForOutput(/Headings/);
 });
