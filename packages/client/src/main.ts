@@ -35,6 +35,7 @@ import { NativeInputService } from './application/services/native-input-service.
 import { SpeechCaptureService } from './application/services/speech-capture-service.js';
 import { playwrightEndpoint } from './domain/playwright-endpoint.js';
 import { URL_ENV } from './domain/bridge-url.js';
+import { OUTPUT_ENV } from './domain/output-format.js';
 import type { BridgeStatus } from './domain/bridge-status.js';
 import type { SessionList, StartedSession } from './domain/session.js';
 import type { ScreenPoint } from './domain/native-input.js';
@@ -51,7 +52,7 @@ export { CONFIG_PATH_ENV, clientConfigFile } from './adapters/out/fs-config/path
 export function createClientConfig(env: NodeJS.ProcessEnv = process.env): ManageClientConfig {
   return new ClientConfigService({
     store: new FsClientConfigStore(clientConfigFile(undefined, env)),
-    envUrl: env[URL_ENV],
+    env: { url: env[URL_ENV], output: env[OUTPUT_ENV] },
   });
 }
 

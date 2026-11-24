@@ -23,11 +23,15 @@ export function commandOf(args: readonly string[]): CliCommand | undefined {
 }
 
 /**
- * With --json, each line of `stdout` must match the command's schema, except the last one, which
+ * With --json (or `json`: the `output` setting), each line of `stdout` must match the command's schema, except the last one, which
  * may be the error object instead (a failed command, or a `tail` that stopped).
  */
-export function expectCliOutput(args: readonly string[], stdout: string): void {
-  if (!args.includes('--json')) return;
+export function expectCliOutput(
+  args: readonly string[],
+  stdout: string,
+  json = args.includes('--json'),
+): void {
+  if (!json) return;
   const lines = stdout.split('\n').filter((l) => l !== '');
   const last = lines.at(-1);
   if (last !== undefined && checkDto(CliErrorOutput, JSON.parse(last)).ok) lines.pop();

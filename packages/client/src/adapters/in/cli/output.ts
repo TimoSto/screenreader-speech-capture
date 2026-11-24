@@ -169,7 +169,8 @@ export const ConfigValueOutput = v.object({
   source: v.pipe(
     v.picklist(['explicit', 'env', 'config', 'default']),
     v.description(
-      'Where it comes from: `--url`, `SR_SPEECH_URL`, the config file, or the default.',
+      'Where it comes from: the flag (`--url`, `--json`), the environment variable ' +
+        '(`SR_SPEECH_URL`, `SR_SPEECH_OUTPUT`), the config file, or the default.',
     ),
   ),
 });
@@ -179,7 +180,7 @@ const setResult = {
   value: v.pipe(v.string(), v.description('The value as saved, normalised.')),
   shadowedBy: v.pipe(
     v.optional(v.literal('env')),
-    v.description('Set when `SR_SPEECH_URL` hides the saved value.'),
+    v.description('Set when the environment variable of the key hides the saved value.'),
   ),
 };
 

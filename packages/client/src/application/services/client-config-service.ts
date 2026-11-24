@@ -1,5 +1,5 @@
-import { overridesStored, pickBridgeUrl } from '../../domain/bridge-url.js';
 import { CONFIG_KEYS, parseConfigKey, type ConfigKey } from '../../domain/client-config.js';
+import { overridesStored, pickValue } from '../../domain/config-value.js';
 import type {
   ConfigValue,
   ExplicitValues,
@@ -10,8 +10,8 @@ import type { ClientConfigStore } from '../ports/out/client-config-store.js';
 
 interface ClientConfigServiceDeps {
   store: ClientConfigStore;
-  /** Value of `SR_SPEECH_URL`, read once by the composition root. */
-  envUrl?: string | undefined;
+  /** The settings' environment variables (`SR_SPEECH_URL`, …), read once by the composition root. */
+  env?: Partial<Record<ConfigKey, string | undefined>>;
 }
 
 export class ClientConfigService implements ManageClientConfig {
@@ -23,10 +23,10 @@ export class ClientConfigService implements ManageClientConfig {
 
   async get(key: string, explicit: ExplicitValues = {}): Promise<ConfigValue> {
     const k = parseConfigKey(key);
-    const sources = { explicit: explicit[k], env: this.deps.envUrl };
+    const sources = { explicit: explicit[k], env: this.deps.env?.[k] };
     const resolved = overridesStored(sources)
-      ? pickBridgeUrl(sources)
-      : pickBridgeUrl({ ...sources, stored: (await this.deps.store.load())[k] });
+      ? pickValue(CONFIG_KEYS[k], sources)
+      : pickValue(CONFIG_KEYS[k], { ...sources, stored: (await this.deps.store.load())[k] });
     return { key: k, ...resolved };
   }
 
@@ -36,9 +36,9 @@ export class ClientConfigService implements ManageClientConfig {
 
   async set(key: string, value: string): Promise<SetResult> {
     const k = parseConfigKey(key);
-    const normalized = CONFIG_KEYS[k](value);
+    const normalized = CONFIG_KEYS[k].normalize(value);
     await this.deps.store.save({ [k]: normalized });
-    const shadowed = overridesStored({ env: this.deps.envUrl });
+    const shadowed = overridesStored({ env: this.deps.env?.[k] });
     return { key: k, value: normalized, ...(shadowed ? { shadowedBy: 'env' as const } : {}) };
   }
 

@@ -4,6 +4,7 @@
 import { toJsonSchema } from '@valibot/to-json-schema';
 import type * as v from 'valibot';
 import { URL_ENV } from '../../../domain/bridge-url.js';
+import { OUTPUT_ENV } from '../../../domain/output-format.js';
 import { EXIT, type Command } from './command.js';
 import { COMMANDS } from './commands/index.js';
 import { CLI_OUTPUT, CliErrorOutput, type CliCommand, type HelpOutput } from './output.js';
@@ -46,6 +47,7 @@ export function helpJson(version: string, only?: { name: string; command: Comman
     exitCodes: { ...EXIT },
     env: {
       [URL_ENV]: 'The bridge URL (below --url, above the config file).',
+      [OUTPUT_ENV]: 'json or text: the output without --json (above the config file).',
       // CONFIG_PATH_ENV in adapters/out/fs-config, which an in adapter may not import.
       SR_SPEECH_CLIENT_CONFIG: 'The client config file to use.',
     },

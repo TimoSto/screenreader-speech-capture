@@ -3,7 +3,7 @@ import type { BridgeStatus } from '../../../domain/bridge-status.js';
 import type { Session } from '../../../domain/session.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import {
-  SOURCE_LABEL,
+  sourceLabel,
   formatEntry,
   formatSession,
   formatSessionEvent,
@@ -149,11 +149,18 @@ describe('formatStatus', () => {
   });
 });
 
-it('labels every config value source', () => {
-  expect(SOURCE_LABEL).toEqual({
-    explicit: '--url',
-    env: 'SR_SPEECH_URL',
-    config: 'config file',
-    default: 'default',
-  });
+it('labels every config value source, with the flag and env variable of the key', () => {
+  const sources = ['explicit', 'env', 'config', 'default'] as const;
+  expect(sources.map((s) => sourceLabel('url', s))).toEqual([
+    '--url',
+    'SR_SPEECH_URL',
+    'config file',
+    'default',
+  ]);
+  expect(sources.map((s) => sourceLabel('output', s))).toEqual([
+    '--json',
+    'SR_SPEECH_OUTPUT',
+    'config file',
+    'default',
+  ]);
 });

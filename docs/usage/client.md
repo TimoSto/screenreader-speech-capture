@@ -55,10 +55,26 @@ Env `SR_SPEECH_CLIENT_CONFIG` points the client at a different file.
 | `config set url <url>` | Store the URL. Only `http://` and `https://` are accepted, and a trailing slash is removed. It does not contact the bridge: use `status` for that. |
 | `config get url` | Print the URL in use and where it comes from (`--url`, `SR_SPEECH_URL`, config file or default). With `--json`: `{ key, value, source }`. |
 | `config unset url` | Remove the stored URL. |
+| `config set output json` | Store the [output format](#output-format); `config get output` / `config unset output` as for the URL. |
 | `config list` | All settings with their source. |
 | `config path` | The path of the config file. |
 
 An invalid URL or a broken config file gives exit code `3` and an error that names the file.
+
+## Output format
+
+What the CLI prints without `--json`: `text` (the default) or `json`. An agent sets it once, so a
+call that forgets `--json` doesn't get a different shape:
+
+```bash
+npx screenreader-speech-capture-client config set output json
+```
+
+The CLI uses the first of these that is set: `--json`, env `SR_SPEECH_OUTPUT` (`json` or `text`),
+`output` in the client config file, `text`. `SR_SPEECH_OUTPUT=text` gets text back for one shell
+when the file says `json`. `--help` stays text unless `--json` is passed. An invalid value gives
+exit code `3` for every command except `config`, which still works so the file can be repaired.
+The library and the fixture don't use it.
 
 ## Library
 
@@ -260,7 +276,11 @@ form, which also finds a global install.
 
 Every command takes `--url` (overrides the [stored bridge URL](#bridge-url)) and `--json` for
 machine-readable output (the shape of every command is the valibot schema in
-`packages/client/src/adapters/in/cli/output.ts`). A CLI call has no memory between invocations, so there is no
+`packages/client/src/adapters/in/cli/output.ts`; `config set output json` makes it the
+[default](#output-format)). `<command> --help` shows that command's usage and options.
+`--help --json` describes every command for a program: its usage, options and the JSON Schema of
+its `--json` output, plus the error object, exit codes and environment variables;
+`<command> --help --json` only that command. A CLI call has no memory between invocations, so there is no
 cursor. Instead, `speech`, `text` and `wait` read the **current
 [session](speech-capture.md#sessions)** (everything since `session start`) by default, or the whole
 buffer when no session is current. `--session <id>` picks another one, `--session current` the

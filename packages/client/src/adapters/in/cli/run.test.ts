@@ -25,12 +25,18 @@ import { NAME } from './options.js';
 import { CLI_OUTPUT } from './output.js';
 import { EXIT, runCli } from './run.js';
 
-/** Records calls and returns canned answers, so only parsing and output are tested here. */
-function fakeConfig(overrides: Partial<ManageClientConfig> = {}) {
+/**
+ * Records calls and returns canned answers, so only parsing and output are tested here. The
+ * `output` every command reads first is `output` and not recorded.
+ */
+function fakeConfig(overrides: Partial<ManageClientConfig> = {}, output = 'text') {
   const calls: unknown[][] = [];
   const config: ManageClientConfig = {
     location: '/cfg/client.json',
     get: (key: string, explicit?: ExplicitValues) => {
+      if (key === 'output' && explicit === undefined) {
+        return Promise.resolve({ key: 'output', value: output, source: 'default' });
+      }
       calls.push(['get', key, explicit]);
       return Promise.resolve({ key: 'url', value: 'http://vm:1', source: 'config' });
     },
@@ -555,7 +561,7 @@ describe('speech commands', () => {
 });
 
 it('--help and --version', async () => {
-  expect((await run(['--help'])).stdout).toContain('config set url');
+  expect((await run(['--help'])).stdout).toContain('config set <key> <value>');
   expect((await run(['--help'])).stdout).toContain('wait <text>');
   expect((await run(['--version'])).stdout).toBe('1.2.3\n');
 });
@@ -589,6 +595,42 @@ it('--help --json describes every command and its --json output', async () => {
   const wait = JSON.parse((await run(['wait', '--help', '--json'])).stdout) as typeof help;
   expect(wait.commands.map((c) => c.name)).toEqual(['wait']);
   expect(Object.keys(wait.commands[0]!.outputs)).toEqual(['wait']);
+});
+
+describe('the output setting', () => {
+  const json = fakeConfig({}, 'json').config;
+
+  it('json prints the --json shapes without --json, errors included', async () => {
+    const fake = fakeSpeech();
+    fake.api.speak('hello');
+    const text = await run(['text', '--all'], json, fake);
+    expectCliOutput(['text'], text.stdout, true);
+    expect(JSON.parse(text.stdout)).toEqual({ text: 'hello', truncated: false });
+    const bad = await run(['speech', '--limit', 'x'], json, fake);
+    expect(bad.code).toBe(EXIT.usage);
+    expect(JSON.parse(bad.stdout)).toMatchObject({ error: { type: 'UsageError' } });
+  });
+
+  it('leaves --help as text', async () => {
+    expect((await run(['--help'], json)).stdout).toMatch(/^Usage:/);
+  });
+
+  it('an invalid value exits 3, except for config, which can repair it', async () => {
+    const broken = fakeConfig({
+      get: () =>
+        Promise.reject(new ClientConfigError('SR_SPEECH_OUTPUT "xml" must be text or json')),
+    }).config;
+    expect(await run(['text'], broken)).toMatchObject({ code: EXIT.usage });
+    // --json doesn't need the setting.
+    expect((await run(['status', '--json'], broken)).code).toBe(EXIT.ok);
+    expect((await run(['config', 'path'], broken)).code).toBe(EXIT.ok);
+  });
+
+  it('config get output --json names --json as the explicit source', async () => {
+    const { config, calls } = fakeConfig();
+    await run(['config', 'get', 'output', '--json'], config);
+    expect(calls).toEqual([['get', 'output', { url: undefined, output: 'json' }]]);
+  });
 });
 
 it('config never creates a bridge client', async () => {

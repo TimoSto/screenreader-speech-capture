@@ -69,7 +69,7 @@ describe('helpText', () => {
   });
 
   it('separates the config commands with a blank line', () => {
-    const at = lines.findIndex((line) => line.startsWith('  config set url'));
+    const at = lines.findIndex((line) => line.startsWith('  config set'));
     expect(lines[at - 1]).toBe('');
   });
 

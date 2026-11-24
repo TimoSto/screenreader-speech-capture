@@ -15,6 +15,7 @@ A typical loop:
 ```bash
 npm i -g screenreader-speech-capture-client@<version>                       # once per machine
 screenreader-speech-capture-client config set url http://my-test-vm:5151   # once per user
+screenreader-speech-capture-client config set output json                   # once per user: always JSON
 screenreader-speech-capture-client session start "audit checkout page"      # once per task
 
 # Before the first screen reader command, and again after anything that could steal focus
@@ -32,6 +33,10 @@ screenreader-speech-capture-client mark step-2
 screenreader-speech-capture-client wait-silence
 screenreader-speech-capture-client text --since mark:step-2 --json   # → judge the output
 ```
+
+`--help --json` describes every command and the JSON Schema of its output
+([Commands](client.md#commands)); with [`output json`](client.md#output-format) a call that
+forgets `--json` still prints JSON.
 
 `--since mark:step-2` starts after the newest marker labelled `step-2` in the session, so no
 number has to be kept between the calls (each runs in its own shell). Don't use a bare `wait "…"`

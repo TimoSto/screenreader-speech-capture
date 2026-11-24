@@ -234,6 +234,11 @@ so users install nothing extra. The bridge keeps its own request checks (`reques
 the field-specific `INVALID_REQUEST` messages the API documents. They use the same limits and
 patterns from `shared`.
 
+The client CLI's `--json` output is described the same way (`packages/client/src/adapters/in/cli/output.ts`):
+the tests check every `--json` output against it, and `--help --json` turns it into JSON Schema at
+runtime with `@valibot/to-json-schema`, which is bundled into the CLI like valibot. So what an agent
+reads about an output can't drift from what the command prints.
+
 The config is the exception: the bridge validates `PUT /config` and the config file with the shared
 `ConfigPatchSchema` (`mergeConfig`) and adds no rules of its own, so the contract and the
 enforcement cannot drift. The error `field` is the schema's dotted path; the message is valibot's.
