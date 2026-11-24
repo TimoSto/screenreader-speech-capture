@@ -308,8 +308,8 @@ export const waitSilence: Command = {
 const MARK: HelpLine = {
   usage: 'mark <label>',
   description: [
-    'Insert a marker and print its seq, for --since; --since mark:<label>',
-    'reads from the newest marker with that label (no seq to keep)',
+    'Insert a marker and print it (#<seq> [marker] <label>);',
+    '--since mark:<label> reads from the newest marker with that label',
   ],
 };
 
@@ -319,7 +319,7 @@ export const mark: Command = {
   async run(args, { speech, out }) {
     const [label] = expectArgs(args, 1, MARK.usage);
     const entry = await speech().mark(label);
-    out('mark', entry, String(entry.seq));
+    out('mark', entry, formatEntry(entry));
     return EXIT.ok;
   },
 };

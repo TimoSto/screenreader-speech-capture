@@ -129,10 +129,13 @@ export type Since = number | { label: string };
 
 /**
  * `--since <seq>` or `--since mark:<label>`, checked before anything is sent: `undefined` if not
- * given.
+ * given. The seq may start with `#`, as the text output prints it (`#4712 [marker] step-2`).
  */
 export function sinceOption(values: Values): Since | undefined {
   const raw = values.since;
+  if (raw?.startsWith('#')) {
+    return intArg(raw.slice(1), 0, `--since must be an integer >= 0, got "${raw}".`);
+  }
   if (raw === undefined || !raw.startsWith(MARK_PREFIX)) return optionalInt(values, 'since', 0);
   const label = raw.slice(MARK_PREFIX.length).trim();
   if (label === '') throw new UsageError('--since mark:<label> needs the label of a marker.');

@@ -7,6 +7,7 @@ import {
   expectArgs,
   optionalInt,
   scope,
+  sinceOption,
   type Values,
 } from './options.js';
 
@@ -63,6 +64,21 @@ describe('expectArgs', () => {
     expect(() => expectArgs(['a'], 0, 'clear')).toThrow(
       'Usage: screenreader-speech-capture-client clear',
     );
+  });
+});
+
+describe('sinceOption', () => {
+  it('takes a seq, with or without the # the text output prints', () => {
+    expect(sinceOption(values({ since: '5' }))).toBe(5);
+    expect(sinceOption(values({ since: '#5' }))).toBe(5);
+  });
+
+  it('takes the label of a marker', () => {
+    expect(sinceOption(values({ since: 'mark: step-2 ' }))).toEqual({ label: 'step-2' });
+  });
+
+  it.each(['#', '#x', '#-1', '##5', '# 5'])('rejects %j', (raw) => {
+    expect(() => sinceOption(values({ since: raw }))).toThrow(UsageError);
   });
 });
 
