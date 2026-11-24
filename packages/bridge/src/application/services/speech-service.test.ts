@@ -61,6 +61,18 @@ describe('SpeechService', () => {
     expect(() => setup().speech.addMarker('  ')).toThrow(/label/);
   });
 
+  it('finds the newest marker with a trimmed label, in a scope', () => {
+    const { speech } = setup();
+    speech.addMarker('step 1');
+    const newest = speech.addMarker('step 1');
+    expect(speech.latestMarker('  step 1 ')).toEqual(newest);
+    expect(speech.latestMarker('step 1', 'none')).toEqual(newest);
+    expect(speech.latestMarker('step 2')).toBeNull();
+    expect(() => speech.latestMarker(' ')).toThrow(/label/);
+    expect(() => speech.latestMarker('x'.repeat(1001))).toThrow(/label/);
+    expect(() => speech.latestMarker('step 1', 'current')).toThrow(/session/i);
+  });
+
   it('lists with default since and limit, and checks their range', () => {
     const { speech } = setup();
     for (let i = 0; i < 3; i++) speech.record({ text: `l${i}`, voice: null, connectionId: 1 });

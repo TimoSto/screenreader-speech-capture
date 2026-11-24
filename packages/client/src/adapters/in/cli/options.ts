@@ -124,3 +124,46 @@ export function requiredSignedInt(values: Values, name: Option, usage: string): 
   }
   return Number(raw);
 }
+
+/** The prefix of a `--since` that names a marker instead of a `seq`. */
+const MARK_PREFIX = 'mark:';
+
+/** `--since`: a `seq`, or the label of a marker (`mark:<label>`) to resolve on the bridge. */
+export type Since = number | { label: string };
+
+/**
+ * `--since <seq>` or `--since mark:<label>`, checked before anything is sent: `undefined` if not
+ * given.
+ */
+export function sinceOption(values: Values): Since | undefined {
+  const raw = values.since;
+  if (raw === undefined || !raw.startsWith(MARK_PREFIX)) return optionalInt(values, 'since', 0);
+  const label = raw.slice(MARK_PREFIX.length).trim();
+  if (label === '') throw new UsageError('--since mark:<label> needs the label of a marker.');
+  return { label };
+}
+
+/**
+ * The `seq` a `--since` stands for: a `mark:<label>` is the newest marker with that label in the
+ * command's scope (`session`; all entries without one). None there is a usage error, as for a
+ * label that was never marked.
+ */
+export async function resolveSince(
+  since: Since | undefined,
+  speech: SpeechCapture,
+  session: SessionRef | undefined,
+): Promise<number | undefined> {
+  if (since === undefined || typeof since === 'number') return since;
+  const marker = await speech.findMarker(since.label, { session });
+  if (marker) return marker.seq;
+  const where =
+    session === undefined
+      ? 'the buffer'
+      : session === 'current'
+        ? 'the current session'
+        : `session ${session}`;
+  throw new UsageError(
+    `No marker "${since.label}" in ${where} (or it was dropped from the buffer). ` +
+      `Set it first with: ${NAME} mark "${since.label}"`,
+  );
+}

@@ -100,6 +100,19 @@ export const WaitResultSchema = v.pipe(
  */
 export type WaitResultDto = v.InferOutput<typeof WaitResultSchema>;
 
+export const LatestMarkerSchema = v.pipe(
+  v.object({
+    marker: v.pipe(
+      v.nullable(SpeechEntrySchema),
+      v.description('The newest marker with that label in the scope, `null` if there is none.'),
+    ),
+  }),
+  v.description('The answer of `GET /markers/latest`. Added in API 1.20.'),
+);
+
+/** `GET /api/v1/markers/latest` */
+export type LatestMarkerDto = v.InferOutput<typeof LatestMarkerSchema>;
+
 export const MarkerRequestSchema = v.object({
   label: v.pipe(
     v.string(),

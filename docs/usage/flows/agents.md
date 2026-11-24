@@ -12,8 +12,8 @@ Details: [Agents](../agents.md), [CLI for agents](../client.md#cli-for-agents).
 
 One session per task, `focus` once so native keys reach the MCP browser, then per step either `press … --capture` (a screen reader command: one call
 acts and prints the speech it caused) or **mark → act → wait-silence → text --since** (an action
-through Playwright MCP, which runs in another process). A CLI call has no memory, so the marker's
-`seq` is the step's starting point. The exit codes let the agent branch without parsing output.
+through Playwright MCP, which runs in another process). A CLI call has no memory, so the marker is the step's starting point:
+`--since mark:<label>` finds it again by its label. The exit codes let the agent branch without parsing output.
 Details: [Agent loop](../agents.md#agent-loop).
 
 ```mermaid
@@ -47,15 +47,18 @@ sequenceDiagram
         else page interaction
             A->>CLI: mark step-1
             CLI->>B: POST /api/v1/markers
-            CLI-->>A: seq 120
+            CLI-->>A: seq 120 (no need to keep it)
             A->>B: MCP: browser_click / browser_press_key (/playwright-mcp)
             B->>MCP: passthrough
             SR->>B: speech (TCP :4449)
             A->>CLI: wait-silence
             CLI->>B: follow the stream until 500 ms quiet
             CLI-->>A: exit 0 (or 1: speech didn't pause)
-            A->>CLI: text --since 120 --json
-            CLI->>B: GET /api/v1/speech?since=120&session=current
+            A->>CLI: text --since mark:step-1 --json
+            CLI->>B: GET /api/v1/status (current session 7)
+            CLI->>B: GET /api/v1/markers/latest?label=step-1&session=7
+            B-->>CLI: {"marker": {"seq": 120, …}}
+            CLI->>B: GET /api/v1/speech?since=120&session=7
             CLI-->>A: {"text": "…", "truncated": false}
         end
         Note over A: judge what was announced

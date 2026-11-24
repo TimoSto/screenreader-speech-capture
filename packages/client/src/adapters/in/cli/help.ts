@@ -35,13 +35,15 @@ Typical use (one session per task, then per step):
   focus --script                   once, and again when focus moved: run the printed function
                                    with MCP browser_evaluate, then focus --geometry '<result>'
   press h --capture --json         a screen reader command and the speech it caused
-  mark step-2                      before an action in another tool (Playwright MCP); prints a seq
+  mark step-2                      before an action in another tool (Playwright MCP)
   wait-silence                     after that action: until the screen reader is quiet
-  text --since <seq> --json        what was said after the marker
+  text --since mark:step-2 --json  what was said after the marker
   session end
 
 seq: every entry (speech or marker) gets a number that only grows. --since <seq> means
-"only entries after this one"; take it from mark or from an entry's seq.
+"only entries after this one"; take it from mark or from an entry's seq. --since mark:<label>
+starts after the newest marker with that label in the scope that is read, so no number has to
+be kept between calls (exit 3 if there is none).
 
 ${keyNames()}
 

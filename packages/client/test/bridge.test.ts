@@ -69,6 +69,17 @@ describe('library', () => {
     expect(await sr.getText()).toBe('Name, edit, blank');
   });
 
+  it('findMarker and --since mark:<label> read after a marker set in another call', async () => {
+    const { url, say, client } = await bridge();
+    await say('before');
+    expect((await cli(['mark', 'step-2', '--url', url])).code).toBe(EXIT.ok);
+    await say('after');
+    const marker = await client().findMarker('step-2');
+    expect(marker).toMatchObject({ kind: 'marker', text: 'step-2', seq: 2 });
+    const text = await cli(['text', '--since', 'mark:step-2', '--json', '--url', url]);
+    expect(JSON.parse(text.stdout)).toEqual({ text: 'after', truncated: false });
+  });
+
   it("refuses to read speech that was partly dropped from the bridge's full buffer", async () => {
     const { say, client } = await bridge({ buffer: { maxEntries: 3 } });
     const sr = client();

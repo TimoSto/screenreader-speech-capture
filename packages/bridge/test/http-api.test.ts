@@ -117,6 +117,26 @@ describe('HTTP API', () => {
     });
   });
 
+  it('finds the newest marker with a label', async () => {
+    const bridge = await start();
+    const mark = (label: string) =>
+      fetch(api(bridge, '/markers'), postJson(JSON.stringify({ label })));
+    await mark('step 1');
+    await mark('step 1');
+    await mark('step 2');
+    const found = await fetch(api(bridge, '/markers/latest?label=step%201'));
+    expect(found.status).toBe(200);
+    expect(await json(found)).toMatchObject({ marker: { seq: 2, text: 'step 1' } });
+    const none = await fetch(api(bridge, '/markers/latest?label=step%203&session=none'));
+    expect(await json(none)).toEqual({ marker: null });
+
+    const missing = await fetch(api(bridge, '/markers/latest'));
+    expect(missing.status).toBe(400);
+    expect((await errorOf(missing)).details).toEqual({ field: 'label' });
+    const noSession = await fetch(api(bridge, '/markers/latest?label=x&session=current'));
+    expect(noSession.status).toBe(404);
+  });
+
   it('adds markers and validates the body', async () => {
     const bridge = await start();
     const created = await fetch(api(bridge, '/markers'), {

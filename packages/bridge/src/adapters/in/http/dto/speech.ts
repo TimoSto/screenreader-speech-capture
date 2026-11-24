@@ -1,4 +1,5 @@
 import type {
+  LatestMarkerDto,
   SpeechEntryDto,
   SpeechListDto,
   WaitResultDto,
@@ -29,6 +30,10 @@ export function toSpeechListDto(page: SpeechPage): SpeechListDto {
     truncated: page.truncated,
     hasMore: page.hasMore,
   };
+}
+
+export function toLatestMarkerDto(marker: SpeechEntry | null): LatestMarkerDto {
+  return { marker: marker && toSpeechEntryDto(marker) };
 }
 
 export function toWaitResultDto(result: WaitResult): WaitResultDto {

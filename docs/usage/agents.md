@@ -27,14 +27,16 @@ screenreader-speech-capture-client focus --geometry '{"screenX":0,"screenY":0,�
 screenreader-speech-capture-client press h --capture --json      # → judge the entries
 
 # An action through Playwright MCP runs in another process, so mark where the step starts:
-SEQ=$(screenreader-speech-capture-client mark step-2)
+screenreader-speech-capture-client mark step-2
 # … act through Playwright MCP …
 screenreader-speech-capture-client wait-silence
-screenreader-speech-capture-client text --since "$SEQ" --json   # → judge the output
+screenreader-speech-capture-client text --since mark:step-2 --json   # → judge the output
 ```
 
-Don't use a bare `wait "…"` to check a step: it searches the whole session and can match what an
-earlier step said. Pass `--since`.
+`--since mark:step-2` starts after the newest marker labelled `step-2` in the session, so no
+number has to be kept between the calls (each runs in its own shell). Don't use a bare `wait "…"`
+to check a step: it searches the whole session and can match what an earlier step said. Pass
+`--since`.
 
 ## Agent skill
 

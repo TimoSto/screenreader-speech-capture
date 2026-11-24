@@ -6,6 +6,7 @@ import {
   ConfigSchema,
   type DtoSchema,
   InputCaptureSchema,
+  LatestMarkerSchema,
   SessionListSchema,
   SessionSchema,
   SpeechEntrySchema,
@@ -20,7 +21,7 @@ import { DEFAULT_CONFIG } from '../../../../domain/config/index.js';
 import { toConfigDto, toConfigOverridesDto } from './config.js';
 import { toInputCaptureDto } from './input.js';
 import { toSessionDto, toSessionListDto, toStartSessionResponseDto } from './session.js';
-import { toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from './speech.js';
+import { toLatestMarkerDto, toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from './speech.js';
 import { toStatusDto } from './status.js';
 
 const cases: [string, DtoSchema, unknown][] = [
@@ -35,6 +36,8 @@ const cases: [string, DtoSchema, unknown][] = [
     SpeechListSchema,
     toSpeechListDto({ entries: [entry], truncated: true, hasMore: false }),
   ],
+  ['latest marker', LatestMarkerSchema, toLatestMarkerDto({ ...entry, kind: 'marker' })],
+  ['no latest marker', LatestMarkerSchema, toLatestMarkerDto(null)],
   ['wait match', WaitResultSchema, toWaitResultDto({ status: 'matched', entry })],
   [
     'wait timeout',

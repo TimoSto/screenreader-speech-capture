@@ -119,6 +119,7 @@ with a `since` option uses the cursor as its default `since`, so it looks at ent
 | `waitForSilence({ quietFor?, timeout? })` | `void` | Wait until nothing new has been spoken for `quietFor` ms (default 500), counted from the call. Throws `SpeechTimeoutError` if speech goes on until `timeout` (default 10000 ms). Useful before asserting on "everything that was said". |
 | `record(fn, { firstWithin?, quietFor?, timeout? })` | `{ result, entries, truncated }` | Run `fn` and return everything spoken while it ran and after it: waits up to `firstWithin` ms (default 2000) for the first speech, then until nothing new was said for `quietFor` ms (default 500), and moves the cursor to the end. Empty `entries`: nothing was said within `firstWithin`. `truncated: true`: some of it was dropped because the bridge's buffer was full, so `entries` is incomplete (raise `buffer.maxEntries`). Throws `SpeechTimeoutError` if speech goes on until `timeout` (default 10000 ms); its `entries` are everything recorded until then. |
 | `mark(label)` | `SpeechEntry` | Insert a marker. Its `seq` can be used as `since`. |
+| `findMarker(label, { session? })` | `SpeechEntry \| undefined` | The newest marker with this label (API 1.20), in `session` (an id or `'current'`) or in all entries. For a step marked in another process. `undefined` if there is none, also when it was dropped or cleared. |
 | `setFocus(page, { target? })` | `void` | Make the page's browser window the OS foreground window with a native click (on the title bar, or the centre of the `target` locator). See [Native input](native-input.md). |
 | `click({ x, y }, { button? })` | `void` | Native click at screen coordinates in physical pixels (`POST /api/v1/input/click`). |
 | `pressKeys(keys, { delayMs? })` | `void` | Native key presses, for screen reader commands (`'Insert+T'`, `['h', 'h']`). |
@@ -269,6 +270,12 @@ So `wait "button"` also matches what an *earlier* step said: use `mark` and `--s
 a smaller range, or `--capture` on `press` / `click` (below) to get exactly the speech an action
 caused.
 
+`--since` (on `speech`, `text`, `wait` and `tail`) takes a `seq` or `mark:<label>`: the newest
+marker with that label in the scope the command reads (the bridge looks it up with
+`GET /markers/latest`; `tail` looks in the whole buffer). `mark step-2` in one call and
+`text --since mark:step-2` in a later one need no number in between. No such marker (never set,
+set in another session, or dropped from the full buffer) is a usage error, exit `3`.
+
 ```bash
 npx screenreader-speech-capture-client config set url http://my-test-vm:5151   # once, see Bridge URL
 npx screenreader-speech-capture-client status [--wait-ready] [--timeout 120000]
@@ -283,7 +290,7 @@ npx screenreader-speech-capture-client speech [--since <seq>] [--limit <n>] [--i
 npx screenreader-speech-capture-client text [--since <seq>] [--separator <s>] [--session <id|current> | --all]
 npx screenreader-speech-capture-client wait "Submit, button" [--regex] [--normalize] [--timeout 5000] [--since <seq>] [--session <id|current> | --all]
 npx screenreader-speech-capture-client wait-silence [--quiet-for 500] [--timeout 10000]
-npx screenreader-speech-capture-client mark "before tab"   # prints the marker's seq
+npx screenreader-speech-capture-client mark "before tab"   # prints the marker's seq; later: --since "mark:before tab"
 npx screenreader-speech-capture-client focus --script       # the function to run with Playwright MCP's browser_evaluate
 npx screenreader-speech-capture-client focus --geometry '<its JSON result>' [--capture]   # click the browser's title bar
 npx screenreader-speech-capture-client click --x 640 --y 12  # native click (negative: --x=-5)

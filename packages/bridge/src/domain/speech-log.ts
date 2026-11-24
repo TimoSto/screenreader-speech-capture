@@ -93,6 +93,15 @@ export class SpeechLog {
   }
 
   /**
+   * The newest marker whose text is `label`, of all entries or, with `sessionId`, of that
+   * session (`null`: outside sessions). `undefined` if there is none (also when it was dropped).
+   */
+  latestMarker(label: string, sessionId?: number | null): SpeechEntry | undefined {
+    const queue = sessionId === undefined ? this.#entries : this.#bySession.get(sessionId);
+    return queue?.findLast((entry) => entry.kind === 'marker' && entry.text === label);
+  }
+
+  /**
    * Removes the entries (and markers) of the current session or of the entries outside sessions
    * (`none`), and returns that scope's id (`null`: outside). The session stays current. `NOT_FOUND`
    * for `current` with none current or an id never given out, `INVALID_REQUEST` for an ended
