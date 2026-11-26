@@ -1,8 +1,8 @@
 import { test, expect } from 'screenreader-speech-capture-client/playwright';
 
 const html = `<!doctype html>
-<html lang="en">
-  <head><title>Headings</title></head>
+<html lang="de">
+  <head><title>Überschriften</title></head>
   <body>
     <h1>Start</h1>
     <h2>Details</h2>
@@ -19,17 +19,17 @@ test('the screen reader jumps to the next heading', async ({ page: p, recordKeys
   // Browse mode: H moves to the next heading (NVDA / JAWS quick navigation). The bridge records
   // from right before the key until the speech pauses.
   const { entries } = await recordKeys('h');
-  expect(entries.map((e) => e.text).join(' ')).toMatch(/heading/i);
+  expect(entries.map((e) => e.text).join(' ')).toMatch(/Überschrift/i);
 });
 
-test('setFocus brings the window to the front and it is announced', async ({
+test('Insert + T gives the page title', async ({
   page: p,
-  setFocus,
   speech,
+  pressKeys
 }) => {
   await p.goto(pageUrl);
-  // The bridge brings the window to the front, and the screen reader announces it with its
-  // title. Where the bridge can't, the fallback clicks and reloads, which announces it too.
-  await setFocus();
-  await speech.waitForOutput(/Headings/);
+  // The bridge trigger native input Insert + T
+  // This makes NVDA read the webpages title
+  await pressKeys('Insert+T')
+  await speech.waitForOutput(/Überschriften/);
 });
