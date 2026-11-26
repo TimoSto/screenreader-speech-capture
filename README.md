@@ -66,8 +66,7 @@ flowchart LR
 ## Requirements
 
 - **The screen reader's machine:** Windows 10 or 11 (usually a VM) with NVDA or JAWS, Node.js ≥ 22.12, an
-  interactive desktop session. Setting it up isn't verified end to end on a real VM yet
-  ([what is](docs/usage/vm-setup.md#verified-so-far)).
+  interactive desktop session.
 - **Where tests or agents run:** any OS with Node.js ≥ 20 that can reach the VM's port 5151.
 
 ## Quick start
@@ -84,9 +83,13 @@ npm i -g screenreader-speech-capture@<version>
 screenreader-speech-capture
 ```
 
-3. In NVDA or JAWS, select the voice **"Text To Socket 127.0.0.1:4449"**.
+The `npm warn install-scripts` line for `@jitsi/robotjs` is
+[expected](docs/usage/vm-setup.md#the-install-scripts-warning).
+
+3. In NVDA or JAWS, select the voice **"Text To Socket 127.0.0.1:4449"**. A German JAWS lists it
+   only once it is [marked as German](docs/usage/vm-setup.md#a-german-voice).
 4. Make the screen reader speak and watch the text arrive live in the web UI at
-   <http://localhost:5151>, or with `npx screenreader-speech-capture-client tail`.
+   <http://localhost:5151>, or with `npx -y screenreader-speech-capture-client@<version> tail`.
 
 The full list (firewall, VM settings, checks) is the [setup checklist](docs/usage/vm-setup.md#checklist).
 
