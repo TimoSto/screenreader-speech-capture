@@ -22,14 +22,10 @@ test('the screen reader jumps to the next heading', async ({ page: p, recordKeys
   expect(entries.map((e) => e.text).join(' ')).toMatch(/Überschrift/i);
 });
 
-test('Insert + T gives the page title', async ({
-  page: p,
-  speech,
-  pressKeys
-}) => {
+test('Insert + T gives the page title', async ({ page: p, speech, pressKeys }) => {
   await p.goto(pageUrl);
   // The bridge trigger native input Insert + T
   // This makes NVDA read the webpages title
-  await pressKeys('Insert+T')
+  await pressKeys('Insert+T');
   await speech.waitForOutput(/Überschriften/);
 });
