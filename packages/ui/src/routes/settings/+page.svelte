@@ -1,9 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { Theme } from '#lib/core/theme.js';
-  import { configStore, themeStore } from '#lib/composition.js';
+  import { appStores } from '#lib/composition.js';
   import TcpPortSetting from '#lib/components/TcpPortSetting/TcpPortSetting.svelte';
   import ThemeSetting from '#lib/components/ThemeSetting/ThemeSetting.svelte';
+
+  const { config: configStore, theme: themeStore } = appStores();
 
   onMount(() => {
     void configStore.refresh();

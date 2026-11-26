@@ -12,6 +12,11 @@
   type Props = {
     /** `#3 Checkout flow`, or `Outside sessions`. */
     heading: string;
+    /**
+     * The page is opened on the screen reader's own machine: the screen reader would read new
+     * rows, and that speech would be logged again. The rows are hidden from it.
+     */
+    local?: boolean;
     /** Oldest first. */
     entries: readonly SpeechEntryDto[];
     connection: FeedState;
@@ -31,6 +36,7 @@
 
   let {
     heading,
+    local = false,
     entries,
     connection,
     canMark,
@@ -110,16 +116,17 @@
     {/if}
   </header>
 
-  <!-- Focusable so the keyboard can scroll it. -->
+  <!-- Focusable so the keyboard can scroll it, except when it is hidden from the screen reader. -->
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div
     class="scroll"
     bind:this={scroller}
     onscroll={onScroll}
-    role="region"
-    aria-label="Speech log"
-    aria-live="off"
-    tabindex="0"
+    role={local ? undefined : 'region'}
+    aria-label={local ? undefined : 'Speech log'}
+    aria-live={local ? undefined : 'off'}
+    aria-hidden={local ? 'true' : undefined}
+    tabindex={local ? undefined : 0}
   >
     <!-- Always there, so its header row doesn't come and go while another scope loads. -->
     <SpeechTable {entries} />

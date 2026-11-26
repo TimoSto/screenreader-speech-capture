@@ -48,6 +48,23 @@ describe('SpeechLog', () => {
     await expect.element(table.getByText('step 3')).toBeVisible();
   });
 
+  it('exposes the log to a screen reader unless it is opened on its machine', async () => {
+    await render(SpeechLog, props());
+    expect(page.getByRole('region', { name: 'Speech log' }).elements()).toHaveLength(1);
+    expect(document.querySelector('[aria-hidden="true"] table')).toBeNull();
+  });
+
+  it('hides the rows from a screen reader on its own machine', async () => {
+    await render(SpeechLog, props({ local: true }));
+    expect(page.getByRole('region', { name: 'Speech log' }).elements()).toHaveLength(0);
+    expect(document.querySelector('.scroll')?.getAttribute('aria-hidden')).toBe('true');
+    expect(document.querySelector('.scroll')?.hasAttribute('tabindex')).toBe(false);
+    // The heading is still there to read.
+    await expect
+      .element(page.getByRole('heading', { name: '#3 Checkout flow' }))
+      .toBeInTheDocument();
+  });
+
   it('has no gap column', async () => {
     await render(SpeechLog, props());
     const headers = page.getByRole('columnheader').elements();

@@ -28,6 +28,9 @@ class FakeSupervisor implements ProcessSupervisor {
   status(): ServiceStatus {
     return { state: this.state, version: '1', port: 3000, restarts: 0, exitCode: null };
   }
+  pid(): number | null {
+    return null;
+  }
   settle(): void {
     for (const resolve of this.#settle.splice(0)) resolve();
   }

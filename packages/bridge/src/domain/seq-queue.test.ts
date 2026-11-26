@@ -57,4 +57,12 @@ describe('SeqQueue', () => {
     queue.removeWhere(() => true);
     expect(queue.size).toBe(0);
   });
+
+  it('finds the newest item a predicate accepts, not among dropped ones', () => {
+    const queue = queueOf(1, 2, 3, 4);
+    expect(queue.findLast((item) => item.seq % 2 === 1)?.seq).toBe(3);
+    queue.shift();
+    expect(queue.findLast((item) => item.seq === 1)).toBeUndefined();
+    expect(queueOf().findLast(() => true)).toBeUndefined();
+  });
 });

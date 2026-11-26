@@ -5,6 +5,8 @@ import type { Logger } from '../src/application/ports/out/logger.js';
 import type { SpeechEventBus } from '../src/application/ports/out/speech-event-bus.js';
 import type { SpeechEvent, SpeechListener } from '../src/domain/speech-event.js';
 import type { ConfigPatch } from '../src/domain/config/index.js';
+import type { AppWindow, WindowSystem } from '../src/application/ports/out/window-system.js';
+import type { Availability } from '../src/domain/availability.js';
 
 /** Logger that keeps its messages, as `"<level> <message>"`. */
 export class MemoryLogger implements Logger {
@@ -64,6 +66,7 @@ export class DeferredEventBus implements SpeechEventBus {
 
 /** Injector that records what it was asked to do, as `"click left 1,2"`, `"down insert"`, … */
 export class RecordingInputInjector implements InputInjector {
+  availability: Availability = { available: true, backend: 'fake' };
   readonly calls: string[] = [];
   /** Makes `keyTap` of this key fail. */
   failOn: string | undefined;
@@ -87,5 +90,50 @@ export class RecordingInputInjector implements InputInjector {
     if (key === this.failOn) return Promise.reject(new Error(`cannot tap ${key}`));
     this.calls.push(`tap ${key}`);
     return Promise.resolve();
+  }
+}
+
+/**
+ * A window system with scripted processes and windows (front to back). `bringToFront` moves the
+ * window to the front and reports success unless `refuse` is set.
+ */
+export class FakeWindowSystem implements WindowSystem {
+  availability: Availability = { available: true, backend: 'fake' };
+  /** Child pid → parent pid. */
+  parents = new Map<number, number>();
+  windows: AppWindow[] = [];
+  refuse = false;
+  readonly focused: AppWindow[] = [];
+
+  processTree(rootPid: number): Promise<Set<number>> {
+    const tree = new Set([rootPid]);
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const [child, parent] of this.parents) {
+        if (tree.has(parent) && !tree.has(child)) {
+          tree.add(child);
+          grew = true;
+        }
+      }
+    }
+    return Promise.resolve(tree);
+  }
+
+  topLevelWindows(): Promise<AppWindow[]> {
+    return Promise.resolve([...this.windows]);
+  }
+
+  bringToFront(window: AppWindow): Promise<boolean> {
+    if (this.refuse) return Promise.resolve(false);
+    this.focused.push(window);
+    this.windows = [window, ...this.windows.filter((w) => w !== window)];
+    return Promise.resolve(true);
+  }
+
+  /** Adds a window owned by `pid`, behind the others. */
+  addWindow(pid: number, title: string, className = 'Chrome_WidgetWin_1'): AppWindow {
+    const window = { handle: this.windows.length + 1, pid, title, className };
+    this.windows.push(window);
+    return window;
   }
 }

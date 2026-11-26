@@ -1,15 +1,32 @@
-import { SpeechTimeoutError, SpeechTruncatedError } from '../../../../domain/errors.js';
+import { createTextTest } from '@screenreader-speech-capture/shared';
+import {
+  BridgeNotReadyError,
+  SpeechTimeoutError,
+  SpeechTruncatedError,
+} from '../../../../domain/errors.js';
 import type { SpeechEntry } from '../../../../domain/speech-entry.js';
 import type { CliIo } from '../command.js';
 import { EXIT, type Command, type HelpLine } from '../command.js';
+import { reportError } from '../errors.js';
 import {
   formatEntry,
   formatSession,
   formatSessionEvent,
   formatStatus,
   seenText,
+  TRUNCATED_WARNING,
 } from '../format.js';
-import { NAME, UsageError, expectArgs, optionalInt, scope } from '../options.js';
+import {
+  NAME,
+  UsageError,
+  expectArgs,
+  intArg,
+  optionalInt,
+  resolveSince,
+  scope,
+  sessionOption,
+  sinceOption,
+} from '../options.js';
 
 // The commands that talk to the bridge. Each one's `help` is also its usage error.
 
@@ -24,17 +41,28 @@ const STATUS: HelpLine = {
 export const status: Command = {
   options: ['wait-ready', 'timeout'],
   help: [STATUS],
-  async run(args, { values, speech, out }) {
+  async run(args, { values, speech, out, io, json }) {
     expectArgs(args, 0, STATUS.usage);
     const timeout = optionalInt(values, 'timeout', 0);
     if (!values['wait-ready'] && timeout !== undefined) {
       throw new UsageError('--timeout needs --wait-ready.');
     }
-    const result = values['wait-ready']
-      ? await speech().waitForReady({ timeout })
-      : await speech().status();
-    out('status', result, formatStatus(result));
-    return EXIT.ok;
+    if (!values['wait-ready']) {
+      const result = await speech().status();
+      out('status', result, formatStatus(result));
+      return EXIT.ok;
+    }
+    try {
+      const result = await speech().waitForReady({ timeout });
+      out('status', { status: 'ready', ...result }, formatStatus(result));
+      return EXIT.ok;
+    } catch (error) {
+      // Not ready in time is a result (exit 1), not an error object.
+      if (!(error instanceof BridgeNotReadyError)) throw error;
+      if (json) out('status', { status: 'not-ready', reason: error.message }, '');
+      io.stderr(`${NAME}: ${error.message}\n`);
+      return EXIT.timeout;
+    }
   },
 };
 
@@ -83,10 +111,7 @@ export const session: Command = {
         return EXIT.ok;
       case 'delete': {
         const [raw] = expectArgs(rest, 1, SESSION_DELETE.usage);
-        const id = Number(raw);
-        if (!/^\d+$/.test(raw) || !Number.isSafeInteger(id) || id < 1) {
-          throw new UsageError(`The session id must be an integer >= 1, got "${raw}".`);
-        }
+        const id = intArg(raw, 1, `The session id must be an integer >= 1, got "${raw}".`);
         await speech().deleteSession(id);
         out('session delete', { deleted: true }, `Session ${id} deleted.`);
         return EXIT.ok;
@@ -112,31 +137,36 @@ export const session: Command = {
 };
 
 const CLEAR: HelpLine = {
-  usage: 'clear [--session <id|current> | --outside]',
+  usage: 'clear (--all | --session <id> | --outside)',
   description: [
-    'Wipe the whole speech buffer, all sessions (for manual use); --session clears only the',
-    'current session (it keeps running), --outside only the speech outside sessions',
+    'Delete recorded speech: --all the whole buffer, all sessions (for manual',
+    "use); --session one session's speech (it keeps running); --outside the",
+    'speech outside sessions',
   ],
 };
 
 export const clear: Command = {
-  options: ['session', 'outside'],
+  options: ['all', 'session', 'outside'],
   help: [CLEAR],
   async run(args, { values, speech, out }) {
     expectArgs(args, 0, CLEAR.usage);
-    if (values.session !== undefined && values.outside) {
-      throw new UsageError('Use either --session or --outside.');
+    // No default scope: wiping every session of every client must be asked for (--all).
+    const session = sessionOption(values);
+    const scopes = [values.all, session !== undefined, values.outside].filter(Boolean);
+    if (scopes.length === 0) {
+      throw new UsageError(
+        'clear needs a scope: --all (the whole buffer, all sessions), --session <id|current> ' +
+          'or --outside. To start fresh, prefer "session start".',
+      );
     }
+    if (scopes.length > 1) throw new UsageError('Use only one of --all, --session or --outside.');
     if (values.outside) {
       await speech().clear({ session: 'none' });
       out('clear', { cleared: true }, 'Speech outside sessions cleared.');
-    } else if (values.session === 'current') {
-      await speech().clear({ session: 'current' });
-      out('clear', { cleared: true }, 'Speech of the current session cleared.');
-    } else if (values.session !== undefined) {
-      const id = optionalInt(values, 'session', 1);
-      await speech().clear({ session: id });
-      out('clear', { cleared: true }, `Speech of session ${id} cleared.`);
+    } else if (session !== undefined) {
+      await speech().clear({ session });
+      const which = session === 'current' ? 'the current session' : `session ${session}`;
+      out('clear', { cleared: true }, `Speech of ${which} cleared.`);
     } else {
       await speech().clear();
       out('clear', { cleared: true }, 'Speech buffer cleared.');
@@ -153,18 +183,24 @@ const SPEECH: HelpLine = {
 export const speech: Command = {
   options: ['since', 'limit', 'include-markers', 'session', 'all'],
   help: [SPEECH],
-  async run(args, { values, speech, out, io }) {
+  async run(args, { values, json, speech, out, io }) {
     expectArgs(args, 0, SPEECH.usage);
     const client = speech();
     // Options are checked before the bridge is asked for the current session.
+    const since = sinceOption(values);
+    const limit = optionalInt(values, 'limit', 1);
+    const session = scope(values);
     const options = {
-      since: optionalInt(values, 'since', 0) ?? 0,
-      limit: optionalInt(values, 'limit', 1),
+      since: (await resolveSince(since, client, session)) ?? 0,
+      limit,
       includeMarkers: values['include-markers'] ?? false,
-      session: await scope(values, client),
+      session,
     };
     const read = await readAll(io, () => client.getSpeech(options));
-    out('speech', read, read.entries.map(formatEntry).join('\n'));
+    if (json || read.entries.length > 0) {
+      out('speech', read, read.entries.map(formatEntry).join('\n'));
+    }
+    if (read.entries.length === 0) io.stderr(`${NAME}: no speech.\n`);
     return EXIT.ok;
   },
 };
@@ -177,17 +213,18 @@ const TEXT: HelpLine = {
 export const text: Command = {
   options: ['since', 'separator', 'session', 'all'],
   help: [TEXT],
-  async run(args, { values, speech, out, io }) {
+  async run(args, { values, json, speech, out, io }) {
     expectArgs(args, 0, TEXT.usage);
     const client = speech();
-    const options = {
-      since: optionalInt(values, 'since', 0) ?? 0,
-      session: await scope(values, client),
-    };
+    const since = sinceOption(values);
+    const session = scope(values);
+    const options = { since: (await resolveSince(since, client, session)) ?? 0, session };
     // `getText` is `getSpeech` joined; reading the entries keeps what is left on truncation.
     const { entries, truncated } = await readAll(io, () => client.getSpeech(options));
     const joined = entries.map((e) => e.text).join(values.separator ?? '\n');
-    out('text', { text: joined, truncated }, joined);
+    // Text mode prints nothing for no speech, rather than an empty line.
+    if (json || entries.length > 0) out('text', { text: joined, truncated }, joined);
+    if (entries.length === 0) io.stderr(`${NAME}: no speech.\n`);
     return EXIT.ok;
   },
 };
@@ -197,7 +234,9 @@ const WAIT: HelpLine = {
     'wait <text> [--regex] [--normalize] [--since <seq>] [--timeout <ms>] [--session <id> | --all]',
   description: [
     'Wait until speech contains <text> (or matches the regex);',
-    'also finds speech that arrived before the call (default timeout 5000)',
+    'also finds speech that arrived before the call (default timeout 5000).',
+    'It searches the whole session: pass --since <seq> or --since mark:<label>',
+    '(from mark) to see only newer speech, or use press --capture',
   ],
 };
 
@@ -216,23 +255,27 @@ export const wait: Command = {
       }
     }
     const client = speech();
+    const since = sinceOption(values);
+    const timeout = optionalInt(values, 'timeout', 0);
+    const session = scope(values);
     const options = {
-      since: optionalInt(values, 'since', 0) ?? 0,
-      timeout: optionalInt(values, 'timeout', 0),
+      since: (await resolveSince(since, client, session)) ?? 0,
+      timeout,
       normalize: values.normalize ?? false,
-      session: await scope(values, client),
+      session,
     };
     try {
       const entry = await client.waitForOutput(match, options);
-      out('wait', { matched: true, entry }, formatEntry(entry));
+      out('wait', { status: 'matched', entry }, formatEntry(entry));
       return EXIT.ok;
     } catch (error) {
       if (!(error instanceof SpeechTimeoutError)) throw error;
-      // Without --json, the timeout is only the message on stderr.
-      if (json) {
-        out('wait', { matched: false, entries: error.entries, truncated: error.truncated }, '');
-      }
-      io.stderr(`${NAME}: ${error.message}.${seenText(error.entries)}\n`);
+      printTimeout(io, json, error, (result) => out('wait', result, ''));
+      // The wording depends on the screen reader and its verbosity: point at --normalize when it
+      // is what made the difference.
+      const normalized = values.normalize ? undefined : createTextTest(match, true);
+      const near = normalized && error.entries.find((e) => normalized(e.text));
+      if (near) io.stderr(`Hint: with --normalize it matches ${formatEntry(near)}.\n`);
       return EXIT.timeout;
     }
   },
@@ -246,25 +289,28 @@ const WAIT_SILENCE: HelpLine = {
 export const waitSilence: Command = {
   options: ['quiet-for', 'timeout'],
   help: [WAIT_SILENCE],
-  async run(args, { values, speech, out, io }) {
+  async run(args, { values, speech, out, io, json }) {
     expectArgs(args, 0, WAIT_SILENCE.usage);
     const quietFor = optionalInt(values, 'quiet-for', 1);
     const timeout = optionalInt(values, 'timeout', 0);
     try {
       await speech().waitForSilence({ quietFor, timeout });
-      out('wait-silence', { silent: true }, 'Silent.');
-      return EXIT.ok;
     } catch (error) {
       if (!(error instanceof SpeechTimeoutError)) throw error;
-      io.stderr(`${NAME}: ${error.message}.\n`);
+      printTimeout(io, json, error, (result) => out('wait-silence', result, ''));
       return EXIT.timeout;
     }
+    out('wait-silence', { status: 'silent' }, 'Silent.');
+    return EXIT.ok;
   },
 };
 
 const MARK: HelpLine = {
   usage: 'mark <label>',
-  description: ['Insert a marker and print its seq, for --since'],
+  description: [
+    'Insert a marker and print it (#<seq> [marker] <label>);',
+    '--since mark:<label> reads from the newest marker with that label',
+  ],
 };
 
 export const mark: Command = {
@@ -273,7 +319,7 @@ export const mark: Command = {
   async run(args, { speech, out }) {
     const [label] = expectArgs(args, 1, MARK.usage);
     const entry = await speech().mark(label);
-    out('mark', entry, String(entry.seq));
+    out('mark', entry, formatEntry(entry));
     return EXIT.ok;
   },
 };
@@ -282,7 +328,8 @@ const TAIL: HelpLine = {
   usage: 'tail [--since <seq>]',
   description: [
     'Print speech live as it arrives, until Ctrl+C (one JSON event per',
-    'line with --json); --since first prints the buffered entries after <seq>',
+    'line with --json); --since first prints the buffered entries after <seq>.',
+    'For people watching; agents use wait, wait-silence or --capture',
   ],
 };
 
@@ -291,10 +338,10 @@ export const tail: Command = {
   help: [TAIL],
   async run(args, { values, speech, out, io, json }) {
     expectArgs(args, 0, TAIL.usage);
-    const since = optionalInt(values, 'since', 0);
     const client = speech();
     // Unreachable or incompatible: exit 2 at once, like every other command. Later connection
-    // problems are retried.
+    // problems are retried. `tail` follows every session, so a marker is looked for everywhere.
+    const since = await resolveSince(sinceOption(values), client, undefined);
     await client.status();
     const signal = io.interrupt();
     return new Promise<number>((resolve) => {
@@ -318,8 +365,9 @@ export const tail: Command = {
             );
           },
           onError: (error, { retrying }) => {
-            io.stderr(`${NAME}: ${error.message}${retrying ? ', reconnecting' : ''}\n`);
-            if (!retrying) finish(EXIT.bridge);
+            // The feed stopped for good: the error ends the output, as for any other command.
+            if (retrying) io.stderr(`${NAME}: ${error.message}, reconnecting\n`);
+            else finish(reportError(error, io, json));
           },
         },
       );
@@ -342,10 +390,21 @@ async function readAll(
     return { entries: await read(), truncated: false };
   } catch (error) {
     if (!(error instanceof SpeechTruncatedError)) throw error;
-    io.stderr(
-      `${NAME}: some speech was dropped because the bridge's buffer was full ` +
-        '(raise buffer.maxEntries); showing what is left.\n',
-    );
+    io.stderr(`${NAME}: ${TRUNCATED_WARNING}\n`);
     return { entries: error.entries, truncated: true };
   }
+}
+
+/**
+ * A wait that timed out: a result with `status: 'timeout'` and the speech seen (exit 1), only
+ * with --json; the message and that speech always go to stderr.
+ */
+function printTimeout(
+  io: CliIo,
+  json: boolean,
+  error: SpeechTimeoutError,
+  print: (result: { status: 'timeout'; entries: SpeechEntry[]; truncated: boolean }) => void,
+): void {
+  if (json) print({ status: 'timeout', entries: error.entries, truncated: error.truncated });
+  io.stderr(`${NAME}: ${error.reason}.${seenText(error.entries)}\n`);
 }

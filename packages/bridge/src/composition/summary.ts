@@ -2,6 +2,7 @@ import { PLAYWRIGHT_MCP_PATH, PLAYWRIGHT_PATH } from '@screenreader-speech-captu
 import { describeAddress, reachableUrls } from '../adapters/shared/net/reachable-urls.js';
 import type { ProcessSupervisor } from '../application/ports/out/process-supervisor.js';
 import { SERVICE_TITLES, type ServiceName } from '../domain/child-service.js';
+import type { Availability } from '../domain/availability.js';
 import type { Config } from '../domain/config/index.js';
 import type { Ports } from './lifecycle.js';
 
@@ -11,8 +12,8 @@ interface SummaryInput {
   supervisors: Readonly<Record<ServiceName, ProcessSupervisor>>;
   /** Whether the web UI is served on the HTTP port. */
   webUi: boolean;
-  /** `null`: native input is off (the reason is logged when it loads). */
-  nativeInput: string | null;
+  /** Off: the reason is logged when it loads. */
+  nativeInput: Availability;
   /** Milliseconds from the start of the bridge until now. */
   tookMs: number;
 }
@@ -48,7 +49,7 @@ export function readySummary(input: SummaryInput): string {
     else value = `${state.toUpperCase()}, see the log above (${version})`;
     rows.push([SERVICE_TITLES[name], value]);
   }
-  rows.push(['native input', input.nativeInput ?? 'off']);
+  rows.push(['native input', input.nativeInput.available ? input.nativeInput.backend : 'off']);
   const width = Math.max(...rows.map(([label]) => label.length));
   const seconds = (input.tookMs / 1000).toFixed(1);
   return [

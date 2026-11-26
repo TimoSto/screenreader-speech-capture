@@ -1,8 +1,15 @@
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from '@playwright/test';
 import type {
   SpeechCaptureOptions,
   SpeechCaptureWorkerOptions,
 } from 'screenreader-speech-capture-client/playwright';
+
+// SR_SPEECH_URL from .env.local (a copy of .env.example), if there is one. A variable set in the
+// shell wins: loadEnvFile doesn't overwrite.
+const envFile = fileURLToPath(new URL('.env.local', import.meta.url));
+if (existsSync(envFile)) process.loadEnvFile(envFile);
 
 export default defineConfig<SpeechCaptureOptions & SpeechCaptureWorkerOptions>({
   testDir: 'tests',

@@ -2,6 +2,7 @@ export * from './api-version.js';
 export * from './config.js';
 export * from './errors.js';
 export * from './input.js';
+export * from './key-chord.js';
 export * from './limits.js';
 export * from './services.js';
 export * from './session.js';

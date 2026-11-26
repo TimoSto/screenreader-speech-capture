@@ -8,6 +8,7 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'FORBIDDEN'
   | 'INPUT_DISABLED'
+  | 'FOCUS_FAILED'
   | 'SERVICE_UNAVAILABLE'
   | 'INTERNAL';
 

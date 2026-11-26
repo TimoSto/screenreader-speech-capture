@@ -1,13 +1,18 @@
 import type {
   BridgeApi,
+  CaptureRequest,
+  InputCapture,
   SpeechPage,
   StreamEvent,
 } from '../src/application/ports/out/bridge-api.js';
 import type { Clock } from '../src/application/ports/out/clock.js';
 import type { BridgeStatus } from '../src/domain/bridge-status.js';
+import type { FocusedWindow, FocusTarget } from '../src/domain/native-input.js';
 import type { SpeechFeedEvent } from '../src/domain/feed-event.js';
 import type { Session, SessionList, SessionRef, StartedSession } from '../src/domain/session.js';
 import type { SpeechEntry } from '../src/domain/speech-entry.js';
+import { API_VERSION } from '@screenreader-speech-capture/shared';
+import { checkApiVersion } from '../src/domain/api-version.js';
 import { BridgeHttpError } from '../src/domain/errors.js';
 
 /**
@@ -90,6 +95,15 @@ export class FakeBridgeApi implements BridgeApi {
   private readonly streams = new Set<FakeStream>();
   /** Makes the next calls reject with these errors, one per call. */
   failures: Error[] = [];
+  /** The virtual time captures (`captureKeys`, `captureClick`) run on. */
+  clock: FakeClock | undefined;
+  /** The `capture` of every capture request, oldest first. */
+  readonly captures: CaptureRequest[] = [];
+  /**
+   * The browser windows `focusWindow` can find, front to back. A `title` is looked up while the
+   * request runs: `titleOf` reads it then (a page's `document.title`, for example).
+   */
+  windows: { target: FocusTarget; pid: number; titleOf: () => string }[] = [];
 
   /** Records a speech entry, as if the screen reader said `text`. */
   speak(...texts: string[]): void {
@@ -107,7 +121,9 @@ export class FakeBridgeApi implements BridgeApi {
     const failure = this.fail();
     if (failure) return failure;
     let sessionId: number | undefined;
-    if (session !== undefined) {
+    // `active`: the current session, or no filter when none is current (API 1.23).
+    if (session === 'active') sessionId = this.current?.id;
+    else if (session !== undefined) {
       sessionId = session === 'current' ? this.current?.id : session;
       if (sessionId === undefined || !this.allSessions.some((s) => s.id === sessionId)) {
         return Promise.reject(new BridgeHttpError(404, 'NOT_FOUND', 'No such session'));
@@ -128,8 +144,13 @@ export class FakeBridgeApi implements BridgeApi {
     this.calls.push(session === undefined ? 'clear' : `clear ${String(session)}`);
     const failure = this.fail();
     if (failure) return failure;
-    if (session !== undefined) {
-      const id = session === 'none' ? null : session === 'current' ? this.current?.id : session;
+    if (session !== undefined && (session !== 'active' || this.current)) {
+      const id =
+        session === 'none'
+          ? null
+          : session === 'current' || session === 'active'
+            ? this.current?.id
+            : session;
       if (id === undefined) {
         return Promise.reject(new BridgeHttpError(404, 'NOT_FOUND', 'No session is current'));
       }
@@ -156,6 +177,23 @@ export class FakeBridgeApi implements BridgeApi {
   mark(label: string): Promise<SpeechEntry> {
     this.calls.push(`mark ${label}`);
     return this.fail() ?? Promise.resolve(this.add('marker', label));
+  }
+
+  latestMarker(label: string, session?: SessionRef): Promise<SpeechEntry | null> {
+    this.calls.push(`latest marker ${label}${session === undefined ? '' : ` session=${session}`}`);
+    const failure = this.fail();
+    if (failure) return failure;
+    const sessionId = session === 'current' || session === 'active' ? this.current?.id : session;
+    if (session === 'current' && sessionId === undefined) {
+      return Promise.reject(new BridgeHttpError(404, 'NOT_FOUND', 'No session is current'));
+    }
+    const found = this.entries.findLast(
+      (e) =>
+        e.kind === 'marker' &&
+        e.text === label.trim() &&
+        (sessionId === undefined || e.sessionId === sessionId),
+    );
+    return Promise.resolve(found ?? null);
   }
 
   startSession(request: { name: string; run?: string | undefined }): Promise<StartedSession> {
@@ -231,6 +269,73 @@ export class FakeBridgeApi implements BridgeApi {
       `keys ${keys}${request.delayMs === undefined ? '' : ` delay=${request.delayMs}`}`,
     );
     return this.fail() ?? Promise.resolve();
+  }
+
+  focusWindow(request: {
+    target: FocusTarget;
+    title?: string | undefined;
+  }): Promise<FocusedWindow> {
+    this.calls.push(
+      `focus ${request.target}${request.title === undefined ? '' : ` "${request.title}"`}`,
+    );
+    const failure = this.fail();
+    if (failure) return failure;
+    const found = this.windows.find(
+      (w) =>
+        w.target === request.target &&
+        (request.title === undefined || w.titleOf().includes(request.title)),
+    );
+    if (!found) return Promise.reject(new BridgeHttpError(404, 'NOT_FOUND', 'No such window'));
+    return Promise.resolve({ title: found.titleOf(), pid: found.pid });
+  }
+
+  captureClick(
+    request: { x: number; y: number; button?: string | undefined } & { capture: CaptureRequest },
+  ): Promise<InputCapture> {
+    return this.capture(request.capture, () => this.click(request));
+  }
+
+  captureKeys(request: {
+    keys: string | readonly string[];
+    delayMs?: number | undefined;
+    capture: CaptureRequest;
+  }): Promise<InputCapture> {
+    return this.capture(request.capture, () => this.pressKeys(request));
+  }
+
+  /**
+   * Like the bridge: the start before the input, then the speech after it until it paused for
+   * `quietForMs`, none came within `firstWithinMs`, or `timeoutMs` ran out (in 10 ms steps of
+   * virtual time). `settleMs` is only recorded.
+   */
+  private async capture(capture: CaptureRequest, send: () => Promise<void>): Promise<InputCapture> {
+    const clock = this.clock;
+    if (!clock) throw new Error('FakeBridgeApi.clock is needed for a capture');
+    this.captures.push(capture);
+    const { quietForMs = 500, firstWithinMs = 2000, timeoutMs = 10_000 } = capture;
+    const startSeq = this.seq;
+    await send();
+    const start = clock.now();
+    const end = start + timeoutMs;
+    const spoken = () => this.entries.filter((e) => e.seq > startSeq && e.kind === 'speech');
+    let seen = 0;
+    let last: number | undefined;
+    for (;;) {
+      const count = spoken().length;
+      if (count > seen) {
+        seen = count;
+        last = clock.now();
+      }
+      const deadline = Math.min(
+        last === undefined ? start + firstWithinMs : last + quietForMs,
+        end,
+      );
+      if (clock.now() >= deadline) break;
+      await clock.sleep(Math.min(10, deadline - clock.now()));
+    }
+    const status =
+      last === undefined ? 'no-speech' : last + quietForMs <= end ? 'silent' : 'timeout';
+    return { status, startSeq, entries: spoken(), omitted: 0, truncated: false };
   }
 
   async *streamSpeech(options: {
@@ -345,9 +450,20 @@ export class FakeBridgeApi implements BridgeApi {
     this.current = undefined;
   }
 
+  /**
+   * The next of `failures`, or an `IncompatibleBridgeError` for another major `apiVersion`, as
+   * `FetchBridgeApi` checks the version header of every answer.
+   */
   private fail(): Promise<never> | undefined {
     const error = this.failures.shift();
-    return error ? Promise.reject(error) : undefined;
+    if (error) return Promise.reject(error);
+    try {
+      checkApiVersion(this.apiVersion, API_VERSION);
+    } catch (incompatible) {
+      if (incompatible instanceof Error) return Promise.reject(incompatible);
+      throw incompatible;
+    }
+    return undefined;
   }
 
   private snapshot(): BridgeStatus {
@@ -377,6 +493,46 @@ export class FakeBridgeApi implements BridgeApi {
         current: this.current ? { ...this.current } : null,
         count: this.allSessions.length,
       },
+      input: {
+        native: { available: true, backend: 'robotjs', reason: null },
+        focus: { available: true, backend: 'koffi', reason: null },
+      },
     };
+  }
+}
+
+/**
+ * A browser page as `setFocus` and the fixture use it: `document.title` can be read and set, the
+ * geometry script answers `geometry`, `reload` is counted.
+ */
+export class FakePage {
+  title = 'Checkout';
+  /** Every title it had, oldest first. */
+  readonly titles: string[] = [];
+  reloads = 0;
+  /** How often `bringToFront()` (Playwright's, the keyboard focus into the page) was called. */
+  focused = 0;
+
+  constructor(private readonly geometry: unknown = {}) {}
+
+  bringToFront(): Promise<void> {
+    this.focused++;
+    return Promise.resolve();
+  }
+
+  evaluate(expression: string): Promise<unknown> {
+    if (expression === 'document.title') return Promise.resolve(this.title);
+    const set = /^document\.title = (".*")$/.exec(expression);
+    if (set) {
+      this.title = JSON.parse(set[1]!) as string;
+      this.titles.push(this.title);
+      return Promise.resolve(this.title);
+    }
+    return Promise.resolve(this.geometry);
+  }
+
+  reload(): Promise<void> {
+    this.reloads++;
+    return Promise.resolve();
   }
 }

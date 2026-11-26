@@ -15,6 +15,10 @@ const status = {
   playwright: service,
   mcp: { ...service, port: 8931 },
   session: { current: null, count: 0 },
+  input: {
+    native: { available: true, backend: 'robotjs', reason: null },
+    focus: { available: true, backend: 'koffi', reason: null },
+  },
 };
 
 function fakeFetch(respond: (url: string) => Response | Promise<Response>): typeof fetch {
@@ -218,6 +222,22 @@ describe('createBridgeApi', () => {
     expect(await response.text()).toBe('id: 1\n\n');
   });
 
+  it('passes the status of a refused stream on and releases its body', async () => {
+    let cancelled = false;
+    const body = new ReadableStream({
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const api = createBridgeApi('http://bridge', () =>
+      Promise.resolve(new Response(body, { status: 404 })),
+    );
+    await expect(api.openSpeechStream(9, null, new AbortController().signal)).rejects.toMatchObject(
+      { status: 404 },
+    );
+    expect(cancelled).toBe(true);
+  });
+
   it('answers 502 when the stream cannot be opened', async () => {
     const api = createBridgeApi('http://bridge', () => Promise.reject(new Error('ECONNREFUSED')));
     await expect(
@@ -234,7 +254,7 @@ describe('createBridgeApi', () => {
         return json({ entries: [], truncated: false, hasMore: false });
       }),
     );
-    const list = await api.speech('4', 10, 500);
+    const list = await api.speech(4, 10, 500);
     expect(new URL(requested).searchParams.toString()).toBe('since=10&limit=500&session=4');
     expect(list.hasMore).toBe(false);
   });

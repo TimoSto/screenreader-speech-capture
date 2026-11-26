@@ -48,6 +48,27 @@ const ConnectionSchema = v.object({
 
 export type ConnectionDto = v.InferOutput<typeof ConnectionSchema>;
 
+export const InputAvailabilitySchema = v.pipe(
+  v.object({
+    available: v.boolean(),
+    backend: v.pipe(
+      v.nullable(v.string()),
+      v.description('The library that does it. `null` when not available.'),
+      v.examples(['robotjs']),
+    ),
+    reason: v.pipe(
+      v.nullable(v.string()),
+      v.description(
+        'Why it is not available (also the `INPUT_DISABLED` message). `null` when it is.',
+      ),
+      v.examples(['only on Windows']),
+    ),
+  }),
+  v.description('Whether a native input feature works on this machine. Fixed at the bridge start.'),
+);
+
+export type InputAvailabilityDto = v.InferOutput<typeof InputAvailabilitySchema>;
+
 export const StatusSchema = v.pipe(
   v.object({
     bridge: v.object({
@@ -92,8 +113,26 @@ export const StatusSchema = v.pipe(
       }),
       v.description('Added in API 1.3.'),
     ),
+    input: v.pipe(
+      v.object({
+        native: v.pipe(
+          InputAvailabilitySchema,
+          v.description('`POST /input/keys` and `POST /input/click` (robotjs).'),
+        ),
+        focus: v.pipe(
+          InputAvailabilitySchema,
+          v.description('`POST /input/focus` (koffi, Windows only).'),
+        ),
+      }),
+      v.description(
+        'Native input (docs/usage/native-input.md). When a feature is not available, its ' +
+          'endpoints answer `409 INPUT_DISABLED`. Added in API 1.24.',
+      ),
+    ),
   }),
-  v.description('`GET /status`. `playwright` since API 1.1, `mcp` since 1.2, `session` since 1.3.'),
+  v.description(
+    '`GET /status`. `playwright` since API 1.1, `mcp` since 1.2, `session` since 1.3, `input` since 1.24.',
+  ),
 );
 
 /** `GET /api/v1/status` */

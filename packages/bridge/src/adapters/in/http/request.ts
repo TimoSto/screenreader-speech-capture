@@ -34,10 +34,10 @@ export function booleanParam(url: URL, name: string): boolean | undefined {
 export function sessionParam(url: URL): SessionFilter | undefined {
   const raw = url.searchParams.get('session');
   if (raw === null || raw === '') return undefined;
-  if (raw === 'current' || raw === 'none') return raw;
+  if (raw === 'current' || raw === 'active' || raw === 'none') return raw;
   const id = /^\d+$/.test(raw) ? Number(raw) : NaN;
   if (!Number.isSafeInteger(id) || id < 1) {
-    throw invalidField('session', 'must be a session id, current or none');
+    throw invalidField('session', 'must be a session id, current, active or none');
   }
   return id;
 }
@@ -114,6 +114,16 @@ export function numberField(body: unknown, name: string): number {
 /** An optional number field of a JSON body. */
 export function optionalNumberField(body: unknown, name: string): number | undefined {
   return field(body, name) === undefined ? undefined : numberField(body, name);
+}
+
+/** An optional field of a JSON body that is a JSON object. */
+export function optionalObjectField(body: unknown, name: string): object | undefined {
+  const value = field(body, name);
+  if (value === undefined) return undefined;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw invalidField(name, 'must be an object');
+  }
+  return value;
 }
 
 /** A required field that is a string or an array of strings. */

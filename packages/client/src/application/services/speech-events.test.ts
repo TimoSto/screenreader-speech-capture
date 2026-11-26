@@ -7,7 +7,7 @@ import { speechEvents, type SpeechEventsOptions } from './speech-events.js';
 function setup() {
   const api = new FakeBridgeApi();
   const clock = new FakeClock();
-  const deps = { api, clock, ensureCompatible: () => Promise.resolve() };
+  const deps = { api, clock };
   return { api, clock, deps };
 }
 

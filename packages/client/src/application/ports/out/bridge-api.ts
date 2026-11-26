@@ -1,7 +1,12 @@
 import type { BridgeStatus } from '../../../domain/bridge-status.js';
 import type { SpeechFeedEvent } from '../../../domain/feed-event.js';
 import type { SessionList, SessionRef, StartedSession } from '../../../domain/session.js';
-import type { MouseButton, ScreenPoint } from '../../../domain/native-input.js';
+import type {
+  FocusedWindow,
+  FocusTarget,
+  MouseButton,
+  ScreenPoint,
+} from '../../../domain/native-input.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 
 /** One page of `GET /api/v1/speech`. */
@@ -11,6 +16,27 @@ export interface SpeechPage {
   truncated: boolean;
   /** More entries follow: ask again with the last entry's `seq` as `since`. */
   hasMore: boolean;
+}
+
+/** How the bridge records the speech an input causes (the `capture` of an input request). */
+export interface CaptureRequest {
+  quietForMs?: number | undefined;
+  firstWithinMs?: number | undefined;
+  timeoutMs?: number | undefined;
+  settleMs?: number | undefined;
+}
+
+/** The answer of an input request with `capture` (API 1.19). */
+export interface InputCapture {
+  status: 'silent' | 'no-speech' | 'timeout';
+  /** The newest `seq` right before the input. */
+  startSeq: number;
+  /** The speech after `startSeq` (no markers), oldest first: the first ones if `omitted`. */
+  entries: SpeechEntry[];
+  /** Later speech entries the bridge left out. */
+  omitted: number;
+  /** Entries after `startSeq` were dropped because the bridge's buffer was full. */
+  truncated: boolean;
 }
 
 /**
@@ -34,6 +60,11 @@ export interface BridgeApi {
    */
   clear(session?: SessionRef | 'none'): Promise<void>;
   mark(label: string): Promise<SpeechEntry>;
+  /**
+   * `GET /api/v1/markers/latest` (API 1.20): the newest marker with this label, in `session`'s
+   * scope (all entries without it), `null` if there is none.
+   */
+  latestMarker(label: string, session?: SessionRef): Promise<SpeechEntry | null>;
   /** `POST /api/v1/sessions` (API 1.3): the new session is current, the previous one ends. */
   startSession(request: { name: string; run?: string | undefined }): Promise<StartedSession>;
   /** `POST /api/v1/sessions/end` (API 1.3). */
@@ -49,6 +80,21 @@ export interface BridgeApi {
     keys: string | readonly string[];
     delayMs?: number | undefined;
   }): Promise<void>;
+  /**
+   * `POST /api/v1/input/focus` (API 1.21): brings a window of a browser the bridge started to the
+   * front; with `title`, one whose title contains it.
+   */
+  focusWindow(request: { target: FocusTarget; title?: string | undefined }): Promise<FocusedWindow>;
+  /** `POST /api/v1/input/click` with `capture` (API 1.19): the click and the speech it caused. */
+  captureClick(
+    request: ScreenPoint & { button?: MouseButton | undefined; capture: CaptureRequest },
+  ): Promise<InputCapture>;
+  /** `POST /api/v1/input/keys` with `capture` (API 1.19): the keys and the speech they caused. */
+  captureKeys(request: {
+    keys: string | readonly string[];
+    delayMs?: number | undefined;
+    capture: CaptureRequest;
+  }): Promise<InputCapture>;
   /**
    * One connection to the live feed (`GET /api/v1/speech/stream`). With `lastEventId` the bridge
    * first replays the buffered entries with `seq > lastEventId` (all of them, after a

@@ -6,7 +6,7 @@ import type { ConfigValue } from '../../../application/ports/in/manage-client-co
 import type { BridgeStatus } from '../../../domain/bridge-status.js';
 import type { Session, SessionList, StartedSession } from '../../../domain/session.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
-import { CLI_OUTPUT } from './output.js';
+import { CLI_OUTPUT, CliErrorOutput } from './output.js';
 import type {
   BridgeStatusOutput,
   ConfigValueOutput,
@@ -27,13 +27,22 @@ describe('CLI output schemas', () => {
     expectTypeOf<InferOutput<typeof ConfigValueOutput>>().toEqualTypeOf<ConfigValue>();
   });
 
+  it('describe the error object of a failed command', () => {
+    expect(
+      checkDto(CliErrorOutput, { error: { type: 'InternalError', message: 'boom' } }),
+    ).toMatchObject({ ok: true });
+    expect(checkDto(CliErrorOutput, { error: { type: 'Oops', message: 'boom' } })).toMatchObject({
+      ok: false,
+    });
+  });
+
   it('reject a shape that differs, for example a wait timeout without truncated', () => {
-    expect(checkDto(CLI_OUTPUT.wait, { matched: false, entries: [] })).toMatchObject({
+    expect(checkDto(CLI_OUTPUT.wait, { status: 'timeout', entries: [] })).toMatchObject({
       ok: false,
       field: 'truncated',
     });
     expect(
-      checkDto(CLI_OUTPUT.wait, { matched: false, entries: [], truncated: false }),
+      checkDto(CLI_OUTPUT.wait, { status: 'timeout', entries: [], truncated: false }),
     ).toMatchObject({ ok: true });
   });
 

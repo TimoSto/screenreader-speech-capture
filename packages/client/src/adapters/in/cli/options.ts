@@ -18,6 +18,8 @@ export const OPTIONS = {
   limit: { type: 'string' },
   timeout: { type: 'string' },
   'quiet-for': { type: 'string' },
+  'first-within': { type: 'string' },
+  settle: { type: 'string' },
   'include-markers': { type: 'boolean' },
   separator: { type: 'string' },
   regex: { type: 'boolean' },
@@ -31,6 +33,9 @@ export const OPTIONS = {
   y: { type: 'string' },
   button: { type: 'string' },
   delay: { type: 'string' },
+  capture: { type: 'boolean' },
+  script: { type: 'boolean' },
+  geometry: { type: 'string' },
 } as const;
 
 export type Values = ReturnType<typeof parseArgs<{ options: typeof OPTIONS }>>['values'];
@@ -58,20 +63,22 @@ export function checkOptions(command: string, allowed: readonly Option[], values
   }
 }
 
+/** `raw` as an integer >= `min` (digits only), or a usage error with `message`. */
+export function intArg(raw: string, min: number, message: string): number {
+  const value = Number(raw);
+  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(value) || value < min) {
+    throw new UsageError(message);
+  }
+  return value;
+}
+
 /** An integer option >= `min`, `undefined` if not given. */
 export function optionalInt(values: Values, name: Option, min: number): number | undefined {
   const raw = values[name];
   if (raw === undefined) return undefined;
-  const value = Number(raw);
-  if (
-    typeof raw !== 'string' ||
-    !/^\d+$/.test(raw) ||
-    !Number.isSafeInteger(value) ||
-    value < min
-  ) {
-    throw new UsageError(`--${name} must be an integer >= ${min}, got "${String(raw)}".`);
-  }
-  return value;
+  const message = `--${name} must be an integer >= ${min}, got "${String(raw)}".`;
+  if (typeof raw !== 'string') throw new UsageError(message);
+  return intArg(raw, min, message);
 }
 
 type Args<N extends number, T extends string[] = []> = T['length'] extends N
@@ -84,20 +91,24 @@ export function expectArgs<N extends 0 | 1 | 2>(args: string[], count: N, usage:
   return args as Args<N>;
 }
 
+/** `--session <id|current>`, the same for the reads and `clear`. */
+export function sessionOption(values: Values): SessionRef | undefined {
+  const raw = values.session;
+  if (raw === undefined || raw === 'current') return raw;
+  return intArg(raw, 1, `--session must be a session id (>= 1) or current, got "${raw}".`);
+}
+
 /**
- * The session `speech`, `text` and `wait` read: `--session <id>`, nothing with `--all`, otherwise
- * the current session. Its id, not `'current'`, so without a current session it reads the whole
- * buffer instead of answering 404.
+ * The session `speech`, `text` and `wait` read: `--session <id|current>`, nothing with `--all`,
+ * otherwise `active`: the current session, or the whole buffer when none is current, resolved by
+ * the bridge in the same request (API 1.23). An explicit `--session current` stays `'current'`:
+ * with none current that is the bridge's `NOT_FOUND`.
  */
-export async function scope(
-  values: Values,
-  speech: SpeechCapture,
-): Promise<SessionRef | undefined> {
-  const id = optionalInt(values, 'session', 1);
-  if (values.all && id !== undefined) throw new UsageError('Use either --session or --all.');
-  if (id !== undefined) return id;
-  if (values.all) return undefined;
-  return (await speech.status()).session.current?.id;
+export function scope(values: Values): SessionRef | undefined {
+  const session = sessionOption(values);
+  if (values.all && session !== undefined) throw new UsageError('Use either --session or --all.');
+  if (session !== undefined) return session;
+  return values.all ? undefined : 'active';
 }
 
 /** A required integer option, may be negative (a screen left of the primary one): `--x=-5`. */
@@ -108,4 +119,52 @@ export function requiredSignedInt(values: Values, name: Option, usage: string): 
     throw new UsageError(`--${name} must be an integer, got "${raw}".`);
   }
   return Number(raw);
+}
+
+/** The prefix of a `--since` that names a marker instead of a `seq`. */
+const MARK_PREFIX = 'mark:';
+
+/** `--since`: a `seq`, or the label of a marker (`mark:<label>`) to resolve on the bridge. */
+export type Since = number | { label: string };
+
+/**
+ * `--since <seq>` or `--since mark:<label>`, checked before anything is sent: `undefined` if not
+ * given. The seq may start with `#`, as the text output prints it (`#4712 [marker] step-2`).
+ */
+export function sinceOption(values: Values): Since | undefined {
+  const raw = values.since;
+  if (raw?.startsWith('#')) {
+    return intArg(raw.slice(1), 0, `--since must be an integer >= 0, got "${raw}".`);
+  }
+  if (raw === undefined || !raw.startsWith(MARK_PREFIX)) return optionalInt(values, 'since', 0);
+  const label = raw.slice(MARK_PREFIX.length).trim();
+  if (label === '') throw new UsageError('--since mark:<label> needs the label of a marker.');
+  return { label };
+}
+
+/**
+ * The `seq` a `--since` stands for: a `mark:<label>` is the newest marker with that label in the
+ * command's scope (`session`; all entries without one). None there is a usage error, as for a
+ * label that was never marked.
+ */
+export async function resolveSince(
+  since: Since | undefined,
+  speech: SpeechCapture,
+  session: SessionRef | undefined,
+): Promise<number | undefined> {
+  if (since === undefined || typeof since === 'number') return since;
+  const marker = await speech.findMarker(since.label, { session });
+  if (marker) return marker.seq;
+  const where =
+    session === undefined
+      ? 'the buffer'
+      : session === 'current'
+        ? 'the current session'
+        : session === 'active'
+          ? 'the current session (or the buffer, without one)'
+          : `session ${session}`;
+  throw new UsageError(
+    `No marker "${since.label}" in ${where} (or it was dropped from the buffer). ` +
+      `Set it first with: ${NAME} mark "${since.label}"`,
+  );
 }

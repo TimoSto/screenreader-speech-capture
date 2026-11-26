@@ -1,3 +1,4 @@
+import { API_VERSION_HEADER } from '@screenreader-speech-capture/shared';
 import { afterEach, describe, expect, it } from 'vitest';
 import { MemoryLogger } from '../../../../test/fakes.js';
 import { accepts } from '../../../../test/helpers.js';
@@ -21,6 +22,8 @@ function server(ui?: UiHandler) {
     config: unused,
     sessions: unused,
     input: unused,
+    captures: unused,
+    focus: unused,
     logger,
     ...(ui ? { ui } : {}),
   });
@@ -90,6 +93,10 @@ describe('HttpServer', () => {
       expect(await (await fetch(`http://127.0.0.1:${port}/live?x=1`)).text()).toBe('ui /live?x=1');
       // Not the API prefix: `/api/v10` is the UI's.
       expect(await (await fetch(`http://127.0.0.1:${port}/api/v10`)).text()).toBe('ui /api/v10');
+      // The API version header is the API's only.
+      expect((await fetch(`http://127.0.0.1:${port}/`)).headers.has(API_VERSION_HEADER)).toBe(
+        false,
+      );
     });
 
     it('leaves the API to the router, so an unknown API path is still a 404 error body', async () => {

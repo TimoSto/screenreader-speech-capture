@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import type http from 'node:http';
 import type { UiHandler } from '../adapters/in/http/ui-handler.js';
-import { hostPort, isWildcard } from '../adapters/shared/net/reachable-urls.js';
+import { hostPort, isOwnAddress, isWildcard } from '../adapters/shared/net/reachable-urls.js';
 import type { Logger } from '../application/ports/out/logger.js';
 import { AppError } from '../domain/errors.js';
 
@@ -10,6 +10,20 @@ export const BRIDGE_API_URL_ENV = 'SR_BRIDGE_API_URL';
 
 /** The header adapter-node reads the request's protocol from (`PROTOCOL_HEADER`). */
 const PROTOCOL_HEADER = 'x-sr-bridge-protocol';
+
+/**
+ * The header that tells the UI its page is opened from the bridge's own machine, where the screen
+ * reader would read the live log and feed it back (docs/usage/web-ui.md#accessibility-of-the-ui-itself).
+ * Set (`1`) or removed on every request, so a client can't send it.
+ */
+export const LOCAL_HEADER = 'x-sr-bridge-local';
+
+/**
+ * Where the UI's server code finds the bridge log (`packages/ui/src/lib/server/log.ts` reads it):
+ * a `Symbol.for` key on `globalThis`, because the bridge and the UI don't import each other. Its
+ * lines then get the `[web-ui]` prefix, go to the log file and never block on the console.
+ */
+export const UI_LOGGER_KEY = Symbol.for('screenreader-speech-capture.ui-logger');
 
 /** The `adapter-node` handler of the SvelteKit app (`packages/ui`, copied to `dist/ui`). */
 type NodeHandler = (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => void;
@@ -61,6 +75,8 @@ export function createUiMount(dir: URL, logger: Logger): UiMount | undefined {
       // The bridge only speaks plain HTTP. adapter-node assumes https unless told otherwise, which
       // makes SvelteKit's CSRF check reject every same-origin body-less DELETE/POST (403).
       req.headers[PROTOCOL_HEADER] = 'http';
+      if (isOwnAddress(req.socket?.remoteAddress)) req.headers[LOCAL_HEADER] = '1';
+      else delete req.headers[LOCAL_HEADER];
       handler(req, res, () => {
         res.statusCode = 404;
         res.end();
@@ -70,6 +86,7 @@ export function createUiMount(dir: URL, logger: Logger): UiMount | undefined {
       try {
         process.env[BRIDGE_API_URL_ENV] = apiUrl;
         process.env.PROTOCOL_HEADER = PROTOCOL_HEADER;
+        (globalThis as Record<symbol, unknown>)[UI_LOGGER_KEY] = logger;
         const module = (await import(file.href)) as { handler?: unknown };
         if (typeof module.handler !== 'function') throw new Error('handler.js has no `handler`');
         settle.resolve(module.handler as NodeHandler);

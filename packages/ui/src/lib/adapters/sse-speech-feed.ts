@@ -1,6 +1,11 @@
-import { checkDto, SpeechEntrySchema, SpeechListSchema } from '@screenreader-speech-capture/shared';
+import {
+  checkDto,
+  SpeechEntrySchema,
+  type SpeechListDto,
+} from '@screenreader-speech-capture/shared';
 import type { SessionScope } from '#lib/core/sessions.js';
 import type { SpeechFeed, SpeechFeedHandlers } from '#lib/core/speech.js';
+import { routeJson } from './route-request.js';
 
 /** Entries read per request when an ended session is read page by page. */
 const PAGE_SIZE = 1000;
@@ -36,6 +41,7 @@ export class SseSpeechFeed implements SpeechFeed {
       } catch {
         return;
       }
+      // The one check left in the browser: the BFF relays the stream as it is, unchecked.
       const checked = checkDto(SpeechEntrySchema, data);
       if (checked.ok) handlers.onEntry(checked.value);
     });
@@ -53,14 +59,9 @@ export class SseSpeechFeed implements SpeechFeed {
           since: String(since),
           limit: String(PAGE_SIZE),
         });
-        const response = await fetch(`${this.speechUrl}?${query}`, {
-          headers: { accept: 'application/json' },
+        const { entries, hasMore } = await routeJson<SpeechListDto>(`${this.speechUrl}?${query}`, {
           signal: abort.signal,
         });
-        if (!response.ok) throw new Error(`The request answered ${response.status}`);
-        const checked = checkDto(SpeechListSchema, await response.json());
-        if (!checked.ok) throw new Error(`Unexpected answer at ${checked.field}`);
-        const { entries, hasMore } = checked.value;
         handlers.onEntries(entries);
         const last = entries.at(-1);
         if (!hasMore || last === undefined) return;

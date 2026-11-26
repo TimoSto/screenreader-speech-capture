@@ -1,49 +1,23 @@
-import {
-  checkDto,
-  ConfigOverridesSchema,
-  ConfigSchema,
-  type ConfigDto,
-  type ConfigPatchDto,
-} from '@screenreader-speech-capture/shared';
+import type { ConfigDto, ConfigPatchDto } from '@screenreader-speech-capture/shared';
 import { SettingRejected, type ConfigApi, type ConfigState } from '#lib/core/config.js';
+import { routeJson, type RouteError } from './route-request.js';
+
+/** A refused save names the bridge's reason (and the setting, when it names one). */
+const rejection = (error: RouteError | null, status: number): Error =>
+  error === null
+    ? new Error(`The request answered ${status}`)
+    : new SettingRejected(error.message, error.field);
 
 /** Reads and saves the configuration through the UI's own config route (`url` includes the base path). */
 export class HttpConfigApi implements ConfigApi {
   constructor(private readonly url: string) {}
 
-  async fetch(): Promise<ConfigState> {
-    const response = await fetch(this.url, { headers: { accept: 'application/json' } });
-    if (!response.ok) throw await rejection(response);
-    const body = (await response.json()) as Record<string, unknown>;
-    const active = checkDto(ConfigSchema, body.active);
-    const saved = checkDto(ConfigSchema, body.saved);
-    const overrides = checkDto(ConfigOverridesSchema, { overrides: body.overrides });
-    if (!active.ok || !saved.ok || !overrides.ok) {
-      throw new Error('Unexpected configuration answer from the bridge');
-    }
-    return { active: active.value, saved: saved.value, overrides: overrides.value.overrides };
+  /** `GET /ui/api/config` answers `{ active, saved, overrides }` in one go. */
+  fetch(): Promise<ConfigState> {
+    return routeJson<ConfigState>(this.url, { rejection });
   }
 
-  async update(patch: ConfigPatchDto): Promise<ConfigDto> {
-    const response = await fetch(this.url, {
-      method: 'PUT',
-      headers: { accept: 'application/json', 'content-type': 'application/json' },
-      body: JSON.stringify(patch),
-    });
-    if (!response.ok) throw await rejection(response);
-    const checked = checkDto(ConfigSchema, await response.json());
-    if (!checked.ok) throw new Error(`Unexpected answer at ${checked.field}: ${checked.message}`);
-    return checked.value;
+  update(patch: ConfigPatchDto): Promise<ConfigDto> {
+    return routeJson<ConfigDto>(this.url, { method: 'PUT', body: patch, rejection });
   }
-}
-
-/** SvelteKit's `error()` answers `{ message, field? }`; fall back to the status. */
-async function rejection(response: Response): Promise<Error> {
-  const body: unknown = await response.json().catch(() => undefined);
-  if (typeof body === 'object' && body !== null && 'message' in body) {
-    const { message } = body;
-    const field = 'field' in body && typeof body.field === 'string' ? body.field : undefined;
-    if (typeof message === 'string') return new SettingRejected(message, field);
-  }
-  return new Error(`The request answered ${response.status}`);
 }

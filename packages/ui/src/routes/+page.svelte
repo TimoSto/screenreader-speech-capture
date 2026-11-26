@@ -3,9 +3,10 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
+  import LoopbackBanner from '#lib/components/LoopbackBanner/LoopbackBanner.svelte';
   import SpeechLog from '#lib/components/SpeechLog/SpeechLog.svelte';
   import SessionsPane from '#lib/components/SessionsPane/SessionsPane.svelte';
-  import { sessionsPaneStore, sessionsStore, speechStore } from '#lib/composition.js';
+  import { appStores } from '#lib/composition.js';
   import { scopeAfterDelete, selectedScope, type SessionScope } from '#lib/core/sessions.js';
   import {
     canAddMarker,
@@ -18,19 +19,21 @@
 
   let { data }: PageProps = $props();
 
-  // Until the store has read the list, show what the server rendered (`+page.server.ts`), so the
-  // server's HTML already has the sessions. The store is shared by all requests: it is never
-  // filled on the server.
-  const list = $derived(
-    sessionsStore.loaded
-      ? {
-          sessions: sessionsStore.sessions,
-          currentId: sessionsStore.currentId,
-          outsideEntries: sessionsStore.outsideEntries,
-        }
-      : (data.sessions ?? { sessions: [], currentId: null, outsideEntries: 0 }),
-  );
-  const now = $derived(sessionsStore.loaded ? sessionsStore.now : data.now);
+  const {
+    sessions: sessionsStore,
+    speech: speechStore,
+    sessionsPane: sessionsPaneStore,
+  } = appStores();
+
+  // The list the load read (`+page.server.ts`), already while rendering: the stores are per
+  // request, so the server's HTML has the sessions and the first browser render matches it.
+  untrack(() => sessionsStore.seed(data.sessions, data.now));
+  const list = $derived({
+    sessions: sessionsStore.sessions,
+    currentId: sessionsStore.currentId,
+    outsideEntries: sessionsStore.outsideEntries,
+  });
+  const now = $derived(sessionsStore.now);
 
   // The URL names the selected session (or `none`, the speech outside any session); without it the
   // pane follows the current session, and with no current session it shows the speech outside.
@@ -45,7 +48,7 @@
 
   onMount(() => {
     sessionsPaneStore.init();
-    return sessionsStore.init(data.sessions);
+    return sessionsStore.init();
   });
 
   // The log follows the selected scope; it only runs in the browser (effects never run on the
@@ -111,17 +114,23 @@
     />
   </aside>
   <div class="log">
-    <SpeechLog
-      {heading}
-      entries={speechStore.entries}
-      connection={speechStore.connection}
-      {canMark}
-      onAddMarker={(label: string) => speechStore.addMarker(label)}
-      {canClear}
-      onClear={clear}
-      {canDelete}
-      onDelete={remove}
-    />
+    {#if data.local}
+      <LoopbackBanner />
+    {/if}
+    <div class="log-body">
+      <SpeechLog
+        {heading}
+        local={data.local}
+        entries={speechStore.entries}
+        connection={speechStore.connection}
+        {canMark}
+        onAddMarker={(label: string) => speechStore.addMarker(label)}
+        {canClear}
+        onClear={clear}
+        {canDelete}
+        onDelete={remove}
+      />
+    </div>
   </div>
 </div>
 
@@ -154,8 +163,17 @@
   }
 
   .log {
+    display: flex;
     flex: 1;
+    flex-direction: column;
+    gap: 12px;
     min-width: 0;
+    min-height: 0;
+  }
+
+  /* The log fills what the banner (when there is one) leaves. */
+  .log-body {
+    flex: 1;
     min-height: 0;
   }
 </style>

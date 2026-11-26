@@ -60,6 +60,10 @@ export class ChildProcessSupervisor implements ProcessSupervisor {
     this.settings = options.settings;
   }
 
+  pid(): number | null {
+    return this.state === 'running' ? (this.child?.pid ?? null) : null;
+  }
+
   status(): ServiceStatus {
     const { version, port } = this.active ?? this.resolved();
     return {

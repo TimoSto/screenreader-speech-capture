@@ -5,13 +5,15 @@ import type {
   StatusDto,
   WaitResultDto,
 } from '@screenreader-speech-capture/shared';
-import { API_VERSION } from '@screenreader-speech-capture/shared';
+import { API_VERSION, API_VERSION_HEADER } from '@screenreader-speech-capture/shared';
 import { once } from 'node:events';
 import net from 'node:net';
 import { describe, expect, it } from 'vitest';
 import { SystemClock } from '../src/adapters/out/clock/system-clock.js';
+import { DisabledWindowSystem } from '../src/adapters/out/input/disabled-window-system.js';
 import { bundledMcp } from '../src/adapters/out/mcp/playwright-mcp.js';
 import type { Bridge } from '../src/main.js';
+import { RecordingInputInjector } from './fakes.js';
 import { eventually, send, start, testConfig } from './helpers.js';
 
 const api = (bridge: Bridge, path: string) => `http://127.0.0.1:${bridge.httpPort}/api/v1${path}`;
@@ -63,6 +65,19 @@ async function openStream(bridge: Bridge, headers: Record<string, string> = {}) 
 }
 
 describe('HTTP API', () => {
+  it('sends the API version on every answer: JSON, errors and the stream', async () => {
+    const bridge = await start();
+    const answers = [
+      await fetch(api(bridge, '/speech')),
+      await fetch(api(bridge, '/nope')),
+      await fetch(api(bridge, '/speech?since=x')),
+    ];
+    for (const answer of answers) expect(answer.headers.get(API_VERSION_HEADER)).toBe(API_VERSION);
+    const stream = await openStream(bridge);
+    expect(stream.response.headers.get(API_VERSION_HEADER)).toBe(API_VERSION);
+    stream.close();
+  });
+
   it('lists speech as DTOs and clears it, with seq counting on', async () => {
     const bridge = await start();
     await send(bridge.tcpPort, 'voice=dev\r\none\r\ntwo\r\n');
@@ -115,6 +130,26 @@ describe('HTTP API', () => {
       message: 'limit: must be an integer from 1 to 10000',
       details: { field: 'limit' },
     });
+  });
+
+  it('finds the newest marker with a label', async () => {
+    const bridge = await start();
+    const mark = (label: string) =>
+      fetch(api(bridge, '/markers'), postJson(JSON.stringify({ label })));
+    await mark('step 1');
+    await mark('step 1');
+    await mark('step 2');
+    const found = await fetch(api(bridge, '/markers/latest?label=step%201'));
+    expect(found.status).toBe(200);
+    expect(await json(found)).toMatchObject({ marker: { seq: 2, text: 'step 1' } });
+    const none = await fetch(api(bridge, '/markers/latest?label=step%203&session=none'));
+    expect(await json(none)).toEqual({ marker: null });
+
+    const missing = await fetch(api(bridge, '/markers/latest'));
+    expect(missing.status).toBe(400);
+    expect((await errorOf(missing)).details).toEqual({ field: 'label' });
+    const noSession = await fetch(api(bridge, '/markers/latest?label=x&session=current'));
+    expect(noSession.status).toBe(404);
   });
 
   it('adds markers and validates the body', async () => {
@@ -402,7 +437,13 @@ describe('HTTP API', () => {
   });
 
   it('reports the status with versions, connections and buffer', async () => {
-    const bridge = await start();
+    const bridge = await start(
+      {},
+      {
+        inputInjector: new RecordingInputInjector(),
+        windowSystem: new DisabledWindowSystem('only on Windows'),
+      },
+    );
     const socket = net.connect(bridge.tcpPort, '127.0.0.1');
     socket.write('voice=open\r\nhello\r\n');
     const status = await eventually(
@@ -438,6 +479,10 @@ describe('HTTP API', () => {
         exitCode: null,
       },
       session: { current: null, count: 0 },
+      input: {
+        native: { available: true, backend: 'fake', reason: null },
+        focus: { available: false, backend: null, reason: 'only on Windows' },
+      },
     });
   });
 

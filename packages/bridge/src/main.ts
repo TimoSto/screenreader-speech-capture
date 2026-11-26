@@ -6,7 +6,6 @@ import { HttpServer } from './adapters/in/http/http-server.js';
 import { TcpListener } from './adapters/in/tcp/tcp-listener.js';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { FsConfigStore } from './adapters/out/fs-config/fs-config-store.js';
-import { DisabledInputInjector } from './adapters/out/input/disabled-input-injector.js';
 import { InProcessEventBus } from './adapters/out/memory/in-process-event-bus.js';
 import { defaultConfigFile } from './adapters/out/platform/paths.js';
 import type { ManageSessions } from './application/ports/in/manage-sessions.js';
@@ -15,6 +14,8 @@ import type { Logger } from './application/ports/out/logger.js';
 import { BridgeLifecycleService } from './application/services/bridge-lifecycle-service.js';
 import { ChildServicesService } from './application/services/child-services-service.js';
 import { ConfigService } from './application/services/config-service.js';
+import { InputCaptureService } from './application/services/input-capture-service.js';
+import { WindowFocusService } from './application/services/window-focus-service.js';
 import { NativeInputService } from './application/services/native-input-service.js';
 import { SessionService } from './application/services/session-service.js';
 import { SpeechService } from './application/services/speech-service.js';
@@ -25,6 +26,7 @@ import { startListeners } from './composition/lifecycle.js';
 import { loadConfig } from './composition/load-config.js';
 import { readySummary } from './composition/summary.js';
 import { createInputInjector } from './composition/input.js';
+import { createWindowSystem } from './composition/window-system.js';
 import { createLogging } from './composition/logging.js';
 import { yieldEvery } from './composition/pace.js';
 import { proxyRoutes } from './composition/proxies.js';
@@ -128,6 +130,13 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     clock,
     logger: log.for('native-input'),
   });
+  const captures = new InputCaptureService({
+    input,
+    log: speechLog,
+    events,
+    clock,
+    pace: () => yieldEvery(256),
+  });
   const configService = new ConfigService({
     store,
     logger: configLogger,
@@ -136,6 +145,14 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     pinned: new Map([...configFields(overrides).keys()].map((field) => [field, sourceOf(field)])),
   });
   const supervisors = createSupervisors(config, seams, log);
+  const windows = seams.windowSystem ?? (await createWindowSystem(log.for('native-input')));
+  const focus = new WindowFocusService({
+    windows,
+    queue: input,
+    services: supervisors,
+    clock,
+    logger: log.for('native-input'),
+  });
   const childServices = new ChildServicesService({
     supervisors,
     config: () => configService.get(),
@@ -152,6 +169,8 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     version,
     apiVersion: API_VERSION,
     startedAt,
+    injector,
+    windows,
   });
   const ui = createUiMount(seams.uiDir ?? shippedUiDir(), log.for('web-ui'));
   const http = new HttpServer({
@@ -161,6 +180,8 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
     config: configService,
     sessions,
     input,
+    captures,
+    focus,
     logger: log.for('http-api'),
     hostnames: [hostname()],
     proxies: proxyRoutes(childServices),
@@ -172,7 +193,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
   await ui?.mount(bridgeApiUrl(config.http.host, ports.http));
   const lifecycle = new BridgeLifecycleService({
     state: status,
-    waits,
+    pending: [waits, captures],
     startServices: () => childServices.startEnabled(),
     stopOrder: [http, tcp, { stop: () => childServices.stopAll() }],
     readyMessage: () =>
@@ -181,7 +202,7 @@ export async function startBridge(options: BridgeOptions): Promise<Bridge> {
         ports,
         supervisors,
         webUi: ui !== undefined,
-        nativeInput: injector instanceof DisabledInputInjector ? null : 'robotjs',
+        nativeInput: injector.availability,
         tookMs: clock.now().getTime() - startedAt.getTime(),
       }),
     logger: bridgeLogger,

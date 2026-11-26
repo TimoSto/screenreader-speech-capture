@@ -96,7 +96,8 @@ GitHub issues. This file only tracks milestones.
 - [x] Releases from PR titles (independent versions, tags as the source of truth), manual npm
       publish from CI (stable from main, previews from branches)
 - [ ] Smoke test on a real VM (NVDA + socket voice + Chrome). It also verifies
-      [VM setup](usage/vm-setup.md), which is not yet checked on a real VM
+      [VM setup](usage/vm-setup.md), which is not yet checked on a real VM. It also checks that
+      `POST /input/focus` (koffi) brings the MCP and test browsers to the front with NVDA running
 
 ### M8 Own SAPI voice (Rust) ⬜
 
@@ -129,6 +130,8 @@ own SAPI 5 voice written in Rust.
   `/input/keys`, so a person can switch to the browser window first, also from the CLI)?
 - **Screen reader key:** do `Insert` and `CapsLock` work as held modifiers through robotjs, so NVDA
   and JAWS see `Insert+T`? Check on a real VM in the M7 smoke test.
+- **Foreground lock:** does the Alt tap / `AttachThreadInput` sequence of `POST /input/focus` bring
+  the browser forward reliably on Windows 10/11 with NVDA and JAWS running? Check on the VM (M7).
 - **Default versions:** `DEFAULT_PLAYWRIGHT_VERSION` (1.65.0) and the `@playwright/mcp`
   dependency (0.0.85) are both pinned. Still open: how often to update them.
 - **Windows job object:** tie the child services to the bridge's process, so a hard kill of the

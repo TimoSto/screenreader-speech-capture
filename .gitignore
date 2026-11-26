@@ -20,3 +20,5 @@ playwright-report/
 
 # Vitest browser mode failure screenshots
 .vitest/
+/examples/playwright/.env.local
+docs/implementation/agent-cli-review.md

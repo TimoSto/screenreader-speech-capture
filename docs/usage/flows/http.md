@@ -15,7 +15,7 @@ errors on the way. The rules behind them are in the [HTTP API](../http-api.md); 
 7. [Clear the buffer](#clear-the-buffer)
 8. [Change the configuration](#change-the-configuration)
 9. [Rejected requests](#rejected-requests)
-10. [Version check on the first call](#version-check-on-the-first-call)
+10. [Version check on every answer](#version-check-on-every-answer)
 
 ## Read speech page by page
 
@@ -72,7 +72,7 @@ sequenceDiagram
     SR->>B: "Email, edit" → seq 42
     Note over B: 5 s pass without a match
     B-->>C: 200 matched: false, entries seq 41..42, omitted: 0
-    Note over C: client library: SpeechTimeoutError with entries<br/>CLI wait: exit code 1
+    Note over C: the client library doesn't use this endpoint:<br/>its waits follow the stream (see the SSE flows)
 ```
 
 ## One session per test
@@ -199,10 +199,13 @@ sequenceDiagram
     B-->>C: 503 SERVICE_UNAVAILABLE
 ```
 
-## Version check on the first call
+## Version check on every answer
 
-The client reads `apiVersion` once, before its first real call. Another major version stops it;
-another minor version works. Details: [Versioning](../http-api.md#versioning).
+Every answer under `/api/v1` (errors and the SSE stream included) carries the API version in the
+`X-SR-Speech-Api-Version` header. The client checks it before it reads the body, so it needs no
+extra request. Another major version stops it; another minor version works. An answer without the
+header comes from a bridge older than API 1.22, which speaks major version 1. Details:
+[Versioning](../http-api.md#versioning).
 
 ```mermaid
 sequenceDiagram
@@ -211,11 +214,10 @@ sequenceDiagram
     participant B as Bridge :5151
 
     T->>C: waitForOutput("Submit")
-    C->>B: GET /api/v1/status
-    B-->>C: 200 bridge.apiVersion "1.13"
-    alt same major version
-        C->>B: GET /api/v1/speech?since=…
-        Note over C: later calls skip the check
+    C->>B: GET /api/v1/speech?since=…
+    B-->>C: 200, X-SR-Speech-Api-Version: 1.24
+    alt same major version (or no header)
+        Note over C: read the body
     else other major version (e.g. "2.0")
         C-->>T: IncompatibleBridgeError (CLI: exit code 2)
     end

@@ -10,7 +10,14 @@ import {
   ServiceConfigSchema,
 } from './config.js';
 import { ErrorBodySchema, ErrorCodeSchema } from './errors.js';
-import { KeysRequestSchema, ClickRequestSchema } from './input.js';
+import {
+  CaptureOptionsSchema,
+  ClickRequestSchema,
+  FocusedWindowSchema,
+  FocusRequestSchema,
+  InputCaptureSchema,
+  KeysRequestSchema,
+} from './input.js';
 import {
   SessionListSchema,
   SessionSchema,
@@ -18,12 +25,13 @@ import {
   StartSessionResponseSchema,
 } from './session.js';
 import {
+  LatestMarkerSchema,
   MarkerRequestSchema,
   SpeechEntrySchema,
   SpeechListSchema,
   WaitResultSchema,
 } from './speech.js';
-import { ServiceStatusSchema, StatusSchema } from './status.js';
+import { InputAvailabilitySchema, ServiceStatusSchema, StatusSchema } from './status.js';
 
 /**
  * Every schema of the API by its name in `docs/usage/openapi.yaml` (`components.schemas`), which
@@ -33,8 +41,13 @@ export const API_SCHEMAS: Record<string, GenericSchema> = {
   SpeechEntry: SpeechEntrySchema,
   SpeechList: SpeechListSchema,
   MarkerRequest: MarkerRequestSchema,
+  LatestMarker: LatestMarkerSchema,
   ClickRequest: ClickRequestSchema,
   KeysRequest: KeysRequestSchema,
+  CaptureOptions: CaptureOptionsSchema,
+  InputCapture: InputCaptureSchema,
+  FocusRequest: FocusRequestSchema,
+  FocusedWindow: FocusedWindowSchema,
   Session: SessionSchema,
   StartSessionResponse: StartSessionResponseSchema,
   SessionList: SessionListSchema,
@@ -43,6 +56,7 @@ export const API_SCHEMAS: Record<string, GenericSchema> = {
   Config: ConfigSchema,
   ConfigPatch: ConfigPatchSchema,
   ConfigOverrides: ConfigOverridesSchema,
+  InputAvailability: InputAvailabilitySchema,
   ServiceStatus: ServiceStatusSchema,
   ServiceConfigPatch: ServiceConfigPatchSchema,
   ServiceConfig: ServiceConfigSchema,

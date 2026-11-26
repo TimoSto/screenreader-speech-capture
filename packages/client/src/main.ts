@@ -1,7 +1,6 @@
 // Composition root: the only place that knows the concrete adapters
 // (docs/implementation/architecture.md).
 import { hostname } from 'node:os';
-import { API_VERSION } from '@screenreader-speech-capture/shared';
 import { SystemClock } from './adapters/out/clock/system-clock.js';
 import { FsClientConfigStore } from './adapters/out/fs-config/fs-client-config-store.js';
 import { clientConfigFile } from './adapters/out/fs-config/paths.js';
@@ -9,11 +8,13 @@ import { FetchBridgeApi } from './adapters/out/http/fetch-bridge-api.js';
 import type { ManageClientConfig } from './application/ports/in/manage-client-config.js';
 import type {
   ClearOptions,
+  FindMarkerOptions,
   GetSpeechOptions,
   GetTextOptions,
   OnSpeechOptions,
   ReadyOptions,
   Recording,
+  RecordOptions,
   SilenceOptions,
   SpeechCapture,
   StartSessionOptions,
@@ -22,6 +23,8 @@ import type {
 import type {
   ClickOptions,
   FocusablePage,
+  InputRecording,
+  InputRecordOptions,
   NativeInput,
   PressKeysOptions,
   SetFocusOptions,
@@ -31,9 +34,10 @@ import { NativeInputService } from './application/services/native-input-service.
 import { SpeechCaptureService } from './application/services/speech-capture-service.js';
 import { playwrightEndpoint } from './domain/playwright-endpoint.js';
 import { URL_ENV } from './domain/bridge-url.js';
+import { OUTPUT_ENV } from './domain/output-format.js';
 import type { BridgeStatus } from './domain/bridge-status.js';
 import type { SessionList, StartedSession } from './domain/session.js';
-import type { ScreenPoint } from './domain/native-input.js';
+import type { FocusedWindow, ScreenPoint } from './domain/native-input.js';
 import type { SpeechEntry } from './domain/speech-entry.js';
 import type { SpeechMatch } from './domain/text-match.js';
 
@@ -47,7 +51,7 @@ export { CONFIG_PATH_ENV, clientConfigFile } from './adapters/out/fs-config/path
 export function createClientConfig(env: NodeJS.ProcessEnv = process.env): ManageClientConfig {
   return new ClientConfigService({
     store: new FsClientConfigStore(clientConfigFile(undefined, env)),
-    envUrl: env[URL_ENV],
+    env: { url: env[URL_ENV], output: env[OUTPUT_ENV] },
   });
 }
 
@@ -85,12 +89,8 @@ export class SpeechCaptureClient implements SpeechCapture, NativeInput {
       baseUrl: this.#resolveUrl,
       clientName: options.clientName ?? `${hostname()} pid ${process.pid}`,
     });
-    this.#service = new SpeechCaptureService({
-      api,
-      clock: new SystemClock(),
-      apiVersion: API_VERSION,
-    });
-    this.#input = new NativeInputService({ api, apiVersion: API_VERSION });
+    this.#service = new SpeechCaptureService({ api, clock: new SystemClock() });
+    this.#input = new NativeInputService({ api });
   }
 
   click(point: ScreenPoint, options?: ClickOptions): Promise<void> {
@@ -101,8 +101,30 @@ export class SpeechCaptureClient implements SpeechCapture, NativeInput {
     return this.#input.pressKeys(keys, options);
   }
 
+  recordClick(
+    point: ScreenPoint,
+    options?: ClickOptions & InputRecordOptions,
+  ): Promise<InputRecording> {
+    return this.#input.recordClick(point, options);
+  }
+
+  recordKeys(
+    keys: string | readonly string[],
+    options?: PressKeysOptions & InputRecordOptions,
+  ): Promise<InputRecording> {
+    return this.#input.recordKeys(keys, options);
+  }
+
   setFocus(page: FocusablePage, options?: SetFocusOptions): Promise<void> {
     return this.#input.setFocus(page, options);
+  }
+
+  bringToFront(page: FocusablePage): Promise<FocusedWindow | null> {
+    return this.#input.bringToFront(page);
+  }
+
+  focusMcpBrowser(): Promise<FocusedWindow> {
+    return this.#input.focusMcpBrowser();
   }
 
   /** WebSocket URL of the bridge's Playwright server, for `browserType.connect()`. */
@@ -142,6 +164,10 @@ export class SpeechCaptureClient implements SpeechCapture, NativeInput {
     return this.#service.mark(label);
   }
 
+  findMarker(label: string, options?: FindMarkerOptions): Promise<SpeechEntry | undefined> {
+    return this.#service.findMarker(label, options);
+  }
+
   status(): Promise<BridgeStatus> {
     return this.#service.status();
   }
@@ -162,7 +188,7 @@ export class SpeechCaptureClient implements SpeechCapture, NativeInput {
     return this.#service.waitForSilence(options);
   }
 
-  record<T>(fn: () => T | Promise<T>, options?: SilenceOptions): Promise<Recording<T>> {
+  record<T>(fn: () => T | Promise<T>, options?: RecordOptions): Promise<Recording<T>> {
     return this.#service.record(fn, options);
   }
 

@@ -1,3 +1,4 @@
+import type { Availability } from '../../../domain/availability.js';
 import type { ConnectionInfo } from '../../../domain/capture.js';
 import type { ServiceName, ServiceStatus } from '../../../domain/child-service.js';
 import type { SessionSummary } from '../../../domain/session.js';
@@ -24,6 +25,8 @@ export interface Status {
   services: Readonly<Record<ServiceName, ServiceStatus>>;
   /** The current session, and how many sessions are listed (`GET /sessions`). */
   session: { current: SessionSummary | null; count: number };
+  /** Native keys and clicks, and bringing windows to the front. */
+  input: { native: Availability; focus: Availability };
 }
 
 export interface GetStatus {

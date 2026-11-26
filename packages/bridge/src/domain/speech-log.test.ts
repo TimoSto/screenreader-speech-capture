@@ -345,6 +345,15 @@ describe('SpeechLog', () => {
       expect(log.resolveFilter('current')).toBe(1);
     });
 
+    it('resolves active to the current id, or to no filter when none is current', () => {
+      const log = new SpeechLog(1);
+      expect(log.resolveFilter('active')).toBeUndefined();
+      start(log, 'a');
+      expect(log.resolveFilter('active')).toBe(1);
+      log.endSession(at(1));
+      expect(log.resolveFilter('active')).toBeUndefined();
+    });
+
     it('resolves none to null', () => {
       const log = new SpeechLog(1);
       expect(log.resolveFilter('none')).toBeNull();
@@ -371,6 +380,38 @@ describe('SpeechLog', () => {
           details: { field: 'session' },
         }) as Error,
       );
+    });
+  });
+
+  describe('latestMarker', () => {
+    const marker = (text: string): SpeechDraft => ({
+      ...draft(text),
+      kind: 'marker',
+      source: 'api',
+      connectionId: null,
+    });
+
+    it('finds the newest marker with the label, never speech', () => {
+      const log = new SpeechLog(10);
+      log.append(marker('step'));
+      log.append(draft('step'));
+      log.append(marker('step'));
+      log.append(marker('other'));
+      expect(log.latestMarker('step')?.seq).toBe(3);
+      expect(log.latestMarker('missing')).toBeUndefined();
+    });
+
+    it('looks only in the given session, and not at dropped entries', () => {
+      const log = new SpeechLog(2);
+      log.append(marker('step'));
+      start(log, 'a');
+      log.append(marker('step'));
+      expect(log.latestMarker('step', null)?.seq).toBe(1);
+      expect(log.latestMarker('step', 1)?.seq).toBe(2);
+      log.append(draft('x'));
+      // The buffer holds two entries: the marker outside sessions was dropped.
+      expect(log.latestMarker('step', null)).toBeUndefined();
+      expect(log.latestMarker('step')?.seq).toBe(2);
     });
   });
 });

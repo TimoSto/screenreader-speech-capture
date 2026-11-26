@@ -2,25 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { AppError } from './errors.js';
 import { parseKeyChord } from './key-chord.js';
 
+// The rule itself is tested in packages/shared/src/key-chord.test.ts.
 describe('parseKeyChord', () => {
-  it('splits modifiers from the last key, case-insensitive', () => {
-    expect(parseKeyChord('Insert+T')).toEqual({ modifiers: ['insert'], key: 't' });
-    expect(parseKeyChord('Control+SHIFT+Home')).toEqual({
-      modifiers: ['control', 'shift'],
-      key: 'home',
-    });
-  });
-
-  it('takes a single key, also a modifier, as a chord of that key', () => {
-    expect(parseKeyChord('h')).toEqual({ modifiers: [], key: 'h' });
-    expect(parseKeyChord('CapsLock')).toEqual({ modifiers: [], key: 'capslock' });
-  });
-
-  it('holds Insert and CapsLock as modifiers', () => {
-    expect(parseKeyChord('CapsLock+Down').modifiers).toEqual(['capslock']);
-  });
-
-  it('accepts aliases', () => {
+  it('returns the chord of the shared rule', () => {
     expect(parseKeyChord('Ctrl+Esc')).toEqual({ modifiers: ['control'], key: 'escape' });
   });
 

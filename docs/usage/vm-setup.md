@@ -2,6 +2,27 @@
 
 How to prepare the Windows machine or VM: requirements, the socket voice, the screen reader, and how to run the bridge there.
 
+> **Not yet checked end to end on a real VM.** The steps follow the components' sources and docs;
+> the smoke test that verifies them (NVDA + socket voice + Chrome) is part of
+> [M7](../ROADMAP.md#m7-distribution-).
+
+## Checklist
+
+In this order (*admin* = an elevated prompt, everything else as the normal user):
+
+1. Install [Node.js](#requirements) ≥ 22.12 (the LTS installer from nodejs.org, or
+   `winget install OpenJS.NodeJS.LTS`).
+2. *Admin:* [install and register the socket voice](#socket-voice-setup).
+3. [Install the bridge](#install-the-bridge), pinned, and start it once: the first start downloads
+   Playwright and Chromium.
+4. *Admin:* [open the firewall](#firewall) for port 5151, and check it from the test machine.
+5. Install NVDA or JAWS and [select the socket voice](#screen-reader-setup).
+6. [Check the setup](#checking-the-setup): speech arrives, and `status` shows a voice connection
+   and native input.
+7. [Prepare the VM](#prepare-the-vm): auto-logon, no lock, 100 % scaling, no notifications, the
+   bridge and the screen reader start at sign-in.
+8. Optional: take a VM snapshot, to reset to before every CI run.
+
 ## Requirements
 
 On the Windows machine or VM that runs the screen reader:
@@ -14,9 +35,32 @@ On the Windows machine or VM that runs the screen reader:
 | JAWS **or** NVDA | Both can use SAPI 5 voices. JAWS without a license runs in 40-minute demo mode (see [Running on the VM](#running-on-the-vm)). |
 | [`text-to-socket-engine`](https://www.npmjs.com/package/text-to-socket-engine) | The SAPI 5 voice that forwards speech text over TCP. Registering it needs an administrator prompt (see [Socket voice setup](#socket-voice-setup)). |
 | Playwright browsers | Playwright's Chromium is installed automatically ([Install](playwright-mcp.md#install)). Branded Chrome / Edge are recommended; install them yourself (their installers need administrator rights). |
-| [`@jitsi/robotjs`](https://www.npmjs.com/package/@jitsi/robotjs) | Native mouse / keyboard input. A dependency of the bridge with prebuilt Windows binaries, so no build tools are needed. |
+| Internet access on the first start | The bridge installs the configured Playwright version from the npm registry and downloads Chromium for the Playwright server and for MCP (possibly two builds, a few hundred MB each). Behind a proxy, set npm's proxy settings and `HTTPS_PROXY`. Later starts need no network. |
+| [`@jitsi/robotjs`](https://www.npmjs.com/package/@jitsi/robotjs) | Native keys and clicks. An **optional** dependency with prebuilt Windows binaries, installed with the bridge; no build tools needed. Without it the bridge still runs, and the input endpoints answer `INPUT_DISABLED`. |
+| [`koffi`](https://koffi.dev/) | Bringing a browser window to the front (`focus`, `setFocus`). Also **optional** and installed with the bridge, prebuilt. Without it clients fall back to a native click. |
+
+Whether the two optional packages loaded shows in `input` of `npx screenreader-speech-capture-client status`
+(`native` and `focus`, each with the `reason` when it is off) and in the `[native-input]` line of the bridge log.
+
+**Administrator rights** are needed only for registering the voice, the firewall rule and installing
+Chrome / Edge. The bridge itself must run **without** them ([why](#run-in-the-user-session-not-as-a-service)).
 
 For development you also need [pnpm](https://pnpm.io/) (see [Development](../implementation/development.md)).
+
+## Install the bridge
+
+In a **normal** (non-elevated) prompt, install a pinned version globally and start it:
+
+```powershell
+npm i -g screenreader-speech-capture@x.y.z    # the version you tested with; see the npm page for the newest
+screenreader-speech-capture
+```
+
+The first start installs Playwright and Chromium in the background (the bridge log shows
+`[playwright-server]` and `[playwright-mcp]` output; `status --wait-ready` waits for it), and prints
+the URLs it can be reached at. A global install, not `npx`: `npx` looks the package up on every
+start and picks up new versions without notice. The `npm warn install-scripts` line is expected
+([below](#the-install-scripts-warning)). Update by installing the new version the same way.
 
 ## Socket voice setup
 
@@ -58,21 +102,51 @@ speech entry, which tells you which voice it came from when several are in use.
 
 ### A German voice
 
-`add-voice` always registers a voice as English (en-US, language `409`). For a German voice, register
-it on the **bridge's port** and then change its language attribute (run both in an elevated prompt):
+`add-voice` always registers a voice as English (en-US, language `409`). A German JAWS only lists
+SAPI 5 voices whose language matches its voice profile, so it doesn't offer the socket voice until
+the voice is also marked as German (seen with JAWS in German on a German Windows).
+
+**Mark the default voice (`textToSocketVoice`) as German as well**, in an **administrator** prompt.
+`text-to-socket-engine-register` created the voice in both the 64-bit and the 32-bit registry view,
+so change both:
+
+```powershell
+# 64-bit view
+reg add "HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens\textToSocketVoice\Attributes" /v Language /t REG_SZ /d "407;409" /f
+reg add "HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens\textToSocketVoice" /v 407 /t REG_SZ /d "Text To Socket 127.0.0.1:4449" /f
+
+# 32-bit view
+reg add "HKLM\SOFTWARE\WOW6432Node\Microsoft\Speech\Voices\Tokens\textToSocketVoice\Attributes" /v Language /t REG_SZ /d "407;409" /f
+reg add "HKLM\SOFTWARE\WOW6432Node\Microsoft\Speech\Voices\Tokens\textToSocketVoice" /v 407 /t REG_SZ /d "Text To Socket 127.0.0.1:4449" /f
+```
+
+- `Language` `407;409` marks the voice as German **and** English (SAPI allows a `;`-separated list).
+  `407` is the hex language id of German (Germany). If a screen reader still doesn't list the voice,
+  use just `407`; an English-only screen reader may then stop listing it.
+- SAPI reads a voice's display name from a value named after the language id. Registration only
+  writes `409` (English), so the second command adds a `407` value with the same name. Without it,
+  some voice lists show the voice without a name or skip it
+  ([what registration writes](../implementation/text-to-socket-engine/voice-registration.md#creating-the-token)).
+- Restart the screen reader completely afterwards.
+- Running `text-to-socket-engine-register` again (or `add-voice` with the id `textToSocketVoice`)
+  writes the voice anew as English: run the commands again after it. Adding voices with other ids
+  doesn't touch it.
+
+**Or add a separate German voice** on the **bridge's port** and change its language the same way:
 
 ```powershell
 text-to-socket-engine-add-voice voiceDe "Text To Socket DE" 127.0.0.1 4449 voice=voiceDe
-reg add "HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens\voiceDe\Attributes" /v Language /d 407 /f
+reg add "HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens\voiceDe\Attributes" /v Language /t REG_SZ /d 407 /f
+reg add "HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens\voiceDe" /v 407 /t REG_SZ /d "Text To Socket DE" /f
 ```
 
 - The port must be the one the bridge listens on (`tcp.port`, default `4449`). A different port
   sends nothing, silently: the bridge only listens on one port.
-- `407` is the hex language id of German (Germany). Restart the screen reader afterwards.
-- Whether NVDA or JAWS use the language to filter or switch voices isn't verified; selecting the
-  voice by hand works regardless.
 - The package ships 32-bit and 64-bit DLLs. If the voice only shows in a 32-bit screen reader, also set
-  the value under `HKLM\SOFTWARE\WOW6432Node\Microsoft\Speech\Voices\Tokens\voiceDe\Attributes`.
+  the values under `HKLM\SOFTWARE\WOW6432Node\Microsoft\Speech\Voices\Tokens\voiceDe`.
+
+A German JAWS also needs *Detect Language Changes* turned off
+([JAWS language detection](#jaws-language-detection)).
 
 > **Voice not listed?** See [Troubleshooting](troubleshooting.md#speech).
 
@@ -80,6 +154,11 @@ reg add "HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens\voiceDe\Attributes" /v Lan
 
 The UI has the same instructions under **Setup**. In both screen readers, select the voice
 **"Text To Socket 127.0.0.1:4449"** (or the display name of a voice you added).
+
+Check the screen reader's **bitness**: a 64-bit screen reader only sees the 64-bit voice
+registration, a 32-bit one only the 32-bit one. `text-to-socket-engine-register` registers both,
+but a voice added later with `add-voice` or a registry change (as for the German voice) may need
+both views ([bitness](../implementation/text-to-socket-engine/quirks.md#bitness)).
 
 ### NVDA
 
@@ -90,8 +169,12 @@ The UI has the same instructions under **Setup**. In both screen readers, select
    - **Keyboard** category: turn off *Speak typed characters* and *Speak typed words*.
    - **Speech** category: set *Punctuation/symbol level* to the level your tests expect.
 5. Optional: save this as a separate NVDA **configuration profile** so you can switch back to an audible voice.
+6. **General** category: turn on *Start NVDA after I sign in*, so NVDA runs after a VM restart.
 
 ### JAWS
+
+With a German (or other non-English) JAWS, first mark the voice with that language
+([A German voice](#a-german-voice)): otherwise JAWS doesn't list it in step 3.
 
 1. Open JAWS → **Options** → **Voices** → **Voice Adjustment…**.
 2. Create or select a **voice profile** and set its **Synthesizer** to **SAPI 5** (the exact label
@@ -99,13 +182,46 @@ The UI has the same instructions under **Setup**. In both screen readers, select
 3. Select the socket voice as the **Voice** for the profile, and apply it to all contexts
    (PC Cursor, Keyboard, Message, …) so that all speech is captured.
 4. Save the profile. Make it the default only on the test VM.
-5. Optional: lower verbosity (**Settings Center** → *Verbosity*) to match what your tests expect.
+5. Turn off *Detect Language Changes* ([below](#jaws-language-detection)), or web pages are read
+   by another voice.
+6. Optional: lower verbosity (**Settings Center** → *Verbosity*) to match what your tests expect.
+7. Let JAWS start at sign-in (**Settings Center** or the Startup Wizard: *Automatically start JAWS*
+   after signing in; the label differs between JAWS versions), so it runs after a VM restart.
+
+#### JAWS language detection
+
+With *Detect Language Changes* (German: *Sprachwechsel erkennen*) on, JAWS reads a page with the
+voice its profile assigns to the page's language (`lang="de"`, `lang="en"`), not with the socket
+voice. That voice is usually an audible one: the page is read aloud and never reaches the bridge,
+while JAWS's own messages (window titles, menus) still do. This happens with any JAWS language,
+whenever a page's `lang` differs from the profile's.
+
+1. Open **Settings Center** (`Insert+F2`).
+2. Search for *Detect Language Changes* (*Sprachwechsel erkennen*) and turn it off (some versions
+   offer *Never* instead of a checkbox).
+
+If your tests need language switching, keep it on and instead select the socket voice for every
+language in the voice profile (**Voice Adjustment…**, see step 3 above; *Stimmenprofile* in a
+German JAWS).
 
 ### Checking the setup
 
 With the bridge running, press a key that makes the screen reader speak (for example
 `Insert+T` to read the window title). The text should appear within a few milliseconds in
-`npx screenreader-speech-capture-client tail` (or the [web UI](web-ui.md) once it exists). `GET /api/v1/status` should list at least one entry in `tcp.connections`.
+`npx screenreader-speech-capture-client tail`, or on the Monitor page of the [web UI](web-ui.md)
+(`http://localhost:5151/ui/`). Then, from the machine that runs the tests:
+
+```bash
+npx screenreader-speech-capture-client status --url http://<vm-ip>:5151
+```
+
+It should show at least one voice connection (`tcp.connections`), native input and focus as
+available (`input`), and the Playwright server and MCP as `running` once their first install is
+done. A native key press through the bridge checks the whole chain, keyboard hook included:
+
+```bash
+npx screenreader-speech-capture-client press Insert+T --capture --url http://<vm-ip>:5151
+```
 
 The exact text depends on the screen reader, its version and its verbosity settings. Phrases like
 `"Submit, button"` in these docs are only examples.
@@ -143,13 +259,20 @@ the warning, allow the script: `npm i -g --allow-scripts=@jitsi/robotjs screenre
 (once) or `npm config set allow-scripts=@jitsi/robotjs --location=user` (for all global installs).
 The bridge's own Playwright install runs with `--ignore-scripts` and prints nothing.
 
+### Prepare the VM
+
 Set up the VM like this:
 
 - log on automatically, turn off the screen lock and the screen saver, so the session stays
   interactive and unlocked,
 - a fixed screen resolution with **100 % display scaling** (for native clicks),
 - don't connect over RDP and then disconnect: a disconnected RDP session has no active desktop.
-  Use the hypervisor console, or VNC.
+  Use the hypervisor console, or VNC,
+- turn off **notifications** (Settings → System → Notifications, or *Do not disturb* / Focus
+  assist): a toast takes the focus, gets spoken and lands in the recording,
+- pause or schedule **Windows Update**, so it doesn't restart the VM during a run,
+- start the bridge ([above](#run-in-the-user-session-not-as-a-service)) and the screen reader
+  ([NVDA](#nvda), [JAWS](#jaws)) at sign-in.
 
 ### Screen reader licensing
 

@@ -210,6 +210,11 @@ const uiServer = {
   group: ['**/lib/server/**', '**/server/**', '**/*.server.js', '**/*.server'],
   message: 'lib/server is the BFF and runs on the server only. Browser code reaches it over HTTP.',
 };
+const uiRemote = {
+  group: ['**/lib/remote/**', '**/*.remote.js', '**/*.remote'],
+  message:
+    'A remote function call is I/O: only an adapter (lib/adapters) and server code call one. Depend on the ports in lib/core.',
+};
 const uiServerOnly = {
   group: ['**/lib/stores/**', '**/lib/components/**', '**/*.svelte', '**/lib/adapters/**'],
   message: 'The BFF (server code) does not import the browser-side layers.',
@@ -261,22 +266,30 @@ const uiLayers = [
   uiLayer(['packages/ui/src/**/*.{ts,svelte}'], []),
   uiLayer(
     ['packages/ui/src/lib/core/**/*.ts'],
-    [uiCoreImports, uiAdapters, uiStores, uiComponents, uiServer, uiSvelteKit],
+    [uiCoreImports, uiAdapters, uiStores, uiComponents, uiServer, uiRemote, uiSvelteKit],
     uiCoreGlobals,
   ),
   uiLayer(['packages/ui/src/lib/adapters/**/*.ts'], [uiStores, uiComponents, uiServer]),
-  uiLayer(['packages/ui/src/lib/stores/**/*.ts'], [uiAdapters, uiComponents, uiServer], uiNoIo),
+  uiLayer(
+    ['packages/ui/src/lib/stores/**/*.ts'],
+    [uiAdapters, uiComponents, uiServer, uiRemote],
+    uiNoIo,
+  ),
   uiLayer(
     [
       'packages/ui/src/lib/components/**/*.{ts,svelte}',
       'packages/ui/src/routes/**/*.svelte',
       'packages/ui/src/routes/**/+{page,layout}.ts',
     ],
-    [uiAdapters, uiServer],
+    [uiAdapters, uiServer, uiRemote],
     uiNoIo,
   ),
   uiLayer(
-    ['packages/ui/src/lib/server/**/*.ts', 'packages/ui/src/routes/**/*.server.ts'],
+    [
+      'packages/ui/src/lib/server/**/*.ts',
+      'packages/ui/src/routes/**/*.server.ts',
+      'packages/ui/src/lib/remote/**/*.remote.ts',
+    ],
     [uiServerOnly],
   ),
 ];
@@ -371,6 +384,10 @@ export default tseslint.config(
           ],
         },
         tsconfigRootDir: import.meta.dirname,
+        // For every file, not just the Svelte ones: typescript-eslint reloads all TypeScript
+        // projects whenever this list differs from the previous file's, which made `eslint .`
+        // rebuild the UI program for almost every UI file (2:20 instead of about 25 s).
+        extraFileExtensions: ['.svelte'],
       },
     },
     rules: {
@@ -383,10 +400,11 @@ export default tseslint.config(
   ...svelte.configs['flat/recommended'],
   {
     // `*.svelte.ts` (stores with runes) goes through the Svelte parser too, so it needs the TS parser.
+    // `extraFileExtensions` comes from the shared block above and must not differ here.
     files: ['packages/ui/**/*.svelte', 'packages/ui/**/*.svelte.ts'],
     languageOptions: {
       parser: svelteParser,
-      parserOptions: { parser: tseslint.parser, extraFileExtensions: ['.svelte'] },
+      parserOptions: { parser: tseslint.parser },
     },
   },
   {

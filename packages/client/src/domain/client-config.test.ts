@@ -5,8 +5,9 @@ import { ClientConfigError } from './errors.js';
 describe('parseClientConfig', () => {
   it('accepts an empty object and normalises the url', () => {
     expect(parseClientConfig({}, 'f')).toEqual({});
-    expect(parseClientConfig({ url: 'http://vm:1/', other: true }, 'f')).toEqual({
+    expect(parseClientConfig({ url: 'http://vm:1/', output: 'JSON', other: true }, 'f')).toEqual({
       url: 'http://vm:1',
+      output: 'json',
     });
   });
 
@@ -15,6 +16,8 @@ describe('parseClientConfig', () => {
     ['null', null],
     ['a non-string url', { url: 5 }],
     ['an invalid url', { url: 'vm:5151' }],
+    ['a non-string output', { output: true }],
+    ['an unknown output', { output: 'xml' }],
   ])('rejects %s and names the origin', (_name, raw) => {
     expect(() => parseClientConfig(raw, '/cfg/client.json')).toThrow(/\/cfg\/client\.json/);
   });
@@ -23,6 +26,7 @@ describe('parseClientConfig', () => {
 describe('parseConfigKey', () => {
   it('accepts known keys and rejects others', () => {
     expect(parseConfigKey('url')).toBe('url');
+    expect(parseConfigKey('output')).toBe('output');
     expect(() => parseConfigKey('colour')).toThrow(ClientConfigError);
     expect(() => parseConfigKey('toString')).toThrow(ClientConfigError);
   });

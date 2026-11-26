@@ -1,4 +1,11 @@
-import type { ElementBox, MouseButton, ScreenPoint } from '../../../domain/native-input.js';
+import type {
+  ElementBox,
+  FocusedWindow,
+  MouseButton,
+  ScreenPoint,
+} from '../../../domain/native-input.js';
+import type { SpeechEntry } from '../../../domain/speech-entry.js';
+import type { RecordOptions } from './speech-capture.js';
 
 export interface ClickOptions {
   /** Default `left`. */
@@ -8,6 +15,27 @@ export interface ClickOptions {
 export interface PressKeysOptions {
   /** Pause between the chords of a sequence in milliseconds. Default: the bridge's (50). */
   delayMs?: number | undefined;
+}
+
+export interface InputRecordOptions extends RecordOptions {
+  /**
+   * Milliseconds without speech to wait for before the input, so speech still trailing from an
+   * earlier step isn't recorded. Waits at most `timeout`, then sends the input anyway. Default 0.
+   */
+  settle?: number | undefined;
+}
+
+/** The speech an input caused, recorded on the bridge. */
+export interface InputRecording {
+  /** Speech after the input, oldest first. Empty: nothing was said within `firstWithin`. */
+  entries: SpeechEntry[];
+  /**
+   * Some of that speech is missing: dropped from the bridge's full buffer, or more than the
+   * bridge sends in one answer (10000 entries).
+   */
+  truncated: boolean;
+  /** The `seq` of the newest entry right before the input: the recording is the speech after it. */
+  startSeq: number;
 }
 
 /** The element `setFocus` clicks in the middle of, for example a Playwright `Locator`. */
@@ -21,6 +49,12 @@ export interface FocusTarget {
  */
 export interface FocusablePage {
   evaluate(expression: string): Promise<unknown>;
+  /**
+   * Playwright's `page.bringToFront()`: after the bridge brought the window to the front, moves
+   * the browser's keyboard focus from its toolbar (a blank tab focuses the address bar) into the
+   * page (docs/usage/native-input.md#bringing-the-browser-to-the-front). Skipped if missing.
+   */
+  bringToFront?(): Promise<void>;
 }
 
 export interface SetFocusOptions {
@@ -38,6 +72,42 @@ export interface NativeInput {
   click(point: ScreenPoint, options?: ClickOptions): Promise<void>;
   /** Presses one chord (`'Insert+T'`) or a sequence (`['h', 'h']`) (`POST /api/v1/input/keys`). */
   pressKeys(keys: string | readonly string[], options?: PressKeysOptions): Promise<void>;
-  /** Makes the page's browser window the foreground window with a native click. */
+  /**
+   * Clicks and records the speech the click causes, on the bridge (API 1.19,
+   * docs/usage/native-input.md#capturing-the-speech-an-input-causes): like `record()`, it waits
+   * up to `firstWithin` ms for the first speech, then until nothing was said for `quietFor` ms,
+   * but the start is taken right before the click and silence is timed where the speech arrives.
+   * Rejects with `SpeechTimeoutError` (with the speech so far) if speech goes on until
+   * `timeout`; the click has happened. Does not move the speech cursor.
+   */
+  recordClick(
+    point: ScreenPoint,
+    options?: ClickOptions & InputRecordOptions,
+  ): Promise<InputRecording>;
+  /** `pressKeys` that records the speech the keys cause, like `recordClick`. */
+  recordKeys(
+    keys: string | readonly string[],
+    options?: PressKeysOptions & InputRecordOptions,
+  ): Promise<InputRecording>;
+  /**
+   * Makes the page's browser window the foreground window. Without `target`, the bridge brings
+   * the window forward itself if it started the browser (a test browser of its Playwright server,
+   * API 1.21); otherwise, and with `target`, a native click on the title bar or on `target`.
+   */
   setFocus(page: FocusablePage, options?: SetFocusOptions): Promise<void>;
+  /**
+   * Asks the bridge to bring the page's window to the front (API 1.21,
+   * docs/usage/native-input.md#bringing-the-browser-to-the-front): puts a marker into
+   * `document.title` for a moment, so the bridge finds this page's window among its Playwright
+   * server's browsers. `null` when the bridge can't (a browser it didn't start, not on Windows),
+   * so the caller can fall back to a click. Rejects with `BridgeHttpError` `FOCUS_FAILED` when
+   * Windows refused.
+   */
+  bringToFront(page: FocusablePage): Promise<FocusedWindow | null>;
+  /**
+   * Brings Playwright MCP's browser window to the front (API 1.21). Rejects with
+   * `BridgeHttpError` `NOT_FOUND` (MCP not running, or no browser yet), `INPUT_DISABLED` or
+   * `FOCUS_FAILED`.
+   */
+  focusMcpBrowser(): Promise<FocusedWindow>;
 }

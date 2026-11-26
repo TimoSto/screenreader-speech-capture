@@ -33,8 +33,8 @@ The bridge stops gracefully on Ctrl+C (`SIGINT`), Ctrl+Break (`SIGBREAK`, Window
 console window (`SIGHUP`) and `SIGTERM`. The bridge log names the signal
 (`[bridge] INFO stopping (SIGINT)`). The bridge:
 
-1. stops accepting new HTTP and TCP connections and ends open SSE streams and `wait` requests
-   (they get `503`),
+1. stops accepting new HTTP and TCP connections and ends open SSE streams, `wait` requests and
+   input requests with `capture` (they get `503`),
 2. stops the child services and **kills their whole process tree**. On Windows, killing a process
    does not kill its children, so without this the browsers started by the Playwright server would
    stay open. The bridge uses `taskkill /T /F /PID <pid>`, limited to 5 seconds. On Linux
@@ -161,7 +161,7 @@ message.
 | `[config]` | grey | Loading and changing the configuration |
 | `[speech-capture]` | green | TCP listener: connections, cut lines, received lines (`debug`, file only, see above) |
 | `[http-api]` | blue | HTTP server and requests (`debug`), SSE clients |
-| `[web-ui]` | bright cyan | Loading the web UI (errors only: it failed to start) |
+| `[web-ui]` | bright cyan | The web UI (errors only: it failed to start, or its server code hit an unexpected error, logged with the path but never the query) |
 | `[native-input]` | magenta | Clicks and key presses |
 | `[playwright-server]` | cyan | Output of the Playwright server child process |
 | `[playwright-mcp]` | bright blue | Output of the Playwright MCP child process |

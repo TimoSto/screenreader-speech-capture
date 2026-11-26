@@ -93,6 +93,15 @@ export class SpeechLog {
   }
 
   /**
+   * The newest marker whose text is `label`, of all entries or, with `sessionId`, of that
+   * session (`null`: outside sessions). `undefined` if there is none (also when it was dropped).
+   */
+  latestMarker(label: string, sessionId?: number | null): SpeechEntry | undefined {
+    const queue = sessionId === undefined ? this.#entries : this.#bySession.get(sessionId);
+    return queue?.findLast((entry) => entry.kind === 'marker' && entry.text === label);
+  }
+
+  /**
    * Removes the entries (and markers) of the current session or of the entries outside sessions
    * (`none`), and returns that scope's id (`null`: outside). The session stays current. `NOT_FOUND`
    * for `current` with none current or an id never given out, `INVALID_REQUEST` for an ended
@@ -198,19 +207,21 @@ export class SpeechLog {
 
   /**
    * The session `id` a read is limited to, `null` for the entries outside sessions (`none`),
-   * `undefined` without a filter. `current` becomes the current session's id now. `NOT_FOUND` for
+   * `undefined` without a filter. `current` becomes the current session's id now, `active` too,
+   * or `undefined` (everything) when none is current: never `NOT_FOUND`. `NOT_FOUND` for
    * `current` with none current, or an id never given out. An ended session whose entries were all
    * dropped is found: it just has no entries.
    */
   resolveFilter(filter: SessionFilter | undefined): number | null | undefined {
     if (filter === undefined) return undefined;
     if (filter === 'none') return null;
+    if (filter === 'active') return this.#currentId ?? undefined;
     if (filter === 'current') {
       if (this.#currentId === null) throw new AppError('NOT_FOUND', 'No session is current');
       return this.#currentId;
     }
     if (!Number.isSafeInteger(filter) || filter < 1) {
-      throw invalidField('session', 'must be a session id, current or none');
+      throw invalidField('session', 'must be a session id, current, active or none');
     }
     if (filter > this.#lastSessionId) {
       throw new AppError('NOT_FOUND', `Session ${filter} does not exist`, { session: filter });

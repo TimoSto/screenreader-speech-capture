@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { API_PREFIX } from '@screenreader-speech-capture/shared';
+import {
+  API_PREFIX,
+  checkDto,
+  InputCaptureSchema,
+  type StatusDto,
+} from '@screenreader-speech-capture/shared';
 import { DisabledInputInjector } from '../src/adapters/out/input/disabled-input-injector.js';
 import { RecordingInputInjector } from './fakes.js';
-import { start } from './helpers.js';
+import { send, start } from './helpers.js';
 
 async function post(port: number, path: string, body: unknown, type = 'application/json') {
   return fetch(`http://127.0.0.1:${port}${API_PREFIX}${path}`, {
@@ -37,6 +42,9 @@ describe('native input API', () => {
     ['/input/keys', { keys: 'Hyper+T' }, 'keys'],
     ['/input/keys', { keys: 5 }, 'keys'],
     ['/input/keys', { keys: 'a', delayMs: 'x' }, 'delayMs'],
+    ['/input/keys', { keys: 'a', capture: 1 }, 'capture'],
+    ['/input/keys', { keys: 'a', capture: { quietForMs: 'x' } }, 'capture.quietForMs'],
+    ['/input/click', { x: 1, y: 1, capture: { timeoutMs: -1 } }, 'capture.timeoutMs'],
   ])('answers 400 for a bad body on %s', async (path, body, field) => {
     const inputInjector = new RecordingInputInjector();
     const bridge = await start({}, { inputInjector });
@@ -66,5 +74,77 @@ describe('native input API', () => {
         error: { code: 'INPUT_DISABLED', message: 'Native input is not available: no robotjs' },
       });
     }
+    const status = await fetch(`http://127.0.0.1:${bridge.httpPort}${API_PREFIX}/status`);
+    expect(((await status.json()) as StatusDto).input.native).toEqual({
+      available: false,
+      backend: null,
+      reason: 'no robotjs',
+    });
+  });
+
+  it('answers with the speech the keys caused when asked to capture', async () => {
+    const inputInjector = new RecordingInputInjector();
+    const bridge = await start({}, { inputInjector });
+    await send(bridge.tcpPort, 'before\r\n');
+    // The speech arrives while the bridge is capturing, as the screen reader's would.
+    let spoken: Promise<void> | undefined;
+    const original = inputInjector.keyTap.bind(inputInjector);
+    inputInjector.keyTap = (key) => {
+      spoken = send(bridge.tcpPort, 'Heading level 1, Welcome\r\n');
+      return original(key);
+    };
+    const res = await post(bridge.httpPort, '/input/keys', {
+      keys: 'h',
+      capture: { quietForMs: 100, firstWithinMs: 2000 },
+    });
+    await spoken;
+    expect(res.status).toBe(200);
+    const check = checkDto(InputCaptureSchema, await res.json());
+    if (!check.ok) throw new Error(`${check.field}: ${check.message}`);
+    expect(check.value).toMatchObject({ status: 'silent', startSeq: 1, omitted: 0 });
+    expect(check.value.entries.map((e) => e.text)).toEqual(['Heading level 1, Welcome']);
+    expect(inputInjector.calls).toEqual(['tap h']);
+  });
+
+  it('answers no-speech for a click nothing announces', async () => {
+    const inputInjector = new RecordingInputInjector();
+    const bridge = await start({}, { inputInjector });
+    const res = await post(bridge.httpPort, '/input/click', {
+      x: 5,
+      y: 6,
+      capture: { firstWithinMs: 50 },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      status: 'no-speech',
+      startSeq: 0,
+      entries: [],
+      omitted: 0,
+      truncated: false,
+    });
+    expect(inputInjector.calls).toEqual(['click left 5,6']);
+  });
+
+  it('answers 409 INPUT_DISABLED for a capture when input is not available', async () => {
+    const bridge = await start({}, { inputInjector: new DisabledInputInjector('no robotjs') });
+    const res = await post(bridge.httpPort, '/input/keys', { keys: 'a', capture: {} });
+    expect(res.status).toBe(409);
+  });
+
+  it('POST /input/focus checks the body and answers 404 when the service is not running', async () => {
+    const bridge = await start({}, { inputInjector: new RecordingInputInjector() });
+    const bad = await post(bridge.httpPort, '/input/focus', { target: 'firefox' });
+    expect(bad.status).toBe(400);
+    expect(await bad.json()).toMatchObject({ error: { details: { field: 'target' } } });
+    const longTitle = await post(bridge.httpPort, '/input/focus', {
+      target: 'playwright',
+      title: 'x'.repeat(201),
+    });
+    expect(longTitle.status).toBe(400);
+    const res = await post(bridge.httpPort, '/input/focus', { target: 'mcp' });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toMatchObject({
+      error: { code: 'NOT_FOUND', message: 'Playwright MCP is not running' },
+    });
   });
 });

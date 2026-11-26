@@ -3,7 +3,7 @@ import type { BridgeStatus } from '../../../domain/bridge-status.js';
 import type { Session } from '../../../domain/session.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import {
-  SOURCE_LABEL,
+  sourceLabel,
   formatEntry,
   formatSession,
   formatSessionEvent,
@@ -59,6 +59,10 @@ function status(overrides: Partial<BridgeStatus> = {}): BridgeStatus {
     playwright: { state: 'stopped', version: '1.65.0', port: 3000, restarts: 0, exitCode: null },
     mcp: { state: 'stopped', version: '0.0.85', port: 8931, restarts: 0, exitCode: null },
     session: { current: null, count: 0 },
+    input: {
+      native: { available: true, backend: 'robotjs', reason: null },
+      focus: { available: false, backend: null, reason: 'only on Windows' },
+    },
     ...overrides,
   };
 }
@@ -119,6 +123,7 @@ describe('formatStatus', () => {
         'tcp     127.0.0.1:4449 listening, 0 voice connections, windows-1252',
         'buffer  0 of 10000 entries (empty)',
         'session none current, 0 in the buffer',
+        'input   keys/clicks on (robotjs), focus off (only on Windows)',
       ].join('\n'),
     );
   });
@@ -149,11 +154,18 @@ describe('formatStatus', () => {
   });
 });
 
-it('labels every config value source', () => {
-  expect(SOURCE_LABEL).toEqual({
-    explicit: '--url',
-    env: 'SR_SPEECH_URL',
-    config: 'config file',
-    default: 'default',
-  });
+it('labels every config value source, with the flag and env variable of the key', () => {
+  const sources = ['explicit', 'env', 'config', 'default'] as const;
+  expect(sources.map((s) => sourceLabel('url', s))).toEqual([
+    '--url',
+    'SR_SPEECH_URL',
+    'config file',
+    'default',
+  ]);
+  expect(sources.map((s) => sourceLabel('output', s))).toEqual([
+    '--json',
+    'SR_SPEECH_OUTPUT',
+    'config file',
+    'default',
+  ]);
 });

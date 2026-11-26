@@ -1,10 +1,14 @@
 // The client against a real bridge (real TCP + HTTP sockets), fed like the socket voice.
+import { API_VERSION_HEADER } from '@screenreader-speech-capture/shared';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import http from 'node:http';
+import os from 'node:os';
+import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { DisabledInputInjector } from '../../bridge/src/adapters/out/input/disabled-input-injector.js';
-import { RecordingInputInjector } from '../../bridge/test/fakes.js';
-import { freePort, send, start } from '../../bridge/test/helpers.js';
+import { FakeWindowSystem, RecordingInputInjector } from '../../bridge/test/fakes.js';
+import { eventually, freePort, send, start } from '../../bridge/test/helpers.js';
 import { SystemClock } from '../../bridge/src/adapters/out/clock/system-clock.js';
 import { EXIT, runCli } from '../src/adapters/in/cli/run.js';
 import { expectCliOutput } from './cli-output.js';
@@ -48,9 +52,13 @@ async function cli(args: string[]) {
 }
 
 /** A server that answers every request with `status` and `body`. */
-async function stub(status: number, body: string): Promise<string> {
+async function stub(
+  status: number,
+  body: string,
+  headers: Record<string, string> = {},
+): Promise<string> {
   const server = http.createServer((_req, res) => {
-    res.writeHead(status, { 'content-type': 'application/json' }).end(body);
+    res.writeHead(status, { 'content-type': 'application/json', ...headers }).end(body);
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   onTestFinished(() => new Promise<void>((resolve) => server.close(() => resolve())));
@@ -67,6 +75,17 @@ describe('library', () => {
     expect(sr.cursor()).toBe(1);
     await expect(sr.waitForOutput('Submit', { timeout: 200 })).rejects.toThrow(SpeechTimeoutError);
     expect(await sr.getText()).toBe('Name, edit, blank');
+  });
+
+  it('findMarker and --since mark:<label> read after a marker set in another call', async () => {
+    const { url, say, client } = await bridge();
+    await say('before');
+    expect((await cli(['mark', 'step-2', '--url', url])).code).toBe(EXIT.ok);
+    await say('after');
+    const marker = await client().findMarker('step-2');
+    expect(marker).toMatchObject({ kind: 'marker', text: 'step-2', seq: 2 });
+    const text = await cli(['text', '--since', 'mark:step-2', '--json', '--url', url]);
+    expect(JSON.parse(text.stdout)).toEqual({ text: 'after', truncated: false });
   });
 
   it("refuses to read speech that was partly dropped from the bridge's full buffer", async () => {
@@ -155,7 +174,7 @@ describe('library', () => {
       code: 'HTTP_ERROR',
     });
 
-    const v2 = await stub(200, JSON.stringify({ bridge: { apiVersion: '2.0' } }));
+    const v2 = await stub(200, JSON.stringify({ entries: [] }), { [API_VERSION_HEADER]: '2.0' });
     await expect(new SpeechCaptureClient({ baseUrl: v2, env }).getSpeech()).rejects.toThrow(
       IncompatibleBridgeError,
     );
@@ -359,6 +378,74 @@ describe('native input', () => {
     ]);
   });
 
+  it('recordKeys and press --capture get the speech the bridge captured', async () => {
+    const injector = new RecordingInputInjector();
+    const { url, client, say } = await bridge({}, injector);
+    await say('before');
+    // The screen reader answers the key while the bridge captures.
+    const tap = injector.keyTap.bind(injector);
+    injector.keyTap = (key) => {
+      void say(`pressed ${key}`);
+      return tap(key);
+    };
+    const recording = await client().recordKeys('h', { quietFor: 100 });
+    expect(recording.entries.map((e) => e.text)).toEqual(['pressed h']);
+    expect(recording.truncated).toBe(false);
+
+    const result = await cli([
+      'press',
+      'k',
+      '--capture',
+      '--quiet-for',
+      '100',
+      '--json',
+      '--url',
+      url,
+    ]);
+    expect(result.code).toBe(EXIT.ok);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      pressed: true,
+      status: 'silent',
+      entries: [{ text: 'pressed k' }],
+    });
+  });
+
+  it("focus brings the window of the bridge's MCP browser to the front", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'sr-focus-'));
+    onTestFinished(() => rm(dir, { recursive: true, force: true }));
+    const pidFile = path.join(dir, 'service.pid');
+    const fakeService = new URL('../../bridge/test/fixtures/fake-service.mjs', import.meta.url);
+    const windows = new FakeWindowSystem();
+    const b = await start(
+      { mcp: { enabled: true, port: await freePort() } },
+      {
+        windowSystem: windows,
+        mcpLaunch: ({ port }) =>
+          Promise.resolve({
+            command: process.execPath,
+            args: [fakeService.pathname, '--port', String(port), '--pid', pidFile],
+          }),
+      },
+    );
+    const url = `http://127.0.0.1:${b.httpPort}`;
+    const sr = new SpeechCaptureClient({ baseUrl: url, env });
+    await eventually(
+      () => sr.status(),
+      (status) => status.mcp.state === 'running',
+      300,
+    );
+    const pid = Number(await readFile(pidFile, 'utf8'));
+    windows.addWindow(pid, 'Shop - Chromium');
+
+    const result = await cli(['focus', '--json', '--url', url]);
+    expect(result.code).toBe(EXIT.ok);
+    expect(JSON.parse(result.stdout)).toEqual({
+      focused: true,
+      window: { title: 'Shop - Chromium', pid },
+    });
+    expect(windows.focused).toHaveLength(1);
+  });
+
   it('the CLI exits 2 on INPUT_DISABLED', async () => {
     const b = await start({}, { inputInjector: new DisabledInputInjector('no robotjs') });
     const url = `http://127.0.0.1:${b.httpPort}`;
@@ -404,7 +491,9 @@ describe('CLI', () => {
     await say('old');
     const mark = await cli(['mark', 'step-1', '--url', url]);
     expect(mark.code).toBe(EXIT.ok);
-    const seq = mark.stdout.trim();
+    // `#<seq> [marker] step-1`: --since takes the `#<seq>` as printed.
+    expect(mark.stdout).toMatch(/^#\d+ \[marker\] step-1\n$/);
+    const seq = mark.stdout.split(' ')[0]!;
     await say('Submit, button');
 
     const found = await cli([
@@ -419,7 +508,7 @@ describe('CLI', () => {
     ]);
     expect(found.code).toBe(EXIT.ok);
     expect(JSON.parse(found.stdout)).toMatchObject({
-      matched: true,
+      status: 'matched',
       entry: { text: 'Submit, button' },
     });
     expect((await cli(['text', '--since', seq, '--url', url])).stdout).toBe('Submit, button\n');

@@ -1,4 +1,5 @@
 import type { SessionDto, SpeechEntryDto, StatusDto } from '@screenreader-speech-capture/shared';
+import { API_VERSION_HEADER } from '@screenreader-speech-capture/shared';
 import { describe, expect, it } from 'vitest';
 import type { StreamEvent } from '../../../application/ports/out/bridge-api.js';
 import {
@@ -77,6 +78,10 @@ const statusDto = (apiVersion = '1.4'): StatusDto => ({
   playwright: { state: 'stopped', version: '1.0.0', port: 3000, restarts: 0, exitCode: null },
   mcp: { state: 'stopped', version: '0.0.1', port: 8931, restarts: 0, exitCode: null },
   session: { current: sessionDto, count: 1 },
+  input: {
+    native: { available: true, backend: 'robotjs', reason: null },
+    focus: { available: true, backend: 'koffi', reason: null },
+  },
 });
 
 describe('FetchBridgeApi requests', () => {
@@ -171,6 +176,47 @@ describe('FetchBridgeApi requests', () => {
     ]);
   });
 
+  it('looks up the newest marker with a label', async () => {
+    const marker = { ...entryDto, kind: 'marker' as const, text: 'step 2' };
+    const { fetch, calls } = fakeFetch((call) =>
+      json({ marker: call.url.includes('session') ? null : marker }),
+    );
+    const bridge = api(fetch);
+    expect(await bridge.latestMarker('step 2')).toEqual(marker);
+    expect(await bridge.latestMarker('a&b', 'current')).toBeNull();
+    expect(calls.map((c) => c.url)).toEqual([
+      'http://vm:5151/api/v1/markers/latest?label=step+2',
+      'http://vm:5151/api/v1/markers/latest?label=a%26b&session=current',
+    ]);
+  });
+
+  it('posts a capture and maps its answer', async () => {
+    const answer = {
+      status: 'silent',
+      startSeq: 41,
+      entries: [entryDto],
+      omitted: 0,
+      truncated: false,
+    };
+    const { fetch, calls } = fakeFetch(() => json(answer));
+    const bridge = api(fetch);
+    expect(
+      await bridge.captureKeys({ keys: 'h', capture: { quietForMs: 200, settleMs: undefined } }),
+    ).toEqual(answer);
+    await bridge.captureClick({ x: 1, y: 2, button: 'right', capture: {} });
+    expect(calls.map(({ method, url, body }) => [method, url, body])).toEqual([
+      ['POST', 'http://vm:5151/api/v1/input/keys', { keys: 'h', capture: { quietForMs: 200 } }],
+      ['POST', 'http://vm:5151/api/v1/input/click', { x: 1, y: 2, button: 'right', capture: {} }],
+    ]);
+  });
+
+  it('rejects a capture answer that does not match the contract', async () => {
+    const { fetch } = fakeFetch(() => json({ status: 'maybe', startSeq: 1, entries: [] }));
+    await expect(api(fetch).captureKeys({ keys: 'h', capture: {} })).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+  });
+
   it('maps the status', async () => {
     const { fetch } = fakeFetch(() => json(statusDto()));
     const status = await api(fetch).status();
@@ -186,9 +232,27 @@ describe('FetchBridgeApi requests', () => {
     ]);
   });
 
-  it('rejects a bridge with another major API version before reading its status', async () => {
-    const { fetch } = fakeFetch(() => json({ bridge: { apiVersion: '2.0' } }));
-    await expect(api(fetch).status()).rejects.toBeInstanceOf(IncompatibleBridgeError);
+  it('checks the version header of every answer before its body, errors included', async () => {
+    const v2 = (body: unknown, status = 200) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'content-type': 'application/json', [API_VERSION_HEADER]: '2.0' },
+      });
+    await expect(api(fakeFetch(() => v2({ other: true })).fetch).status()).rejects.toBeInstanceOf(
+      IncompatibleBridgeError,
+    );
+    await expect(
+      api(fakeFetch(() => v2({ error: { code: 'NOT_FOUND' } }, 404)).fetch).clear(),
+    ).rejects.toBeInstanceOf(IncompatibleBridgeError);
+    const v1 = new Response(JSON.stringify(statusDto('1.0')), {
+      headers: { 'content-type': 'application/json', [API_VERSION_HEADER]: '1.9' },
+    });
+    expect((await api(fakeFetch(() => v1).fetch).status()).bridge.apiVersion).toBe('1.0');
+  });
+
+  it('accepts an answer without the header: a bridge before API 1.22 speaks major 1', async () => {
+    const { fetch } = fakeFetch(() => json(statusDto('1.0')));
+    await expect(api(fetch).status()).resolves.toBeTruthy();
   });
 
   it('accepts a bridge with an older minor API version', async () => {

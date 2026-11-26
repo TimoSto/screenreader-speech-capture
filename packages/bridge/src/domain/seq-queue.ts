@@ -64,6 +64,15 @@ export class SeqQueue<T extends Sequenced> {
     return { items: items.slice(low, low + limit), hasMore: true };
   }
 
+  /** The newest item the predicate accepts. O(n) from the end. */
+  findLast(predicate: (item: T) => boolean): T | undefined {
+    for (let index = this.#items.length - 1; index >= this.#head; index--) {
+      const item = this.#items[index]!;
+      if (predicate(item)) return item;
+    }
+    return undefined;
+  }
+
   /** Removes every item the predicate accepts, wherever it sits. Keeps the order. O(n). */
   removeWhere(predicate: (item: T) => boolean): void {
     this.#items = this.#items.slice(this.#head).filter((item) => !predicate(item));

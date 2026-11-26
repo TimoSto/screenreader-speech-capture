@@ -1,8 +1,57 @@
 # Decisions
 
 Choices that shape the project and rarely change, with the reasons behind them. The code layout,
-which changes with refactors, is in [Architecture](architecture.md). One entry per decision, newest
-last. Once there are several, they can move to one file each in `docs/decisions/`.
+which changes with refactors, is in [Architecture](architecture.md). One entry per decision, added at
+the end. The contents group them by area and name the PR that made each one; later PRs may have
+refined it (`git log -S '<heading>' -- docs/implementation/decisions.md`).
+
+**Platform and process**
+
+- [Node.js, not Go](#nodejs-not-go) ([#87](https://github.com/TimoSto/screenreader-speech-capture/pull/87))
+- [One consumer per VM](#one-consumer-per-vm) ([#88](https://github.com/TimoSto/screenreader-speech-capture/pull/88))
+- [Child process trees are killed by the bridge, not the OS](#child-process-trees-are-killed-by-the-bridge-not-the-os) ([#130](https://github.com/TimoSto/screenreader-speech-capture/pull/130))
+- [The bridge is the single way in](#the-bridge-is-the-single-way-in) ([#114](https://github.com/TimoSto/screenreader-speech-capture/pull/114))
+- [Settings apply on the next start](#settings-apply-on-the-next-start) ([#139](https://github.com/TimoSto/screenreader-speech-capture/pull/139))
+
+**API and contract**
+
+- [The API contract is valibot schemas](#the-api-contract-is-valibot-schemas) ([#119](https://github.com/TimoSto/screenreader-speech-capture/pull/119))
+- [The client checks only the major API version](#the-client-checks-only-the-major-api-version) ([#103](https://github.com/TimoSto/screenreader-speech-capture/pull/103))
+- [The client checks the API version on every answer](#the-client-checks-the-api-version-on-every-answer) ([#224](https://github.com/TimoSto/screenreader-speech-capture/pull/224))
+- [`seq` keeps rising across restarts](#seq-keeps-rising-across-restarts) ([#101](https://github.com/TimoSto/screenreader-speech-capture/pull/101))
+- [Deleting a session is a 400 for the current one, and sends no event](#deleting-a-session-is-a-400-for-the-current-one-and-sends-no-event) ([#174](https://github.com/TimoSto/screenreader-speech-capture/pull/174))
+- [Clearing one scope is `DELETE /speech?session=`](#clearing-one-scope-is-delete-speechsession) ([#176](https://github.com/TimoSto/screenreader-speech-capture/pull/176))
+
+**Capture, buffer and live feed**
+
+- [The socket voice stays the only capture source](#the-socket-voice-stays-the-only-capture-source) ([#123](https://github.com/TimoSto/screenreader-speech-capture/pull/123))
+- [The speech log owns the buffer and session rules](#the-speech-log-owns-the-buffer-and-session-rules) ([#106](https://github.com/TimoSto/screenreader-speech-capture/pull/106))
+- [Sessions warn instead of locking](#sessions-warn-instead-of-locking) ([#112](https://github.com/TimoSto/screenreader-speech-capture/pull/112))
+- [The SSE replay follows the reader](#the-sse-replay-follows-the-reader) ([#113](https://github.com/TimoSto/screenreader-speech-capture/pull/113))
+- [A stream announces where it starts](#a-stream-announces-where-it-starts) ([#128](https://github.com/TimoSto/screenreader-speech-capture/pull/128))
+- [Client waits read the live feed](#client-waits-read-the-live-feed) ([#92](https://github.com/TimoSto/screenreader-speech-capture/pull/92))
+- [A wait's regex is not sandboxed](#a-waits-regex-is-not-sandboxed) ([#131](https://github.com/TimoSto/screenreader-speech-capture/pull/131))
+
+**Native input**
+
+- [Captures of native input run on the bridge](#captures-of-native-input-run-on-the-bridge) ([#216](https://github.com/TimoSto/screenreader-speech-capture/pull/216))
+- [The bridge focuses browser windows it started](#the-bridge-focuses-browser-windows-it-started) ([#218](https://github.com/TimoSto/screenreader-speech-capture/pull/218))
+
+**Code structure**
+
+- [Services stay where they hold a rule](#services-stay-where-they-hold-a-rule) ([#135](https://github.com/TimoSto/screenreader-speech-capture/pull/135))
+
+**Web UI**
+
+- [The web UI is a SvelteKit BFF inside the bridge process](#the-web-ui-is-a-sveltekit-bff-inside-the-bridge-process) ([#145](https://github.com/TimoSto/screenreader-speech-capture/pull/145))
+- [The UI's server build is self-contained](#the-uis-server-build-is-self-contained) ([#168](https://github.com/TimoSto/screenreader-speech-capture/pull/168))
+- [The UI uses SvelteKit's experimental remote functions](#the-ui-uses-sveltekits-experimental-remote-functions) ([#203](https://github.com/TimoSto/screenreader-speech-capture/pull/203))
+- [The speech table follows live scopes over SSE and reads ended sessions once](#the-speech-table-follows-live-scopes-over-sse-and-reads-ended-sessions-once) ([#172](https://github.com/TimoSto/screenreader-speech-capture/pull/172))
+- [The speech table is a real `<table>`](#the-speech-table-is-a-real-table) ([#172](https://github.com/TimoSto/screenreader-speech-capture/pull/172))
+- [The UI builds its own lists instead of using `md-list`](#the-ui-builds-its-own-lists-instead-of-using-md-list) ([#159](https://github.com/TimoSto/screenreader-speech-capture/pull/159))
+- [The add-marker action only shows where the marker would land](#the-add-marker-action-only-shows-where-the-marker-would-land) ([#173](https://github.com/TimoSto/screenreader-speech-capture/pull/173))
+- [The UI theme lives in the browser, not in the bridge config](#the-ui-theme-lives-in-the-browser-not-in-the-bridge-config) ([#179](https://github.com/TimoSto/screenreader-speech-capture/pull/179))
+- [A UI opened on the bridge's machine hides its log from the screen reader](#a-ui-opened-on-the-bridges-machine-hides-its-log-from-the-screen-reader) ([#192](https://github.com/TimoSto/screenreader-speech-capture/pull/192))
 
 ## Node.js, not Go
 
@@ -34,6 +83,50 @@ So the bridge has no locks, leases or per-client state:
 - The Playwright server, Playwright MCP and the web UI share the same screen reader. Use one at a
   time.
 
+## The bridge focuses browser windows it started
+
+`POST /input/focus` (API 1.21) brings a window of Playwright MCP's or the Playwright server's
+browsers to the front natively, instead of a click computed from the page's geometry
+([usage](../usage/native-input.md#bringing-the-browser-to-the-front)). The CLI's `focus` and the
+client's `setFocus` / fixture use it first; the click stays as the fallback.
+
+Why: the click guessed the title bar from `outerHeight - innerHeight` and `devicePixelRatio`, which
+breaks with other display scaling or a maximised window, and an agent needed three tool calls
+(`focus --script` → MCP `browser_evaluate` → `focus --geometry`). The bridge supervises both
+services, so their browsers are in process trees it knows.
+
+- **koffi, not PowerShell.** The Win32 calls (`EnumWindows`, `SetForegroundWindow`, …) run in
+  process through koffi, an FFI library with prebuilt binaries, in about a millisecond. A
+  PowerShell call starts a process and compiles its `Add-Type` block each time (0.5 to 1 s). koffi
+  is an optional dependency like robotjs: without it, or not on Windows, the endpoint answers
+  `INPUT_DISABLED` and clients fall back to the click.
+- **A title marker for tests.** The Playwright server runs a browser per connection and a window
+  per context, so "the server's window" is ambiguous. The client puts a unique marker into
+  `document.title` and the bridge matches it in the window title. The browser's process id (through
+  CDP) would only work for Chromium and still not tell a browser's windows apart.
+- **The foreground lock.** Windows lets a background process take the foreground only in some
+  cases. The bridge taps Alt first (it is then the last input sender), then tries once more attached
+  to the foreground window's input thread. `AllowSetForegroundWindow` doesn't help: it lets another
+  process take the foreground. Whether this holds with NVDA and JAWS running is checked on the VM
+  ([M7](../ROADMAP.md#m7-distribution-)).
+
+## Captures of native input run on the bridge
+
+`POST /input/keys` and `POST /input/click` take a `capture` (API 1.19); the CLI's `--capture` and
+the library's `recordKeys` / `recordClick` use it. The bridge reads the start `seq` inside the input
+queue right before the input, follows the speech after it and times the silence from the entries'
+`receivedAt` ([usage](../usage/native-input.md#capturing-the-speech-an-input-causes)).
+
+Why: a capture is only correct if "start read" and "input sent" happen in that order with nothing
+in between, which only the bridge can guarantee. The client did it with a status read one round
+trip before the input (foreign or trailing speech in between counted as the input's), timed the
+silence on its own clock (SSE jitter looked like pauses), and needed five requests and a stream.
+This doesn't contradict [Client waits read the live feed](#client-waits-read-the-live-feed): that
+is about matching with predicates; a capture has none. `record(fn)` stays in the client for actions
+the bridge doesn't send (Playwright input). `settleMs` presses after `timeoutMs` even if the speech
+didn't pause, so a chatty page can't block the input forever; the trailing speech then shows in the
+answer.
+
 ## Client waits read the live feed
 
 The client's waits (`waitForOutput`, `waitForSequence`, `waitForSilence`) follow the **SSE live
@@ -50,6 +143,16 @@ first). They don't poll, and they don't use `GET /speech/wait`:
 
 `GET /speech/wait` stays as a convenience for `curl` and agents without the client; it is not the
 reference behaviour for the client.
+
+The CLI's `wait` uses the same path, although it only sends a string or a regex the bridge's wait
+could take. The bridge's wait would save no request: a wait asks `GET /status` once to fix its
+session (`active` and `current` are resolved when the wait starts, so a session started meanwhile
+doesn't take over), and the stream is open long before the
+screen reader speaks, so a match isn't reported any sooner. And it would be worse: one long request
+of up to 300 s (`timeoutMs` is capped) fails when the link drops, where the feed reconnects with
+`Last-Event-ID`; a `since` from an earlier bridge run waits until the timeout instead of getting
+`truncated` and the whole buffer; and its `omitted` would have to be mapped onto the CLI's
+`truncated`, which means something else.
 
 ## Settings apply on the next start
 
@@ -110,10 +213,25 @@ bridge handed out (from a run whose clock was ahead) is a gap, not a position to
 bridge sends `truncated` and the whole buffer instead of dropping every new entry as already
 delivered. `GET /speech/wait` doesn't do that: its `since` keeps its meaning of "after this `seq`".
 
-## Bridge and client are released together
+## The client checks the API version on every answer
 
-The client only checks the bridge's **major** API version. It used to also require a minimum minor
-version (`MIN_BRIDGE_API`) and planned per-function checks (`requireApiVersion`) for features an
+Every answer under `/api/v1` carries `X-SR-Speech-Api-Version` (API 1.22), and `FetchBridgeApi`
+checks it before it reads the body. Before, the services asked `GET /status` once before their
+first request (`VersionGate`). For the library that was one request per process, but every CLI call
+is a new process, so every command paid a round trip for the check.
+
+Checking the answer instead of asking first is as safe: the client only calls `/api/v1` paths, and
+a bridge of another major version either still serves them compatibly (it serves both prefixes for
+a while, [Versioning](../usage/http-api.md#versioning)) or answers 404 there, so no request can do
+something else than intended. The header is checked before the body because another major version
+may shape it differently. A missing header means a bridge older than 1.22, which speaks major 1.
+
+## The client checks only the major API version
+
+The client only checks the bridge's **major** API version. The packages are versioned and
+published independently ([Releases](development.md#releases)), but users install bridge and client
+from the same release, so a client never meets an older minor version in practice. It used to also
+require a minimum minor version (`MIN_BRIDGE_API`) and planned per-function checks (`requireApiVersion`) for features an
 older bridge lacks. Bridge and client are installed from the same release, so those checks
 guarded a combination nobody runs, and they made every API addition a compatibility question.
 Settings and status fields of features that don't exist yet (`input.enabled`, `--no-input`,
@@ -144,7 +262,6 @@ leave it locked, and every later start would need a forced takeover. Instead cli
 themselves (`X-SR-Speech-Client`), and the bridge warns when one ends or replaces another one's
 session, and returns the replaced session from `POST /sessions`. A lease that expires could
 come later if parallel workers become a real use case.
-
 
 ## Deleting a session is a 400 for the current one, and sends no event
 
@@ -216,6 +333,11 @@ valibot because it is small and tree-shakes: it is bundled into bridge and clien
 so users install nothing extra. The bridge keeps its own request checks (`request.ts`): they give
 the field-specific `INVALID_REQUEST` messages the API documents. They use the same limits and
 patterns from `shared`.
+
+The client CLI's `--json` output is described the same way (`packages/client/src/adapters/in/cli/output.ts`):
+the tests check every `--json` output against it, and `--help --json` turns it into JSON Schema at
+runtime with `@valibot/to-json-schema`, which is bundled into the CLI like valibot. So what an agent
+reads about an output can't drift from what the command prints.
 
 The config is the exception: the bridge validates `PUT /config` and the config file with the shared
 `ConfigPatchSchema` (`mergeConfig`) and adds no rules of its own, so the contract and the
@@ -329,7 +451,6 @@ The mockup draws the rows as a `div` grid with an `aria-hidden` column header. A
 one. The time and seq columns are as wide as their text (`seq` is a 13-digit number), and the seq column
 is hidden in a narrow log. The sticky header needs `border-collapse: separate`, or its borders scroll away.
 
-
 ## The add-marker action only shows where the marker would land
 
 `POST /api/v1/markers` has no session parameter: the bridge files a marker under the current session,
@@ -338,7 +459,6 @@ current session, and in "Outside sessions" while no session is current. In "Outs
 session is live, and in an ended session, it is hidden: the marker would appear in a different log than
 the one on screen. A button that is there but does something else would be worse than none.
 
-
 ## The UI theme lives in the browser, not in the bridge config
 
 The color theme (light, dark, high contrast, dark high contrast) is a property of the person and the
@@ -346,3 +466,29 @@ browser looking at the UI, not of the bridge, and several browsers can open the 
 in `localStorage` (`sr-theme`) and the bridge config and API don't know about it. An inline script in
 `app.html` applies it before the first paint. `prefers-color-scheme` is ignored on purpose: the UI starts
 light, and a high-contrast need is an explicit choice.
+
+## A UI opened on the bridge's machine hides its log from the screen reader
+
+The screen reader reads the machine it runs on, so the UI opened there would speak its own log rows into
+the log (`Outside sessions`, `#<seq>` cells). `aria-live="off"` isn't enough: JAWS still reads changes
+inside a focused region. The bridge's UI handler sets `x-sr-bridge-local: 1` on a request whose peer
+address is loopback or one of the machine's own interface addresses (a page opened on the VM through its LAN IP comes from that IP, not from loopback) and removes the header from every other one (so a client can't send it); the BFF's
+`hooks.server.ts` turns it into `locals.local`, and `SpeechLog` then marks its rows `aria-hidden`, drops
+the region and `tabindex`, and a warning banner above the log says why. A page opened from another machine is unchanged. A proxy that
+connects from the machine itself makes remote viewers look local.
+
+## The UI uses SvelteKit's experimental remote functions
+
+Remote functions (`query`, `command` in `*.remote.ts`) replace a hand-written `+server.ts` route and a
+`fetch` adapter with one typed function, and a query awaited during the server render goes into the page,
+so the browser's first call needs no request. In this Kit version they are behind
+`experimental.remoteFunctions`, and their API may change in a minor release. The dependencies are pinned
+to exact versions, so a change only arrives with a deliberate upgrade. They are adopted one resource at a
+time, starting with the sessions list (`lib/remote/sessions.remote.ts`). Two rules keep the layers:
+
+- Only adapters (behind the `lib/core` ports) and server code call a remote function (`uiRemote` in
+  `eslint.config.js`); stores and components still get the stores, so their tests are unchanged.
+- Svelte's experimental async mode (`await` in components) stays off. On the server a query's `current`
+  is always `undefined`, so the page's load awaits the query and the page seeds the store with the result
+  while it renders.
+

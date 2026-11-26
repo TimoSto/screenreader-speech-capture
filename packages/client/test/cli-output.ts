@@ -2,7 +2,12 @@
 // test that runs a command with --json also checks the shape scripts and agents rely on.
 import { checkDto } from '@screenreader-speech-capture/shared';
 import { expect } from 'vitest';
-import { CLI_OUTPUT, type CliCommand } from '../src/adapters/in/cli/output.js';
+import {
+  CLI_OUTPUT,
+  CliErrorOutput,
+  HelpOutput,
+  type CliCommand,
+} from '../src/adapters/in/cli/output.js';
 
 const COMMANDS = Object.keys(CLI_OUTPUT) as CliCommand[];
 
@@ -17,12 +22,31 @@ export function commandOf(args: readonly string[]): CliCommand | undefined {
   return COMMANDS.includes(args[at] as CliCommand) ? (args[at] as CliCommand) : undefined;
 }
 
-/** With --json, each line of `stdout` must match the command's schema. */
-export function expectCliOutput(args: readonly string[], stdout: string): void {
-  if (!args.includes('--json')) return;
+/**
+ * With --json (or `json`: the `output` setting), each line of `stdout` must match the command's schema, except the last one, which
+ * may be the error object instead (a failed command, or a `tail` that stopped).
+ */
+export function expectCliOutput(
+  args: readonly string[],
+  stdout: string,
+  json = args.includes('--json'),
+): void {
+  if (!json) return;
+  const lines = stdout.split('\n').filter((l) => l !== '');
+  const last = lines.at(-1);
+  if (last !== undefined && checkDto(CliErrorOutput, JSON.parse(last)).ok) lines.pop();
+  if (args.includes('--help') || args.includes('-h')) {
+    for (const line of lines) {
+      expect(checkDto(HelpOutput, JSON.parse(line)), 'help --json').toMatchObject({ ok: true });
+    }
+    return;
+  }
   const command = commandOf(args);
-  if (command === undefined) return;
-  for (const line of stdout.split('\n').filter((l) => l !== '')) {
+  if (command === undefined) {
+    expect(lines, 'only an error object without a command').toEqual([]);
+    return;
+  }
+  for (const line of lines) {
     const checked = checkDto(CLI_OUTPUT[command], JSON.parse(line));
     expect(checked, `${command} --json printed ${line}`).toMatchObject({ ok: true });
   }

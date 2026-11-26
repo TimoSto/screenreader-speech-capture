@@ -14,11 +14,13 @@ export type {
 } from './application/ports/in/manage-client-config.js';
 export type {
   ClearOptions,
+  FindMarkerOptions,
   GetSpeechOptions,
   GetTextOptions,
   OnSpeechOptions,
   ReadyOptions,
   Recording,
+  RecordOptions,
   SilenceOptions,
   SpeechCapture,
   StartSessionOptions,
@@ -28,6 +30,8 @@ export type {
   ClickOptions,
   FocusablePage,
   FocusTarget,
+  InputRecording,
+  InputRecordOptions,
   NativeInput,
   PressKeysOptions,
   SetFocusOptions,
@@ -35,15 +39,12 @@ export type {
 export {
   FocusError,
   type ElementBox,
+  type FocusedWindow,
   type MouseButton,
   type ScreenPoint,
 } from './domain/native-input.js';
-export {
-  DEFAULT_BRIDGE_URL,
-  normalizeBridgeUrl,
-  URL_ENV,
-  type ValueSource,
-} from './domain/bridge-url.js';
+export { DEFAULT_BRIDGE_URL, normalizeBridgeUrl, URL_ENV } from './domain/bridge-url.js';
+export type { ValueSource } from './domain/config-value.js';
 export type { ClientConfig, ConfigKey } from './domain/client-config.js';
 export {
   BridgeHttpError,

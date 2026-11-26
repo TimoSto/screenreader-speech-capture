@@ -11,12 +11,16 @@ const geometry = {
   devicePixelRatio: 1,
 };
 
-function setup(evaluated: unknown = geometry) {
+function setup(evaluated: unknown = geometry, bridgeFocuses = false) {
   const calls: string[] = [];
   const input = {
     click: (point: { x: number; y: number }) => {
       calls.push(`click ${point.x},${point.y}`);
       return Promise.resolve();
+    },
+    bringToFront: () => {
+      calls.push('bringToFront');
+      return Promise.resolve(bridgeFocuses ? { title: 'Checkout - Chromium', pid: 7 } : null);
     },
   };
   const page = {
@@ -25,20 +29,30 @@ function setup(evaluated: unknown = geometry) {
       calls.push('reload');
       return Promise.resolve();
     },
+    bringToFront: () => {
+      calls.push('page.bringToFront');
+      return Promise.resolve();
+    },
   };
   return { calls, input, page };
 }
 
 describe('focusPage', () => {
-  it('clicks the top-left corner of the content, then reloads', async () => {
+  it('lets the bridge bring the window to the front, then focuses the page: no click, no reload', async () => {
+    const { calls, input, page } = setup(geometry, true);
+    await focusPage(input, page);
+    expect(calls).toEqual(['bringToFront', 'page.bringToFront']);
+  });
+
+  it('otherwise clicks the top-left corner of the content, then reloads', async () => {
     const { calls, input, page } = setup();
     await focusPage(input, page);
-    expect(calls).toEqual(['click 109,143', 'reload']);
+    expect(calls).toEqual(['bringToFront', 'click 109,143', 'reload']);
   });
 
   it('neither clicks nor reloads when the geometry is unreadable', async () => {
     const { calls, input, page } = setup({ screenX: 'x' });
     await expect(focusPage(input, page)).rejects.toThrow();
-    expect(calls).toEqual([]);
+    expect(calls).toEqual(['bringToFront']);
   });
 });

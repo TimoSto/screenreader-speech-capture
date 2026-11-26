@@ -2,9 +2,13 @@ import {
   AnyErrorBodySchema,
   API_PREFIX,
   API_VERSION,
-  ApiVersionSchema,
+  API_VERSION_HEADER,
+  FocusedWindowSchema,
+  LatestMarkerSchema,
+  API_LIMITS,
   checkDto,
   CLIENT_HEADER,
+  InputCaptureSchema,
   SessionListSchema,
   SessionSchema,
   SpeechEntrySchema,
@@ -15,8 +19,12 @@ import {
   type DtoSchema,
   type KeysRequestDto,
   type MarkerRequestDto,
+  type InputAvailabilityDto,
   type ServiceStatusDto,
+  type CaptureOptionsDto,
   type ClickRequestDto,
+  type FocusRequestDto,
+  type InputCaptureDto,
   type SessionDto,
   type SpeechEntryDto,
   type StartSessionRequestDto,
@@ -24,6 +32,8 @@ import {
 } from '@screenreader-speech-capture/shared';
 import type {
   BridgeApi,
+  CaptureRequest,
+  InputCapture,
   SpeechPage,
   StreamEvent,
 } from '../../../application/ports/out/bridge-api.js';
@@ -33,9 +43,18 @@ import {
   BridgeUnreachableError,
   INVALID_RESPONSE,
 } from '../../../domain/errors.js';
-import type { BridgeStatus, ServiceStatus } from '../../../domain/bridge-status.js';
+import type {
+  BridgeStatus,
+  InputAvailability,
+  ServiceStatus,
+} from '../../../domain/bridge-status.js';
 import type { Session, SessionList, SessionRef, StartedSession } from '../../../domain/session.js';
-import type { MouseButton, ScreenPoint } from '../../../domain/native-input.js';
+import type {
+  FocusedWindow,
+  FocusTarget,
+  MouseButton,
+  ScreenPoint,
+} from '../../../domain/native-input.js';
 import type { SpeechEntry } from '../../../domain/speech-entry.js';
 import { parseSse, type SseMessage } from './sse-parser.js';
 
@@ -72,9 +91,6 @@ export class FetchBridgeApi implements BridgeApi {
   async status(): Promise<BridgeStatus> {
     const response = await this.request('GET', '/status');
     const body: unknown = await response.json();
-    // Checked before the rest: another major version may answer in another shape.
-    const version = checkDto(ApiVersionSchema, body);
-    if (version.ok) checkApiVersion(version.value.bridge.apiVersion, API_VERSION);
     return toStatus(parseBody(StatusSchema, body, response.status, 'GET /status'));
   }
 
@@ -104,6 +120,17 @@ export class FetchBridgeApi implements BridgeApi {
     return toEntry(await this.json(SpeechEntrySchema, 'POST', '/markers', { body }));
   }
 
+  async latestMarker(label: string, session?: SessionRef): Promise<SpeechEntry | null> {
+    const query = new URLSearchParams({ label });
+    if (session !== undefined) query.set('session', String(session));
+    const { marker } = await this.json(
+      LatestMarkerSchema,
+      'GET',
+      `/markers/latest?${query.toString()}`,
+    );
+    return marker && toEntry(marker);
+  }
+
   async startSession(request: { name: string; run?: string | undefined }): Promise<StartedSession> {
     const body: StartSessionRequestDto = {
       name: request.name,
@@ -122,23 +149,55 @@ export class FetchBridgeApi implements BridgeApi {
   }
 
   async click(request: ScreenPoint & { button?: MouseButton | undefined }): Promise<void> {
-    const body: ClickRequestDto = {
-      x: request.x,
-      y: request.y,
-      ...(request.button === undefined ? {} : { button: request.button }),
-    };
-    await this.request('POST', '/input/click', { body });
+    await this.request('POST', '/input/click', { body: clickBody(request) });
   }
 
   async pressKeys(request: {
     keys: string | readonly string[];
     delayMs?: number | undefined;
   }): Promise<void> {
-    const body: KeysRequestDto = {
-      keys: typeof request.keys === 'string' ? request.keys : [...request.keys],
-      ...(request.delayMs === undefined ? {} : { delayMs: request.delayMs }),
+    await this.request('POST', '/input/keys', { body: keysBody(request) });
+  }
+
+  async focusWindow(request: {
+    target: FocusTarget;
+    title?: string | undefined;
+  }): Promise<FocusedWindow> {
+    const body: FocusRequestDto = {
+      target: request.target,
+      ...(request.title === undefined ? {} : { title: request.title }),
     };
-    await this.request('POST', '/input/keys', { body });
+    // Up to 2 s on the bridge while the browser sets its window title, plus the request itself.
+    return this.json(FocusedWindowSchema, 'POST', '/input/focus', {
+      body,
+      signal: AbortSignal.timeout(2000 + REQUEST_TIMEOUT_MS),
+    });
+  }
+
+  async captureClick(
+    request: ScreenPoint & { button?: MouseButton | undefined; capture: CaptureRequest },
+  ): Promise<InputCapture> {
+    const body: ClickRequestDto = { ...clickBody(request), capture: captureBody(request.capture) };
+    return toInputCapture(
+      await this.json(InputCaptureSchema, 'POST', '/input/click', {
+        body,
+        signal: captureTimeout(request.capture),
+      }),
+    );
+  }
+
+  async captureKeys(request: {
+    keys: string | readonly string[];
+    delayMs?: number | undefined;
+    capture: CaptureRequest;
+  }): Promise<InputCapture> {
+    const body: KeysRequestDto = { ...keysBody(request), capture: captureBody(request.capture) };
+    return toInputCapture(
+      await this.json(InputCaptureSchema, 'POST', '/input/keys', {
+        body,
+        signal: captureTimeout(request.capture),
+      }),
+    );
   }
 
   async listSessions(): Promise<SessionList> {
@@ -233,6 +292,11 @@ export class FetchBridgeApi implements BridgeApi {
     } catch (error) {
       throw new BridgeUnreachableError(base, { cause: error });
     }
+    // Every answer carries the bridge's API version (since 1.22): checked before the body, which
+    // another major version may shape differently (docs/usage/http-api.md#versioning). Without
+    // the header, the bridge is older than 1.22 and so speaks major 1.
+    const version = response.headers.get(API_VERSION_HEADER);
+    if (version !== null) checkApiVersion(version, API_VERSION);
     if (!response.ok) throw await toHttpError(response);
     return response;
   }
@@ -263,6 +327,47 @@ function parseBody<S extends DtoSchema>(
     INVALID_RESPONSE,
     `The bridge answered ${what} with an unexpected body: ${checked.field}: ${checked.message}`,
   );
+}
+
+function clickBody(request: ScreenPoint & { button?: MouseButton | undefined }): ClickRequestDto {
+  return {
+    x: request.x,
+    y: request.y,
+    ...(request.button === undefined ? {} : { button: request.button }),
+  };
+}
+
+function keysBody(request: {
+  keys: string | readonly string[];
+  delayMs?: number | undefined;
+}): KeysRequestDto {
+  return {
+    keys: typeof request.keys === 'string' ? request.keys : [...request.keys],
+    ...(request.delayMs === undefined ? {} : { delayMs: request.delayMs }),
+  };
+}
+
+function captureBody(capture: CaptureRequest): CaptureOptionsDto {
+  const body: CaptureOptionsDto = {};
+  for (const key of ['quietForMs', 'firstWithinMs', 'timeoutMs', 'settleMs'] as const) {
+    const value = capture[key];
+    if (value !== undefined) body[key] = value;
+  }
+  return body;
+}
+
+/**
+ * A capture answers after the speech paused: up to `settleMs` (at most `timeoutMs`) before the
+ * input and `timeoutMs` after it, plus the usual time for the request itself.
+ */
+function captureTimeout(capture: CaptureRequest): AbortSignal {
+  const timeout = capture.timeoutMs ?? API_LIMITS.capture.timeoutMs.default;
+  const settle = Math.min(capture.settleMs ?? 0, timeout);
+  return AbortSignal.timeout(settle + timeout + REQUEST_TIMEOUT_MS);
+}
+
+function toInputCapture(dto: InputCaptureDto): InputCapture {
+  return { ...dto, entries: dto.entries.map(toEntry) };
 }
 
 async function toHttpError(response: Response): Promise<BridgeHttpError> {
@@ -348,7 +453,21 @@ const toServiceStatus = (dto: ServiceStatusDto): ServiceStatus => ({
   exitCode: dto.exitCode,
 });
 
-const toStatus = ({ bridge, tcp, buffer, playwright, mcp, session }: StatusDto): BridgeStatus => ({
+const toInputAvailability = (dto: InputAvailabilityDto): InputAvailability => ({
+  available: dto.available,
+  backend: dto.backend,
+  reason: dto.reason,
+});
+
+const toStatus = ({
+  bridge,
+  tcp,
+  buffer,
+  playwright,
+  mcp,
+  session,
+  input,
+}: StatusDto): BridgeStatus => ({
   bridge: {
     version: bridge.version,
     apiVersion: bridge.apiVersion,
@@ -373,5 +492,9 @@ const toStatus = ({ bridge, tcp, buffer, playwright, mcp, session }: StatusDto):
   session: {
     current: session.current === null ? null : toSession(session.current),
     count: session.count,
+  },
+  input: {
+    native: toInputAvailability(input.native),
+    focus: toInputAvailability(input.focus),
   },
 });

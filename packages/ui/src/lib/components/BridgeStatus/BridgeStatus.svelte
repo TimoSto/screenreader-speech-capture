@@ -3,9 +3,11 @@
   import { page } from '$app/state';
   import StatusChips from '#lib/components/StatusChips/StatusChips.svelte';
   import StatusRefresh from '#lib/components/StatusRefresh/StatusRefresh.svelte';
-  import { statusStore } from '#lib/composition.js';
+  import { appStores } from '#lib/composition.js';
   import { announcement, deriveChips } from '#lib/core/status.js';
   import type { StatusDto } from '@screenreader-speech-capture/shared';
+
+  const statusStore = appStores().status;
 
   // The status the server rendered (`+layout.server.ts`); it fills in until the store has its own.
   const seed = $derived(page.data.status as StatusDto | null);

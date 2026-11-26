@@ -94,6 +94,7 @@ describe('Sessions API', () => {
     await say(bridge, 'b1');
 
     expect(await texts(bridge, 'session=current')).toEqual(['b1']);
+    expect(await texts(bridge, 'session=active')).toEqual(['b1']);
     expect(await texts(bridge, 'session=1')).toEqual(['a1', 'a2']);
     expect(await texts(bridge, '')).toEqual(['before', 'a1', 'a2', 'b1']);
 
@@ -114,6 +115,8 @@ describe('Sessions API', () => {
 
     const status = await json<StatusDto>(await fetch(api(bridge, '/status')));
     expect(status.session).toEqual({ current: null, count: 2 });
+    // Without a current session, `active` is everything, where `current` is a 404.
+    expect(await texts(bridge, 'session=active')).toEqual(['before', 'a1', 'a2', 'b1', 'after']);
   });
 
   it('answers 404 for current without a session or an unknown id, on every read', async () => {
@@ -313,6 +316,18 @@ describe('Sessions API', () => {
       expect(list).toMatchObject({ currentId: 2, sessions: [{ id: 2, entries: 0 }, { id: 1 }] });
       await say(bridge, 'b2');
       expect(await texts(bridge, 'session=2')).toEqual(['b2']);
+    });
+
+    it('clears the current session with active, or everything when none is current', async () => {
+      const bridge = await start();
+      await say(bridge, 'outside');
+      await startSession(bridge, { name: 'a' });
+      await say(bridge, 'a1');
+      expect((await clear(bridge, '?session=active')).status).toBe(204);
+      expect(await texts(bridge, '')).toEqual(['outside']);
+      await post(bridge, '/sessions/end');
+      expect((await clear(bridge, '?session=active')).status).toBe(204);
+      expect(await texts(bridge, '')).toEqual([]);
     });
 
     it('clears the entries outside sessions while a session is current', async () => {

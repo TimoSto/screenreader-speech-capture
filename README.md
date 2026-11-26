@@ -19,7 +19,7 @@ flowchart LR
         SR["JAWS / NVDA"]
         Voice["text-to-socket-engine<br/>(SAPI 5 voice)"]
         Bridge["bridge (this project)<br/>HTTP API + UI :5151"]
-        Input["native input<br/>(#64;jitsi/robotjs)"]
+        Input["native input<br/>(#64;jitsi/robotjs, koffi:<br/>keys, clicks, window focus)"]
         PWS["Playwright server<br/>(loopback)"]
         MCP["Playwright MCP<br/>(loopback)"]
         Browser["Browser<br/>(Chrome, Edge, ...)"]
@@ -39,7 +39,7 @@ flowchart LR
     subgraph Remote["Remote machine / CI"]
         Tests["Playwright tests"]
         Lib["client lib<br/>+ Playwright fixture"]
-        Agent["AI agent<br/>(+ skill)"]
+        Agent["AI agent<br/>(skill planned)"]
         CLI["screenreader-speech-capture-client CLI"]
 
         Tests --> Lib
@@ -58,10 +58,16 @@ flowchart LR
 ## What it does
 
 - **Records speech** from NVDA or JAWS, one entry per spoken phrase, with timestamps.
-- **HTTP API + live stream** to read, wait for and clear the recorded speech, plus a **web UI** to watch them (UI planned, [M5](docs/ROADMAP.md#m5-web-ui-)).
+- **HTTP API + live stream** to read, wait for and clear the recorded speech, plus a **web UI** to watch them by session (more of the UI is planned, [M5](docs/ROADMAP.md#m5-web-ui-)).
 - **Test client**: a TypeScript library with a Playwright fixture (`waitForOutput('Submit, button')`) and a CLI for scripts and AI agents.
 - **Remote browser** on the screen reader's machine through a Playwright server and Playwright MCP.
 - **Native input** for screen reader commands (`Insert+T`, browse mode `H`) that Playwright can't send.
+
+## Requirements
+
+- **The screen reader's machine:** Windows 10 or 11 (usually a VM) with NVDA or JAWS, Node.js ≥ 22.12, an
+  interactive desktop session.
+- **Where tests or agents run:** any OS with Node.js ≥ 20 that can reach the VM's port 5151.
 
 ## Quick start
 
@@ -72,15 +78,20 @@ On the Windows VM:
 npm install -g text-to-socket-engine
 text-to-socket-engine-register
 
-# 2. the bridge (normal, non-elevated user session)
-npm i -g screenreader-speech-capture
+# 2. the bridge (normal, non-elevated user session), pinned
+npm i -g screenreader-speech-capture@<version>
 screenreader-speech-capture
 ```
 
-3. In NVDA or JAWS, select the voice **"Text To Socket 127.0.0.1:4449"**.
-4. Make the screen reader speak and watch the text arrive live with
-   `npx screenreader-speech-capture-client tail` (the web UI at <http://localhost:5151> comes with
-   M5).
+The `npm warn install-scripts` line for `@jitsi/robotjs` is
+[expected](docs/usage/vm-setup.md#the-install-scripts-warning).
+
+3. In NVDA or JAWS, select the voice **"Text To Socket 127.0.0.1:4449"**. A German JAWS lists it
+   only once it is [marked as German](docs/usage/vm-setup.md#a-german-voice).
+4. Make the screen reader speak and watch the text arrive live in the web UI at
+   <http://localhost:5151>, or with `npx -y screenreader-speech-capture-client@<version> tail`.
+
+The full list (firewall, VM settings, checks) is the [setup checklist](docs/usage/vm-setup.md#checklist).
 
 In your test project (see the [Playwright fixture](docs/usage/client.md#playwright-fixture) and the
 [example tests](examples/playwright)):
@@ -95,13 +106,13 @@ test('submit button is announced', async ({ page, speech }) => {
 });
 ```
 
-Details: [VM setup](docs/usage/vm-setup.md), [Test client](docs/usage/client.md).
+Run the tests with `workers: 1`, and with `@playwright/test` at exactly the bridge's Playwright
+version: [Setting up a test project](docs/usage/client.md#setting-up-a-test-project). The
+[example project](examples/playwright) has all of it.
 
-## Following speech live
-
-The bridge pushes each speech entry the moment it arrives (Server-Sent Events). Watch it with
-`npx screenreader-speech-capture-client tail`, or subscribe in code with `sr.onSpeech(...)`. Details:
-[Test client → Live feed](docs/usage/client.md#live-feed).
+For an **AI agent**: point its MCP client at `http://<vm>:5151/playwright-mcp` to drive the browser,
+and give it the CLI (`npm i -g screenreader-speech-capture-client@<version>`) to send screen reader
+commands and read what was said: [Agents](docs/usage/agents.md).
 
 ## Documentation
 
@@ -112,7 +123,9 @@ with sequence diagrams of the main flows. Good places to start:
 - [VM setup](docs/usage/vm-setup.md): socket voice, NVDA / JAWS, running the bridge
 - [Test client](docs/usage/client.md): library, Playwright fixture, CLI
 - [HTTP API](docs/usage/http-api.md) and its [flows](docs/usage/flows/http.md)
+- [Agents](docs/usage/agents.md): the CLI loop with Playwright MCP
 - [Roadmap](docs/ROADMAP.md): what works today
+- [Development](docs/implementation/development.md): contributing, building and testing without Windows
 
 ## Security
 

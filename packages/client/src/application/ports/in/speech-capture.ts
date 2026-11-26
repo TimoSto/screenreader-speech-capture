@@ -6,7 +6,8 @@ import type { SpeechMatch } from '../../../domain/text-match.js';
 export interface ClearOptions {
   /**
    * Clear only this scope: the current session (its id or `'current'`) or `'none'` (the speech
-   * outside any session). The session keeps running. Needs bridge API 1.17.
+   * outside any session). The session keeps running. Needs bridge API 1.17. `'active'`: the
+   * current session, or everything when none is current.
    */
   session?: SessionRef | 'none' | undefined;
 }
@@ -24,8 +25,9 @@ export interface GetSpeechOptions {
    */
   allowTruncated?: boolean | undefined;
   /**
-   * Only entries of this session: its `id`, or `'current'` (the session current when the request
-   * arrives). Default: all entries.
+   * Only entries of this session: its `id`, `'current'` (the session current when the request
+   * arrives), or `'active'` (the current one, or all entries when none is current). Default: all
+   * entries.
    */
   session?: SessionRef | undefined;
 }
@@ -38,8 +40,9 @@ export interface GetTextOptions {
   /** As for `getSpeech`: return what is left instead of throwing `SpeechTruncatedError`. */
   allowTruncated?: boolean | undefined;
   /**
-   * Only entries of this session: its `id`, or `'current'` (the session current when the request
-   * arrives). Default: all entries.
+   * Only entries of this session: its `id`, `'current'` (the session current when the request
+   * arrives), or `'active'` (the current one, or all entries when none is current). Default: all
+   * entries.
    */
   session?: SessionRef | undefined;
 }
@@ -52,9 +55,15 @@ export interface WaitOptions {
   /** Ignore case and extra whitespace (strings and regular expressions). */
   normalize?: boolean | undefined;
   /**
-   * Only entries of this session: its `id`, or `'current'` (the session current when the wait
-   * starts; it stays that one even if another session starts meanwhile). Default: all entries.
+   * Only entries of this session: its `id`, `'current'` (the session current when the wait
+   * starts; it stays that one even if another session starts meanwhile), or `'active'` (the same,
+   * or all entries when none is current). Default: all entries.
    */
+  session?: SessionRef | undefined;
+}
+
+export interface FindMarkerOptions {
+  /** Only this session's markers: its `id`, `'current'` or `'active'`. Default: all entries. */
   session?: SessionRef | undefined;
 }
 
@@ -68,6 +77,14 @@ export interface SilenceOptions {
   quietFor?: number | undefined;
   /** Milliseconds. Default 10000. */
   timeout?: number | undefined;
+}
+
+export interface RecordOptions extends SilenceOptions {
+  /**
+   * Milliseconds the screen reader may take to start talking after `fn`; `quietFor` counts from
+   * its first speech. If nothing is said in this time, the recording ends empty. Default 2000.
+   */
+  firstWithin?: number | undefined;
 }
 
 export interface ReadyOptions {
@@ -99,7 +116,7 @@ export interface OnSpeechOptions {
 
 export interface Recording<T> {
   result: T;
-  /** Speech spoken while `fn` ran and until silence, oldest first. */
+  /** Speech spoken while `fn` ran and until silence, oldest first. Empty: nothing was said. */
   entries: SpeechEntry[];
   /**
    * Some of that speech was dropped because the bridge's buffer was full before it could be read:
@@ -147,6 +164,12 @@ export interface SpeechCapture {
   sessions(): Promise<SessionList>;
   /** Inserts a marker. Its `seq` can be used as `since`. */
   mark(label: string): Promise<SpeechEntry>;
+  /**
+   * The newest marker with this label (API 1.20), so a step marked in another process can be read
+   * from its `seq`. With `session`, only in that session (`'current'`: the current one); all
+   * entries without it. `undefined` if there is none, also when it was dropped or cleared.
+   */
+  findMarker(label: string, options?: FindMarkerOptions): Promise<SpeechEntry | undefined>;
   /** Bridge health and versions. */
   status(): Promise<BridgeStatus>;
   /**
@@ -171,10 +194,12 @@ export interface SpeechCapture {
    */
   waitForSilence(options?: SilenceOptions): Promise<void>;
   /**
-   * Runs `fn` and returns the speech spoken while it ran (waits for silence at the end), then
-   * moves the cursor to the end.
+   * Runs `fn` and returns the speech spoken while it ran and after it: it waits up to
+   * `firstWithin` ms for the first speech, then until nothing was said for `quietFor` ms. Moves
+   * the cursor to the end. Rejects with `SpeechTimeoutError` if speech goes on until `timeout`;
+   * its `entries` are then everything recorded so far (`fn` has run).
    */
-  record<T>(fn: () => T | Promise<T>, options?: SilenceOptions): Promise<Recording<T>>;
+  record<T>(fn: () => T | Promise<T>, options?: RecordOptions): Promise<Recording<T>>;
   /**
    * Subscribes to the live feed (SSE): `listener` gets every new speech entry as the bridge
    * receives it, until the returned function is called. Reconnects by itself after a lost

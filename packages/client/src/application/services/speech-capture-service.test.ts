@@ -15,7 +15,7 @@ import { SpeechCaptureService } from './speech-capture-service.js';
 function setup() {
   const api = new FakeBridgeApi();
   const clock = new FakeClock();
-  const sr = new SpeechCaptureService({ api, clock, apiVersion: '1.4' });
+  const sr = new SpeechCaptureService({ api, clock });
   return { api, clock, sr };
 }
 
@@ -163,7 +163,7 @@ describe('waitForOutput', () => {
     clock.at(300, () => api.speak('Dialog, Settings'));
     expect(await sr.waitForOutput(/dialog/i)).toMatchObject({ text: 'Dialog, Settings' });
     expect(clock.now()).toBe(300);
-    expect(api.calls).toEqual(['status', 'list 0', 'stream 1']);
+    expect(api.calls).toEqual(['list 0', 'stream 1']);
     expect(api.openStreams).toBe(0);
   });
 
@@ -219,7 +219,10 @@ describe('waitForOutput', () => {
     clock.at(100, () => api.speak('two'));
     const error = await sr.waitForOutput('three', { timeout: 1000 }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(SpeechTimeoutError);
-    expect((error as SpeechTimeoutError).message).toBe('No speech matched "three" within 1000 ms');
+    expect((error as SpeechTimeoutError).reason).toBe('No speech matched "three" within 1000 ms');
+    expect((error as SpeechTimeoutError).message).toBe(
+      'No speech matched "three" within 1000 ms. Speech seen (2):\n  #1 one\n  #2 two',
+    );
     expect(texts((error as SpeechTimeoutError).entries)).toEqual(['one', 'two']);
     expect(clock.now()).toBe(1000);
     expect(sr.cursor()).toBe(0);
@@ -258,7 +261,7 @@ describe('waitForSequence', () => {
     const { api, sr } = setup();
     api.speak('a b');
     const error = await sr.waitForSequence(['a', 'b'], { timeout: 100 }).catch((e: unknown) => e);
-    expect((error as Error).message).toBe(
+    expect((error as SpeechTimeoutError).reason).toBe(
       'Only 1 of 2 matches occurred in order (next: "b") within 100 ms',
     );
   });
@@ -315,6 +318,50 @@ describe('record', () => {
     expect(texts(entries)).toEqual(['during', 'right after']);
     expect(sr.cursor()).toBe(3);
   });
+
+  it('waits up to firstWithin for the first speech, then quietFor from it', async () => {
+    const { api, clock, sr } = setup();
+    clock.at(1500, () => api.speak('late'));
+    const { entries } = await sr.record(() => undefined);
+    expect(texts(entries)).toEqual(['late']);
+    expect(clock.now()).toBe(2000);
+  });
+
+  it('ends empty after firstWithin when nothing is said', async () => {
+    const { clock, sr } = setup();
+    expect((await sr.record(() => undefined)).entries).toEqual([]);
+    expect(clock.now()).toBe(2000);
+    const start = clock.now();
+    await sr.record(() => undefined, { firstWithin: 300 });
+    expect(clock.now() - start).toBe(300);
+  });
+
+  it('counts speech while fn ran as the first speech', async () => {
+    const { api, clock, sr } = setup();
+    // The fake clock jumps to the end of a sleep when nothing is due: a tick at 1 ms lets the
+    // feed's replay of 'at once' arrive first.
+    clock.at(1, () => undefined);
+    const { entries } = await sr.record(() => api.speak('at once'), { quietFor: 300 });
+    expect(texts(entries)).toEqual(['at once']);
+    expect(clock.now()).toBe(301);
+  });
+
+  it('rejects with everything recorded when the speech does not pause', async () => {
+    const { api, clock, sr } = setup();
+    api.speak('before');
+    for (let t = 100; t <= 2000; t += 100) clock.at(t, () => api.speak(`tick ${t}`));
+    const error = await sr
+      .record(() => api.speak('during'), { quietFor: 300, timeout: 1000 })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(SpeechTimeoutError);
+    expect((error as SpeechTimeoutError).reason).toBe(
+      'Speech did not pause for 300 ms within 1000 ms',
+    );
+    const recorded = texts((error as SpeechTimeoutError).entries);
+    expect(recorded.slice(0, 2)).toEqual(['during', 'tick 100']);
+    expect(recorded).not.toContain('before');
+    expect(sr.cursor()).toBe(0);
+  });
 });
 
 describe('speech dropped from the bridge buffer', () => {
@@ -334,7 +381,7 @@ describe('speech dropped from the bridge buffer', () => {
     const error = await failure(sr.waitForOutput('never', { since: 0, timeout: 100 }));
     expect(error).toBeInstanceOf(SpeechTimeoutError);
     expect(error.truncated).toBe(true);
-    expect(error.message).toBe(`No speech matched "never" within 100 ms; ${TRUNCATED_HINT}`);
+    expect(error.reason).toBe(`No speech matched "never" within 100 ms; ${TRUNCATED_HINT}`);
     expect(texts(error.entries)).toEqual(['three']);
   });
 
@@ -343,7 +390,7 @@ describe('speech dropped from the bridge buffer', () => {
     api.speak('one');
     const error = await failure(sr.waitForOutput('never', { timeout: 100 }));
     expect(error.truncated).toBe(false);
-    expect(error.message).toBe('No speech matched "never" within 100 ms');
+    expect(error.reason).toBe('No speech matched "never" within 100 ms');
   });
 
   it('says so for a sequence too', async () => {
@@ -419,6 +466,35 @@ describe('speech dropped from the bridge buffer', () => {
 });
 
 describe('sessions', () => {
+  it("session 'active' reads the current session, or everything without one", async () => {
+    const { api, sr } = setup();
+    api.speak('outside');
+    expect(texts(await sr.getSpeech({ since: 0, session: 'active' }))).toEqual(['outside']);
+    await sr.startSession('task');
+    api.speak('inside');
+    expect(texts(await sr.getSpeech({ since: 0, session: 'active' }))).toEqual(['inside']);
+    // Sent as is: the bridge resolves it, no status first.
+    expect(api.calls.filter((c) => c.startsWith('list'))).toEqual([
+      'list 0 session=active',
+      'list 0 session=active',
+    ]);
+  });
+
+  it("a wait with session 'active' keeps the session current when it starts", async () => {
+    const { api, sr } = setup();
+    api.speak('Submit outside');
+    // None current: the whole buffer.
+    expect((await sr.waitForOutput('Submit', { since: 0, session: 'active' })).text).toBe(
+      'Submit outside',
+    );
+    await sr.startSession('task');
+    api.speak('Submit inside');
+    expect((await sr.waitForOutput('Submit', { since: 0, session: 'active' })).text).toBe(
+      'Submit inside',
+    );
+    expect(api.calls).toContain('list 0 session=1');
+  });
+
   it('startSession moves the cursor to the session start; reads and waits see only it', async () => {
     const { api, sr } = setup();
     api.speak('earlier test');
@@ -457,7 +533,7 @@ describe('sessions', () => {
       ['two', false],
       ['one', false],
     ]);
-    expect(api.calls).toEqual(['status', 'start one', 'start two', 'end', 'sessions']);
+    expect(api.calls).toEqual(['start one', 'start two', 'end', 'sessions']);
   });
 
   it('deleteSession deletes an ended session and keeps the cursor', async () => {
@@ -468,7 +544,7 @@ describe('sessions', () => {
     await sr.deleteSession(1);
     expect((await sr.sessions()).sessions.map((s) => s.name)).toEqual(['two']);
     expect(sr.cursor()).toBe(cursor);
-    expect(api.calls).toEqual(['status', 'start one', 'start two', 'delete 1', 'sessions']);
+    expect(api.calls).toEqual(['start one', 'start two', 'delete 1', 'sessions']);
     await expect(sr.deleteSession(2)).rejects.toMatchObject({ status: 400 });
   });
 
@@ -542,31 +618,23 @@ describe('bridge restart', () => {
 });
 
 describe('version check', () => {
-  it('runs once before the first call', async () => {
+  it('needs no status call before the first request: every answer carries the version', async () => {
     const { api, sr } = setup();
     await sr.getSpeech();
     await sr.getSpeech();
-    expect(api.calls.filter((c) => c === 'status')).toHaveLength(1);
+    expect(api.calls).toEqual(['list 0', 'list 0']);
   });
 
-  it('accepts another minor version and rejects another major version', async () => {
+  it('accepts another minor version and rejects another major version on any answer', async () => {
     const { api, sr } = setup();
     api.apiVersion = '1.7';
-    await expect(sr.status()).resolves.toBeTruthy();
+    await expect(sr.getSpeech()).resolves.toEqual([]);
     api.apiVersion = '2.0';
-    const error = await sr.status().catch((e: unknown) => e);
+    const error = await sr.clear().catch((e: unknown) => e);
     expect(error).toBeInstanceOf(IncompatibleBridgeError);
-    expect(error).toMatchObject({ bridgeApiVersion: '2.0', clientApiVersion: '1.4' });
-  });
-
-  it('is repeated after a failure', async () => {
-    const { api, sr } = setup();
-    api.apiVersion = '2.0';
-    await expect(sr.clear()).rejects.toThrow(IncompatibleBridgeError);
-    expect(api.calls).not.toContain('clear');
+    expect(error).toMatchObject({ bridgeApiVersion: '2.0' });
     api.apiVersion = '1.0';
-    await sr.clear();
-    expect(api.calls).toContain('clear');
+    await expect(sr.clear()).resolves.toBeUndefined();
   });
 });
 
@@ -594,15 +662,24 @@ describe('waitForReady', () => {
 });
 
 describe('onSpeech', () => {
-  it('checks the version, then delivers live speech; the cursor stays', async () => {
+  it('delivers live speech; the cursor stays', async () => {
     const { api, sr } = setup();
     const log: string[] = [];
     const stop = sr.onSpeech((entry) => log.push(entry.text));
     await vi.waitFor(() => expect(api.openStreams).toBe(1));
-    expect(api.calls).toEqual(['status', 'stream null']);
+    expect(api.calls).toEqual(['stream null']);
     api.speak('Submit, button');
     await vi.waitFor(() => expect(log).toEqual(['Submit, button']));
     expect(sr.cursor()).toBe(0);
     stop();
+  });
+
+  it('findMarker returns the newest marker with the label, or undefined', async () => {
+    const { api, sr } = setup();
+    await sr.mark('step');
+    const newest = await sr.mark('step');
+    expect(await sr.findMarker('step')).toEqual(newest);
+    expect(await sr.findMarker('other')).toBeUndefined();
+    expect(api.calls).toContain('latest marker other');
   });
 });

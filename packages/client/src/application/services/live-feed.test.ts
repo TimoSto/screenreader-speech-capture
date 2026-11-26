@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import { FakeBridgeApi, FakeClock } from '../../../test/fakes.js';
-import { checkApiVersion } from '../../domain/api-version.js';
 import {
   BridgeHttpError,
   BridgeUnreachableError,
@@ -12,13 +11,7 @@ import { startLiveFeed, type LiveFeedDeps } from './live-feed.js';
 function setup() {
   const api = new FakeBridgeApi();
   const clock = new FakeClock();
-  const deps: LiveFeedDeps = {
-    api,
-    clock,
-    ensureCompatible: async () => {
-      checkApiVersion((await api.status()).bridge.apiVersion, '1.4');
-    },
-  };
+  const deps: LiveFeedDeps = { api, clock };
   return { api, clock, deps };
 }
 
@@ -36,12 +29,12 @@ function subscribe(deps: LiveFeedDeps, options: OnSpeechOptions = {}) {
 }
 
 describe('live feed', () => {
-  it('checks the version, then delivers live speech and clears', async () => {
+  it('delivers live speech and clears', async () => {
     const { api, deps } = setup();
     api.speak('before');
     const { log, errors } = subscribe(deps);
     await vi.waitFor(() => expect(api.openStreams).toBe(1));
-    expect(api.calls).toEqual(['status', 'stream null']);
+    expect(api.calls).toEqual(['stream null']);
     api.speak('Submit, button');
     await api.mark('step');
     await api.clear();
@@ -125,7 +118,7 @@ describe('live feed', () => {
   it('stops for good when the stream answers with a 4xx', async () => {
     const { api, deps } = setup();
     api.failures = [new BridgeHttpError(404, 'NOT_FOUND', 'nope')];
-    const { errors } = subscribe({ ...deps, ensureCompatible: () => Promise.resolve() });
+    const { errors } = subscribe(deps);
     await vi.waitFor(() => expect(errors).toHaveLength(1));
     expect(errors[0]).toMatchObject({ retrying: false });
     expect(api.calls).toEqual(['stream null']);

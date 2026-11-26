@@ -2,11 +2,14 @@
 openapi: 3.1.0
 info:
   title: screenreader-speech-capture bridge API
-  version: '1.18'
+  version: '1.24'
   summary: Capture what a screen reader says and read it over HTTP.
   description: |
     REST + Server-Sent Events API of the bridge. `info.version` is the API version that
     `GET /status` reports as `bridge.apiVersion` (`<major>.<minor>`; minor versions only add things).
+    Every answer under `/api/v1`, errors and streams included, also carries it in the
+    `X-SR-Speech-Api-Version` response header (since 1.22), so a client checks it on each answer
+    instead of asking `GET /status` first.
     The prose reference is `docs/usage/http-api.md`. The types match `packages/shared`.
 
     This file describes the endpoints the bridge serves today.
@@ -28,7 +31,11 @@ info:
     shows the settings in use. 1.14 added native input (`POST /input/click`, `POST /input/keys`) and
     the `INPUT_DISABLED` error code again. 1.15 added `outsideEntries` to `GET /sessions`. 1.16 added `DELETE /sessions`. 1.17 added the `session` parameter of `DELETE /speech` and the
     `sessionId` in the `data` of a scoped `clear` event. 1.18 added the `view` parameter of `GET /config`
-    and `GET /config/overrides`.
+    and `GET /config/overrides`. 1.19 added `capture` to `POST /input/click` and `POST /input/keys`
+    (the bridge records the speech the input causes and answers `200` with `InputCapture`). 1.20
+    added `GET /markers/latest` (the newest marker with a label, for a `since`). 1.21 added
+    `POST /input/focus` and the `FOCUS_FAILED` error code. 1.22 added the `X-SR-Speech-Api-Version`
+    response header. 1.23 added `session=active`.
 
     Every error has the same body (`ErrorBody`). Clients must handle unknown error codes as errors
     of their HTTP status.
@@ -110,7 +117,7 @@ paths:
         - name: session
           in: query
           required: false
-          description: 'Only clear this scope: the id of the current session, `current`, or `none`. Without it everything is wiped.'
+          description: 'Only clear this scope: the id of the current session, `current`, `active` (the current session, or everything when none is current; since 1.23) or `none`. Without it everything is wiped.'
           schema:
             oneOf:
               - type: integer
@@ -118,6 +125,7 @@ paths:
               - type: string
                 enum:
                   - current
+                  - active
                   - none
       responses:
         '204':
@@ -309,6 +317,38 @@ paths:
                 $ref: '#/components/schemas/SpeechEntry'
         '400':
           $ref: '#/components/responses/InvalidRequest'
+  /markers/latest:
+    get:
+      tags:
+        - speech
+      operationId: latestMarker
+      summary: Find the newest marker with a label
+      description: |
+        The newest marker whose text is `label` (since API 1.20), so a caller that only knows the label it
+        marked a step with can read from there: pass the marker's `seq` as `since`. The label is
+        trimmed and compared exactly. `null` when the scope has no such marker, also when it was
+        dropped from the full buffer or cleared.
+      parameters:
+        - name: label
+          in: query
+          required: true
+          description: 'The marker text to look for: not empty, at most 1000 characters (trimmed).'
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 1000
+        - $ref: '#/components/parameters/Session'
+      responses:
+        '200':
+          description: The marker, or `null`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LatestMarker'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '404':
+          $ref: '#/components/responses/SessionNotFound'
   /input/click:
     post:
       tags:
@@ -316,7 +356,7 @@ paths:
       operationId: click
       summary: Click at a screen point
       description: |
-        Sends a native mouse click, to give a window the focus (`docs/usage/native-input.md`). The body must be sent as `application/json`.
+        Sends a native mouse click, to give a window the focus (`docs/usage/native-input.md`). With `capture` (since 1.19), also records the speech the click causes (`docs/usage/native-input.md#capturing-the-speech-an-input-causes`). The body must be sent as `application/json`.
       requestBody:
         required: true
         content:
@@ -324,12 +364,20 @@ paths:
             schema:
               $ref: '#/components/schemas/ClickRequest'
       responses:
+        '200':
+          description: 'With `capture`: the input was sent, and the speech it caused.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InputCapture'
         '204':
-          description: Done.
+          description: 'Without `capture`: done.'
         '400':
           $ref: '#/components/responses/InvalidRequest'
         '409':
           $ref: '#/components/responses/InputDisabled'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /input/keys:
     post:
       tags:
@@ -337,7 +385,7 @@ paths:
       operationId: sendKeys
       summary: Send key presses
       description: |
-        Presses one chord or a sequence of chords in the focused window (`docs/usage/native-input.md#key-names`). Requests are queued, so two requests never interleave. The body must be sent as `application/json`.
+        Presses one chord or a sequence of chords in the focused window (`docs/usage/native-input.md#key-names`). Requests are queued, so two requests never interleave. With `capture` (since 1.19), also records the speech the keys cause (`docs/usage/native-input.md#capturing-the-speech-an-input-causes`). The body must be sent as `application/json`.
       requestBody:
         required: true
         content:
@@ -345,12 +393,57 @@ paths:
             schema:
               $ref: '#/components/schemas/KeysRequest'
       responses:
+        '200':
+          description: 'With `capture`: the input was sent, and the speech it caused.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InputCapture'
         '204':
-          description: Done.
+          description: 'Without `capture`: done.'
         '400':
           $ref: '#/components/responses/InvalidRequest'
         '409':
           $ref: '#/components/responses/InputDisabled'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /input/focus:
+    post:
+      tags:
+        - input
+      operationId: focusWindow
+      summary: Bring a browser window to the front
+      description: |
+        Makes a window of a browser the bridge started (Playwright MCP's, or one the Playwright server launched for a test) the foreground window, so the screen reader reads it and native keys reach it (since 1.21, `docs/usage/native-input.md#bringing-the-browser-to-the-front`). The bridge looks for visible top-level windows of the service's process tree, front to back; with `title`, only one whose title contains it (it waits up to 2 seconds for the title, which the browser updates a moment after `document.title` changes). Runs in the input queue. Windows only. The body must be sent as `application/json`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FocusRequest'
+      responses:
+        '200':
+          description: The window that is now in front.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FocusedWindow'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '404':
+          description: 'No such window: the service is not running, has not opened a browser yet, or no window title contains `title`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: '`INPUT_DISABLED`: the bridge cannot manage windows here (not Windows, or `koffi` could not be loaded). `FOCUS_FAILED`: Windows refused to bring the window to the front.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /sessions:
     delete:
       tags:
@@ -540,8 +633,10 @@ components:
       in: query
       description: |
         Only entries of this session: its `id`, `current` for the session that is current
-        when the request arrives (it is not followed to later sessions), or `none` for the
-        entries recorded outside any session (`sessionId: null`, since 1.5).
+        when the request arrives (it is not followed to later sessions), `active` for the same or,
+        when no session is current, every entry instead of a 404 (since 1.23), or `none` for the
+        entries recorded outside any session (`sessionId: null`, since 1.5). On `DELETE /speech`,
+        `active` without a current session clears everything.
       schema:
         oneOf:
           - type: integer
@@ -549,6 +644,7 @@ components:
           - type: string
             enum:
               - current
+              - active
               - none
     ConfigView:
       name: view
@@ -709,6 +805,17 @@ components:
             - step 3
       required:
         - label
+    LatestMarker:
+      type: object
+      properties:
+        marker:
+          anyOf:
+            - $ref: '#/components/schemas/SpeechEntry'
+            - type: 'null'
+          description: The newest marker with that label in the scope, `null` if there is none.
+      required:
+        - marker
+      description: The answer of `GET /markers/latest`. Added in API 1.20.
     ClickRequest:
       type: object
       properties:
@@ -733,6 +840,8 @@ components:
             - middle
           type: string
           description: Mouse button, `left` if omitted.
+        capture:
+          $ref: '#/components/schemas/CaptureOptions'
       required:
         - x
         - 'y'
@@ -758,9 +867,101 @@ components:
           minimum: 0
           maximum: 10000
           description: Pause between the chords of a sequence in milliseconds, 50 if omitted.
+        capture:
+          $ref: '#/components/schemas/CaptureOptions'
       required:
         - keys
       description: '`POST /input/keys`: send key presses to the focused window. Added in API 1.14.'
+    CaptureOptions:
+      type: object
+      properties:
+        quietForMs:
+          type: integer
+          minimum: 1
+          maximum: 60000
+          description: The capture ends when nothing was spoken for this long, 500 if omitted.
+        firstWithinMs:
+          type: integer
+          minimum: 0
+          maximum: 300000
+          description: How long the first speech may take after the input; none in that time is `no-speech`. 2000 if omitted.
+        timeoutMs:
+          type: integer
+          minimum: 0
+          maximum: 300000
+          description: Longest capture, counted from the input; speech that goes on until then is `timeout`. 10000 if omitted.
+        settleMs:
+          type: integer
+          minimum: 0
+          maximum: 60000
+          description: Before the input, wait until nothing was spoken for this long (at most `timeoutMs`), so speech still trailing from an earlier step is not captured. The input is sent after `timeoutMs` even if the speech did not pause. 0 (no wait) if omitted.
+      required: []
+      description: Records the speech the input causes and answers `200` with it (`InputCapture`) instead of `204`. Times are in milliseconds and measured on the bridge, from when it received the speech. Added in API 1.19.
+    InputCapture:
+      type: object
+      properties:
+        status:
+          enum:
+            - silent
+            - no-speech
+            - timeout
+          type: string
+          description: '`silent`: speech came and paused for `quietForMs`. `no-speech`: nothing was spoken within `firstWithinMs`. `timeout`: the speech went on until `timeoutMs`; `entries` holds what was said until then. The input was sent in every case.'
+        startSeq:
+          type: integer
+          minimum: 0
+          description: 'The `seq` of the newest entry right before the input was sent: the capture holds the speech after it.'
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpeechEntry'
+          maxItems: 10000
+          description: The speech entries (no markers) after `startSeq`, oldest first, at most the first 10000.
+        omitted:
+          type: integer
+          minimum: 0
+          description: How many later speech entries were left out.
+        truncated:
+          type: boolean
+          description: '`true` when entries after `startSeq` were dropped because the buffer was full.'
+      required:
+        - status
+        - startSeq
+        - entries
+        - omitted
+        - truncated
+      description: The answer of `POST /input/click` and `POST /input/keys` with `capture`. Added in API 1.19.
+    FocusRequest:
+      type: object
+      properties:
+        target:
+          enum:
+            - mcp
+            - playwright
+          type: string
+          description: 'Whose browser: `mcp` (Playwright MCP) or `playwright` (the Playwright server, for tests).'
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Only a window whose title contains this text, for example a marker the caller put into `document.title`. Without it, the front-most window of the target.
+      required:
+        - target
+      description: '`POST /input/focus`: bring a browser window the bridge started to the front. Added in API 1.21.'
+    FocusedWindow:
+      type: object
+      properties:
+        title:
+          type: string
+          description: The window title.
+        pid:
+          type: integer
+          minimum: 1
+          description: The process that owns the window.
+      required:
+        - title
+        - pid
+      description: The window `POST /input/focus` brought to the front. Added in API 1.21.
     Session:
       type: object
       properties:
@@ -1049,6 +1250,61 @@ components:
             - current
             - count
           description: Added in API 1.3.
+        input:
+          type: object
+          properties:
+            native:
+              type: object
+              properties:
+                available:
+                  type: boolean
+                backend:
+                  anyOf:
+                    - type: string
+                    - type: 'null'
+                  description: The library that does it. `null` when not available.
+                  examples:
+                    - robotjs
+                reason:
+                  anyOf:
+                    - type: string
+                    - type: 'null'
+                  description: Why it is not available (also the `INPUT_DISABLED` message). `null` when it is.
+                  examples:
+                    - only on Windows
+              required:
+                - available
+                - backend
+                - reason
+              description: '`POST /input/keys` and `POST /input/click` (robotjs).'
+            focus:
+              type: object
+              properties:
+                available:
+                  type: boolean
+                backend:
+                  anyOf:
+                    - type: string
+                    - type: 'null'
+                  description: The library that does it. `null` when not available.
+                  examples:
+                    - robotjs
+                reason:
+                  anyOf:
+                    - type: string
+                    - type: 'null'
+                  description: Why it is not available (also the `INPUT_DISABLED` message). `null` when it is.
+                  examples:
+                    - only on Windows
+              required:
+                - available
+                - backend
+                - reason
+              description: '`POST /input/focus` (koffi, Windows only).'
+          required:
+            - native
+            - focus
+          description: Native input (docs/usage/native-input.md). When a feature is not available, its endpoints answer `409 INPUT_DISABLED`. Added in API 1.24.
       required:
         - bridge
         - tcp
@@ -1056,7 +1312,8 @@ components:
         - playwright
         - mcp
         - session
-      description: '`GET /status`. `playwright` since API 1.1, `mcp` since 1.2, `session` since 1.3.'
+        - input
+      description: '`GET /status`. `playwright` since API 1.1, `mcp` since 1.2, `session` since 1.3, `input` since 1.24.'
     Config:
       type: object
       properties:
@@ -1234,6 +1491,30 @@ components:
       required:
         - overrides
       description: The settings the config file cannot change (`GET /config/overrides`).
+    InputAvailability:
+      type: object
+      properties:
+        available:
+          type: boolean
+        backend:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: The library that does it. `null` when not available.
+          examples:
+            - robotjs
+        reason:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Why it is not available (also the `INPUT_DISABLED` message). `null` when it is.
+          examples:
+            - only on Windows
+      required:
+        - available
+        - backend
+        - reason
+      description: Whether a native input feature works on this machine. Fixed at the bridge start.
     ServiceStatus:
       type: object
       properties:
@@ -1342,6 +1623,7 @@ components:
         - NOT_FOUND
         - FORBIDDEN
         - INPUT_DISABLED
+        - FOCUS_FAILED
         - SERVICE_UNAVAILABLE
         - INTERNAL
       type: string
@@ -1366,7 +1648,7 @@ components:
             - message
       required:
         - error
-      description: 'Body of every error response. HTTP status per code: `INVALID_REQUEST` 400, `FORBIDDEN` 403, `INPUT_DISABLED` 409, `NOT_FOUND` 404 (also for unknown endpoints), `SERVICE_UNAVAILABLE` 503, `INTERNAL` 500.'
+      description: 'Body of every error response. HTTP status per code: `INVALID_REQUEST` 400, `FORBIDDEN` 403, `INPUT_DISABLED` 409, `FOCUS_FAILED` 409 (since 1.21), `NOT_FOUND` 404 (also for unknown endpoints), `SERVICE_UNAVAILABLE` 503, `INTERNAL` 500.'
     WaitResult:
       oneOf:
         - type: object

@@ -36,11 +36,21 @@ function setup(capture: CaptureStatus) {
     version: '1.2.3',
     apiVersion: '1.0',
     startedAt: STARTED_AT,
+    injector: { availability: { available: true, backend: 'robotjs' } },
+    windows: { availability: { available: false, reason: 'only on Windows' } },
   });
   return { status, log };
 }
 
 describe('StatusService', () => {
+  it('reports whether native input and focus are available', () => {
+    const { status } = setup({ listener: null, connections: [] });
+    expect(status.status().input).toEqual({
+      native: { available: true, backend: 'robotjs' },
+      focus: { available: false, reason: 'only on Windows' },
+    });
+  });
+
   it('reports every child service, by name', () => {
     const { status } = setup({ listener: null, connections: [] });
     expect(Object.keys(status.status().services)).toEqual([...SERVICE_NAMES]);
@@ -82,6 +92,10 @@ describe('StatusService', () => {
         mcp: { state: 'failed', version: '0.0.85', port: 8931, restarts: 4, exitCode: 2 },
       },
       session: { current: null, count: 0 },
+      input: {
+        native: { available: true, backend: 'robotjs' },
+        focus: { available: false, reason: 'only on Windows' },
+      },
     });
   });
 

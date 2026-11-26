@@ -1,4 +1,3 @@
-import { AppError } from '../../domain/errors.js';
 import type { SpeechEntry } from '../../domain/speech-entry.js';
 import type { SpeechLog } from '../../domain/speech-log.js';
 import { createSpeechMatcher } from '../../domain/text-match.js';
@@ -12,6 +11,7 @@ import {
 } from '../ports/in/wait-for-speech.js';
 import type { Clock } from '../ports/out/clock.js';
 import type { SpeechEventBus } from '../ports/out/speech-event-bus.js';
+import { abortReason, shuttingDown as unavailable } from '../shared/abort.js';
 import { followLog, type FollowOptions } from '../shared/follow-log.js';
 import { intOption } from '../shared/int-option.js';
 
@@ -27,13 +27,6 @@ interface WaitForSpeechDeps {
    */
   pace?: (() => FollowOptions['pace']) | undefined;
 }
-
-function abortReason(signal: AbortSignal): Error {
-  const reason: unknown = signal.reason;
-  return reason instanceof Error ? reason : new Error('The wait was aborted');
-}
-
-const unavailable = () => new AppError('SERVICE_UNAVAILABLE', 'The bridge is shutting down');
 
 /** The last {@link WAIT_SEEN_LIMIT} entries pushed, and how many came before them. */
 class LastSeen {

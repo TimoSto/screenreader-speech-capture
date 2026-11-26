@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import type { SpeechCapture } from '../../../application/ports/in/speech-capture.js';
-import type { BridgeStatus } from '../../../domain/bridge-status.js';
 import {
   GLOBAL_OPTIONS,
   OPTIONS,
@@ -9,6 +7,7 @@ import {
   expectArgs,
   optionalInt,
   scope,
+  sinceOption,
   type Values,
 } from './options.js';
 
@@ -68,49 +67,43 @@ describe('expectArgs', () => {
   });
 });
 
+describe('sinceOption', () => {
+  it('takes a seq, with or without the # the text output prints', () => {
+    expect(sinceOption(values({ since: '5' }))).toBe(5);
+    expect(sinceOption(values({ since: '#5' }))).toBe(5);
+  });
+
+  it('takes the label of a marker', () => {
+    expect(sinceOption(values({ since: 'mark: step-2 ' }))).toEqual({ label: 'step-2' });
+  });
+
+  it.each(['#', '#x', '#-1', '##5', '# 5'])('rejects %j', (raw) => {
+    expect(() => sinceOption(values({ since: raw }))).toThrow(UsageError);
+  });
+});
+
 describe('scope', () => {
-  function speech(session: BridgeStatus['session']) {
-    const calls: string[] = [];
-    const fake = {
-      status: () => {
-        calls.push('status');
-        return Promise.resolve({ session } as BridgeStatus);
-      },
-    } as unknown as SpeechCapture;
-    return { fake, calls };
-  }
-
-  it('uses --session without asking the bridge', async () => {
-    const { fake, calls } = speech({ current: null, count: 0 });
-    expect(await scope(values({ session: '4' }), fake)).toBe(4);
-    expect(calls).toEqual([]);
+  it('uses --session', () => {
+    expect(scope(values({ session: '4' }))).toBe(4);
+    expect(scope(values({ session: 'current' }))).toBe('current');
   });
 
-  it('reads the whole buffer with --all', async () => {
-    const { fake, calls } = speech({ current: null, count: 0 });
-    expect(await scope(values({ all: true }), fake)).toBeUndefined();
-    expect(calls).toEqual([]);
+  it('reads the whole buffer with --all', () => {
+    expect(scope(values({ all: true }))).toBeUndefined();
   });
 
-  it('rejects --session together with --all', async () => {
-    await expect(
-      scope(values({ session: '1', all: true }), speech({ current: null, count: 0 }).fake),
-    ).rejects.toThrow('Use either --session or --all.');
+  it('rejects --session together with --all', () => {
+    expect(() => scope(values({ session: '1', all: true }))).toThrow(
+      'Use either --session or --all.',
+    );
   });
 
-  it('rejects --session 0', async () => {
-    await expect(
-      scope(values({ session: '0' }), speech({ current: null, count: 0 }).fake),
-    ).rejects.toThrow(UsageError);
+  it('rejects --session 0', () => {
+    expect(() => scope(values({ session: '0' }))).toThrow(UsageError);
   });
 
-  it('defaults to the id of the current session', async () => {
-    const current = { id: 7 } as BridgeStatus['session']['current'];
-    expect(await scope(values({}), speech({ current, count: 1 }).fake)).toBe(7);
-  });
-
-  it('reads the whole buffer without a current session', async () => {
-    expect(await scope(values({}), speech({ current: null, count: 0 }).fake)).toBeUndefined();
+  it('defaults to active: the bridge reads the current session, or everything without one', () => {
+    expect(scope(values({}))).toBe('active');
   });
 });
 

@@ -12,6 +12,9 @@ export const INFO = {
   summary: 'Capture what a screen reader says and read it over HTTP.',
   description: `REST + Server-Sent Events API of the bridge. \`info.version\` is the API version that
 \`GET /status\` reports as \`bridge.apiVersion\` (\`<major>.<minor>\`; minor versions only add things).
+Every answer under \`/api/v1\`, errors and streams included, also carries it in the
+\`X-SR-Speech-Api-Version\` response header (since 1.22), so a client checks it on each answer
+instead of asking \`GET /status\` first.
 The prose reference is \`docs/usage/http-api.md\`. The types match \`packages/shared\`.
 
 This file describes the endpoints the bridge serves today.
@@ -33,7 +36,11 @@ existed): \`PUT /config\` now only saves, a setting takes effect on the next sta
 shows the settings in use. 1.14 added native input (\`POST /input/click\`, \`POST /input/keys\`) and
 the \`INPUT_DISABLED\` error code again. 1.15 added \`outsideEntries\` to \`GET /sessions\`. 1.16 added \`DELETE /sessions\`. 1.17 added the \`session\` parameter of \`DELETE /speech\` and the
 \`sessionId\` in the \`data\` of a scoped \`clear\` event. 1.18 added the \`view\` parameter of \`GET /config\`
-and \`GET /config/overrides\`.
+and \`GET /config/overrides\`. 1.19 added \`capture\` to \`POST /input/click\` and \`POST /input/keys\`
+(the bridge records the speech the input causes and answers \`200\` with \`InputCapture\`). 1.20
+added \`GET /markers/latest\` (the newest marker with a label, for a \`since\`). 1.21 added
+\`POST /input/focus\` and the \`FOCUS_FAILED\` error code. 1.22 added the \`X-SR-Speech-Api-Version\`
+response header. 1.23 added \`session=active\`.
 
 Every error has the same body (\`ErrorBody\`). Clients must handle unknown error codes as errors
 of their HTTP status.
@@ -154,11 +161,11 @@ of \`GET /speech/stream\` then names the scope.
           in: 'query',
           required: false,
           description:
-            'Only clear this scope: the id of the current session, `current`, or `none`. Without it everything is wiped.',
+            'Only clear this scope: the id of the current session, `current`, `active` (the current session, or everything when none is current; since 1.23) or `none`. Without it everything is wiped.',
           schema: {
             oneOf: [
               { type: 'integer', minimum: 1 },
-              { type: 'string', enum: ['current', 'none'] },
+              { type: 'string', enum: ['current', 'active', 'none'] },
             ],
           },
         },
@@ -417,12 +424,58 @@ so a web page can't add markers cross-origin without a CORS preflight. At most 1
       },
     },
   },
+  '/markers/latest': {
+    get: {
+      tags: ['speech'],
+      operationId: 'latestMarker',
+      summary: 'Find the newest marker with a label',
+      description: `The newest marker whose text is \`label\` (since API 1.20), so a caller that only knows the label it
+marked a step with can read from there: pass the marker's \`seq\` as \`since\`. The label is
+trimmed and compared exactly. \`null\` when the scope has no such marker, also when it was
+dropped from the full buffer or cleared.
+`,
+      parameters: [
+        {
+          name: 'label',
+          in: 'query',
+          required: true,
+          description: 'The marker text to look for: not empty, at most 1000 characters (trimmed).',
+          schema: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 1000,
+          },
+        },
+        {
+          $ref: '#/components/parameters/Session',
+        },
+      ],
+      responses: {
+        '200': {
+          description: 'The marker, or `null`.',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/LatestMarker',
+              },
+            },
+          },
+        },
+        '400': {
+          $ref: '#/components/responses/InvalidRequest',
+        },
+        '404': {
+          $ref: '#/components/responses/SessionNotFound',
+        },
+      },
+    },
+  },
   '/input/click': {
     post: {
       tags: ['input'],
       operationId: 'click',
       summary: 'Click at a screen point',
-      description: `Sends a native mouse click, to give a window the focus (\`docs/usage/native-input.md\`). The body must be sent as \`application/json\`.
+      description: `Sends a native mouse click, to give a window the focus (\`docs/usage/native-input.md\`). With \`capture\` (since 1.19), also records the speech the click causes (\`docs/usage/native-input.md#capturing-the-speech-an-input-causes\`). The body must be sent as \`application/json\`.
 `,
       requestBody: {
         required: true,
@@ -435,14 +488,27 @@ so a web page can't add markers cross-origin without a CORS preflight. At most 1
         },
       },
       responses: {
+        '200': {
+          description: 'With `capture`: the input was sent, and the speech it caused.',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/InputCapture',
+              },
+            },
+          },
+        },
         '204': {
-          description: 'Done.',
+          description: 'Without `capture`: done.',
         },
         '400': {
           $ref: '#/components/responses/InvalidRequest',
         },
         '409': {
           $ref: '#/components/responses/InputDisabled',
+        },
+        '503': {
+          $ref: '#/components/responses/ServiceUnavailable',
         },
       },
     },
@@ -452,7 +518,7 @@ so a web page can't add markers cross-origin without a CORS preflight. At most 1
       tags: ['input'],
       operationId: 'sendKeys',
       summary: 'Send key presses',
-      description: `Presses one chord or a sequence of chords in the focused window (\`docs/usage/native-input.md#key-names\`). Requests are queued, so two requests never interleave. The body must be sent as \`application/json\`.
+      description: `Presses one chord or a sequence of chords in the focused window (\`docs/usage/native-input.md#key-names\`). Requests are queued, so two requests never interleave. With \`capture\` (since 1.19), also records the speech the keys cause (\`docs/usage/native-input.md#capturing-the-speech-an-input-causes\`). The body must be sent as \`application/json\`.
 `,
       requestBody: {
         required: true,
@@ -465,14 +531,86 @@ so a web page can't add markers cross-origin without a CORS preflight. At most 1
         },
       },
       responses: {
+        '200': {
+          description: 'With `capture`: the input was sent, and the speech it caused.',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/InputCapture',
+              },
+            },
+          },
+        },
         '204': {
-          description: 'Done.',
+          description: 'Without `capture`: done.',
         },
         '400': {
           $ref: '#/components/responses/InvalidRequest',
         },
         '409': {
           $ref: '#/components/responses/InputDisabled',
+        },
+        '503': {
+          $ref: '#/components/responses/ServiceUnavailable',
+        },
+      },
+    },
+  },
+  '/input/focus': {
+    post: {
+      tags: ['input'],
+      operationId: 'focusWindow',
+      summary: 'Bring a browser window to the front',
+      description: `Makes a window of a browser the bridge started (Playwright MCP's, or one the Playwright server launched for a test) the foreground window, so the screen reader reads it and native keys reach it (since 1.21, \`docs/usage/native-input.md#bringing-the-browser-to-the-front\`). The bridge looks for visible top-level windows of the service's process tree, front to back; with \`title\`, only one whose title contains it (it waits up to 2 seconds for the title, which the browser updates a moment after \`document.title\` changes). Runs in the input queue. Windows only. The body must be sent as \`application/json\`.
+`,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              $ref: '#/components/schemas/FocusRequest',
+            },
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'The window that is now in front.',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/FocusedWindow',
+              },
+            },
+          },
+        },
+        '400': {
+          $ref: '#/components/responses/InvalidRequest',
+        },
+        '404': {
+          description:
+            'No such window: the service is not running, has not opened a browser yet, or no window title contains `title`.',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/ErrorBody',
+              },
+            },
+          },
+        },
+        '409': {
+          description:
+            '`INPUT_DISABLED`: the bridge cannot manage windows here (not Windows, or `koffi` could not be loaded). `FOCUS_FAILED`: Windows refused to bring the window to the front.',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/ErrorBody',
+              },
+            },
+          },
+        },
+        '503': {
+          $ref: '#/components/responses/ServiceUnavailable',
         },
       },
     },
@@ -749,8 +887,10 @@ export const PARAMETERS = {
     name: 'session',
     in: 'query',
     description: `Only entries of this session: its \`id\`, \`current\` for the session that is current
-when the request arrives (it is not followed to later sessions), or \`none\` for the
-entries recorded outside any session (\`sessionId: null\`, since 1.5).
+when the request arrives (it is not followed to later sessions), \`active\` for the same or,
+when no session is current, every entry instead of a 404 (since 1.23), or \`none\` for the
+entries recorded outside any session (\`sessionId: null\`, since 1.5). On \`DELETE /speech\`,
+\`active\` without a current session clears everything.
 `,
     schema: {
       oneOf: [
@@ -760,7 +900,7 @@ entries recorded outside any session (\`sessionId: null\`, since 1.5).
         },
         {
           type: 'string',
-          enum: ['current', 'none'],
+          enum: ['current', 'active', 'none'],
         },
       ],
     },

@@ -5,6 +5,9 @@ import {
   ConfigOverridesSchema,
   ConfigSchema,
   type DtoSchema,
+  FocusedWindowSchema,
+  InputCaptureSchema,
+  LatestMarkerSchema,
   SessionListSchema,
   SessionSchema,
   SpeechEntrySchema,
@@ -17,8 +20,9 @@ import { describe, expect, it } from 'vitest';
 import { entry, session, status } from '../../../../../test/dto-fixtures.js';
 import { DEFAULT_CONFIG } from '../../../../domain/config/index.js';
 import { toConfigDto, toConfigOverridesDto } from './config.js';
+import { toFocusedWindowDto, toInputCaptureDto } from './input.js';
 import { toSessionDto, toSessionListDto, toStartSessionResponseDto } from './session.js';
-import { toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from './speech.js';
+import { toLatestMarkerDto, toSpeechEntryDto, toSpeechListDto, toWaitResultDto } from './speech.js';
 import { toStatusDto } from './status.js';
 
 const cases: [string, DtoSchema, unknown][] = [
@@ -33,11 +37,29 @@ const cases: [string, DtoSchema, unknown][] = [
     SpeechListSchema,
     toSpeechListDto({ entries: [entry], truncated: true, hasMore: false }),
   ],
+  ['latest marker', LatestMarkerSchema, toLatestMarkerDto({ ...entry, kind: 'marker' })],
+  ['no latest marker', LatestMarkerSchema, toLatestMarkerDto(null)],
   ['wait match', WaitResultSchema, toWaitResultDto({ status: 'matched', entry })],
   [
     'wait timeout',
     WaitResultSchema,
     toWaitResultDto({ status: 'timeout', seen: [entry], omitted: 2 }),
+  ],
+  [
+    'input capture',
+    InputCaptureSchema,
+    toInputCaptureDto({
+      status: 'timeout',
+      startSeq: 41,
+      entries: [entry],
+      omitted: 1,
+      truncated: true,
+    }),
+  ],
+  [
+    'focused window',
+    FocusedWindowSchema,
+    toFocusedWindowDto({ title: 'Checkout - Chromium', pid: 4242 }),
   ],
   ['ended session', SessionSchema, toSessionDto(session(new Date('2026-11-12T10:00:00Z')))],
   [

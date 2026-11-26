@@ -12,11 +12,13 @@ import { isSpeech, type SpeechEntry } from '../../domain/speech-entry.js';
 import { advanceSequence, toMatcher, type SpeechMatch } from '../../domain/text-match.js';
 import type {
   ClearOptions,
+  FindMarkerOptions,
   GetSpeechOptions,
   GetTextOptions,
   OnSpeechOptions,
   ReadyOptions,
   Recording,
+  RecordOptions,
   SilenceOptions,
   SpeechCapture,
   StartSessionOptions,
@@ -25,14 +27,12 @@ import type {
 import type { BridgeApi } from '../ports/out/bridge-api.js';
 import type { Clock } from '../ports/out/clock.js';
 import { startLiveFeed } from './live-feed.js';
+import { silenceFailure } from './silence.js';
 import { speechEvents } from './speech-events.js';
-import { VersionGate } from './version-gate.js';
 
 interface SpeechCaptureServiceDeps {
   api: BridgeApi;
   clock: Clock;
-  /** The HTTP API version this client was built for (`API_VERSION` from the shared contract). */
-  apiVersion: string;
 }
 
 /** Largest `limit` the bridge accepts for `GET /api/v1/speech`. */
@@ -46,7 +46,14 @@ function remember(seen: SpeechEntry[], entries: SpeechEntry[]): void {
   if (seen.length > MAX_SEEN) seen.splice(0, seen.length - MAX_SEEN);
 }
 
-const DEFAULTS = { timeout: 5000, quietFor: 500, silenceTimeout: 10_000, readyTimeout: 120_000 };
+const DEFAULTS = {
+  timeout: 5000,
+  // The same as a capture on the bridge (`NativeInput.recordKeys`).
+  quietFor: API_LIMITS.capture.quietForMs.default,
+  silenceTimeout: API_LIMITS.capture.timeoutMs.default,
+  firstWithin: API_LIMITS.capture.firstWithinMs.default,
+  readyTimeout: 120_000,
+};
 
 /** How often `waitForReady` asks for the status. */
 const READY_POLL_MS = 500;
@@ -62,11 +69,7 @@ export class SpeechCaptureService implements SpeechCapture {
    * moves the cursor if none happened since it started: the explicit move wins.
    */
   #moves = 0;
-  readonly #gate: VersionGate;
-
-  constructor(private readonly deps: SpeechCaptureServiceDeps) {
-    this.#gate = new VersionGate(deps.api, deps.apiVersion);
-  }
+  constructor(private readonly deps: SpeechCaptureServiceDeps) {}
 
   cursor(): number {
     return this.#cursor;
@@ -105,7 +108,6 @@ export class SpeechCaptureService implements SpeechCapture {
   async getSpeech(options: GetSpeechOptions = {}): Promise<SpeechEntry[]> {
     // Read when the call starts, so a cursor move after it doesn't change this read.
     const since = options.since ?? this.#cursor;
-    await this.compatible();
     const { entries, truncated } = await this.fetchSince(since, options.session);
     const wanted = options.includeMarkers ? entries : entries.filter(isSpeech);
     const result = options.limit === undefined ? wanted : wanted.slice(0, options.limit);
@@ -124,7 +126,6 @@ export class SpeechCaptureService implements SpeechCapture {
   }
 
   async clear(options: ClearOptions = {}): Promise<void> {
-    await this.compatible();
     if (options.session !== undefined) {
       // One scope: the session goes on and the cursor stays, `seq` only rises.
       await this.deps.api.clear(options.session);
@@ -136,7 +137,6 @@ export class SpeechCaptureService implements SpeechCapture {
   }
 
   async startSession(name: string, options: StartSessionOptions = {}): Promise<StartedSession> {
-    await this.compatible();
     const session = await this.deps.api.startSession({ name, run: options.run });
     // Everything after `startSeq` belongs to the session (or a later one).
     this.#moveTo(session.startSeq);
@@ -144,29 +144,30 @@ export class SpeechCaptureService implements SpeechCapture {
   }
 
   async endSession(): Promise<void> {
-    await this.compatible();
     await this.deps.api.endSession();
   }
 
   async deleteSession(id: number): Promise<void> {
-    await this.compatible();
     await this.deps.api.deleteSession(id);
   }
 
   async sessions(): Promise<SessionList> {
-    await this.compatible();
     return this.deps.api.listSessions();
   }
 
   async mark(label: string): Promise<SpeechEntry> {
-    await this.compatible();
     return this.deps.api.mark(label);
   }
 
+  async findMarker(
+    label: string,
+    options: FindMarkerOptions = {},
+  ): Promise<SpeechEntry | undefined> {
+    return (await this.deps.api.latestMarker(label, options.session)) ?? undefined;
+  }
+
   async status(): Promise<BridgeStatus> {
-    const status = await this.deps.api.status();
-    this.#gate.passed(status.bridge.apiVersion);
-    return status;
+    return this.deps.api.status();
   }
 
   async waitForReady(options: ReadyOptions = {}): Promise<BridgeStatus> {
@@ -195,7 +196,6 @@ export class SpeechCaptureService implements SpeechCapture {
   async waitForOutput(match: SpeechMatch, options: WaitOptions = {}): Promise<SpeechEntry> {
     const test = toMatcher(match, options);
     const start = this.#start(options);
-    await this.compatible();
     const entry = await this.search(
       start.options,
       (entries) => entries.find(test),
@@ -212,7 +212,6 @@ export class SpeechCaptureService implements SpeechCapture {
     if (matches.length === 0) throw new TypeError('waitForSequence needs at least one match');
     const matchers = matches.map((m) => toMatcher(m, options));
     const start = this.#start(options);
-    await this.compatible();
     let found: SpeechEntry[] = [];
     const result = await this.search(
       start.options,
@@ -229,17 +228,57 @@ export class SpeechCaptureService implements SpeechCapture {
   }
 
   async waitForSilence(options: SilenceOptions = {}): Promise<void> {
-    const { clock } = this.deps;
     const quietFor = options.quietFor ?? DEFAULTS.quietFor;
     const timeout = options.timeout ?? DEFAULTS.silenceTimeout;
-    await this.compatible();
+    const settled = await this.settle({ since: await this.endSeq(), quietFor, timeout });
+    if (!settled.silent)
+      throw new SpeechTimeoutError(silenceFailure(quietFor, timeout), settled.seen);
+  }
+
+  async record<T>(fn: () => T | Promise<T>, options: RecordOptions = {}): Promise<Recording<T>> {
+    const quietFor = options.quietFor ?? DEFAULTS.quietFor;
+    const timeout = options.timeout ?? DEFAULTS.silenceTimeout;
+    const firstWithin = options.firstWithin ?? DEFAULTS.firstWithin;
+    const moves = this.#moves;
+    const start = await this.endSeq();
+    const result = await fn();
+    // Followed from `start`, so speech spoken while `fn` ran counts as the first speech too.
+    const { silent } = await this.settle({ since: start, quietFor, timeout, firstWithin });
+    const { entries, truncated } = await this.fetchSince(start);
+    const speech = entries.filter(isSpeech);
+    // The whole recording, not only the last entries seen: it is what the caller judges.
+    if (!silent) throw new SpeechTimeoutError(silenceFailure(quietFor, timeout), speech, truncated);
+    const last = entries.at(-1)?.seq;
+    if (last !== undefined) this.#advance(last, moves);
+    return { result, entries: speech, truncated };
+  }
+
+  onSpeech(listener: (entry: SpeechEntry) => void, options: OnSpeechOptions = {}): () => void {
+    const { api, clock } = this.deps;
+    return startLiveFeed({ api, clock }, listener, options);
+  }
+
+  /**
+   * Follows the feed from `since` until nothing was spoken for `quietFor` ms. Without
+   * `firstWithin`, silence is counted from the call. With it, the first speech (also replayed
+   * entries after `since`) may take up to `firstWithin` ms, and silence is counted from there; if
+   * none comes in that time, it is silent. Not silent: speech went on until `timeout`.
+   */
+  private async settle(options: {
+    since: number;
+    quietFor: number;
+    timeout: number;
+    firstWithin?: number;
+  }): Promise<{ silent: boolean; seen: SpeechEntry[] }> {
+    const { clock } = this.deps;
+    const { since, quietFor, timeout, firstWithin } = options;
     const start = clock.now();
-    const end = await this.endSeq();
     // Speech may have arrived just before the call, so silence is counted from the call.
-    let lastSpeech = start;
+    let lastSpeech = firstWithin === undefined ? start : undefined;
     const seen: SpeechEntry[] = [];
-    const left = () => Math.min(lastSpeech + quietFor, start + timeout) - clock.now();
-    await this.follow({ since: end }, left(), (entry, timer) => {
+    const end = () => (lastSpeech === undefined ? start + firstWithin! : lastSpeech + quietFor);
+    const left = () => Math.min(end(), start + timeout) - clock.now();
+    await this.follow({ since }, left(), (entry, timer) => {
       if (!isSpeech(entry)) return undefined;
       remember(seen, [entry]);
       lastSpeech = clock.now();
@@ -247,38 +286,9 @@ export class SpeechCaptureService implements SpeechCapture {
       return undefined;
     });
     // The timer ran out at the earlier of the two; timers may fire a little early, so don't
-    // compare with `now()`.
-    if (lastSpeech + quietFor <= start + timeout) return;
-    throw new SpeechTimeoutError(
-      `Speech did not pause for ${quietFor} ms within ${timeout} ms`,
-      seen,
-    );
-  }
-
-  async record<T>(fn: () => T | Promise<T>, options: SilenceOptions = {}): Promise<Recording<T>> {
-    const moves = this.#moves;
-    await this.compatible();
-    const start = await this.endSeq();
-    const result = await fn();
-    await this.waitForSilence(options);
-    const { entries, truncated } = await this.fetchSince(start);
-    const last = entries.at(-1)?.seq;
-    if (last !== undefined) this.#advance(last, moves);
-    return { result, entries: entries.filter(isSpeech), truncated };
-  }
-
-  onSpeech(listener: (entry: SpeechEntry) => void, options: OnSpeechOptions = {}): () => void {
-    const { api, clock } = this.deps;
-    return startLiveFeed(
-      { api, clock, ensureCompatible: () => this.compatible() },
-      listener,
-      options,
-    );
-  }
-
-  /** Checks the API version once. A failed check is repeated on the next call. */
-  private compatible(): Promise<void> {
-    return this.#gate.ensure();
+    // compare with `now()`. Nothing spoken at all is silence, whatever `firstWithin` was.
+    const silent = lastSpeech === undefined || lastSpeech + quietFor <= start + timeout;
+    return { silent, seen };
   }
 
   /** The `seq` of the newest entry in the buffer, 0 if it is empty. */
@@ -313,11 +323,13 @@ export class SpeechCaptureService implements SpeechCapture {
 
   /**
    * The session id a wait is limited to: `'current'` becomes the session current now, and stays
-   * that one for the whole wait, even if another session starts meanwhile.
+   * that one for the whole wait, even if another session starts meanwhile. `'active'` too, or no
+   * limit when none is current.
    */
   private async resolveSession(ref: SessionRef | undefined): Promise<number | undefined> {
-    if (ref !== 'current') return ref;
+    if (ref !== 'current' && ref !== 'active') return ref;
     const { current } = (await this.deps.api.status()).session;
+    if (ref === 'active') return current?.id;
     // The answer the bridge gives a read with `session=current`.
     if (!current) throw new BridgeHttpError(404, 'NOT_FOUND', 'No session is current');
     return current.id;
@@ -381,7 +393,7 @@ export class SpeechCaptureService implements SpeechCapture {
     timer.set(ms);
     try {
       const events = speechEvents(
-        { api, clock, ensureCompatible: () => this.compatible() },
+        { api, clock },
         { since: from.since, session: from.session, signal: feed.signal },
       );
       for await (const event of events) {
