@@ -6,6 +6,9 @@ Tests that drive a page and check what the screen reader says, using the client'
 They need a VM with the bridge, a screen reader and the socket voice
 ([VM setup](../../docs/usage/vm-setup.md#checklist)), so they do not run in CI.
 
+> These tests where implemented for NVDA. With JAWS they fail because JAWS gives other output.
+
+
 ## Run them
 
 1. Point them at the bridge: copy `.env.example` to `.env.local` (gitignored) and set the VM's
