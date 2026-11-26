@@ -4,7 +4,7 @@ How to prepare the Windows machine or VM: requirements, the socket voice, the sc
 
 > **Not yet checked end to end on a real VM.** The steps follow the components' sources and docs;
 > the smoke test that verifies them (NVDA + socket voice + Chrome) is part of
-> [M7](../ROADMAP.md#m7-distribution-). See [Verified so far](#verified-so-far).
+> [M7](../ROADMAP.md#m7-distribution-).
 
 ## Checklist
 
@@ -46,18 +46,6 @@ Whether the two optional packages loaded shows in `input` of `npx screenreader-s
 Chrome / Edge. The bridge itself must run **without** them ([why](#run-in-the-user-session-not-as-a-service)).
 
 For development you also need [pnpm](https://pnpm.io/) (see [Development](../implementation/development.md)).
-
-### Verified so far
-
-| Part | Status |
-|---|---|
-| Bridge, API, client, CLI, Playwright server and MCP supervision | Tested in CI on Linux, with a fake speech sender instead of the voice. |
-| Socket voice wire format | Read from the engine's source ([internals](../implementation/text-to-socket-engine/README.md)). |
-| German JAWS on a German Windows | The socket voice is only listed once it is marked German ([A German voice](#a-german-voice)); with *Detect Language Changes* on, pages are read by another voice ([JAWS language detection](#jaws-language-detection)). |
-| NVDA / JAWS with the socket voice, native input, bringing windows to the front | Not yet checked fully on a real VM ([M7](../ROADMAP.md#m7-distribution-)): including whether `Insert` and `CapsLock` work as held modifiers. |
-| Windows versions | Windows 10 and 11 are the target; no version is verified yet. |
-
-Reports of setups that work, or don't, are welcome as issues.
 
 ## Install the bridge
 
