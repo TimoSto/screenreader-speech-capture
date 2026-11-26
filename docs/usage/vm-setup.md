@@ -53,7 +53,8 @@ For development you also need [pnpm](https://pnpm.io/) (see [Development](../imp
 |---|---|
 | Bridge, API, client, CLI, Playwright server and MCP supervision | Tested in CI on Linux, with a fake speech sender instead of the voice. |
 | Socket voice wire format | Read from the engine's source ([internals](../implementation/text-to-socket-engine/README.md)). |
-| NVDA / JAWS with the socket voice, native input, bringing windows to the front | Not yet checked on a real VM ([M7](../ROADMAP.md#m7-distribution-)): including whether `Insert` and `CapsLock` work as held modifiers. |
+| German JAWS on a German Windows | The socket voice is only listed once it is marked German ([A German voice](#a-german-voice)); with *Detect Language Changes* on, pages are read by another voice ([JAWS language detection](#jaws-language-detection)). |
+| NVDA / JAWS with the socket voice, native input, bringing windows to the front | Not yet checked fully on a real VM ([M7](../ROADMAP.md#m7-distribution-)): including whether `Insert` and `CapsLock` work as held modifiers. |
 | Windows versions | Windows 10 and 11 are the target; no version is verified yet. |
 
 Reports of setups that work, or don't, are welcome as issues.
@@ -113,21 +114,51 @@ speech entry, which tells you which voice it came from when several are in use.
 
 ### A German voice
 
-`add-voice` always registers a voice as English (en-US, language `409`). For a German voice, register
-it on the **bridge's port** and then change its language attribute (run both in an elevated prompt):
+`add-voice` always registers a voice as English (en-US, language `409`). A German JAWS only lists
+SAPI 5 voices whose language matches its voice profile, so it doesn't offer the socket voice until
+the voice is also marked as German (seen with JAWS in German on a German Windows).
+
+**Mark the default voice (`textToSocketVoice`) as German as well**, in an **administrator** prompt.
+`text-to-socket-engine-register` created the voice in both the 64-bit and the 32-bit registry view,
+so change both:
+
+```powershell
+# 64-bit view
+reg add "HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens\textToSocketVoice\Attributes" /v Language /t REG_SZ /d "407;409" /f
+reg add "HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens\textToSocketVoice" /v 407 /t REG_SZ /d "Text To Socket 127.0.0.1:4449" /f
+
+# 32-bit view
+reg add "HKLM\SOFTWARE\WOW6432Node\Microsoft\Speech\Voices\Tokens\textToSocketVoice\Attributes" /v Language /t REG_SZ /d "407;409" /f
+reg add "HKLM\SOFTWARE\WOW6432Node\Microsoft\Speech\Voices\Tokens\textToSocketVoice" /v 407 /t REG_SZ /d "Text To Socket 127.0.0.1:4449" /f
+```
+
+- `Language` `407;409` marks the voice as German **and** English (SAPI allows a `;`-separated list).
+  `407` is the hex language id of German (Germany). If a screen reader still doesn't list the voice,
+  use just `407`; an English-only screen reader may then stop listing it.
+- SAPI reads a voice's display name from a value named after the language id. Registration only
+  writes `409` (English), so the second command adds a `407` value with the same name. Without it,
+  some voice lists show the voice without a name or skip it
+  ([what registration writes](../implementation/text-to-socket-engine/voice-registration.md#creating-the-token)).
+- Restart the screen reader completely afterwards.
+- Running `text-to-socket-engine-register` again (or `add-voice` with the id `textToSocketVoice`)
+  writes the voice anew as English: run the commands again after it. Adding voices with other ids
+  doesn't touch it.
+
+**Or add a separate German voice** on the **bridge's port** and change its language the same way:
 
 ```powershell
 text-to-socket-engine-add-voice voiceDe "Text To Socket DE" 127.0.0.1 4449 voice=voiceDe
-reg add "HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens\voiceDe\Attributes" /v Language /d 407 /f
+reg add "HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens\voiceDe\Attributes" /v Language /t REG_SZ /d 407 /f
+reg add "HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens\voiceDe" /v 407 /t REG_SZ /d "Text To Socket DE" /f
 ```
 
 - The port must be the one the bridge listens on (`tcp.port`, default `4449`). A different port
   sends nothing, silently: the bridge only listens on one port.
-- `407` is the hex language id of German (Germany). Restart the screen reader afterwards.
-- Whether NVDA or JAWS use the language to filter or switch voices isn't verified; selecting the
-  voice by hand works regardless.
 - The package ships 32-bit and 64-bit DLLs. If the voice only shows in a 32-bit screen reader, also set
-  the value under `HKLM\SOFTWARE\WOW6432Node\Microsoft\Speech\Voices\Tokens\voiceDe\Attributes`.
+  the values under `HKLM\SOFTWARE\WOW6432Node\Microsoft\Speech\Voices\Tokens\voiceDe`.
+
+A German JAWS also needs *Detect Language Changes* turned off
+([JAWS language detection](#jaws-language-detection)).
 
 > **Voice not listed?** See [Troubleshooting](troubleshooting.md#speech).
 
@@ -154,15 +185,36 @@ both views ([bitness](../implementation/text-to-socket-engine/quirks.md#bitness)
 
 ### JAWS
 
+With a German (or other non-English) JAWS, first mark the voice with that language
+([A German voice](#a-german-voice)): otherwise JAWS doesn't list it in step 3.
+
 1. Open JAWS → **Options** → **Voices** → **Voice Adjustment…**.
 2. Create or select a **voice profile** and set its **Synthesizer** to **SAPI 5** (the exact label
    can differ between JAWS versions).
 3. Select the socket voice as the **Voice** for the profile, and apply it to all contexts
    (PC Cursor, Keyboard, Message, …) so that all speech is captured.
 4. Save the profile. Make it the default only on the test VM.
-5. Optional: lower verbosity (**Settings Center** → *Verbosity*) to match what your tests expect.
-6. Let JAWS start at sign-in (**Settings Center** or the Startup Wizard: *Automatically start JAWS*
+5. Turn off *Detect Language Changes* ([below](#jaws-language-detection)), or web pages are read
+   by another voice.
+6. Optional: lower verbosity (**Settings Center** → *Verbosity*) to match what your tests expect.
+7. Let JAWS start at sign-in (**Settings Center** or the Startup Wizard: *Automatically start JAWS*
    after signing in; the label differs between JAWS versions), so it runs after a VM restart.
+
+#### JAWS language detection
+
+With *Detect Language Changes* (German: *Sprachwechsel erkennen*) on, JAWS reads a page with the
+voice its profile assigns to the page's language (`lang="de"`, `lang="en"`), not with the socket
+voice. That voice is usually an audible one: the page is read aloud and never reaches the bridge,
+while JAWS's own messages (window titles, menus) still do. This happens with any JAWS language,
+whenever a page's `lang` differs from the profile's.
+
+1. Open **Settings Center** (`Insert+F2`).
+2. Search for *Detect Language Changes* (*Sprachwechsel erkennen*) and turn it off (some versions
+   offer *Never* instead of a checkbox).
+
+If your tests need language switching, keep it on and instead select the socket voice for every
+language in the voice profile (**Voice Adjustment…**, see step 3 above; *Stimmenprofile* in a
+German JAWS).
 
 ### Checking the setup
 
