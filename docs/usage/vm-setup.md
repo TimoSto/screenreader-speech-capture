@@ -211,8 +211,6 @@ whenever a page's `lang` differs from the profile's.
 1. Open **Settings Center** (`Insert+F2`).
 2. Search for *Detect Language Changes* (*Sprachwechsel erkennen*) and turn it off (some versions
    offer *Never* instead of a checkbox).
-3. Do the same for each browser you test with (Chrome, Edge, Firefox): Settings Center keeps
-   settings per application, so switch to the browser in its application list and repeat step 2.
 
 If your tests need language switching, keep it on and instead select the socket voice for every
 language in the voice profile (**Voice Adjustment…**, see step 3 above; *Stimmenprofile* in a
