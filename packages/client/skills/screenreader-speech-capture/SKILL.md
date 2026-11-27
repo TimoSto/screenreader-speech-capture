@@ -71,9 +71,10 @@ before auditing.
    | `mcp.state` | `running` | Playwright MCP is disabled, still installing or crashed. |
 
 4. **Playwright MCP tools available?** Look for `browser_navigate` / `browser_evaluate`. If absent,
-   give the user the registration (streamable HTTP at the bridge's `/playwright-mcp` path):
-   `claude mcp add --transport http screenreader-vm http://<vm>:5151/playwright-mcp`, then they
-   restart the session. Don't edit their MCP config yourself.
+   give the user the registration command with the real bridge URL filled in: the `value` from
+   `client config get url --json` (check 2) plus `/playwright-mcp` (streamable HTTP):
+   `claude mcp add --transport http screenreader-vm <value>/playwright-mcp`. Then they restart the
+   session. Don't edit their MCP config yourself.
 5. **The whole chain** (after MCP opened a page, see step 3): `client focus --json`, then
    `client press Insert+T --capture --json` (read the window title; NVDA and JAWS both use it). It
    must answer `"status": "silent"` with the browser's title in `entries`. If not, see
