@@ -24,8 +24,10 @@ Two input paths exist, and the difference matters:
   own keyboard hook, so screen reader commands need it: browse-mode `h` / `k` / `d`, `Insert+T`,
   `Insert+F7`, the virtual cursor.
 
-Both only reach the screen reader if the MCP browser is the **OS foreground window**, which MCP
-never changes. `focus` does that.
+With either path, you only get useful speech while the MCP browser is the **OS foreground window**
+(the active window on the desktop). Playwright MCP can't bring it there. The CLI command
+`client focus` (see below) does. It activates the window only and doesn't move keyboard focus to an
+element in the page.
 
 `client` below means `screenreader-speech-capture-client` (globally installed, pinned:
 `npm i -g screenreader-speech-capture-client@<version>`), or `npx -y screenreader-speech-capture-client@<version>`
@@ -65,7 +67,7 @@ before auditing.
    | Field | Must be | Otherwise |
    |---|---|---|
    | `tcp.connections` | not empty | The screen reader doesn't speak through the socket voice. |
-   | `input.native.available`, `input.focus.available` | `true` | No `press` / no `focus`; `reason` says why (not Windows, robotjs/koffi missing, elevated, locked desktop). |
+   | `input.native.available`, `input.focus.available` | `true` | No `press` / no `client focus`; `reason` says why (not Windows, robotjs/koffi missing, elevated, locked desktop). |
    | `mcp.state` | `running` | Playwright MCP is disabled, still installing or crashed. |
 
 4. **Playwright MCP tools available?** Look for `browser_navigate` / `browser_evaluate`. If absent,
@@ -114,17 +116,17 @@ announcement, and get a yes before executing. The plan is the contract; without 
 2. Open the page: MCP `browser_navigate`. MCP only starts its browser on the first browser tool call.
 3. `client focus --json` → `{"focused": true, "window": {"title", "pid"}}`. The screen reader
    announces the window. Run the chain check from step 0.5 if you haven't yet.
-4. **Keyboard focus inside the page.** `focus` restores the focus the window had, which can be the
-   browser's toolbar (a fresh tab focuses the address bar), and the CLI can't move it into the page.
-   If Tab or `h` reads the address bar or toolbar, click into the page with MCP (`browser_click` on a
-   non-interactive element such as the main heading) and check `document.activeElement` with
-   `browser_evaluate`.
+4. **Keyboard focus inside the page.** `client focus` leaves keyboard focus wherever it last was
+   in that window. That can be the browser's toolbar (a fresh tab starts in the address bar), and
+   the CLI can't move it into the page. If Tab or `h` reads the address bar or toolbar, click into
+   the page with MCP (`browser_click` on a non-interactive element such as the main heading) and
+   check `document.activeElement` with `browser_evaluate`.
 
-Run `focus` again after anything that could steal the foreground: a new window or tab, a popup, a
-native dialog, a file picker.
+Run `client focus` again after anything that could steal the foreground: a new window or tab, a
+popup, a native dialog, a file picker.
 
-**Fallback** when `focus` can't find the window (`NOT_FOUND` although MCP has a page open) or only
-focus is unavailable (`input.focus.available: false`, `input.native.available: true`):
+**Fallback** when `client focus` can't find the window (`NOT_FOUND` although MCP has a page open)
+or only focusing is unavailable (`input.focus.available: false`, `input.native.available: true`):
 `client focus --script --json` prints a function; run it with MCP `browser_evaluate` and pass its
 JSON result to `client focus --geometry '<json>' --capture --json`, which clicks the middle of the
 window's title bar and prints what the screen reader said.
@@ -209,10 +211,10 @@ Exit 1 is a result to judge, exit 2 and 3 come with an error object. Condensed f
 
 | What the CLI says | Likely cause | Next step |
 |---|---|---|
-| `--capture`: `"status": "no-speech"` | The keys went to another window (a dialog, a new window). | `focus`, repeat the step. Only if it stays silent: raise `--first-within` (page load, dialog), or the page really says nothing. |
+| `--capture`: `"status": "no-speech"` | The keys went to another window (a dialog, a new window). | `client focus`, repeat the step. Only if it stays silent: raise `--first-within` (page load, dialog), or the page really says nothing. |
 | `--capture`: `"status": "timeout"`, exit 1 | Speech didn't pause: a live region, a timer, speech trailing from the previous step. | Judge `entries`; next time add `--settle 500` or raise `--quiet-for` / `--timeout`. |
 | `wait`: `"status": "timeout"`, exit 1 | Said differently, or not at all. | Read `entries`; stderr hints at `--normalize` when only case or spaces differ. |
-| `focus`: `NOT_FOUND`, exit 2 | MCP hasn't opened its browser yet. | Navigate with MCP first. |
+| `client focus`: `NOT_FOUND`, exit 2 | MCP hasn't opened its browser yet. | Navigate with MCP first. |
 | `FOCUS_FAILED` or `INPUT_DISABLED`, exit 2 | Locked desktop, or no native input on this bridge. | Stop and report: an agent can't fix it. |
 | `--since mark:…`: exit 3 | No such marker in the current session. | Mark again, repeat the step. |
 | `BridgeUnreachableError`, exit 2 | Bridge not running, or wrong URL. | `status --wait-ready`, then `config get url`. |
@@ -234,5 +236,5 @@ session id so a person can find each step in the bridge's web UI.
 - Don't change the bridge config, install packages, or touch the user's MCP/CLI settings without
   asking. `config set url` is fine once the user gave you the address.
 - Native input is not yet verified on a real VM (ROADMAP M7): `Insert` / `CapsLock` as held
-  modifiers and `focus` with a screen reader running. If `Insert+…` commands do nothing while plain
+  modifiers and `client focus` with a screen reader running. If `Insert+…` commands do nothing while plain
   keys work, say so rather than concluding the page is broken.
