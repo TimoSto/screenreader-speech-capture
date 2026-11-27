@@ -12,7 +12,7 @@ to the bridge's HTTP API and contains:
   project needs `@types/node`,
 - a **Playwright fixture** (`screenreader-speech-capture-client/playwright` subpath export, [example tests](../../examples/playwright)),
 - a **CLI** (`screenreader-speech-capture-client`) with the same functions, for AI agents and shell scripts,
-- an **agent skill** (see [Agent skill](agents.md#agent-skill)) *(planned, [M6](../ROADMAP.md#m6-agents-))*.
+- an **agent skill** (see [Agent skill](agents.md#agent-skill)).
 
 On every answer, the client checks the bridge's API version (a response header) and throws `IncompatibleBridgeError`
 if the major version differs (see [Versioning](http-api.md#versioning)). The client's package

@@ -205,7 +205,7 @@ to raise `buffer.maxEntries`).
 ## When a step fails
 
 Exit 1 is a result to judge, exit 2 and 3 come with an error object. Condensed from
-`docs/usage/agents.md#when-a-step-fails`:
+<https://github.com/TimoSto/screenreader-speech-capture/blob/main/docs/usage/agents.md#when-a-step-fails>:
 
 | What the CLI says | Likely cause | Next step |
 |---|---|---|

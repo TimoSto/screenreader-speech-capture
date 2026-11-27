@@ -2,7 +2,7 @@
 
 How AI agents use the bridge: the CLI, the agent skill and Playwright MCP.
 
-> **Partly planned.** The CLI loop, native input and Playwright MCP work today. The agent skill, `install-skill` and the subagents come with [M6](../ROADMAP.md#m6-agents-).
+> **Partly planned.** The CLI loop, native input and Playwright MCP work today. `install-skill` and the subagents come with [M6](../ROADMAP.md#m6-agents-).
 
 Flows: [Agents](flows/agents.md).
 
@@ -98,9 +98,7 @@ Exit `1` is a result, exit `2` and `3` come with an [error object](client.md#err
 
 ## Agent skill
 
-*(planned, [M6](../ROADMAP.md#m6-agents-))*
-
-The client package ships an agent skill in the [Claude Code skill format](https://docs.claude.com/en/docs/claude-code/skills):
+The client package folder holds an agent skill in the [Claude Code skill format](https://docs.claude.com/en/docs/claude-code/skills):
 
 ```
 packages/client/skills/screenreader-speech-capture/SKILL.md
@@ -117,7 +115,20 @@ It teaches an agent how to use the CLI:
   do that again, and the `--script` / `--geometry` fallback,
 - the exit codes, and that the exact wording depends on the screen reader and its verbosity.
 
-Install it into a project (or into `~/.claude/skills/` for all projects):
+In Claude Code, install it as a plugin: the repo is a plugin marketplace
+(`.claude-plugin/marketplace.json`) whose one plugin is the skill folder.
+
+```bash
+claude plugin marketplace add TimoSto/screenreader-speech-capture
+claude plugin install screenreader-speech-capture@a11y-testing
+```
+
+The skill is then `/screenreader-speech-capture:screenreader-speech-capture`. The plugin has no
+version of its own, so updates follow the commits that change that folder. It installs
+neither the CLI nor the [MCP registration](#preflight).
+
+*(planned, [M6](../ROADMAP.md#m6-agents-))* Install it into a project (or into `~/.claude/skills/`
+for all projects) without the plugin:
 
 ```bash
 npx screenreader-speech-capture-client install-skill [--dir .claude/skills]

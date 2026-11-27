@@ -53,5 +53,6 @@ JSON shapes (`--json`):
   with `--wait-ready` plus `status: "ready"`, or (exit 1) `{status: "not-ready", reason}`
 - errors (exit 2-4): `{"error": {"type", "message", "status"?, "code"?, "details"?}}`
 
-Full reference: `docs/usage/client.md#cli-for-agents`, `docs/usage/native-input.md`,
-`docs/usage/agents.md`.
+Full reference: <https://github.com/TimoSto/screenreader-speech-capture/blob/main/docs/usage/client.md#cli-for-agents>,
+<https://github.com/TimoSto/screenreader-speech-capture/blob/main/docs/usage/native-input.md>,
+<https://github.com/TimoSto/screenreader-speech-capture/blob/main/docs/usage/agents.md>.

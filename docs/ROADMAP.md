@@ -87,6 +87,7 @@ GitHub issues. This file only tracks milestones.
 ### M6 Agents 🚧
 
 - [x] Agent skill (`SKILL.md`, in `packages/client/skills/`; not yet tried on a real VM)
+- [x] Claude Code plugin for the skill (`.claude-plugin/` marketplace in the repo)
 - [ ] `install-skill` command (ship the skill in the npm package and copy it into `.claude/skills`)
 - [ ] Subagent definitions (for example `a11y-screenreader-tester`)
 
