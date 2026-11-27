@@ -1,35 +1,57 @@
 # CLI cheatsheet
 
-Run as `npx screenreader-speech-capture-client <cmd>` or the globally installed binary. Every command
-takes `--url <url>` and `--json`. The CLI keeps no state between calls: carry the `mark` seq yourself.
+Run as `screenreader-speech-capture-client <cmd>` (global install, pinned) or
+`npx -y screenreader-speech-capture-client@<version> <cmd>`. Every command takes `--url <url>` and
+`--json`. The CLI keeps no state between calls: find a step's start again with `--since mark:<label>`.
+
+The authoritative reference is the CLI itself: `--help --json` lists every command, its options and
+the JSON Schema of its `--json` output; `<command> --help --json` only that command.
 
 | Command | Notes |
 |---|---|
-| `--version`, `--help` | installed check |
-| `status [--wait-ready] [--timeout ms]` | bridge/tcp/buffer/playwright/mcp/session state; `--wait-ready` default 120000 ms |
-| `config get url` / `set url <url>` / `unset url` / `list` / `path` | work without a reachable bridge. Precedence: `--url` > `SR_SPEECH_URL` > client.json > `http://localhost:5151` |
-| `session start <name> [--run label]` / `end` / `list` / `delete <id>` | one current session; starting ends the previous one |
-| `clear [--session current \| --outside]` | bare `clear` wipes everything: avoid, use sessions |
-| `mark <label>` | prints the marker seq |
-| `speech [--since seq] [--limit n] [--include-markers] [--session id \| --all]` | entries |
-| `text [--since seq] [--separator s] [--session id \| --all]` | joined text, newline default |
-| `wait <text> [--regex] [--normalize] [--since seq] [--timeout ms]` | substring; also matches earlier speech with seq > since; markers never match; default 5000 ms |
+| `--version`, `--help [--json]` | installed check, usage |
+| `status [--wait-ready] [--timeout ms]` | bridge, tcp, buffer, playwright, mcp, session, input; `--wait-ready` default 120000 ms |
+| `config get\|set\|unset url [<url>]`, `config get\|set\|unset output [json\|text]`, `config list`, `config path` | work without a reachable bridge. URL: `--url` > `SR_SPEECH_URL` > client.json > `http://localhost:5151`. Output: `--json` > `SR_SPEECH_OUTPUT` > client.json > `text` |
+| `session start <name> [--run label]` / `end` / `list` / `delete <id>` | one current session; starting ends the previous one (stderr warns if it was another client's) |
+| `clear --all \| --session <id\|current> \| --outside` | a bare `clear` is a usage error; agents use sessions instead |
+| `mark <label>` | prints `#<seq> [marker] <label>` (the entry with `--json`) |
+| `speech [--since s] [--limit n] [--include-markers] [--session <id\|current> \| --all]` | entries, oldest first |
+| `text [--since s] [--separator str] [--session … \| --all]` | joined text, one line per entry |
+| `wait <text> [--regex] [--normalize] [--since s] [--timeout ms] [--session … \| --all]` | substring; also finds speech that arrived before the call; markers never match; default 5000 ms |
 | `wait-silence [--quiet-for ms] [--timeout ms]` | defaults 500 / 10000 |
-| `tail [--since seq]` | live feed until Ctrl+C (NDJSON with `--json`) |
-| `press <keys...> [--delay ms]` | native keys: one arg = chord (`"Insert+T"`), several = sequence (`h h Insert+Down`). Max 100 chords |
-| `click --x px --y px [--button left\|right\|middle]` | physical pixels; negative as `--x=-5` |
+| `focus` | bridge brings Playwright MCP's browser window to the front |
+| `focus --script` / `focus --geometry '<json>' [--capture …]` | click fallback: run the script with MCP `browser_evaluate`, pass its result; clicks the title bar |
+| `press <keys...> [--delay ms] [--capture …]` | native keys: one arg = chord (`"Insert+T"`), several = sequence (`h h Insert+Down`); max 100 chords |
+| `click --x px --y px [--button left\|right\|middle] [--capture …]` | physical pixels; negative as `--x=-5` |
+| `tail [--since s]` | live feed until Ctrl+C, for people (NDJSON with `--json`); agents use waits or `--capture` |
 
-Reads and waits default to the current session (whole buffer if none). `--session`/`--all` are exclusive.
+`--since` takes a seq (`4712` or `#4712`) or `mark:<label>` (the newest marker with that label in
+the scope the command reads; none = exit 3).
 
-Key names (robotjs, case-insensitive): a-z, 0-9, enter, tab, escape, up/down/left/right, home, end,
-pageup, pagedown, f1-f12, space, backspace, delete, insert, capslock. Aliases: Ctrl, Esc, Return, Del, Ins,
-PgUp, PgDn, Windows, Meta. Modifiers: Control, Shift, Alt, Win (+ Insert/CapsLock). Unknown key = 400 before
-anything is sent.
+`--capture` options: `--first-within` (default 2000 ms), `--quiet-for` (500), `--timeout` (10000),
+`--settle` (0: first wait for that much silence, to keep out trailing speech).
 
-JSON shapes: speech entry `{seq, kind, text, receivedAt, source, voice, connectionId, sessionId}`;
-`speech` -> `{entries, truncated}`; `text` -> `{text, truncated}`; `wait` -> `{matched:true, entry}` or
-(exit 1) `{matched:false, entries, truncated}`; `wait-silence` -> `{silent:true}`; `click`/`press` ->
-`{clicked|pressed:true}`; `status` -> `{bridge:{state,...}, tcp:{connections}, playwright, mcp, session}`.
-Without `--json`, `mark` prints only the seq, which is what `SEQ=$(...)` wants.
+Reads and waits default to the current session, or the whole buffer when none is current.
 
-Full reference: `docs/usage/client.md`, `docs/usage/native-input.md`, `docs/usage/agents.md`.
+Key names (case-insensitive): a-z, 0-9, enter, tab, escape, space, backspace, delete, up, down,
+left, right, home, end, pageup, pagedown, f1-f12. Modifiers: control, shift, alt, win, insert,
+capslock. Aliases: ctrl, windows/meta (win), esc, return, del, ins, pgup, pgdn. Unknown key = exit 3
+before anything is sent.
+
+JSON shapes (`--json`):
+
+- speech entry: `{seq, kind, text, receivedAt, source, voice, connectionId, sessionId}`
+- `speech` → `{entries, truncated}`; `text` → `{text, truncated}`; `mark` → the marker entry
+- `wait` → `{status: "matched", entry}` or (exit 1) `{status: "timeout", entries, truncated}`
+- `wait-silence` → `{status: "silent"}` or (exit 1) the same `timeout` result
+- `press` / `click` → `{pressed|clicked: true}`; with `--capture` also
+  `{status: "silent"|"no-speech"|"timeout", entries, truncated}` (`timeout` exits 1)
+- `focus` → `{focused: true, window: {title, pid}}`; `--script` → `{script}`; `--geometry` →
+  `{focused: true, point: {x, y}}` (+ capture fields)
+- `status` → `{bridge: {version, apiVersion, state}, tcp: {connections}, buffer, playwright, mcp,
+  session: {current, count}, input: {native, focus}}`, each `input.*` `{available, backend, reason}`;
+  with `--wait-ready` plus `status: "ready"`, or (exit 1) `{status: "not-ready", reason}`
+- errors (exit 2-4): `{"error": {"type", "message", "status"?, "code"?, "details"?}}`
+
+Full reference: `docs/usage/client.md#cli-for-agents`, `docs/usage/native-input.md`,
+`docs/usage/agents.md`.

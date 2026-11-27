@@ -9,9 +9,9 @@ Page: <url> | Screen reader: <NVDA/JAWS, version, verbosity if known> | Bridge: 
 
 ## Steps
 ### 1. <action> — PASS | FAIL | UNCLEAR
-- Input: <MCP tool or `press ...`>
+- Input: <MCP tool, or `press ... --capture`>
 - Expected: <from the agreed plan>
-- Heard (seq 41-44): "<exact text from the bridge>"
+- Heard (seq 41-44, capture status silent | no-speech | timeout): "<exact text from the bridge>"
 - Evidence: <DOM/snapshot detail from MCP, e.g. button has no accessible name>
 - Note: <likely cause / suggested fix>
 
