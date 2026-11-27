@@ -101,13 +101,14 @@ Exit `1` is a result, exit `2` and `3` come with an [error object](client.md#err
 The client package folder holds an agent skill in the [Claude Code skill format](https://docs.claude.com/en/docs/claude-code/skills):
 
 ```
-packages/client/skills/screenreader-speech-capture/SKILL.md
+packages/client/skills/audit/SKILL.md
 ```
 
 It teaches an agent how to use the CLI:
 
 - to start a [session](speech-capture.md#sessions) per task (`session start`) instead of `clear`,
   so a person can follow the task in the [web UI](web-ui.md#context-pane),
+- to rehearse the flow through Playwright MCP, without judging speech, before it agrees a test plan,
 - the loop: `press … --capture` for screen reader commands, **mark → act → wait-silence →
   text --since** for Playwright MCP actions,
 - when to use Playwright MCP input and when to use `press` (screen reader commands),
@@ -123,7 +124,7 @@ claude plugin marketplace add TimoSto/screenreader-speech-capture
 claude plugin install screenreader-speech-capture@a11y-testing
 ```
 
-The skill is then `/screenreader-speech-capture:screenreader-speech-capture`. The plugin has no
+The skill is then `/screenreader-speech-capture:audit`. The plugin has no
 version of its own, so updates follow the commits that change that folder. It installs
 neither the CLI nor the [MCP registration](#preflight).
 

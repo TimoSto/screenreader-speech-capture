@@ -1,5 +1,5 @@
 ---
-name: screenreader-speech-capture
+name: audit
 description: |-
   Screen reader testing runbook (NVDA/JAWS). Use this skill as your very first action whenever someone wants to test, audit, walk through or "a11y-test" how a running page behaves for screen reader or keyboard users, in English, German or any other language. Examples: what is announced when tabbing through a form or widget; whether error messages or required fields (Pflichtfelder) are read out (vorgelesen); how headings sound in browse mode; focus order; speech compared with the DOM. Also use it when the screenreader-speech-capture client, bridge, MCP or connection status needs fixing before such an audit.
 
@@ -75,7 +75,7 @@ before auditing.
    `client config get url --json` (check 2) plus `/playwright-mcp` (streamable HTTP):
    `claude mcp add --transport http screenreader-vm <value>/playwright-mcp`. Then they restart the
    session. Don't edit their MCP config yourself.
-5. **The whole chain** (after MCP opened a page, see step 3): `client focus --json`, then
+5. **The whole chain** (after MCP opened a page, see step 4): `client focus --json`, then
    `client press Insert+T --capture --json` (read the window title; NVDA and JAWS both use it). It
    must answer `"status": "silent"` with the browser's title in `entries`. If not, see
    [When a step fails](#when-a-step-fails) before going on.
@@ -87,11 +87,43 @@ describing what the page does, and read any they give (paths may be passed as ar
 **page URL** and whether it needs a login (the MCP browser starts with a fresh profile every session,
 so there are no cookies; credentials must come from the user, never invent them).
 
-## Step 2: Interview before touching anything
+Before you click anything, also settle:
 
-Interview the user until the workflow is unambiguous. Ask in small batches (2-4 questions), pick the
-next questions from the previous answers, and offer your best guess as the default so they can just
-confirm. Skip questions the context files already answer, but state your assumption. Cover:
+- **The flow in outline**: where it starts and what its end goal is.
+- **Environment**: a test system or production?
+- **Side effects**: which actions must never be triggered (purchases, emails, deletions)?
+- **Test data**: can it be used more than once, or reset?
+
+## Step 2: Rehearse the flow (no speech judging yet)
+
+Walk the described flow once with Playwright MCP before you plan the test. It shows what a
+description leaves out (cookie banners, dialogs, validation, extra steps, slow loading) and whether
+the flow works at all, so a later failure isn't mistaken for a screen reader problem.
+
+1. The rehearsal takes over the shared browser. If `client status --json` shows a current session
+   that isn't yours, ask the user first.
+2. MCP `browser_navigate`, `browser_snapshot`, then go through the flow with MCP clicks and typing.
+   Stay on the described flow; don't crawl the application.
+3. Note for each step: the action, the element (role and accessible name), what changes (dialog,
+   error, toast, route, focus) and how long it takes. This tells you what to ask and what to wait
+   for.
+4. Stop before any side effect the user hasn't allowed. On production, submit nothing without a yes.
+   If you can't complete the flow, ask the user instead of guessing.
+5. Restore the start state: MCP `browser_close` discards the browser profile (check that the next
+   page load is signed out and fresh). Data on the server stays changed, so ask the user to reset it
+   if the flow needs that.
+
+The rehearsal is **not a test result**: clicks through MCP prove nothing about keyboard or screen
+reader use. Odd things in the DOM (a button without a name) are suspicions to verify in the test, not
+findings. Skip or shorten the rehearsal if the user declines it or a step can't be repeated (a
+one-time token, an irreversible action).
+
+## Step 3: Interview and agree the plan
+
+Show the user what the rehearsal found, then interview them until the workflow is unambiguous. Ask in
+small batches (2-4 questions), pick the next questions from the previous answers, and offer your best
+guess as the default so they can just confirm. Skip questions that are already answered (context
+files, step 1, the rehearsal), but state your assumption. Cover:
 
 - **Workflow**: the exact start state and end goal ("sign in, add item to cart, reach confirmation").
   Which steps, in which order? Happy path only, or also errors (empty required field, wrong password)?
@@ -101,20 +133,21 @@ confirm. Skip questions the context files already answer, but state your assumpt
   messages, live-region updates, page title on load)? Which wordings are mandatory, which are flexible?
 - **Screen reader and verbosity**: NVDA or JAWS, language, verbosity. Wording depends on all of these,
   so assertions should match meaning (`--regex` or `--normalize`), not exact strings.
-- **Done criteria and scope**: what counts as a failure? Which areas are out of scope? Any steps that
-  have side effects (purchases, emails, deletions) that must not be triggered?
+- **Done criteria and scope**: what counts as a failure? Which areas are out of scope?
 
 Finish by writing the plan back as a numbered list of steps, each with action + expected
 announcement, and get a yes before executing. The plan is the contract; without it you cannot tell
-"unexpected" from "expected" later.
+"unexpected" from "expected" later. Take expected announcements from the visible UI, the specs and
+the user, **never from the DOM**: otherwise a wrong label becomes the expectation and passes.
 
-## Step 3: Start the run and put the browser in the foreground
+## Step 4: Start the run and put the browser in the foreground
 
 1. `client session start "<short task name>" --json`. A session scopes reads and waits to this task
    and lets a person follow it in the bridge's web UI. Prefer it over `clear` (`clear --all` wipes
    every session). If it warns that it **ended another client's session**, someone else is using the
    screen reader: stop and tell the user, two clients can't share it.
-2. Open the page: MCP `browser_navigate`. MCP only starts its browser on the first browser tool call.
+2. Open the page in its start state: MCP `browser_navigate`. MCP only starts its browser on the
+   first browser tool call.
 3. `client focus --json` → `{"focused": true, "window": {"title", "pid"}}`. The screen reader
    announces the window. Run the chain check from step 0.5 if you haven't yet.
 4. **Keyboard focus inside the page.** `client focus` leaves keyboard focus wherever it last was
@@ -132,7 +165,7 @@ or only focusing is unavailable (`input.focus.available: false`, `input.native.a
 JSON result to `client focus --geometry '<json>' --capture --json`, which clicks the middle of the
 window's title bar and prints what the screen reader said.
 
-## Step 4: The step loop
+## Step 5: The step loop
 
 For every step in the plan, use one of three patterns. Give every step its own marker label.
 
@@ -220,14 +253,15 @@ Exit 1 is a result to judge, exit 2 and 3 come with an error object. Condensed f
 | `--since mark:…`: exit 3 | No such marker in the current session. | Mark again, repeat the step. |
 | `BridgeUnreachableError`, exit 2 | Bridge not running, or wrong URL. | `status --wait-ready`, then `config get url`. |
 
-## Step 5: Report
+## Step 6: Report
 
 End with `client session end`, then give the user a report (see `references/report-template.md`):
 the plan with a pass/fail/unclear verdict per step, the exact speech captured for each (quote it),
 what you expected, and the likely cause when you can tell (DOM evidence from MCP). Separate **page
 findings** from **environment doubts** (focus, verbosity, screen reader differences) so the user can
-tell which to fix. Say plainly what you could not verify. Cite the entries' `seq` numbers and the
-session id so a person can find each step in the bridge's web UI.
+tell which to fix. Say plainly what you could not verify, including rehearsal suspicions the run
+didn't confirm. Cite the entries' `seq` numbers and the session id so a person can find each step in
+the bridge's web UI.
 
 ## Ground rules
 

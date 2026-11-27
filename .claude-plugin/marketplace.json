@@ -5,7 +5,7 @@
   "plugins": [
     {
       "name": "screenreader-speech-capture",
-      "source": "./packages/client/skills/screenreader-speech-capture"
+      "source": "./packages/client/skills/audit"
     }
   ]
 }
