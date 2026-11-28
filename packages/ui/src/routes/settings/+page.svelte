@@ -1,12 +1,17 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import type { ConfigPatchDto } from '@screenreader-speech-capture/shared';
+  import { PLAYWRIGHT_VERSION, TCP_PORT } from '#lib/core/settings.js';
   import type { Theme } from '#lib/core/theme.js';
   import { appStores } from '#lib/composition.js';
-  import PlaywrightVersionSetting from '#lib/components/PlaywrightVersionSetting/PlaywrightVersionSetting.svelte';
-  import TcpPortSetting from '#lib/components/TcpPortSetting/TcpPortSetting.svelte';
+  import SettingsForm from '#lib/components/SettingsForm/SettingsForm.svelte';
   import ThemeSetting from '#lib/components/ThemeSetting/ThemeSetting.svelte';
 
   const { config: configStore, status: statusStore, theme: themeStore } = appStores();
+
+  const settingContext = $derived({
+    runningPlaywright: statusStore.status?.playwright.version ?? null,
+  });
 
   onMount(() => {
     void configStore.refresh();
@@ -27,11 +32,13 @@
       <h2 id="capture-heading">Speech capture</h2>
       <p class="scope">Saved on the bridge. A change takes effect when the bridge is restarted.</p>
       {#if configStore.active !== null && configStore.saved !== null}
-        <TcpPortSetting
-          active={configStore.active.tcp.port}
-          saved={configStore.saved.tcp.port}
-          overriddenBy={configStore.overrides['tcp.port'] ?? null}
-          onSave={(port: number) => configStore.save({ tcp: { port } })}
+        <SettingsForm
+          settings={[TCP_PORT]}
+          active={configStore.active}
+          saved={configStore.saved}
+          overrides={configStore.overrides}
+          {settingContext}
+          onSave={(patch: ConfigPatchDto) => configStore.save(patch)}
         />
       {:else if !configStore.reachable}
         <p class="scope" role="alert">
@@ -49,12 +56,13 @@
         <p class="scope">
           Saved on the bridge. A change takes effect when the bridge is restarted.
         </p>
-        <PlaywrightVersionSetting
-          active={configStore.active.playwright.version}
-          saved={configStore.saved.playwright.version}
-          running={statusStore.status?.playwright.version ?? null}
-          overriddenBy={configStore.overrides['playwright.version'] ?? null}
-          onSave={(version: string | null) => configStore.save({ playwright: { version } })}
+        <SettingsForm
+          settings={[PLAYWRIGHT_VERSION]}
+          active={configStore.active}
+          saved={configStore.saved}
+          overrides={configStore.overrides}
+          {settingContext}
+          onSave={(patch: ConfigPatchDto) => configStore.save(patch)}
         />
       </section>
     {/if}
