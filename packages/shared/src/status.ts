@@ -19,7 +19,7 @@ export const ServiceStatusSchema = v.pipe(
     version: v.pipe(
       v.string(),
       v.description('The version that runs (configured or bundled).'),
-      v.examples(['1.65.0']),
+      v.examples(['1.65.1']),
     ),
     port: integer(0),
     restarts: v.pipe(

@@ -62,7 +62,7 @@ describe('Playwright server service', () => {
     expect(current.bridge.state).toBe('ready');
     expect(current.playwright).toEqual({
       state: 'running',
-      version: '1.65.0',
+      version: '1.65.1',
       port,
       restarts: 0,
       exitCode: null,

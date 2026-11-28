@@ -22,7 +22,7 @@
     "@vitest/browser": "5.1.2",
     "@vitest/browser-playwright": "5.1.2",
     "axe-core": "4.14.1",
-    "playwright": "1.65.0",
+    "playwright": "1.65.1",
     "svelte": "5.57.3",
     "svelte-check": "4.7.8",
     "typescript": "6.0.3",

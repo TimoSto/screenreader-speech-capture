@@ -135,7 +135,7 @@ own SAPI 5 voice written in Rust.
   and JAWS see `Insert+T`? Check on a real VM in the M7 smoke test.
 - **Foreground lock:** does the Alt tap / `AttachThreadInput` sequence of `POST /input/focus` bring
   the browser forward reliably on Windows 10/11 with NVDA and JAWS running? Check on the VM (M7).
-- **Default versions:** `DEFAULT_PLAYWRIGHT_VERSION` (1.65.0) and the `@playwright/mcp`
+- **Default versions:** `DEFAULT_PLAYWRIGHT_VERSION` (1.65.1) and the `@playwright/mcp`
   dependency (0.0.85) are both pinned. Still open: how often to update them.
 - **Windows job object:** tie the child services to the bridge's process, so a hard kill of the
   bridge ends them too (see [Shutdown](usage/operations.md#shutdown)).

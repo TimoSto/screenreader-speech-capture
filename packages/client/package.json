@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/core": "0.18.5",
-    "@playwright/test": "1.65.0",
+    "@playwright/test": "1.65.1",
     "@screenreader-speech-capture/shared": "workspace:*",
     "@valibot/to-json-schema": "1.8.0",
     "publint": "0.3.25",
@@ -47,7 +47,7 @@
     "directory": "packages/client"
   },
   "peerDependencies": {
-    "@playwright/test": "1.65.0"
+    "@playwright/test": "1.65.1"
   },
   "peerDependenciesMeta": {
     "@playwright/test": {
