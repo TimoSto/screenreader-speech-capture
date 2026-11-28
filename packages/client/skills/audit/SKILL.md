@@ -289,7 +289,8 @@ End with `client session end`, then give the user a report (see `references/repo
 the plan with a pass/fail/unclear verdict per step, the exact speech captured for each (quote it),
 what you expected, and the likely cause when you can tell (DOM evidence from MCP). Separate **page
 findings** from **environment doubts** (focus, verbosity, screen reader differences) so the user can
-tell which to fix. Say plainly what you could not verify, including rehearsal suspicions the run
+tell which to fix. Give each page finding a severity and a WCAG reference, by the rules in the
+template. Say plainly what you could not verify, including rehearsal suspicions the run
 didn't confirm. Cite the entries' `seq` numbers and the session id so a person can find each step in
 the bridge's web UI.
 
