@@ -146,7 +146,27 @@ The actions panel sends [native input](native-input.md) through the bridge, the 
 ## Settings
 
 The page is one pane, like the speech log, with a section per topic (its "Settings" heading is for
-screen readers only).
+screen readers only). Appearance is kept in the browser and applies at once; every other setting is
+saved on the bridge and applies when the bridge is restarted.
+
+### Bridge settings
+
+Each section is a form of its own: **Save** (or Enter in a field) saves what changed in that
+section with one `PUT /api/v1/config`, **Revert** puts the saved values back. Nothing is saved by
+itself. If one value is refused in the browser, nothing is saved and the focus moves to its field.
+An error from the bridge is shown under the form, and what was typed stays.
+
+- After a save the form says "Saved." and, if something waits, to restart the bridge.
+- A saved setting that isn't in use yet is marked on its field: "Restart pending, in use: …".
+- While anything waits, a box at the top lists every such change with what to know before the
+  restart, also settings saved through the API that have no field here (shown by their dotted path).
+  A restart empties the recorded speech and sessions ([Operations](operations.md#restarting-the-bridge)).
+  **Check again** reads the settings and the status again after the restart; the page doesn't poll.
+  All of this survives a reload: the page compares `GET /config` with `GET /config?view=saved`.
+- A setting a flag or variable sets (`--tcp-port`, `GET /config/overrides`) wins over the config file
+  on every start, so the page shows it as text: the value **in use** and what sets it. A value saved
+  through the API meanwhile isn't shown, and no restart is asked for.
+- If the settings can't be read, one message with **Try again** takes the place of these sections.
 
 ### Appearance
 
@@ -157,40 +177,20 @@ the system's `prefers-color-scheme`.
 
 ### Speech capture
 
-Settings saved on the bridge, so unlike the theme they are not kept in the browser and apply only
-when the bridge is restarted. So far one field, the **TCP port** the [socket voice](vm-setup.md#socket-voice-setup)
-sends to (default 4449). Enter saves, or the **Save** button; **Revert** puts the saved port back.
-
-- A port is checked in the browser first (a whole number from 1 to 65535), then saved with
-  `PUT /api/v1/config {"tcp":{"port":…}}`. An error from the bridge, for example a port that is
-  already used, is shown under the field.
-- The field shows what is saved. "In use" is what the bridge listens on now (`GET /config`). When
-  the saved port differs, a notice says to restart the bridge, and that the voice on the VM sends to
-  a fixed port, so a voice for the new port has to be added (`text-to-socket-engine-add-voice`)
-  and selected. The notice survives a reload: the page compares `GET /config` with
-  `GET /config?view=saved`.
-- A setting a flag or variable sets (`--tcp-port`, `GET /config/overrides`) wins over the config file
-  on every start, so the page shows it as text: the value **in use** and what sets it. A value saved
-  through the API meanwhile isn't shown, and no restart is asked for. This holds for every bridge
-  setting on the page.
+- **TCP port:** the port the [socket voice](vm-setup.md#socket-voice-setup) sends to (default 4449), a
+  whole number from 1 to 65535. The voice on the VM has its port built in, so after a change add a
+  voice for the new port (`text-to-socket-engine-add-voice`) and select it.
 
 ### Playwright
 
-The **Playwright version** of the [Playwright server](playwright-mcp.md#version), saved on the bridge
-like the TCP port and applied when the bridge is restarted. The section appears once the bridge
-settings are read. Enter saves, or the **Save** button; **Revert** puts the saved version back.
-
-- The field takes an exact version like `1.65.0`; empty means the bundled version. The browser checks
-  the format, then saves with `PUT /api/v1/config {"playwright":{"version":…}}` (`null` for the
-  bundled one). Whether the version exists is only found out on the next start: the service then fails.
-- "In use" is the version the bridge is configured with now; for the bundled one it names the version
-  the server runs (`GET /status`). While the saved version differs, a notice says to restart the
-  bridge.
+- **Playwright version** of the [Playwright server](playwright-mcp.md#version): an exact version like
+  `1.65.0`, or empty for the bundled one (`null`). Its number is under the field while the bundled one
+  runs. Whether the version exists is only found out on the next start: the service then fails.
 
 ### More bridge settings *(planned, [M5](../ROADMAP.md))*
 
 A form for the rest of the [configuration](configuration.md): other ports, hosts, encoding, buffer
-size, log file, and native input on/off, with the same pattern as the TCP port.
+size, log file, and native input on/off, in the sections described above.
 
 - **Services:** the state and version of the Playwright server and MCP (from `status`). They are
   switched on and off with their `enabled` setting; there are no start / stop buttons.

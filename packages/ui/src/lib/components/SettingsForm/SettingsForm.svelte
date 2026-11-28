@@ -1,11 +1,13 @@
 <script lang="ts">
   import '@material/web/button/filled-button.js';
   import '@material/web/button/text-button.js';
+  import { tick } from 'svelte';
   import type { ConfigDto, ConfigPatchDto } from '@screenreader-speech-capture/shared';
   import SettingField from '#lib/components/SettingField/SettingField.svelte';
   import {
     buildPatch,
     changedSettings,
+    isPending,
     readSetting,
     type Drafts,
     type Setting,
@@ -14,6 +16,8 @@
   } from '#lib/core/settings.js';
 
   type Props = {
+    /** What the form's buttons are about, for their accessible names (`speech capture`). */
+    name: string;
     settings: Setting[];
     /** The configuration in use. */
     active: ConfigDto;
@@ -26,26 +30,38 @@
     onSave: (patch: ConfigPatchDto) => Promise<void>;
   };
 
-  let { settings, active, saved, overrides, settingContext, onSave }: Props = $props();
+  let { name, settings, active, saved, overrides, settingContext, onSave }: Props = $props();
 
   /** What was typed; a field without a draft follows the saved value. */
   let drafts = $state<Drafts>({});
   let errors = $state<Partial<Record<SettingPath, string>>>({});
   let failure = $state('');
   let busy = $state(false);
+  /**
+   * Set while the last thing that happened to this form is a save that worked: whether it left
+   * something waiting for a restart.
+   */
+  let justSaved = $state<{ waited: boolean } | null>(null);
+  let form: HTMLFormElement;
 
   const editable = $derived(settings.filter((setting) => overrides[setting.path] === undefined));
   const changed = $derived(changedSettings(editable, drafts, saved));
-  const pending = $derived(
-    editable.filter(
-      (setting) => readSetting(saved, setting.path) !== readSetting(active, setting.path),
-    ),
+  const idle = $derived(changed.length === 0 || busy);
+  const waits = $derived(
+    editable.some((setting) => isPending(setting.path, active, saved, overrides)),
   );
+  // After the restart there is nothing left to say: the message goes, it doesn't change.
+  const savedMessage = $derived.by(() => {
+    if (justSaved === null) return '';
+    if (!justSaved.waited) return 'Saved.';
+    return waits ? 'Saved. Restart the bridge to apply.' : '';
+  });
 
   function revert(): void {
     drafts = {};
     errors = {};
     failure = '';
+    justSaved = null;
   }
 
   async function save(): Promise<void> {
@@ -53,8 +69,12 @@
     const noun = changed[0].noun;
     const result = buildPatch(editable, drafts, saved);
     failure = '';
+    justSaved = null;
     if (!result.ok) {
       errors = result.errors;
+      const first = editable.find((setting) => result.errors[setting.path] !== undefined)!;
+      await tick();
+      form.querySelector<HTMLElement>(`[data-setting="${first.path}"]`)?.focus();
       return;
     }
     errors = {};
@@ -62,6 +82,7 @@
     try {
       await onSave(result.patch);
       drafts = {};
+      justSaved = { waited: waits };
     } catch (cause) {
       failure = cause instanceof Error ? cause.message : `The ${noun} could not be saved.`;
     } finally {
@@ -71,6 +92,7 @@
 </script>
 
 <form
+  bind:this={form}
   novalidate
   onsubmit={(event) => {
     event.preventDefault();
@@ -79,57 +101,47 @@
 >
   {#each settings as setting (setting.path)}
     {@const overriddenBy = overrides[setting.path]}
+    {@const inUse = readSetting(active, setting.path)}
     <SettingField
       {setting}
       value={drafts[setting.path] ?? setting.format(readSetting(saved, setting.path))}
+      help={setting.help(inUse, settingContext)}
+      pendingValue={isPending(setting.path, active, saved, overrides)
+        ? setting.describe(inUse, settingContext)
+        : undefined}
       error={errors[setting.path] ?? ''}
       fixed={overriddenBy === undefined
         ? undefined
-        : {
-            by: overriddenBy,
-            value: setting.describe(readSetting(active, setting.path), settingContext),
-          }}
+        : { by: overriddenBy, value: setting.describe(inUse, settingContext) }}
       onInput={(value: string) => {
         drafts[setting.path] = value;
         delete errors[setting.path];
+        justSaved = null;
       }}
       onSubmit={() => void save()}
     />
   {/each}
 
   {#if editable.length > 0}
+    <!-- Soft-disabled: a disabled button would drop the focus it has after a save. -->
     <div class="actions">
-      <md-filled-button type="submit" disabled={changed.length === 0 || busy}>Save</md-filled-button
+      <md-filled-button
+        type="submit"
+        aria-label="Save {name} settings"
+        soft-disabled={idle ? true : undefined}>Save</md-filled-button
       >
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-      <md-text-button type="button" disabled={changed.length === 0 || busy} onclick={revert}
-        >Revert</md-text-button
+      <md-text-button
+        type="button"
+        aria-label="Revert {name} settings"
+        soft-disabled={idle ? true : undefined}
+        onclick={revert}>Revert</md-text-button
       >
     </div>
   {/if}
 
-  {#each editable as setting (setting.path)}
-    <p class="note">
-      In use: {setting.describe(readSetting(active, setting.path), settingContext)}
-    </p>
-  {/each}
-
-  <!-- A live region that is always there, so the notice is announced when it appears. -->
-  <div role="status" class="status">
-    {#each pending as setting (setting.path)}
-      {@const notice = setting.notice(
-        readSetting(saved, setting.path),
-        readSetting(active, setting.path),
-        settingContext,
-      )}
-      <div class="pending">
-        <strong>{notice.headline}</strong>
-        {#each notice.detail as fragment, index (index)}{#if typeof fragment === 'string'}{fragment}{:else}<code
-              >{fragment.code}</code
-            >{/if}{/each}
-      </div>
-    {/each}
-  </div>
+  <!-- A live region that is always there, so the message is announced when it appears. -->
+  <p role="status" class="note">{savedMessage}</p>
 
   {#if failure !== ''}<p role="alert" class="failure">{failure}</p>{/if}
 </form>
@@ -144,6 +156,7 @@
 
   .actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
   }
 
@@ -154,24 +167,10 @@
     line-height: 18px;
   }
 
-  .pending {
-    padding: 12px 16px;
-    border-radius: 12px;
-    background: var(--app-warning-container);
-    color: var(--app-on-warning-container);
-    font-size: 14px;
-    line-height: 20px;
-  }
-
   .failure {
     margin: 0;
     color: var(--md-sys-color-error);
     font-size: 14px;
     line-height: 20px;
-  }
-
-  code {
-    font-family: var(--app-mono-font, monospace);
-    font-size: 0.95em;
   }
 </style>

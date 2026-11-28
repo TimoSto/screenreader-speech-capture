@@ -217,4 +217,11 @@
     border-radius: 6px;
     background: var(--md-sys-color-primary);
   }
+
+  /* On a narrow screen the decorative swatch makes room for the name and "Selected". */
+  @media (max-width: 400px) {
+    .swatch {
+      display: none;
+    }
+  }
 </style>
