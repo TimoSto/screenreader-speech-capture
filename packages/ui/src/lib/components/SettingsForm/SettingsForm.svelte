@@ -7,6 +7,7 @@
   import {
     buildPatch,
     changedSettings,
+    explainRejection,
     isPending,
     readSetting,
     type Drafts,
@@ -64,17 +65,20 @@
     justSaved = null;
   }
 
+  async function focusField(path: SettingPath): Promise<void> {
+    await tick();
+    form.querySelector<HTMLElement>(`[data-setting="${path}"]`)?.focus();
+  }
+
   async function save(): Promise<void> {
     if (busy || changed.length === 0) return;
-    const noun = changed[0].noun;
     const result = buildPatch(editable, drafts, saved);
     failure = '';
     justSaved = null;
     if (!result.ok) {
       errors = result.errors;
       const first = editable.find((setting) => result.errors[setting.path] !== undefined)!;
-      await tick();
-      form.querySelector<HTMLElement>(`[data-setting="${first.path}"]`)?.focus();
+      await focusField(first.path);
       return;
     }
     errors = {};
@@ -84,7 +88,13 @@
       drafts = {};
       justSaved = { waited: waits };
     } catch (cause) {
-      failure = cause instanceof Error ? cause.message : `The ${noun} could not be saved.`;
+      const rejection = explainRejection(cause, editable);
+      if (rejection.field === null) {
+        failure = rejection.message;
+      } else {
+        errors = { [rejection.field]: rejection.message };
+        await focusField(rejection.field);
+      }
     } finally {
       busy = false;
     }
@@ -105,6 +115,7 @@
     <SettingField
       {setting}
       value={drafts[setting.path] ?? setting.format(readSetting(saved, setting.path))}
+      savedValue={setting.format(readSetting(saved, setting.path))}
       help={setting.help(inUse, settingContext)}
       pendingValue={isPending(setting.path, active, saved, overrides)
         ? setting.describe(inUse, settingContext)

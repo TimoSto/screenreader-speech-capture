@@ -2,7 +2,8 @@ import axe from 'axe-core';
 import { describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
-import { PLAYWRIGHT_VERSION, TCP_PORT } from '#lib/core/settings.js';
+import { SettingRejected } from '#lib/core/config.js';
+import { PLAYWRIGHT_VERSION, TCP_PORT, TEXT_ENCODING } from '#lib/core/settings.js';
 import { configWith } from '../../../test/config.js';
 import SettingsForm from './SettingsForm.svelte';
 
@@ -273,5 +274,105 @@ describe('SettingsForm with the Playwright version', () => {
     await save().click();
     const results = await axe.run(container);
     expect(results.violations.map((violation) => violation.id)).toEqual([]);
+  });
+});
+
+describe('SettingsForm with the port and the encoding', () => {
+  const props = ({
+    encoding = 'windows-1252',
+    ...patch
+  }: Record<string, unknown> & { encoding?: string } = {}) =>
+    form({
+      settings: [TCP_PORT, TEXT_ENCODING],
+      active: configWith({ tcp: { encoding } }),
+      saved: configWith({ tcp: { encoding } }),
+      ...patch,
+    });
+
+  const select = () => page.getByRole('combobox', { name: 'Text encoding' });
+  const choose = async (name: string) => {
+    await select().click();
+    await page.getByRole('option', { name }).click();
+  };
+  const shownEncoding = () => document.querySelector('md-outlined-select')!.value;
+
+  it('shows the saved encoding', async () => {
+    await render(SettingsForm, props({ encoding: 'windows-1250' }));
+    await expect.poll(shownEncoding).toBe('windows-1250');
+  });
+
+  it('keeps a saved label that is not in the list', async () => {
+    await render(SettingsForm, props({ encoding: 'cp1252' }));
+    await expect.poll(shownEncoding).toBe('cp1252');
+    await expect.element(save()).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('saves a chosen encoding, and only what changed', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    await render(SettingsForm, props({ onSave }));
+    await choose('windows-1251 (Cyrillic)');
+    await save().click();
+    expect(onSave).toHaveBeenCalledWith({ tcp: { encoding: 'windows-1251' } });
+  });
+
+  it('saves the port and the encoding together', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    await render(SettingsForm, props({ onSave }));
+    await page.getByRole('textbox', { name: 'TCP port' }).fill('4450');
+    await choose('utf-8 (Unicode)');
+    await save().click();
+    expect(onSave).toHaveBeenCalledWith({ tcp: { port: 4450, encoding: 'utf-8' } });
+  });
+
+  it('can be chosen with the keyboard', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    await render(SettingsForm, props({ onSave }));
+    (document.querySelector('md-outlined-select') as HTMLElement).focus();
+    await userEvent.keyboard('{Enter}');
+    await expect.element(page.getByRole('option', { name: /1252/ })).toBeVisible();
+    await userEvent.keyboard('{ArrowDown}');
+    await userEvent.keyboard('{Enter}');
+    await expect.poll(shownEncoding).toBe('windows-1253');
+  });
+
+  it('puts the saved encoding back on Revert', async () => {
+    await render(SettingsForm, props());
+    await choose('windows-1251 (Cyrillic)');
+    await revertButton().click();
+    await expect.poll(shownEncoding).toBe('windows-1252');
+    await expect.element(save()).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('shows a refusal on the field the bridge message is about', async () => {
+    const onSave = () =>
+      Promise.reject(
+        new SettingRejected(
+          'playwright.port: port 3000 is already used by tcp.port',
+          'playwright.port',
+        ),
+      );
+    await render(SettingsForm, props({ onSave }));
+    await page.getByRole('textbox', { name: 'TCP port' }).fill('3000');
+    await save().click();
+    await expect
+      .element(
+        page
+          .getByText('playwright.port: port 3000 is already used by TCP port. Nothing was saved.')
+          .first(),
+      )
+      .toBeInTheDocument();
+    await expect.poll(focused).toBe('md-outlined-text-field');
+  });
+
+  it('has no axe violations, also with the list open', async () => {
+    const { container } = await render(SettingsForm, props());
+    const violations = async (rules: Record<string, { enabled: boolean }> = {}) =>
+      (await axe.run(container, { rules })).violations.map((violation) => violation.id);
+    expect(await violations()).toEqual([]);
+    await select().click();
+    await expect.element(page.getByRole('option', { name: /1251/ })).toBeVisible();
+    // The Material options get their role through `ElementInternals`, which axe can't see, so it
+    // reports the list's children. The role queries above find them as options.
+    expect(await violations({ 'aria-required-children': { enabled: false } })).toEqual([]);
   });
 });

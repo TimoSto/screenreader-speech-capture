@@ -1,11 +1,11 @@
 import type { ConfigDto, ConfigPatchDto } from '@screenreader-speech-capture/shared';
-import { parsePlaywrightVersion, parsePort, pendingFields } from './config.js';
+import { parsePlaywrightVersion, parsePort, pendingFields, SettingRejected } from './config.js';
 
 // The bridge settings the Settings page edits, as data: what each one is called, how its value is
 // shown and read, and what to say about it. The components only render this.
 
 /** The settings with a UI element, by dotted path. */
-export type SettingPath = 'tcp.port' | 'playwright.version';
+export type SettingPath = 'tcp.port' | 'tcp.encoding' | 'playwright.version';
 
 export type SettingValue = string | number | boolean | null;
 
@@ -20,12 +20,19 @@ export type Fragment = string | { code: string };
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false; message: string };
 
+/** One choice of a select. */
+export interface Option {
+  value: string;
+  label: string;
+}
+
+export type Control =
+  { kind: 'text'; inputmode: 'text' | 'numeric' } | { kind: 'select'; options: readonly Option[] };
+
 export interface Setting<T = SettingValue> {
   path: SettingPath;
   label: string;
-  /** What the messages call the value (`port`). */
-  noun: string;
-  control: { kind: 'text'; inputmode: 'text' | 'numeric' };
+  control: Control;
   /** The text under the control; `active` is the value in use. */
   help(active: T, context: SettingContext): string;
   /** A value as the control holds it. */
@@ -41,7 +48,6 @@ export interface Setting<T = SettingValue> {
 export const TCP_PORT: Setting<number> = {
   path: 'tcp.port',
   label: 'TCP port',
-  noun: 'port',
   control: { kind: 'text', inputmode: 'numeric' },
   help: () => "The port the screen reader's speech voice sends to. Default 4449.",
   format: String,
@@ -57,13 +63,55 @@ export const TCP_PORT: Setting<number> = {
   ],
 };
 
+/** The ANSI code pages Windows has, plus UTF-8: what a speech voice on the VM can send. */
+const ENCODINGS: readonly Option[] = (
+  [
+    ['windows-874', 'Thai'],
+    ['windows-1250', 'Central European'],
+    ['windows-1251', 'Cyrillic'],
+    ['windows-1252', 'Western European'],
+    ['windows-1253', 'Greek'],
+    ['windows-1254', 'Turkish'],
+    ['windows-1255', 'Hebrew'],
+    ['windows-1256', 'Arabic'],
+    ['windows-1257', 'Baltic'],
+    ['windows-1258', 'Vietnamese'],
+    ['shift_jis', 'Japanese'],
+    ['gbk', 'Simplified Chinese'],
+    ['euc-kr', 'Korean'],
+    ['big5', 'Traditional Chinese'],
+    ['utf-8', 'Unicode'],
+  ] as const
+).map(([value, name]) => ({ value, label: `${value} (${name})` }));
+
+/**
+ * The options of a select that holds `value`. A saved value outside the list (an alias such as
+ * `cp1252`) is added, so showing it never changes it.
+ */
+export function selectOptions(options: readonly Option[], value: string): readonly Option[] {
+  return options.some((option) => option.value === value)
+    ? options
+    : [...options, { value, label: value }];
+}
+
+export const TEXT_ENCODING: Setting<string> = {
+  path: 'tcp.encoding',
+  label: 'Text encoding',
+  control: { kind: 'select', options: ENCODINGS },
+  help: () =>
+    "The code page the speech voice sends: the VM's ANSI code page. Default windows-1252.",
+  format: (encoding) => encoding,
+  parse: (text) => ({ ok: true, value: text }),
+  describe: (encoding) => encoding,
+  consequence: () => [],
+};
+
 const bundled = ({ runningPlaywright }: SettingContext) =>
   runningPlaywright === null ? 'bundled version' : `bundled version (${runningPlaywright})`;
 
 export const PLAYWRIGHT_VERSION: Setting<string | null> = {
   path: 'playwright.version',
   label: 'Playwright version',
-  noun: 'version',
   control: { kind: 'text', inputmode: 'text' },
   // The running version is the bundled one only while no version is configured.
   help: (active, { runningPlaywright }) =>
@@ -130,7 +178,7 @@ export function buildPatch(
 }
 
 /** The settings with a UI element. */
-export const SETTINGS: readonly Setting[] = [TCP_PORT, PLAYWRIGHT_VERSION];
+export const SETTINGS: readonly Setting[] = [TCP_PORT, TEXT_ENCODING, PLAYWRIGHT_VERSION];
 
 /** Whether the saved value of a setting waits for a restart. A flag or variable keeps winning. */
 export function isPending(
@@ -186,4 +234,31 @@ export function waitingForRestart(
         consequence: setting.consequence(to, from),
       };
     });
+}
+
+/** Why a save failed: on the field it is about, or for the form as a whole. */
+export interface Rejection {
+  field: SettingPath | null;
+  message: string;
+}
+
+/**
+ * Puts a failed save into the form's terms. The bridge names one setting (`details.field`) by its
+ * dotted path, which isn't always the one that was changed: two listeners on one port are reported
+ * on the later one. So the field is the named one if the form has it, else one the message names.
+ */
+export function explainRejection(cause: unknown, settings: readonly Setting[]): Rejection {
+  if (!(cause instanceof Error))
+    return { field: null, message: 'The settings could not be saved.' };
+  if (!(cause instanceof SettingRejected) || cause.field === undefined) {
+    return { field: null, message: cause.message };
+  }
+  const target =
+    settings.find((setting) => setting.path === cause.field) ??
+    settings.find((setting) => cause.message.includes(setting.path));
+  const readable = SETTINGS.reduce(
+    (message, setting) => message.replaceAll(setting.path, setting.label),
+    cause.message,
+  );
+  return { field: target?.path ?? null, message: `${readable}. Nothing was saved.` };
 }

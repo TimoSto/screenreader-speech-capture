@@ -2,14 +2,18 @@ import { describe, expect, it } from 'vitest';
 import {
   buildPatch,
   changedSettings,
+  explainRejection,
   isPending,
   PLAYWRIGHT_VERSION,
   readSetting,
+  selectOptions,
   TCP_PORT,
+  TEXT_ENCODING,
   waitingForRestart,
   type Setting,
 } from './settings.js';
 import { configWith } from '../../test/config.js';
+import { SettingRejected } from './config.js';
 
 const config = configWith();
 
@@ -113,5 +117,54 @@ describe('waitingForRestart', () => {
   it('leaves out what a flag or variable sets', () => {
     const saved = configWith({ tcp: { port: 4450 } });
     expect(waitingForRestart(config, saved, { 'tcp.port': '--tcp-port' }, context)).toEqual([]);
+  });
+});
+
+describe('the text encodings', () => {
+  const { control } = TEXT_ENCODING;
+  const options = control.kind === 'select' ? control.options : [];
+
+  // The bridge checks a label with `TextDecoder` too.
+  it.each(options.map((option) => option.value))('%s can be decoded', (label) => {
+    expect(() => new TextDecoder(label)).not.toThrow();
+  });
+
+  it('keeps a saved label that is not in the list as one more option', () => {
+    expect(selectOptions(options, 'windows-1252')).toBe(options);
+    expect(selectOptions(options, 'cp1252').at(-1)).toEqual({ value: 'cp1252', label: 'cp1252' });
+  });
+});
+
+describe('explainRejection', () => {
+  const form = [TCP_PORT, TEXT_ENCODING];
+  const rejected = (field: string, message: string) =>
+    new SettingRejected(`${field}: ${message}`, field);
+
+  it('puts it on the named field, in words', () => {
+    expect(explainRejection(rejected('tcp.encoding', 'unsupported'), form)).toEqual({
+      field: 'tcp.encoding',
+      message: 'Text encoding: unsupported. Nothing was saved.',
+    });
+  });
+
+  it('puts a port clash on the field the message names', () => {
+    const cause = rejected('playwright.port', 'port 3000 is already used by tcp.port');
+    expect(explainRejection(cause, form)).toEqual({
+      field: 'tcp.port',
+      message: 'playwright.port: port 3000 is already used by TCP port. Nothing was saved.',
+    });
+  });
+
+  it('leaves it to the form when no field of it is named', () => {
+    const cause = rejected('mcp.port', 'port 5151 is already used by http.port');
+    expect(explainRejection(cause, form).field).toBeNull();
+  });
+
+  it('keeps any other failure as it is', () => {
+    expect(explainRejection(new Error('The bridge is not reachable'), form)).toEqual({
+      field: null,
+      message: 'The bridge is not reachable',
+    });
+    expect(explainRejection(undefined, form).message).toBe('The settings could not be saved.');
   });
 });

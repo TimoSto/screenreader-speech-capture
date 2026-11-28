@@ -127,6 +127,9 @@ this browser and applies at once, and the rest applies after a restart.
   `type=number`: no spinner, no scroll-wheel changes). The browser check (`error-text` on the field)
   and the bridge's refusal (`role="alert"` under the form, the fields keep what was typed) are
   separate.
+- A choice from a closed set (the text encoding) is a Material outlined select, not free text.
+- A refusal that names a setting of the form shows on that field and gets the focus; it ends with
+  "Nothing was saved.".
 - Each form has an always-present `role="status"` for "Saved.".
 - A saved-but-not-applied setting has a `--app-warning` bar and "Restart pending, in use: …" in its
   supporting text. The consequences stand once, in a `--app-warning-container` box above the

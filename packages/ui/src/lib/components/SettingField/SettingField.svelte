@@ -1,11 +1,15 @@
 <script lang="ts">
+  import '@material/web/select/outlined-select.js';
+  import '@material/web/select/select-option.js';
   import '@material/web/textfield/outlined-text-field.js';
-  import type { Setting } from '#lib/core/settings.js';
+  import { selectOptions, type Setting } from '#lib/core/settings.js';
 
   type Props = {
     setting: Setting;
     /** What the control holds: the draft, or the saved value. */
     value: string;
+    /** The saved value, as the control holds it. */
+    savedValue: string;
     /** The text under the control. */
     help: string;
     /** The value in use while the saved one waits for a restart. */
@@ -22,7 +26,8 @@
     onSubmit: () => void;
   };
 
-  let { setting, value, help, pendingValue, error, fixed, onInput, onSubmit }: Props = $props();
+  let { setting, value, savedValue, help, pendingValue, error, fixed, onInput, onSubmit }: Props =
+    $props();
 
   // In the supporting text, so a screen reader says it when the field gets the focus.
   const supporting = $derived(
@@ -39,36 +44,64 @@
   </dl>
 {:else}
   <div class:pending={pendingValue !== undefined}>
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <md-outlined-text-field
-      data-setting={setting.path}
-      label={setting.label}
-      inputmode={setting.control.inputmode}
-      autocomplete="off"
-      supporting-text={supporting}
-      {value}
-      error={error !== '' ? true : undefined}
-      error-text={error}
-      onkeydown={(event: KeyboardEvent) => {
-        // Enter saves, whatever the text field does with the form around it.
-        if (event.key !== 'Enter') return;
-        event.preventDefault();
-        onSubmit();
-      }}
-      oninput={(event: Event) => onInput((event.target as HTMLInputElement).value)}
-    ></md-outlined-text-field>
+    {#if setting.control.kind === 'select'}
+      <md-outlined-select
+        data-setting={setting.path}
+        label={setting.label}
+        supporting-text={supporting}
+        {value}
+        error={error !== '' ? true : undefined}
+        error-text={error}
+        onchange={(event: Event) => onInput((event.target as HTMLSelectElement).value)}
+      >
+        {#each selectOptions(setting.control.options, savedValue) as option (option.value)}
+          <md-select-option
+            value={option.value}
+            selected={option.value === value ? true : undefined}
+          >
+            <div slot="headline">{option.label}</div>
+          </md-select-option>
+        {/each}
+      </md-outlined-select>
+    {:else}
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <md-outlined-text-field
+        data-setting={setting.path}
+        label={setting.label}
+        inputmode={setting.control.inputmode}
+        autocomplete="off"
+        supporting-text={supporting}
+        {value}
+        error={error !== '' ? true : undefined}
+        error-text={error}
+        onkeydown={(event: KeyboardEvent) => {
+          // Enter saves, whatever the text field does with the form around it.
+          if (event.key !== 'Enter') return;
+          event.preventDefault();
+          onSubmit();
+        }}
+        oninput={(event: Event) => onInput((event.target as HTMLInputElement).value)}
+      ></md-outlined-text-field>
+    {/if}
   </div>
 {/if}
 
 <style>
   /* The server's HTML has the field before the browser knows the element: keep its room, so what
      follows doesn't jump. */
-  md-outlined-text-field:not(:defined) {
+  md-outlined-text-field:not(:defined),
+  md-outlined-select:not(:defined) {
     display: block;
     min-height: 76px;
   }
 
-  md-outlined-text-field {
+  /* Not a list of every option before the browser knows the select. */
+  md-outlined-select:not(:defined) > * {
+    display: none;
+  }
+
+  md-outlined-text-field,
+  md-outlined-select {
     width: 100%;
     min-width: 0;
   }
