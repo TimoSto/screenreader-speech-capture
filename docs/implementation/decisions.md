@@ -45,7 +45,7 @@ refined it (`git log -S '<heading>' -- docs/implementation/decisions.md`).
 
 - [The web UI is a SvelteKit BFF inside the bridge process](#the-web-ui-is-a-sveltekit-bff-inside-the-bridge-process) ([#145](https://github.com/TimoSto/screenreader-speech-capture/pull/145))
 - [The UI's server build is self-contained](#the-uis-server-build-is-self-contained) ([#168](https://github.com/TimoSto/screenreader-speech-capture/pull/168))
-- [The Settings page saves by section and leaves access settings out](#the-settings-page-saves-by-section-and-leaves-access-settings-out)
+- [The Settings page saves by section and leaves access settings out](#the-settings-page-saves-by-section-and-leaves-access-settings-out) ([#246](https://github.com/TimoSto/screenreader-speech-capture/pull/246))
 - [The UI uses SvelteKit's experimental remote functions](#the-ui-uses-sveltekits-experimental-remote-functions) ([#203](https://github.com/TimoSto/screenreader-speech-capture/pull/203))
 - [The speech table follows live scopes over SSE and reads ended sessions once](#the-speech-table-follows-live-scopes-over-sse-and-reads-ended-sessions-once) ([#172](https://github.com/TimoSto/screenreader-speech-capture/pull/172))
 - [The speech table is a real `<table>`](#the-speech-table-is-a-real-table) ([#172](https://github.com/TimoSto/screenreader-speech-capture/pull/172))
