@@ -1,0 +1,139 @@
+import type { ConfigDto, ConfigPatchDto } from '@screenreader-speech-capture/shared';
+import { parsePlaywrightVersion, parsePort } from './config.js';
+
+// The bridge settings the Settings page edits, as data: what each one is called, how its value is
+// shown and read, and what to say about it. The components only render this.
+
+/** The settings with a UI element, by dotted path. */
+export type SettingPath = 'tcp.port' | 'playwright.version';
+
+export type SettingValue = string | number | boolean | null;
+
+/** What the texts of a setting need besides its value. */
+export interface SettingContext {
+  /** The version the Playwright server runs (from the status); `null` while unknown. */
+  runningPlaywright: string | null;
+}
+
+/** A piece of a text: plain, or a command name. */
+export type Fragment = string | { code: string };
+
+export type Parsed<T> = { ok: true; value: T } | { ok: false; message: string };
+
+export interface Setting<T = SettingValue> {
+  path: SettingPath;
+  label: string;
+  /** What the messages call the value (`port`). */
+  noun: string;
+  control: { kind: 'text'; inputmode: 'text' | 'numeric' };
+  /** The text under the control. */
+  help: string;
+  /** A value as the control holds it. */
+  format(value: T): string;
+  /** Reads what the control holds; a refused text has a message and is not saved. */
+  parse(text: string): Parsed<T>;
+  /** A value in words. */
+  describe(value: T, context: SettingContext): string;
+  /** What to say while the saved value differs from the one in use. */
+  notice(saved: T, active: T, context: SettingContext): { headline: string; detail: Fragment[] };
+}
+
+export const TCP_PORT: Setting<number> = {
+  path: 'tcp.port',
+  label: 'TCP port',
+  noun: 'port',
+  control: { kind: 'text', inputmode: 'numeric' },
+  help: "The port the screen reader's speech voice sends to. Default 4449.",
+  format: String,
+  parse(text) {
+    const parsed = parsePort(text);
+    return parsed.ok ? { ok: true, value: parsed.port } : parsed;
+  },
+  describe: String,
+  notice: (saved, active) => ({
+    headline: `Restart the bridge to use port ${saved}.`,
+    detail: [
+      `It still listens on ${active} until it is restarted. The speech voice on the VM sends to ` +
+        `a fixed port, so also add a voice for ${saved} (`,
+      { code: 'text-to-socket-engine-add-voice' },
+      ') and select it in the screen reader.',
+    ],
+  }),
+};
+
+const bundled = ({ runningPlaywright }: SettingContext) =>
+  runningPlaywright === null ? 'bundled version' : `bundled version (${runningPlaywright})`;
+
+export const PLAYWRIGHT_VERSION: Setting<string | null> = {
+  path: 'playwright.version',
+  label: 'Playwright version',
+  noun: 'version',
+  control: { kind: 'text', inputmode: 'text' },
+  help:
+    'The exact version of the Playwright server, like 1.65.0. Use the version your tests use. ' +
+    'Leave empty for the bundled version.',
+  format: (version) => version ?? '',
+  parse(text) {
+    const parsed = parsePlaywrightVersion(text);
+    return parsed.ok ? { ok: true, value: parsed.version } : parsed;
+  },
+  describe: (version, context) => version ?? bundled(context),
+  notice(saved, active, context) {
+    const next = saved === null ? 'the bundled Playwright version' : `Playwright ${saved}`;
+    const running = active === null ? `the ${bundled(context)}` : `version ${active}`;
+    return {
+      headline: `Restart the bridge to use ${next}.`,
+      detail: [
+        `It still runs ${running} until it is restarted. The first start of a new version ` +
+          'installs it, which can take a minute or two. Your test projects need the same version.',
+      ],
+    };
+  },
+};
+
+/** The value of a setting in a configuration. */
+export function readSetting(config: ConfigDto, path: SettingPath): SettingValue {
+  const [section, key] = path.split('.') as [keyof ConfigDto, string];
+  return (config[section] as Record<string, SettingValue>)[key];
+}
+
+/** What was typed or chosen, by setting; a setting nobody touched has no draft. */
+export type Drafts = Partial<Record<SettingPath, string>>;
+
+/** The settings whose draft differs from the saved value. */
+export function changedSettings(
+  settings: readonly Setting[],
+  drafts: Drafts,
+  saved: ConfigDto,
+): Setting[] {
+  return settings.filter((setting) => {
+    const draft = drafts[setting.path];
+    return draft !== undefined && draft.trim() !== setting.format(readSetting(saved, setting.path));
+  });
+}
+
+export type PatchResult =
+  { ok: true; patch: ConfigPatchDto } | { ok: false; errors: Partial<Record<SettingPath, string>> };
+
+/**
+ * The patch that saves the changed settings, and only those: an untouched value must not end up in
+ * the config file. One unreadable draft means nothing is saved.
+ */
+export function buildPatch(
+  settings: readonly Setting[],
+  drafts: Drafts,
+  saved: ConfigDto,
+): PatchResult {
+  const patch: Record<string, Record<string, SettingValue>> = {};
+  const errors: Partial<Record<SettingPath, string>> = {};
+  for (const setting of changedSettings(settings, drafts, saved)) {
+    const parsed = setting.parse(drafts[setting.path]!);
+    if (!parsed.ok) {
+      errors[setting.path] = parsed.message;
+      continue;
+    }
+    const [section, key] = setting.path.split('.') as [string, string];
+    (patch[section] ??= {})[key] = parsed.value;
+  }
+  return Object.keys(errors).length > 0 ? { ok: false, errors } : { ok: true, patch };
+}

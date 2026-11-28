@@ -309,8 +309,9 @@ the speech store, which the monitor page re-opens whenever the selected scope ch
   A refused setting keeps the bridge's `details.field` as `error.field` (`App.Error`), which the adapter turns
   into a `SettingRejected`. The config store keeps the state and `pending` (`pendingFields`: the saved
   settings that differ from what runs); the page and its setting components only show it.
-  `TcpPortSetting` and `PlaywrightVersionSetting` are wrappers around `BridgeSetting`, the form every
-  bridge setting shares (draft, check, save, override note, restart notice).
+  Each setting is data in `lib/core/settings.ts` (label, texts, how its value is shown and read), and
+  `buildPatch` makes a patch of the changed ones only. `SettingsForm` is the form of one section (drafts,
+  save, override note, restart notice) and renders each setting with `SettingField`.
 - **Sessions list**: the `getSessions` remote query (`lib/remote/sessions.remote.ts`, `BridgeApi.sessions`).
   The monitor page's load awaits it, so the server's HTML has the list and Kit puts the answer in the
   page. The page seeds the sessions store with it while rendering, on the server too.
