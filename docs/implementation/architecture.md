@@ -313,7 +313,7 @@ the speech store, which the monitor page re-opens whenever the selected scope ch
   settings that differ from what runs); the page and its setting components only show it.
   Each setting is data in `lib/core/settings.ts` (label, texts, how its value is shown and read), and
   `buildPatch` makes a patch of the changed ones only. `SettingsForm` is the form of one section (drafts,
-  save) and renders each setting with `SettingField` (a read-only row if a flag sets it). `RestartSummary`
+  save) and renders each setting with `SettingField` (a text field, a select, a `CheckboxField`, or a read-only row if a flag sets it). `RestartSummary`
   lists what waits for a restart (`waitingForRestart`).
 - **Sessions list**: the `getSessions` remote query (`lib/remote/sessions.remote.ts`, `BridgeApi.sessions`).
   The monitor page's load awaits it, so the server's HTML has the list and Kit puts the answer in the

@@ -5,7 +5,7 @@ The web UI served by the bridge, for people watching, driving and configuring it
 > **Partly implemented ([M5](../ROADMAP.md#m5-web-ui-)).** Working today: the status chips with a
 > refresh button, the [context pane](#context-pane) (sessions), the [live log](#live-log) with
 > markers, clear and delete, and on the [Settings](#settings) page the color theme, the TCP port, the
-> text encoding, the speech buffer size and the Playwright version.
+> text encoding, the speech buffer size, and the Playwright server and its version.
 > The rest of this page is design and marked *(planned)*: the status panel, the actions panel, the
 > other settings and the Setup page's check.
 
@@ -187,8 +187,10 @@ the system's `prefers-color-scheme`.
 - **Speech buffer size:** how many entries the [buffer](speech-capture.md#buffer) keeps (default
   10 000), a whole number from 1 to 1 000 000.
 
-### Playwright
+### Playwright and MCP
 
+- **Playwright server:** a checkbox for [the server](playwright-mcp.md) tests connect to
+  (`playwright.enabled`, on by default). While it is off, tests can't use a browser on the VM.
 - **Playwright version** of the [Playwright server](playwright-mcp.md#version): an exact version like
   `1.65.0`, or empty for the bundled one (`null`). Its number is under the field while the bundled one
   runs. Whether the version exists is only found out on the next start: the service then fails.

@@ -4,6 +4,7 @@ import {
   changedSettings,
   explainRejection,
   isPending,
+  PLAYWRIGHT_ENABLED,
   PLAYWRIGHT_VERSION,
   readSetting,
   selectOptions,
@@ -166,5 +167,25 @@ describe('explainRejection', () => {
       message: 'The bridge is not reachable',
     });
     expect(explainRejection(undefined, form).message).toBe('The settings could not be saved.');
+  });
+});
+
+describe('an on / off setting', () => {
+  it('goes through the patch as a boolean', () => {
+    expect(buildPatch([PLAYWRIGHT_ENABLED], { 'playwright.enabled': 'false' }, config)).toEqual({
+      ok: true,
+      patch: { playwright: { enabled: false } },
+    });
+    expect(buildPatch([PLAYWRIGHT_ENABLED], { 'playwright.enabled': 'true' }, config)).toEqual({
+      ok: true,
+      patch: {},
+    });
+  });
+
+  it('says that the version applies later while the server is off', () => {
+    const context = { runningPlaywright: null, playwrightOff: true };
+    expect(PLAYWRIGHT_VERSION.help(null, context)).toContain(
+      'Applies when the server is turned on.',
+    );
   });
 });

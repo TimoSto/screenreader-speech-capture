@@ -3,7 +3,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import { SettingRejected } from '#lib/core/config.js';
-import { BUFFER_SIZE, PLAYWRIGHT_VERSION, TCP_PORT, TEXT_ENCODING } from '#lib/core/settings.js';
+import {
+  BUFFER_SIZE,
+  PLAYWRIGHT_ENABLED,
+  PLAYWRIGHT_VERSION,
+  TCP_PORT,
+  TEXT_ENCODING,
+} from '#lib/core/settings.js';
 import { configWith } from '../../../test/config.js';
 import SettingsForm from './SettingsForm.svelte';
 
@@ -416,6 +422,96 @@ describe('SettingsForm with the port and the buffer size', () => {
 
   it('has no axe violations', async () => {
     const { container } = await render(SettingsForm, props());
+    const results = await axe.run(container);
+    expect(results.violations.map((violation) => violation.id)).toEqual([]);
+  });
+});
+
+describe('SettingsForm with a checkbox', () => {
+  const props = (patch: Record<string, unknown> = {}) =>
+    form({
+      name: 'Playwright and MCP',
+      settings: [PLAYWRIGHT_ENABLED, PLAYWRIGHT_VERSION],
+      active: configWith(),
+      saved: configWith(),
+      ...patch,
+    });
+
+  const server = () => page.getByRole('checkbox', { name: 'Playwright server' });
+  const saveBoth = () => page.getByRole('button', { name: 'Save Playwright and MCP settings' });
+  const off = configWith({ playwright: { enabled: false } });
+
+  it('is named, described and shows the saved state', async () => {
+    await render(SettingsForm, props());
+    await expect.element(server()).toBeChecked();
+    await expect
+      .element(server())
+      .toHaveAccessibleDescription('Tests connect to it to drive a browser on the VM.');
+  });
+
+  it('flips with Space without saving', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    await render(SettingsForm, props({ onSave }));
+    document.querySelector<HTMLInputElement>('input[type="checkbox"]')!.focus();
+    await userEvent.keyboard(' ');
+    await expect.element(server()).not.toBeChecked();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('saves unchecked as false', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    await render(SettingsForm, props({ onSave }));
+    await server().click();
+    await saveBoth().click();
+    expect(onSave).toHaveBeenCalledWith({ playwright: { enabled: false } });
+  });
+
+  it('goes back on Revert', async () => {
+    await render(SettingsForm, props());
+    await server().click();
+    await page.getByRole('button', { name: 'Revert Playwright and MCP settings' }).click();
+    await expect.element(server()).toBeChecked();
+  });
+
+  it('says in its description that a restart is pending', async () => {
+    await render(SettingsForm, props({ saved: off }));
+    await expect.element(server()).not.toBeChecked();
+    await expect
+      .element(server())
+      .toHaveAccessibleDescription(
+        'Restart pending, in use: On. Tests connect to it to drive a browser on the VM.',
+      );
+  });
+
+  it('is text when a flag turns the server off', async () => {
+    const overrides = { 'playwright.enabled': '--no-playwright' };
+    await render(SettingsForm, props({ active: off, saved: off, overrides }));
+    expect(page.getByRole('checkbox').elements()).toHaveLength(0);
+    await expect.element(page.getByRole('definition').first()).toHaveTextContent('Off');
+    await expect.element(page.getByText('--no-playwright')).toBeInTheDocument();
+  });
+
+  it('shows a port clash from turning it on for the whole form', async () => {
+    const onSave = () =>
+      Promise.reject(
+        new SettingRejected(
+          'playwright.port: port 3000 is already used by tcp.port',
+          'playwright.port',
+        ),
+      );
+    await render(SettingsForm, props({ active: off, saved: off, onSave }));
+    await server().click();
+    await saveBoth().click();
+    await expect
+      .element(page.getByRole('alert'))
+      .toHaveTextContent(
+        'playwright.port: port 3000 is already used by TCP port. Nothing was saved.',
+      );
+  });
+
+  it.each([true, false])('has no axe violations (checked: %s)', async (enabled) => {
+    const config = configWith({ playwright: { enabled } });
+    const { container } = await render(SettingsForm, props({ active: config, saved: config }));
     const results = await axe.run(container);
     expect(results.violations.map((violation) => violation.id)).toEqual([]);
   });

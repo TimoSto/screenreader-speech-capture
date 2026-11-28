@@ -47,7 +47,8 @@ The client's `@playwright/test` / `playwright` version must match the server's. 
 `--playwright-version` (or `playwright.version` in the config) to your test project's version. It
 must be an exact version like `1.65.0` (no ranges or tags). Without it, the bridge uses its bundled
 default (`DEFAULT_PLAYWRIGHT_VERSION`, currently `1.65.0`). `GET /api/v1/status` reports the
-version that runs. The web UI can set it too ([Settings](web-ui.md#playwright)).
+version that runs. The web UI can set it too ([Settings](web-ui.md#playwright-and-mcp)), and
+turn the server on and off.
 
 ### Install
 

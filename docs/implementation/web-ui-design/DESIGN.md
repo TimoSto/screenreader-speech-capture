@@ -128,6 +128,8 @@ this browser and applies at once, and the rest applies after a restart.
   and the bridge's refusal (`role="alert"` under the form, the fields keep what was typed) are
   separate.
 - A choice from a closed set (the text encoding) is a Material outlined select, not free text.
+- An on / off setting is a native checkbox with a description under it (`md-checkbox` doesn't pass a
+  description to the control). It never saves by itself.
 - A refusal that names a setting of the form shows on that field and gets the focus; it ends with
   "Nothing was saved.".
 - Each form has an always-present `role="status"` for "Saved.".
