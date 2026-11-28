@@ -2,6 +2,7 @@
   import '@material/web/select/outlined-select.js';
   import '@material/web/select/select-option.js';
   import '@material/web/textfield/outlined-text-field.js';
+  import CheckboxField from '#lib/components/CheckboxField/CheckboxField.svelte';
   import { selectOptions, type Setting } from '#lib/core/settings.js';
 
   type Props = {
@@ -44,7 +45,16 @@
   </dl>
 {:else}
   <div class:pending={pendingValue !== undefined}>
-    {#if setting.control.kind === 'select'}
+    {#if setting.control.kind === 'checkbox'}
+      <CheckboxField
+        path={setting.path}
+        label={setting.label}
+        checked={value === 'true'}
+        help={supporting}
+        {error}
+        onChange={(checked: boolean) => onInput(String(checked))}
+      />
+    {:else if setting.control.kind === 'select'}
       <md-outlined-select
         data-setting={setting.path}
         label={setting.label}

@@ -3,6 +3,7 @@
   import type { ConfigPatchDto } from '@screenreader-speech-capture/shared';
   import {
     BUFFER_SIZE,
+    PLAYWRIGHT_ENABLED,
     PLAYWRIGHT_VERSION,
     TCP_PORT,
     TEXT_ENCODING,
@@ -26,6 +27,7 @@
   // On the server the header's status store is still empty, the layout's load has the status.
   const settingContext = $derived({
     runningPlaywright: (statusStore.status ?? data.status)?.playwright.version ?? null,
+    playwrightOff: configStore.saved?.playwright.enabled === false,
   });
 
   const waiting = $derived(
@@ -80,10 +82,10 @@
       </section>
 
       <section aria-labelledby="playwright-heading">
-        <h2 id="playwright-heading">Playwright</h2>
+        <h2 id="playwright-heading">Playwright and MCP</h2>
         <SettingsForm
-          name="Playwright"
-          settings={[PLAYWRIGHT_VERSION]}
+          name="Playwright and MCP"
+          settings={[PLAYWRIGHT_ENABLED, PLAYWRIGHT_VERSION]}
           active={configStore.active}
           saved={configStore.saved}
           overrides={configStore.overrides}
