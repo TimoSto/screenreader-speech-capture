@@ -1,11 +1,17 @@
 import type { ConfigDto, ConfigPatchDto } from '@screenreader-speech-capture/shared';
-import { parsePlaywrightVersion, parsePort, pendingFields, SettingRejected } from './config.js';
+import {
+  parseMaxEntries,
+  parsePlaywrightVersion,
+  parsePort,
+  pendingFields,
+  SettingRejected,
+} from './config.js';
 
 // The bridge settings the Settings page edits, as data: what each one is called, how its value is
 // shown and read, and what to say about it. The components only render this.
 
 /** The settings with a UI element, by dotted path. */
-export type SettingPath = 'tcp.port' | 'tcp.encoding' | 'playwright.version';
+export type SettingPath = 'tcp.port' | 'tcp.encoding' | 'buffer.maxEntries' | 'playwright.version';
 
 export type SettingValue = string | number | boolean | null;
 
@@ -27,7 +33,8 @@ export interface Option {
 }
 
 export type Control =
-  { kind: 'text'; inputmode: 'text' | 'numeric' } | { kind: 'select'; options: readonly Option[] };
+  | { kind: 'text'; inputmode: 'text' | 'numeric'; suffix?: string }
+  | { kind: 'select'; options: readonly Option[] };
 
 export interface Setting<T = SettingValue> {
   path: SettingPath;
@@ -106,6 +113,21 @@ export const TEXT_ENCODING: Setting<string> = {
   consequence: () => [],
 };
 
+export const BUFFER_SIZE: Setting<number> = {
+  path: 'buffer.maxEntries',
+  label: 'Speech buffer size',
+  control: { kind: 'text', inputmode: 'numeric', suffix: 'entries' },
+  help: () =>
+    'How many speech entries the bridge keeps; then the oldest are dropped. Default 10000.',
+  format: String,
+  parse(text) {
+    const parsed = parseMaxEntries(text);
+    return parsed.ok ? { ok: true, value: parsed.entries } : parsed;
+  },
+  describe: String,
+  consequence: () => [],
+};
+
 const bundled = ({ runningPlaywright }: SettingContext) =>
   runningPlaywright === null ? 'bundled version' : `bundled version (${runningPlaywright})`;
 
@@ -178,7 +200,12 @@ export function buildPatch(
 }
 
 /** The settings with a UI element. */
-export const SETTINGS: readonly Setting[] = [TCP_PORT, TEXT_ENCODING, PLAYWRIGHT_VERSION];
+export const SETTINGS: readonly Setting[] = [
+  TCP_PORT,
+  TEXT_ENCODING,
+  BUFFER_SIZE,
+  PLAYWRIGHT_VERSION,
+];
 
 /** Whether the saved value of a setting waits for a restart. A flag or variable keeps winning. */
 export function isPending(

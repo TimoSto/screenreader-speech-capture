@@ -102,13 +102,13 @@ describe('waitingForRestart', () => {
   });
 
   it('lists a setting without a field by its path', () => {
-    const saved = configWith({ buffer: { maxEntries: 5 } });
+    const saved = configWith({ log: { consoleSpeech: true } });
     expect(waitingForRestart(config, saved, {}, context)).toEqual([
       {
-        path: 'buffer.maxEntries',
-        label: 'buffer.maxEntries',
-        from: '10000',
-        to: '5',
+        path: 'log.consoleSpeech',
+        label: 'log.consoleSpeech',
+        from: 'false',
+        to: 'true',
         consequence: [],
       },
     ]);

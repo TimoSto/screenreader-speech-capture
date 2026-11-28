@@ -38,7 +38,8 @@ The buffer is an in-memory list, oldest first, with at most `buffer.maxEntries` 
 10 000). When it is full, the oldest entry is dropped for each new one. `GET /api/v1/status`
 reports `buffer.firstSeq` and `buffer.lastSeq`. If entries after a request's `since` were dropped
 this way, the response has `"truncated": true`, so a test can tell that it missed something.
-Entries removed by a clear don't count.
+Entries removed by a clear don't count. The size can be set on the web UI's
+[Settings](web-ui.md#settings) page too.
 
 ## Sessions
 

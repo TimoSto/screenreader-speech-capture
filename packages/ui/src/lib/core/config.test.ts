@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ConfigDto } from '@screenreader-speech-capture/shared';
-import { parsePlaywrightVersion, parsePort, pendingFields } from './config.js';
+import { parseMaxEntries, parsePlaywrightVersion, parsePort, pendingFields } from './config.js';
 
 const config: ConfigDto = {
   tcp: { host: '127.0.0.1', port: 4449, encoding: 'windows-1252', maxLineBytes: 65536 },
@@ -59,6 +59,23 @@ describe('parsePlaywrightVersion', () => {
     expect(parsePlaywrightVersion(text)).toEqual({
       ok: false,
       message: 'Enter an exact version like 1.65.0, or leave the field empty.',
+    });
+  });
+});
+
+describe('parseMaxEntries', () => {
+  it.each([
+    ['1', 1],
+    [' 50000 ', 50_000],
+    ['1000000', 1_000_000],
+  ])('accepts %j', (text, entries) => {
+    expect(parseMaxEntries(text)).toEqual({ ok: true, entries });
+  });
+
+  it.each(['', '0', '1000001', '-1', '1.5', '1e3', '10,000', 'many'])('refuses %j', (text) => {
+    expect(parseMaxEntries(text)).toEqual({
+      ok: false,
+      message: 'Enter a whole number from 1 to 1000000.',
     });
   });
 });

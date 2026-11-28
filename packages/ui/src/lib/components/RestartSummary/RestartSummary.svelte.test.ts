@@ -10,7 +10,7 @@ import RestartSummary from './RestartSummary.svelte';
 
 const changes = waitingForRestart(
   configWith(),
-  configWith({ tcp: { port: 4450 }, log: { level: 'debug' } }),
+  configWith({ tcp: { port: 4450 }, log: { consoleSpeech: true } }),
   {},
   { runningPlaywright: '1.65.0' },
 );
@@ -40,11 +40,11 @@ describe('RestartSummary', () => {
     await expect
       .element(page.getByRole('heading', { name: '2 changes wait for a restart' }))
       .toBeInTheDocument();
-    const [port, level] = page.getByRole('listitem').elements();
+    const [port, unlisted] = page.getByRole('listitem').elements();
     expect(port.textContent).toContain('TCP port: ');
     expect(port.textContent).toContain('4449 → 4450.');
     expect(port.textContent).toContain('text-to-socket-engine-add-voice');
-    expect(level.textContent).toContain('log.level:');
+    expect(unlisted.textContent).toContain('log.consoleSpeech:');
     await expect
       .element(page.getByText(/empties the recorded speech and sessions/))
       .toBeInTheDocument();

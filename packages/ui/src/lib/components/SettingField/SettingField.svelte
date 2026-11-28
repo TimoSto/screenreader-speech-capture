@@ -69,6 +69,7 @@
         data-setting={setting.path}
         label={setting.label}
         inputmode={setting.control.inputmode}
+        suffix-text={setting.control.suffix}
         autocomplete="off"
         supporting-text={supporting}
         {value}

@@ -2,6 +2,7 @@
   import { onMount, untrack } from 'svelte';
   import type { ConfigPatchDto } from '@screenreader-speech-capture/shared';
   import {
+    BUFFER_SIZE,
     PLAYWRIGHT_VERSION,
     TCP_PORT,
     TEXT_ENCODING,
@@ -69,7 +70,7 @@
         <h2 id="capture-heading">Speech capture</h2>
         <SettingsForm
           name="speech capture"
-          settings={[TCP_PORT, TEXT_ENCODING]}
+          settings={[TCP_PORT, TEXT_ENCODING, BUFFER_SIZE]}
           active={configStore.active}
           saved={configStore.saved}
           overrides={configStore.overrides}

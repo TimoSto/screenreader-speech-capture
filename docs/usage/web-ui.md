@@ -5,7 +5,7 @@ The web UI served by the bridge, for people watching, driving and configuring it
 > **Partly implemented ([M5](../ROADMAP.md#m5-web-ui-)).** Working today: the status chips with a
 > refresh button, the [context pane](#context-pane) (sessions), the [live log](#live-log) with
 > markers, clear and delete, and on the [Settings](#settings) page the color theme, the TCP port, the
-> text encoding and the Playwright version.
+> text encoding, the speech buffer size and the Playwright version.
 > The rest of this page is design and marked *(planned)*: the status panel, the actions panel, the
 > other settings and the Setup page's check.
 
@@ -184,6 +184,8 @@ the system's `prefers-color-scheme`.
 - **Text encoding:** the code page the voice sends, the VM's ANSI code page
   ([Wire format](speech-capture.md#wire-format)): a list of the Windows code pages and UTF-8. Another
   label saved elsewhere (such as `cp1252`) is shown and kept.
+- **Speech buffer size:** how many entries the [buffer](speech-capture.md#buffer) keeps (default
+  10 000), a whole number from 1 to 1 000 000.
 
 ### Playwright
 
@@ -193,8 +195,7 @@ the system's `prefers-color-scheme`.
 
 ### More bridge settings *(planned, [M5](../ROADMAP.md))*
 
-A form for the rest of the [configuration](configuration.md): other ports, hosts, buffer
-size, log file, and native input on/off, in the sections described above.
+A form for the rest of the [configuration](configuration.md): other ports, hosts, log file, and native input on/off, in the sections described above.
 
 - **Services:** the state and version of the Playwright server and MCP (from `status`). They are
   switched on and off with their `enabled` setting; there are no start / stop buttons.
