@@ -1,0 +1,6 @@
+{
+  "name": "screenreader-speech-capture",
+  "description": "Screen reader (NVDA/JAWS) testing runbook for the speech-capture bridge.",
+  "license": "MIT",
+  "repository": "https://github.com/TimoSto/screenreader-speech-capture"
+}

@@ -1,0 +1,11 @@
+{
+  "name": "a11y-testing",
+  "description": "Plugins of the screenreader-speech-capture bridge.",
+  "owner": { "name": "TimoSto" },
+  "plugins": [
+    {
+      "name": "screenreader-speech-capture",
+      "source": "./packages/client/skills/audit"
+    }
+  ]
+}
