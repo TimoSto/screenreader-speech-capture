@@ -2,8 +2,9 @@ import type { ConfigPatchDto } from '@screenreader-speech-capture/shared';
 import { pendingFields, type ConfigApi, type ConfigState } from '#lib/core/config.js';
 
 /**
- * The bridge's configuration: read on `init` and after every save. A saved setting takes effect on
- * the next start of the bridge, so `pending` lists the ones that differ from what runs.
+ * The bridge's configuration: seeded by the page's load, read again on `refresh` and after every
+ * save. A saved setting takes effect on the next start of the bridge, so `pending` lists the ones
+ * that differ from what runs.
  */
 export function createConfigStore(api: ConfigApi) {
   let state = $state<ConfigState | null>(null);
@@ -48,6 +49,17 @@ export function createConfigStore(api: ConfigApi) {
     /** Dotted paths of the saved settings that wait for a restart. */
     get pending(): string[] {
       return state === null ? [] : pendingFields(state.active, state.saved);
+    },
+    /**
+     * Shows the configuration the page's load read, before any request of its own. Call it while
+     * the page renders, on the server too: the stores are per request, so the server's HTML and the
+     * first browser render agree. Unlike a list that is polled, every load's answer replaces what
+     * is shown; `null` (the load failed) changes nothing.
+     */
+    seed(next: ConfigState | null): void {
+      if (next === null) return;
+      state = next;
+      reachable = true;
     },
     /** Reads the configuration now (also after a failed read, to try again). */
     refresh(): Promise<void> {
