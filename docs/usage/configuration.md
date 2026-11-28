@@ -16,7 +16,7 @@ Precedence: **CLI flags > environment variables > config file > defaults**.
   `SR_SPEECH_TCP_PORT=4449`, `SR_SPEECH_HTTP_PORT=5151`, `SR_SPEECH_NO_MCP=1`. Switches
   (`SR_SPEECH_NO_MCP`, `SR_SPEECH_CONSOLE_SPEECH`, …) are on with `1`, `true`, `yes` or `on`;
   `0`, `false`, `no`, `off` or empty count as not set.
-- The **Settings** page of the [web UI](web-ui.md#settings) edits the TCP port, the text encoding, the speech buffer size, the Playwright server, the Playwright version and Playwright MCP through `PUT /api/v1/config`; the other settings there are planned ([M5](../ROADMAP.md#m5-web-ui-)).
+- The **Settings** page of the [web UI](web-ui.md#settings) edits the TCP port, the text encoding, the speech buffer size, the Playwright server, the Playwright version, Playwright MCP and the log level through `PUT /api/v1/config`; [the other settings](web-ui.md#settings-without-a-field) have no field.
 - An invalid value stops the start with an error that names the flag, the variable or the config
   file, and the setting (exit code `2`).
 - If a flag or variable sets something the config file also sets, the bridge log warns at startup:

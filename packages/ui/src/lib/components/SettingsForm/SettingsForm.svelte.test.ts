@@ -5,6 +5,7 @@ import { render } from 'vitest-browser-svelte';
 import { SettingRejected } from '#lib/core/config.js';
 import {
   BUFFER_SIZE,
+  LOG_LEVEL,
   MCP_ENABLED,
   PLAYWRIGHT_ENABLED,
   PLAYWRIGHT_VERSION,
@@ -551,6 +552,42 @@ describe('SettingsForm with the Playwright server and MCP', () => {
     await expect.element(page.getByText('--no-mcp')).toBeInTheDocument();
     expect(page.getByRole('checkbox').elements()).toHaveLength(1);
     await expect.element(saveAll()).toBeInTheDocument();
+  });
+
+  it('has no axe violations', async () => {
+    const { container } = await render(SettingsForm, props());
+    const results = await axe.run(container);
+    expect(results.violations.map((violation) => violation.id)).toEqual([]);
+  });
+});
+
+describe('SettingsForm with the log level', () => {
+  const props = (patch: Record<string, unknown> = {}) =>
+    form({
+      name: 'bridge log',
+      settings: [LOG_LEVEL],
+      active: configWith(),
+      saved: configWith(),
+      ...patch,
+    });
+
+  const level = () => page.getByRole('combobox', { name: 'Log level' });
+
+  it('saves a chosen level', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    await render(SettingsForm, props({ onSave }));
+    await level().click();
+    await page.getByRole('option', { name: 'debug (everything, with the speech)' }).click();
+    await page.getByRole('button', { name: 'Save bridge log settings' }).click();
+    expect(onSave).toHaveBeenCalledWith({ log: { level: 'debug' } });
+  });
+
+  it('is text when a flag sets the level', async () => {
+    const overrides = { 'log.level': '--log-level' };
+    await render(SettingsForm, props({ overrides }));
+    expect(page.getByRole('combobox').elements()).toHaveLength(0);
+    await expect.element(page.getByRole('definition').first()).toHaveTextContent('info');
+    await expect.element(page.getByText('--log-level')).toBeInTheDocument();
   });
 
   it('has no axe violations', async () => {
