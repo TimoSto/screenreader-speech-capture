@@ -193,7 +193,7 @@ the system's `prefers-color-scheme`.
 - **Playwright server:** a checkbox for [the server](playwright-mcp.md) tests connect to
   (`playwright.enabled`, on by default). While it is off, tests can't use a browser on the VM.
 - **Playwright version** of the [Playwright server](playwright-mcp.md#version): an exact version like
-  `1.65.0`, or empty for the bundled one (`null`). Its number is under the field while the bundled one
+  `1.65.1`, or empty for the bundled one (`null`). Its number is under the field while the bundled one
   runs. Whether the version exists is only found out on the next start: the service then fails.
 - **Playwright MCP:** a checkbox for [the MCP server](playwright-mcp.md) AI agents connect to
   (`mcp.enabled`, on by default). It brings its own Playwright, so the version above doesn't change it.

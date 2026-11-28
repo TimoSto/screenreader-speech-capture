@@ -124,14 +124,14 @@ always starts in the same column:
 [bridge]            2026-11-07T14:03:10.002Z INFO  config  C:\Users\test\AppData\Roaming\screenreader-speech-capture\config.json
 [bridge]            2026-11-07T14:03:10.002Z INFO  log     level info, file C:\Users\test\AppData\Local\screenreader-speech-capture\logs\bridge.log
 [bridge]            2026-11-07T14:03:10.002Z INFO  speech text is logged at debug
-[bridge]            2026-11-07T14:03:10.050Z INFO  starting playwright 1.65.0
+[bridge]            2026-11-07T14:03:10.050Z INFO  starting playwright 1.65.1
 [bridge]            2026-11-07T14:03:10.050Z INFO  starting mcp 0.0.85
 [bridge]            2026-11-07T14:03:11.497Z INFO  playwright running (1.4s)
 [bridge]            2026-11-07T14:03:11.623Z INFO  mcp running (1.6s)
 [bridge]            2026-11-07T14:03:11.624Z INFO  ready in 1.6s
 [bridge]            2026-11-07T14:03:11.624Z INFO    speech capture     127.0.0.1:4449 (windows-1252)
 [bridge]            2026-11-07T14:03:11.624Z INFO    HTTP API + web UI  http://192.168.122.57:5151, http://localhost:5151
-[bridge]            2026-11-07T14:03:11.624Z INFO    Playwright server  ws://192.168.122.57:5151/playwright, ws://localhost:5151/playwright (1.65.0)
+[bridge]            2026-11-07T14:03:11.624Z INFO    Playwright server  ws://192.168.122.57:5151/playwright, ws://localhost:5151/playwright (1.65.1)
 [bridge]            2026-11-07T14:03:11.624Z INFO    Playwright MCP     http://192.168.122.57:5151/playwright-mcp, http://localhost:5151/playwright-mcp (0.0.85)
 [bridge]            2026-11-07T14:03:11.624Z INFO    native input       robotjs
 [speech-capture]    2026-11-07T14:03:12.345Z INFO  connection 1 opened

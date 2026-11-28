@@ -96,7 +96,7 @@ with every run.
     "connections": [{ "id": 3, "voice": null, "connectedAt": "2026-11-07T14:01:02.000Z" }]
   },
   "buffer": { "size": 120, "maxEntries": 10000, "firstSeq": 223, "lastSeq": 342 },
-  "playwright": { "state": "running", "version": "1.65.0", "port": 3000, "restarts": 0, "exitCode": null },
+  "playwright": { "state": "running", "version": "1.65.1", "port": 3000, "restarts": 0, "exitCode": null },
   "mcp": { "state": "running", "version": "0.0.85", "port": 8931, "restarts": 0, "exitCode": null },
   "session": { "current": { "id": 7, "name": "checkout test", "run": null, "client": null, "startedAt": "2026-11-07T14:02:55.000Z", "endedAt": null, "startSeq": 339, "firstSeq": 340, "lastSeq": 342, "entries": 3 }, "count": 12 },
   "input": {

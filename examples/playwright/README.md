@@ -20,7 +20,7 @@ They need a VM with the bridge, a screen reader and the socket voice
    pnpm --filter screenreader-speech-capture-example-playwright test
    ```
 
-`@playwright/test` is pinned to `1.65.0`, the bridge's default Playwright version. A bridge started
+`@playwright/test` is pinned to `1.65.1`, the bridge's default Playwright version. A bridge started
 with another `--playwright-version` needs the same version here
 ([Version](../../docs/usage/playwright-mcp.md#version)).
 
@@ -48,7 +48,7 @@ The example depends on the client through the workspace (`workspace:*`). In your
 install it pinned instead and copy `playwright.config.ts` and a test:
 
 ```bash
-pnpm add -D screenreader-speech-capture-client@<version> @playwright/test@1.65.0 @types/node
+pnpm add -D screenreader-speech-capture-client@<version> @playwright/test@1.65.1 @types/node
 ```
 
 The steps are in [Setting up a test project](../../docs/usage/client.md#setting-up-a-test-project).
