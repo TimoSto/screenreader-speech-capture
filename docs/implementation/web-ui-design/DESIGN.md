@@ -119,7 +119,11 @@ input (result of the last input request), Sessions. Same data as `GET /api/v1/st
 ### Navigation rail
 
 Monitor, Settings, Setup. Active item: 56×32 `secondary-container` indicator. Setup is not designed
-yet (see `docs/web-ui.md` for its content).
+yet (see `docs/web-ui.md` for its content). Follows the
+[MD3 navigation rail accessibility guidelines](https://m3.material.io/components/navigation-rail/accessibility):
+every item is a tab stop and Arrow Up / Down also move between them; Enter and Space activate; hover
+and press ripple through the indicator; labels follow the browser's text size and wrap. One
+exception: the active item's icon stays outlined, because the filled icons looked bad.
 
 ### Settings: bridge settings
 
