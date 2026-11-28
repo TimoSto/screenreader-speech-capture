@@ -30,14 +30,14 @@
   {/if}
   <ul class="more">
     <li>
-      <ExternalLink href={docs('usage/troubleshooting.md#speech')}
-        >The voice is not listed</ExternalLink
-      >
+      <ExternalLink href={docs('usage/troubleshooting.md#speech')}>
+        The voice is not listed
+      </ExternalLink>
     </li>
     <li>
-      <ExternalLink href={docs('usage/vm-setup.md#more-voices--other-ports')}
-        >More voices, and removing them</ExternalLink
-      >
+      <ExternalLink href={docs('usage/vm-setup.md#more-voices--other-ports')}>
+        More voices, and removing them
+      </ExternalLink>
     </li>
   </ul>
 </section>
@@ -70,19 +70,19 @@
 
   <ul class="more">
     <li>
-      <ExternalLink href={docs('usage/vm-setup.md#a-german-voice')}
-        >JAWS in German or another language doesn't list the voice</ExternalLink
-      >
+      <ExternalLink href={docs('usage/vm-setup.md#a-german-voice')}>
+        JAWS in German or another language doesn't list the voice
+      </ExternalLink>
     </li>
     <li>
-      <ExternalLink href={docs('usage/vm-setup.md#prepare-the-vm')}
-        >Prepare the VM for CI</ExternalLink
-      >
+      <ExternalLink href={docs('usage/vm-setup.md#prepare-the-vm')}>
+        Prepare the VM for CI
+      </ExternalLink>
     </li>
     <li>
-      <ExternalLink href={docs('usage/vm-setup.md#screen-reader-licensing')}
-        >Screen reader licensing</ExternalLink
-      >
+      <ExternalLink href={docs('usage/vm-setup.md#screen-reader-licensing')}>
+        Screen reader licensing
+      </ExternalLink>
     </li>
   </ul>
 </section>

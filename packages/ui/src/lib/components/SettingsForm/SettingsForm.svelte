@@ -149,15 +149,19 @@
       <md-filled-button
         type="submit"
         aria-label="Save {name} settings"
-        soft-disabled={idle ? true : undefined}>Save</md-filled-button
+        soft-disabled={idle ? true : undefined}
       >
+        Save
+      </md-filled-button>
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
       <md-text-button
         type="button"
         aria-label="Revert {name} settings"
         soft-disabled={idle ? true : undefined}
-        onclick={revert}>Revert</md-text-button
+        onclick={revert}
       >
+        Revert
+      </md-text-button>
     </div>
   {/if}
 

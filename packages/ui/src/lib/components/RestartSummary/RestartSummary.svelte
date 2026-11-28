@@ -43,9 +43,9 @@
         <li>
           <strong>{change.label}:</strong>
           {change.from} → {change.to}.
-          {#each change.consequence as fragment, index (index)}{#if typeof fragment === 'string'}{fragment}{:else}<code
-                >{fragment.code}</code
-              >{/if}{/each}
+          {#each change.consequence as fragment, index (index)}{#if typeof fragment === 'string'}{fragment}{:else}<code>
+                {fragment.code}
+              </code>{/if}{/each}
         </li>
       {/each}
     </ul>
