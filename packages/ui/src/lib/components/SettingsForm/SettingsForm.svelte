@@ -19,7 +19,8 @@
   type Props = {
     /** What the form's buttons are about, for their accessible names (`speech capture`). */
     name: string;
-    settings: Setting[];
+    /** In order, one per grid cell; settings that belong together share a cell, stacked. */
+    settings: (Setting | Setting[])[];
     /** The configuration in use. */
     active: ConfigDto;
     /** The configuration the next start will use. */
@@ -45,7 +46,10 @@
   let justSaved = $state<{ waited: boolean } | null>(null);
   let form: HTMLFormElement;
 
-  const editable = $derived(settings.filter((setting) => overrides[setting.path] === undefined));
+  const cells = $derived(settings.map((cell) => [cell].flat()));
+  const editable = $derived(
+    cells.flat().filter((setting) => overrides[setting.path] === undefined),
+  );
   const changed = $derived(changedSettings(editable, drafts, saved));
   const idle = $derived(changed.length === 0 || busy);
   const waits = $derived(
@@ -109,29 +113,35 @@
     void save();
   }}
 >
-  {#each settings as setting (setting.path)}
-    {@const overriddenBy = overrides[setting.path]}
-    {@const inUse = readSetting(active, setting.path)}
-    <SettingField
-      {setting}
-      value={drafts[setting.path] ?? setting.format(readSetting(saved, setting.path))}
-      savedValue={setting.format(readSetting(saved, setting.path))}
-      help={setting.help(inUse, settingContext)}
-      pendingValue={isPending(setting.path, active, saved, overrides)
-        ? setting.describe(inUse, settingContext)
-        : undefined}
-      error={errors[setting.path] ?? ''}
-      fixed={overriddenBy === undefined
-        ? undefined
-        : { by: overriddenBy, value: setting.describe(inUse, settingContext) }}
-      onInput={(value: string) => {
-        drafts[setting.path] = value;
-        delete errors[setting.path];
-        justSaved = null;
-      }}
-      onSubmit={() => void save()}
-    />
-  {/each}
+  <div class="fields">
+    {#each cells as cell (cell[0].path)}
+      <div class="cell">
+        {#each cell as setting (setting.path)}
+          {@const overriddenBy = overrides[setting.path]}
+          {@const inUse = readSetting(active, setting.path)}
+          <SettingField
+            {setting}
+            value={drafts[setting.path] ?? setting.format(readSetting(saved, setting.path))}
+            savedValue={setting.format(readSetting(saved, setting.path))}
+            help={setting.help(inUse, settingContext)}
+            pendingValue={isPending(setting.path, active, saved, overrides)
+              ? setting.describe(inUse, settingContext)
+              : undefined}
+            error={errors[setting.path] ?? ''}
+            fixed={overriddenBy === undefined
+              ? undefined
+              : { by: overriddenBy, value: setting.describe(inUse, settingContext) }}
+            onInput={(value: string) => {
+              drafts[setting.path] = value;
+              delete errors[setting.path];
+              justSaved = null;
+            }}
+            onSubmit={() => void save()}
+          />
+        {/each}
+      </div>
+    {/each}
+  </div>
 
   {#if editable.length > 0}
     <!-- Soft-disabled: a disabled button would drop the focus it has after a save. -->
@@ -158,10 +168,28 @@
 </form>
 
 <style>
+  /* Wide enough for two columns of fields, not three. */
   form {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    max-width: 720px;
+    padding: 8px;
+  }
+
+  /* Two columns when the form has room for them. A column holds the longest option of a select. */
+  .fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+    align-items: start;
+    gap: 12px 24px;
+  }
+
+  .cell {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
     max-width: 480px;
   }
 
