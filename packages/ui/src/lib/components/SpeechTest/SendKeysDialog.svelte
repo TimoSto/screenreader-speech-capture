@@ -29,8 +29,10 @@
       onclick={() => {
         onClose();
         onSend();
-      }}>Send</md-text-button
+      }}
     >
+      Send
+    </md-text-button>
   </div>
 </md-dialog>
 

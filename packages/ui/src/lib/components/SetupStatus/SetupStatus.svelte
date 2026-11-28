@@ -58,26 +58,22 @@
           {row.state}
           {#if row.library !== null}
             {@const { name, href } = row.library}
-            <span
-              >({#if href === null}{name}{:else}<ExternalLink {href}
-                  >{name}<span class="visually-hidden"> on GitHub</span></ExternalLink
-                >{/if})</span
-            >
+            <span>
+              ({#if href === null}{name}{:else}<ExternalLink {href}>
+                  {name}<span class="visually-hidden"> on GitHub</span>
+                </ExternalLink>{/if})
+            </span>
           {/if}
           {#if row.help !== null}
             <span class="help">
               {#if 'href' in row.help}
-                <ExternalLink href={row.help.href}
-                  >{row.help.label}<span class="visually-hidden">
-                    (help for {row.label})</span
-                  ></ExternalLink
-                >
+                <ExternalLink href={row.help.href}>
+                  {row.help.label}<span class="visually-hidden"> (help for {row.label})</span>
+                </ExternalLink>
               {:else}
-                <ScreenReaderLink
-                  >{row.help.label}<span class="visually-hidden">
-                    (help for {row.label})</span
-                  ></ScreenReaderLink
-                >
+                <ScreenReaderLink>
+                  {row.help.label}<span class="visually-hidden"> (help for {row.label})</span>
+                </ScreenReaderLink>
               {/if}
             </span>
           {/if}

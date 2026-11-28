@@ -46,8 +46,10 @@
     <p>
       Windows can block the port without asking. On the bridge's machine, in an
       <strong>administrator</strong> PowerShell (<ExternalLink
-        href={docs('usage/vm-setup.md#firewall')}>firewall</ExternalLink
-      >):
+        href={docs('usage/vm-setup.md#firewall')}
+      >
+        firewall
+      </ExternalLink>):
     </p>
     <CommandBlock label="the firewall command" text={firewallCommand(httpPort)} {onCopy} />
   {:else}
@@ -75,8 +77,9 @@
     />
   {/if}
   <p>
-    <ExternalLink href={docs('usage/client.md')}>Set up the tests with the test client</ExternalLink
-    >
+    <ExternalLink href={docs('usage/client.md')}>
+      Set up the tests with the test client
+    </ExternalLink>
   </p>
 
   <h3>AI agents</h3>

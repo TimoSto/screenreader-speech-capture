@@ -108,22 +108,28 @@
     soft-disabled={busy ? true : undefined}
     onclick={() => {
       if (!busy) onListen();
-    }}>Listen</md-filled-button
+    }}
   >
+    Listen
+  </md-filled-button>
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <md-outlined-button
     type="button"
     soft-disabled={cannotSend ? true : undefined}
-    onclick={() => void send()}>Send {CHECK_CHORD}</md-outlined-button
+    onclick={() => void send()}
   >
+    Send {CHECK_CHORD}
+  </md-outlined-button>
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <md-text-button
     type="button"
     soft-disabled={busy ? undefined : true}
     onclick={() => {
       if (busy) onStop();
-    }}>Stop</md-text-button
+    }}
   >
+    Stop
+  </md-text-button>
 </div>
 
 {#if input !== null && !input.available}
@@ -152,15 +158,15 @@
     </li>
     <li>
       The voice must send to {port === null ? "the bridge's port" : `port ${port}`}
-      (<ExternalLink href={docsUrl(version, 'usage/troubleshooting.md#speech')}
-        >troubleshooting</ExternalLink
-      >).
+      (<ExternalLink href={docsUrl(version, 'usage/troubleshooting.md#speech')}>
+        troubleshooting
+      </ExternalLink>).
     </li>
     <li>
       JAWS: turn off
-      <ExternalLink href={docsUrl(version, 'usage/vm-setup.md#jaws-language-detection')}
-        >Detect Language Changes</ExternalLink
-      >.
+      <ExternalLink href={docsUrl(version, 'usage/vm-setup.md#jaws-language-detection')}>
+        Detect Language Changes
+      </ExternalLink>.
     </li>
   </ul>
 {:else if phase === 'silent'}
@@ -168,8 +174,9 @@
     {CHECK_CHORD} was sent. Use Listen and make the screen reader speak by hand: if that works, the keys
     don't reach the screen reader (<ExternalLink
       href={docsUrl(version, 'usage/troubleshooting.md#browser-and-input')}
-      >troubleshooting</ExternalLink
-    >).
+    >
+      troubleshooting
+    </ExternalLink>).
   </p>
 {/if}
 
