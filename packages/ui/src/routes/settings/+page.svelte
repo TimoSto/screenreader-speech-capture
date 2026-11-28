@@ -3,6 +3,7 @@
   import type { ConfigPatchDto } from '@screenreader-speech-capture/shared';
   import {
     BUFFER_SIZE,
+    MCP_ENABLED,
     PLAYWRIGHT_ENABLED,
     PLAYWRIGHT_VERSION,
     TCP_PORT,
@@ -85,7 +86,7 @@
         <h2 id="playwright-heading">Playwright and MCP</h2>
         <SettingsForm
           name="Playwright and MCP"
-          settings={[PLAYWRIGHT_ENABLED, PLAYWRIGHT_VERSION]}
+          settings={[PLAYWRIGHT_ENABLED, PLAYWRIGHT_VERSION, MCP_ENABLED]}
           active={configStore.active}
           saved={configStore.saved}
           overrides={configStore.overrides}

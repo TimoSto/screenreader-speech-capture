@@ -5,6 +5,7 @@ import { render } from 'vitest-browser-svelte';
 import { SettingRejected } from '#lib/core/config.js';
 import {
   BUFFER_SIZE,
+  MCP_ENABLED,
   PLAYWRIGHT_ENABLED,
   PLAYWRIGHT_VERSION,
   TCP_PORT,
@@ -512,6 +513,48 @@ describe('SettingsForm with a checkbox', () => {
   it.each([true, false])('has no axe violations (checked: %s)', async (enabled) => {
     const config = configWith({ playwright: { enabled } });
     const { container } = await render(SettingsForm, props({ active: config, saved: config }));
+    const results = await axe.run(container);
+    expect(results.violations.map((violation) => violation.id)).toEqual([]);
+  });
+});
+
+describe('SettingsForm with the Playwright server and MCP', () => {
+  const props = (patch: Record<string, unknown> = {}) =>
+    form({
+      name: 'Playwright and MCP',
+      settings: [PLAYWRIGHT_ENABLED, PLAYWRIGHT_VERSION, MCP_ENABLED],
+      active: configWith(),
+      saved: configWith(),
+      ...patch,
+    });
+
+  const mcp = () => page.getByRole('checkbox', { name: 'Playwright MCP' });
+  const saveAll = () => page.getByRole('button', { name: 'Save Playwright and MCP settings' });
+
+  it('saves both services and the version in one patch', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    await render(SettingsForm, props({ onSave }));
+    await page.getByRole('checkbox', { name: 'Playwright server' }).click();
+    await page.getByRole('textbox', { name: 'Playwright version' }).fill('1.64.0');
+    await mcp().click();
+    await saveAll().click();
+    expect(onSave).toHaveBeenCalledWith({
+      playwright: { enabled: false, version: '1.64.0' },
+      mcp: { enabled: false },
+    });
+  });
+
+  it('keeps the other settings editable when a flag turns MCP off', async () => {
+    const off = configWith({ mcp: { enabled: false } });
+    const overrides = { 'mcp.enabled': '--no-mcp' };
+    await render(SettingsForm, props({ active: off, saved: off, overrides }));
+    await expect.element(page.getByText('--no-mcp')).toBeInTheDocument();
+    expect(page.getByRole('checkbox').elements()).toHaveLength(1);
+    await expect.element(saveAll()).toBeInTheDocument();
+  });
+
+  it('has no axe violations', async () => {
+    const { container } = await render(SettingsForm, props());
     const results = await axe.run(container);
     expect(results.violations.map((violation) => violation.id)).toEqual([]);
   });

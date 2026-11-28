@@ -12,7 +12,12 @@ import {
 
 /** The settings with a UI element, by dotted path. */
 export type SettingPath =
-  'tcp.port' | 'tcp.encoding' | 'buffer.maxEntries' | 'playwright.enabled' | 'playwright.version';
+  | 'tcp.port'
+  | 'tcp.encoding'
+  | 'buffer.maxEntries'
+  | 'playwright.enabled'
+  | 'playwright.version'
+  | 'mcp.enabled';
 
 export type SettingValue = string | number | boolean | null;
 
@@ -141,15 +146,16 @@ const onOff = {
   describe: (on: boolean) => (on ? 'On' : 'Off'),
 } as const;
 
+/** What to know before a restart that turns a child service on. */
+const INSTALLS = 'The first start installs what is missing, which can take a minute or two.';
+
 export const PLAYWRIGHT_ENABLED: Setting<boolean> = {
   ...onOff,
   path: 'playwright.enabled',
   label: 'Playwright server',
   help: () => 'Tests connect to it to drive a browser on the VM.',
   consequence: (saved) => [
-    saved
-      ? 'The first start installs what is missing, which can take a minute or two.'
-      : "Tests can't connect to a browser on the VM while it is off.",
+    saved ? INSTALLS : "Tests can't connect to a browser on the VM while it is off.",
   ],
 };
 
@@ -225,6 +231,16 @@ export function buildPatch(
   return Object.keys(errors).length > 0 ? { ok: false, errors } : { ok: true, patch };
 }
 
+export const MCP_ENABLED: Setting<boolean> = {
+  ...onOff,
+  path: 'mcp.enabled',
+  label: 'Playwright MCP',
+  help: () => 'AI agents connect to it to drive a browser on the VM.',
+  consequence: (saved) => [
+    saved ? INSTALLS : "AI agents can't connect to a browser through it while it is off.",
+  ],
+};
+
 /** The settings with a UI element. */
 export const SETTINGS: readonly Setting[] = [
   TCP_PORT,
@@ -232,6 +248,7 @@ export const SETTINGS: readonly Setting[] = [
   BUFFER_SIZE,
   PLAYWRIGHT_ENABLED,
   PLAYWRIGHT_VERSION,
+  MCP_ENABLED,
 ];
 
 /** Whether the saved value of a setting waits for a restart. A flag or variable keeps winning. */
