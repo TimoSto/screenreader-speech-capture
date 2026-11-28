@@ -11,7 +11,7 @@ import { ensurePlaywright } from './playwright-installer.js';
  * Playwright version of the server when `playwright.version` is `null`. Clients need the same
  * version (docs/usage/playwright-mcp.md#playwright-server).
  */
-export const DEFAULT_PLAYWRIGHT_VERSION = '1.65.0';
+export const DEFAULT_PLAYWRIGHT_VERSION = '1.65.1';
 
 interface PlaywrightServerOptions {
   settings: ServiceSettings;

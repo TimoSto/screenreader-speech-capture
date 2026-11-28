@@ -65,7 +65,7 @@ GitHub issues. This file only tracks milestones.
 - [x] ESLint hexagon rules for `packages/ui` (components must not call `fetch`; the rule that the
       UI imports no bridge or client code exists)
 - [x] Status bar: Playwright / MCP / session chips, status read on load and on a refresh button (through the BFF)
-- [x] Navigation rail (Monitor `/ui/`, Settings `/ui/settings`, Setup `/ui/setup`; text-only pages so far)
+- [x] Navigation rail (Monitor `/ui/`, Settings `/ui/settings`, Setup `/ui/setup`)
 - [ ] Layout and status panel (side sheet; polls `GET /status`, or an SSE `status` event instead
       of polling)
 - [x] Context pane: sessions (newest first, follow the current one, new / end session dialogs, selection in `?session=`; the list is still polled every 3 s; the speech table has an SSE feed, the list could use its `session` events)
@@ -80,8 +80,12 @@ GitHub issues. This file only tracks milestones.
       (`data-theme` on `<html>`, choice remembered in `localStorage`). The UI starts light and
       ignores `prefers-color-scheme`
 - [x] Settings: TCP port field (saved on the bridge, "restart necessary" notice, read-only when a flag sets it)
-- [ ] Settings: the other bridge settings (validation, services)
-- [ ] Setup page with check button
+- [x] Settings: Playwright version field (same pattern; empty means the bundled version)
+- [x] Settings: text encoding, speech buffer size, Playwright server and MCP on / off, log level;
+      pending restarts in one summary (the other settings stay flags and config file)
+- [ ] Settings: state and version of the services
+- [x] Setup page: check (status rows, speech test by hand or with `Insert+T`)
+- [x] Setup page: instructions (socket voice, screen reader, connecting the test machine)
 - [ ] Accessibility of the UI itself (no feedback loop)
 
 ### M6 Agents 🚧
@@ -133,8 +137,8 @@ own SAPI 5 voice written in Rust.
   and JAWS see `Insert+T`? Check on a real VM in the M7 smoke test.
 - **Foreground lock:** does the Alt tap / `AttachThreadInput` sequence of `POST /input/focus` bring
   the browser forward reliably on Windows 10/11 with NVDA and JAWS running? Check on the VM (M7).
-- **Default versions:** `DEFAULT_PLAYWRIGHT_VERSION` (1.65.0) and the `@playwright/mcp`
-  dependency (0.0.85) are both pinned. Still open: how often to update them.
+- **Default versions:** `DEFAULT_PLAYWRIGHT_VERSION` (1.65.1) and the `@playwright/mcp`
+  dependency (0.0.86) are both pinned. Still open: how often to update them.
 - **Windows job object:** tie the child services to the bridge's process, so a hard kill of the
   bridge ends them too (see [Shutdown](usage/operations.md#shutdown)).
 - **JAWS in CI:** license the VM, or reset a snapshot before each run (demo mode stops after 40 minutes)?

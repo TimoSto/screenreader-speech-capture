@@ -1531,7 +1531,7 @@ components:
           type: string
           description: The version that runs (configured or bundled).
           examples:
-            - 1.65.0
+            - 1.65.1
         port:
           type: integer
           minimum: 0
@@ -1565,7 +1565,7 @@ components:
             - type: string
               pattern: ^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$
             - type: 'null'
-          description: '`null` = bundled version. Otherwise an exact version like `1.65.0`.'
+          description: '`null` = bundled version. Otherwise an exact version like `1.65.1`.'
       required: []
       additionalProperties: false
     ServiceConfig:
@@ -1582,7 +1582,7 @@ components:
             - type: string
               pattern: ^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$
             - type: 'null'
-          description: '`null` = bundled version. Otherwise an exact version like `1.65.0`.'
+          description: '`null` = bundled version. Otherwise an exact version like `1.65.1`.'
       required:
         - enabled
         - port

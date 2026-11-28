@@ -4,9 +4,11 @@ The web UI served by the bridge, for people watching, driving and configuring it
 
 > **Partly implemented ([M5](../ROADMAP.md#m5-web-ui-)).** Working today: the status chips with a
 > refresh button, the [context pane](#context-pane) (sessions), the [live log](#live-log) with
-> markers, clear and delete, and on the [Settings](#settings) page the color theme and the TCP port.
-> The rest of this page is design and marked *(planned)*: the status panel, the actions panel, the
-> other settings and the Setup page's check.
+> markers, clear and delete, on the [Settings](#settings) page the color theme, the TCP port, the
+> text encoding, the speech buffer size, the Playwright server and its version, Playwright MCP and the
+> log level, and the [Setup](#setup) page.
+> The rest of this page is design and marked *(planned)*: the status panel, the actions panel and the
+> service state on the Settings page.
 
 The UI is at `http://<vm>:5151/ui/` (`/` leads there): **Monitor** (`/ui/`), **Settings**
 (`/ui/settings`) and **Setup** (`/ui/setup`).
@@ -145,7 +147,27 @@ The actions panel sends [native input](native-input.md) through the bridge, the 
 ## Settings
 
 The page is one pane, like the speech log, with a section per topic (its "Settings" heading is for
-screen readers only).
+screen readers only). Appearance is kept in the browser and applies at once; every other setting is
+saved on the bridge and applies when the bridge is restarted.
+
+### Bridge settings
+
+Each section is a form of its own: **Save** (or Enter in a field) saves what changed in that
+section with one `PUT /api/v1/config`, **Revert** puts the saved values back. Nothing is saved by
+itself. If one value is refused in the browser, nothing is saved and the focus moves to its field.
+An error from the bridge is shown under the form, and what was typed stays.
+
+- After a save the form says "Saved." and, if something waits, to restart the bridge.
+- A saved setting that isn't in use yet is marked on its field: "Restart pending, in use: …".
+- While anything waits, a box at the top lists every such change with what to know before the
+  restart, also settings saved through the API that have no field here (shown by their dotted path).
+  A restart empties the recorded speech and sessions ([Operations](operations.md#restarting-the-bridge)).
+  **Check again** reads the settings and the status again after the restart; the page doesn't poll.
+  All of this survives a reload: the page compares `GET /config` with `GET /config?view=saved`.
+- A setting a flag or variable sets (`--tcp-port`, `GET /config/overrides`) wins over the config file
+  on every start, so the page shows it as text: the value **in use** and what sets it. A value saved
+  through the API meanwhile isn't shown, and no restart is asked for.
+- If the settings can't be read, one message with **Try again** takes the place of these sections.
 
 ### Appearance
 
@@ -156,37 +178,106 @@ the system's `prefers-color-scheme`.
 
 ### Speech capture
 
-Settings saved on the bridge, so unlike the theme they are not kept in the browser and apply only
-when the bridge is restarted. So far one field, the **TCP port** the [socket voice](vm-setup.md#socket-voice-setup)
-sends to (default 4449). Enter saves, or the **Save** button; **Revert** puts the saved port back.
+- **TCP port:** the port the [socket voice](vm-setup.md#socket-voice-setup) sends to (default 4449), a
+  whole number from 1 to 65535. The voice on the VM has its port built in, so after a change add a
+  whole number from 1 to 65535. The voice on the VM has its port built in, so after a change add a
+  voice for the new port (`text-to-socket-engine-add-voice`) and select it.
+- **Text encoding:** the code page the voice sends, the VM's ANSI code page
+  ([Wire format](speech-capture.md#wire-format)): a list of the Windows code pages and UTF-8. Another
+  label saved elsewhere (such as `cp1252`) is shown and kept.
+- **Speech buffer size:** how many entries the [buffer](speech-capture.md#buffer) keeps (default
+  10 000), a whole number from 1 to 1 000 000.
 
-- A port is checked in the browser first (a whole number from 1 to 65535), then saved with
-  `PUT /api/v1/config {"tcp":{"port":…}}`. An error from the bridge, for example a port that is
-  already used, is shown under the field.
-- The field shows what is saved. "In use" is what the bridge listens on now (`GET /config`). When
-  the saved port differs, a notice says to restart the bridge, and that the voice on the VM sends to
-  a fixed port, so a voice for the new port has to be added (`text-to-socket-engine-add-voice`)
-  and selected. The notice survives a reload: the page compares `GET /config` with
-  `GET /config?view=saved`.
-- A port set by a flag or variable (`--tcp-port`, `GET /config/overrides`) shows the flag and can't be
-  edited: it wins over the config file on every start.
+### Playwright and MCP
 
-### More bridge settings *(planned, [M5](../ROADMAP.md))*
+- **Playwright server:** a checkbox for [the server](playwright-mcp.md) tests connect to
+  (`playwright.enabled`, on by default). While it is off, tests can't use a browser on the VM.
+- **Playwright version** of the [Playwright server](playwright-mcp.md#version): an exact version like
+  `1.65.1`, or empty for the bundled one (`null`). Its number is under the field while the bundled one
+  runs. Whether the version exists is only found out on the next start: the service then fails.
+- **Playwright MCP:** a checkbox for [the MCP server](playwright-mcp.md) AI agents connect to
+  (`mcp.enabled`, on by default). It brings its own Playwright, so the version above doesn't change it.
 
-A form for the rest of the [configuration](configuration.md): other ports, hosts, encoding, buffer
-size, log file, Playwright version, and native input on/off, with the same pattern as the TCP port.
+### Bridge log
 
-- **Services:** the state and version of the Playwright server and MCP (from `status`). They are
-  switched on and off with their `enabled` setting; there are no start / stop buttons.
+- **Log level** of the [bridge log](operations.md#logging) (`log.level`, default `info`). At `debug`
+  the file also gets everything the screen reader says.
+
+### Settings without a field
+
+The rest of the [configuration](configuration.md) is set with a flag, a variable or the config file.
+`http.host`, `http.port`, `http.allowedHosts` and `tcp.host` could cut people off from the UI or
+weaken its protection ([why](../implementation/decisions.md#the-settings-page-saves-by-section-and-leaves-access-settings-out));
+`log.consoleSpeech` can start a speech feedback loop; the ports of the Playwright server and MCP,
+`log.file` and `tcp.maxLineBytes` are rarely needed.
+
+### Service state *(planned, [M5](../ROADMAP.md#m5-web-ui-))*
+
+The state and version of the Playwright server and MCP (from `status`) in their section. They are
+turned on and off with their checkboxes; there are no start / stop buttons.
 
 ## Setup
 
-*(planned, [M5](../ROADMAP.md#m5-web-ui-); the page exists but has no content yet)*
+Two tabs, each a page of its own:
 
-The [socket voice](vm-setup.md#socket-voice-setup) and [screen reader](vm-setup.md#screen-reader-setup) instructions
-from these docs, plus a **check** button. It inserts a marker, asks you to make the screen
-reader speak (or sends `Insert+T` through native input, if enabled), and shows a green check when
-speech arrives within a few seconds.
+- **Check** (`/ui/setup`): is the VM set up? The [status](#status-1) the bridge knows and a
+  [speech test](#speech-test).
+- **Instructions** (`/ui/setup/instructions`): the [steps](#instructions) to get there.
+
+Links to these docs open them on GitHub, as of the bridge's release (`main` for a preview or a
+development build). Leaving the Check tab stops a running speech test.
+
+### Status
+
+One row each, read when the page opens and again with **Check again** (the page doesn't poll):
+
+| Row | Warning when |
+|---|---|
+| Speech listener, with the port and encoding | the bridge doesn't listen |
+| Voice connected, with the number of connections and the voices | never: the voice only [connects with its first words](speech-capture.md#wire-format) |
+| Native input and Window focus | not available, with the reason |
+| Playwright server and Playwright MCP | crashed or failed (starting and off are not warnings) |
+
+A row that isn't fine links to what helps: the screen reader steps under [Instructions](#instructions),
+or the docs. The library behind native input
+([robotjs](https://github.com/jitsi/robotjs)) and window focus
+([koffi](https://github.com/Koromix/koffi)) is named with a link to its repository.
+
+### Speech test
+
+- **Listen** waits 30 s for new speech, in any session or outside one. Make the screen reader speak,
+  for example with a key press. It adds nothing to the recording.
+- **Send Insert+T** (read the window title) sends the keys to the foreground window of the VM with
+  [native input](native-input.md), after a marker `ui: Insert+T`, and waits 5 s for the speech after
+  that marker. While a session is running it asks first, because the speech lands in that session.
+  The button is off when native input isn't available.
+- **Stop** ends the test.
+
+When speech arrives, the page shows up to five entries (those that follow until a second passes
+without speech). Wrong characters mean the wrong [text encoding](#speech-capture). When nothing
+arrives after **Listen**, check the [selected voice](#instructions), its port and, with JAWS,
+[language detection](vm-setup.md#jaws-language-detection). When nothing arrives after
+**Send Insert+T** but **Listen** works, the keys don't reach the screen reader.
+
+Opened on the VM itself, the arrived text is hidden from the screen reader
+(see [Accessibility](#accessibility-of-the-ui-itself)). The screen reader still reads the page, and
+that speech can pass the test.
+
+### Instructions
+
+The short steps of [VM setup](vm-setup.md), filled with the bridge's values. Each command has a
+**Copy** button. Long, rare and one-off topics are links to the docs.
+
+- **Socket voice:** installing and registering it. If the bridge listens somewhere the default voice
+  doesn't send to (`tcp.port`, `tcp.host`), also the command that adds a voice for it.
+- **Screen reader:** selecting that voice in NVDA or JAWS.
+- **Test machine:** the [client's bridge URL](client.md#bridge-url), the test packages with the
+  bridge's [Playwright version](playwright-mcp.md#version) and the
+  [MCP client entry](playwright-mcp.md#playwright-mcp). A service that is off points to
+  [Settings](#playwright-and-mcp) instead. The URL is the page's own address. Opened as `localhost`
+  or another loopback address, it holds `<vm-ip>` to fill in, with the bridge's HTTP port. Opened on
+  the VM, the page also shows the [firewall](vm-setup.md#firewall) command, and it warns when
+  `http.host` keeps other machines out.
 
 ## Accessibility of the UI itself
 

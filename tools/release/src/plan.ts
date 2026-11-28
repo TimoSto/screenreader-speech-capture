@@ -36,7 +36,8 @@ export function planRelease(
 ): PackagePlan {
   const lastVersion = parseLast(pkg, last);
   const { bump, entries } = collect(pkg, commits);
-  const version = bump === null ? null : formatVersion(nextVersion(lastVersion, bump, null));
+  const version =
+    bump === null ? null : formatVersion(usable(pkg, nextVersion(lastVersion, bump, null)));
   return { pkg, last, bump, version, entries };
 }
 
@@ -59,6 +60,15 @@ export function planPreview(
   const next = nextVersion(lastVersion, bump ?? 'patch', null);
   const version = formatVersion({ ...next, pre: { id: slug, n: run } });
   return { pkg, last, bump: bump ?? 'patch', version, entries };
+}
+
+/** `next`, or the first patch after it that is not one of the package's `unusableVersions`. */
+function usable(pkg: ReleasePackage, next: Version): Version {
+  let version = next;
+  while (pkg.unusableVersions?.includes(formatVersion(version))) {
+    version = { ...version, patch: version.patch + 1 };
+  }
+  return version;
 }
 
 function parseLast(pkg: ReleasePackage, last: string): Version {

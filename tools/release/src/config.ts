@@ -10,6 +10,11 @@ export interface ReleasePackage {
   dir: string;
   /** More directories built into this package only (the bridge ships `packages/ui`). */
   extraDirs?: string[];
+  /**
+   * Stable versions npm refuses because they were published once and then removed. A release that
+   * would get one takes the next free patch instead.
+   */
+  unusableVersions?: string[];
 }
 
 export interface ReleaseConfig {

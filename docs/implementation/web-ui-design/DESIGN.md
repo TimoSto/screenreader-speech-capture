@@ -85,6 +85,14 @@ API over loopback; core / adapters / stores / components layers.
 
 ## Components
 
+### Loading placeholders
+
+Until the scripts have defined a Material element, CSS alone (`:not(:defined)` in `global.css`)
+draws a shimmering placeholder in its size: a 56px box and a bar for the supporting text for a text
+field or select, a pill as wide as its label for a button, a circle for an icon (also until the icon
+font is there). A dialog shows nothing. The shimmer stands still with reduced motion. A supporting
+text of more than one line still moves what follows when the field appears.
+
 ### Top app bar = status bar
 
 - Logo tile (44 px, radius 14, `primary`), title (title-large), mono subline:
@@ -115,18 +123,35 @@ yet (see `docs/web-ui.md` for its content).
 
 ### Settings: bridge settings
 
-One section per topic in the single pane, separated by a divider. "Appearance" is stored in this
-browser and applies at once; "Speech capture" is stored on the bridge and applies after a restart,
-which its hint line says ("Saved on the bridge. A change takes effect when the bridge is
-restarted."). A bridge setting is a Material outlined text field (`inputmode="numeric"` for a port,
-not `type=number`: no spinner, no scroll-wheel changes) with an explicit **Save** (filled) and
-**Revert** (text) button, never autosave: a half-typed `44` must not be saved, and a save has a
-consequence. Save is disabled until the value differs from the saved one. The browser check
-(`error-text` on the field) and the bridge's refusal (`role="alert"` under the field, the field keeps
-the typed value) are separate. A saved-but-not-applied setting shows a `--app-warning-container`
-notice in an always-present `role="status"` region, so it is announced when it appears; it states
-the consequence for the VM (the voice has the port built in). A setting a flag or variable sets
-shows the flag and no buttons.
+One section per topic in the single pane, separated by a divider: no tabs and no collapsed parts,
+which would hide pending changes and unsaved input. An intro line says that "Appearance" is stored in
+this browser and applies at once, and the rest applies after a restart.
+
+- A section is one form with an explicit **Save** (filled) and **Revert** (text) button, never
+  autosave: a half-typed `44` must not be saved, and a save has a consequence. The buttons are
+  soft-disabled until something differs from the saved values, so they keep the focus after a save.
+  Their accessible names include the section ("Save speech capture settings").
+- A text setting is a Material outlined text field (`inputmode="numeric"` for a port, not
+  `type=number`: no spinner, no scroll-wheel changes). The browser check (`error-text` on the field)
+  and the bridge's refusal (`role="alert"` under the form, the fields keep what was typed) are
+  separate.
+- A choice from a closed set (the text encoding) is a Material outlined select, not free text.
+- An on / off setting is a native checkbox with a description under it (`md-checkbox` doesn't pass a
+  description to the control), placed like a text field's supporting text: 4px under the box, 16px
+  in. It never saves by itself.
+- A refusal that names a setting of the form shows on that field and gets the focus; it ends with
+  "Nothing was saved.".
+- Each form has an always-present `role="status"` for "Saved.".
+- A saved-but-not-applied setting has a `--app-warning` bar and "Restart pending, in use: …" in its
+  supporting text. The consequences stand once, in a `--app-warning-container` box above the
+  sections, which is not a live region.
+- A setting a flag or variable sets is a read-only row: label, value in use, what sets it.
+- The fields of a section stand in two columns when each can be 340px wide, else in one (up to
+  480px wide). This follows the form's width, not a screen breakpoint, and there is never a third
+  column. Save, Revert and the messages stay below.
+- Settings that belong together share a column, stacked: the Playwright version under its server's
+  checkbox, beside the MCP checkbox. So Tab goes down a column before it moves to the next.
+- Below 600px the pane's padding shrinks.
 
 ### Sessions pane
 

@@ -7,6 +7,7 @@ the API. The design is in [the web UI](../architecture.md#the-web-ui-a-sveltekit
 
 1. [Mounting the UI at startup](#mounting-the-ui-at-startup)
 2. [A page request](#a-page-request)
+3. [The setup check](#the-setup-check)
 
 ## Mounting the UI at startup
 
@@ -58,3 +59,31 @@ sequenceDiagram
     UI->>UI: checkDto(StatusSchema) (mismatch → 502)
     UI-->>B: HTML (server-rendered)
 ```
+
+## The setup check
+
+**Send Insert+T** on the Setup page ([what it does](../../usage/web-ui.md#speech-test)). **Listen** is
+the same without the marker and the keys. The pieces are in
+[the web UI](../architecture.md#the-web-ui-a-sveltekit-bff).
+
+```mermaid
+sequenceDiagram
+    participant S as voice check store<br/>(browser)
+    participant UI as BFF routes<br/>(/ui/api)
+    participant API as Bridge API<br/>/api/v1
+
+    S->>UI: GET status
+    UI->>API: GET /status
+    API-->>S: buffer.lastSeq (via the BFF)
+    S->>UI: GET speech/stream?since=lastSeq (EventSource)
+    UI->>API: GET /speech/stream
+    S->>UI: POST markers { label: "ui: Insert+T" }
+    UI->>API: POST /markers
+    S->>UI: POST input/keys { keys: "Insert+T" }
+    UI->>API: POST /input/keys
+    API-->>S: marker, then speech entries (stream)
+    S->>S: speech after the marker: heard, collect until 1 s quiet
+    Note over S: nothing within 5 s: silent
+    S->>UI: close the stream
+```
+

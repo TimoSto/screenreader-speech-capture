@@ -1,9 +1,11 @@
 import {
   checkDto,
   SpeechEntrySchema,
+  type SpeechEntryDto,
   type SpeechListDto,
 } from '@screenreader-speech-capture/shared';
 import type { SessionScope } from '#lib/core/sessions.js';
+import type { SpeechProbe, SpeechProbeHandlers } from '#lib/core/setup.js';
 import type { SpeechFeed, SpeechFeedHandlers } from '#lib/core/speech.js';
 import { routeJson } from './route-request.js';
 
@@ -17,7 +19,7 @@ const PAGE_SIZE = 1000;
  *   shows as `reconnecting` and the missed entries are replayed.
  * - An ended session never gets new entries: it is read page by page, once, without a stream.
  */
-export class SseSpeechFeed implements SpeechFeed {
+export class SseSpeechFeed implements SpeechFeed, SpeechProbe {
   constructor(
     private readonly streamUrl: string,
     private readonly speechUrl: string,
@@ -28,12 +30,28 @@ export class SseSpeechFeed implements SpeechFeed {
     return live ? this.follow(scope, handlers) : this.read(scope, handlers);
   }
 
+  listen(since: number, handlers: SpeechProbeHandlers): () => void {
+    // Without `session`, the stream carries the speech of every scope.
+    const source = this.stream(`since=${since}`, (entry) => handlers.onEntry(entry));
+    source.onopen = () => handlers.onState('live');
+    // Closed: the route refused the stream, and `EventSource` won't try again.
+    source.onerror = () =>
+      handlers.onState(source.readyState === EventSource.CLOSED ? 'failed' : 'reconnecting');
+    return () => source.close();
+  }
+
   private follow(scope: SessionScope, handlers: SpeechFeedHandlers): () => void {
-    const source = new EventSource(
-      `${this.streamUrl}?session=${encodeURIComponent(String(scope))}&since=0`,
+    const source = this.stream(`session=${encodeURIComponent(String(scope))}&since=0`, (entry) =>
+      handlers.onEntry(entry),
     );
     source.onopen = () => handlers.onState('live');
     source.onerror = () => handlers.onState('reconnecting');
+    source.addEventListener('clear', () => handlers.onClear());
+    return () => source.close();
+  }
+
+  private stream(query: string, onEntry: (entry: SpeechEntryDto) => void): EventSource {
+    const source = new EventSource(`${this.streamUrl}?${query}`);
     source.addEventListener('entry', (event) => {
       let data: unknown;
       try {
@@ -43,10 +61,9 @@ export class SseSpeechFeed implements SpeechFeed {
       }
       // The one check left in the browser: the BFF relays the stream as it is, unchecked.
       const checked = checkDto(SpeechEntrySchema, data);
-      if (checked.ok) handlers.onEntry(checked.value);
+      if (checked.ok) onEntry(checked.value);
     });
-    source.addEventListener('clear', () => handlers.onClear());
-    return () => source.close();
+    return source;
   }
 
   private read(scope: SessionScope, handlers: SpeechFeedHandlers): () => void {

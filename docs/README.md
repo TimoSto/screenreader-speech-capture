@@ -16,7 +16,7 @@ For people who set up the VM, write tests or run agents against the bridge.
 | [Native input](usage/native-input.md) | Real clicks and key presses: when Playwright input isn't enough |
 | [Remote Playwright & MCP](usage/playwright-mcp.md) | The Playwright server and Playwright MCP run by the bridge |
 | [Agents](usage/agents.md) | Agent loop with the CLI, agent skill (partly planned) |
-| [Web UI](usage/web-ui.md) | Sessions, live log, settings (partly planned), actions and setup page (planned) |
+| [Web UI](usage/web-ui.md) | Sessions, live log, settings (partly planned), setup page, actions (planned) |
 | [Configuration](usage/configuration.md) | CLI flags, environment variables, config file |
 | [Operations](usage/operations.md) | Startup, shutdown, crash recovery, logging |
 | [Troubleshooting](usage/troubleshooting.md) | Common problems and fixes |
@@ -59,4 +59,4 @@ For contributors: how the bridge and client are built and why.
 | [Lifecycle](implementation/flows/lifecycle.md) | Startup order and shutdown |
 | [Config](implementation/flows/config.md) | `PUT /config` through the layers |
 | [Child services](implementation/flows/child-services.md) | Install, spawn, crash restarts with backoff, giving up |
-| [Web UI](implementation/flows/web-ui.md) | Mounting the SvelteKit BFF, a page request through the bridge |
+| [Web UI](implementation/flows/web-ui.md) | Mounting the SvelteKit BFF, a page request through the bridge, the setup check |

@@ -30,7 +30,7 @@ export const AllowedHostsSchema = v.pipe(
 
 const playwrightVersion = v.pipe(
   v.nullable(v.pipe(v.string(), v.regex(EXACT_VERSION_PATTERN))),
-  v.description('`null` = bundled version. Otherwise an exact version like `1.65.0`.'),
+  v.description('`null` = bundled version. Otherwise an exact version like `1.65.1`.'),
 );
 
 export const ServiceConfigSchema = v.object({

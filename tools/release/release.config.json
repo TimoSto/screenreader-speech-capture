@@ -5,9 +5,15 @@
       "scope": "bridge",
       "name": "screenreader-speech-capture",
       "dir": "packages/bridge",
-      "extraDirs": ["packages/ui"]
+      "extraDirs": ["packages/ui"],
+      "unusableVersions": ["1.0.0", "1.0.1"]
     },
-    { "scope": "client", "name": "screenreader-speech-capture-client", "dir": "packages/client" }
+    {
+      "scope": "client",
+      "name": "screenreader-speech-capture-client",
+      "dir": "packages/client",
+      "unusableVersions": ["1.0.0"]
+    }
   ],
   "sharedDirs": ["packages/shared"],
   "otherScopes": ["shared", "fake-speech", "release", "ui", "deps"]

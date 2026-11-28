@@ -45,6 +45,7 @@ refined it (`git log -S '<heading>' -- docs/implementation/decisions.md`).
 
 - [The web UI is a SvelteKit BFF inside the bridge process](#the-web-ui-is-a-sveltekit-bff-inside-the-bridge-process) ([#145](https://github.com/TimoSto/screenreader-speech-capture/pull/145))
 - [The UI's server build is self-contained](#the-uis-server-build-is-self-contained) ([#168](https://github.com/TimoSto/screenreader-speech-capture/pull/168))
+- [The Settings page saves by section and leaves access settings out](#the-settings-page-saves-by-section-and-leaves-access-settings-out) ([#246](https://github.com/TimoSto/screenreader-speech-capture/pull/246))
 - [The UI uses SvelteKit's experimental remote functions](#the-ui-uses-sveltekits-experimental-remote-functions) ([#203](https://github.com/TimoSto/screenreader-speech-capture/pull/203))
 - [The speech table follows live scopes over SSE and reads ended sessions once](#the-speech-table-follows-live-scopes-over-sse-and-reads-ended-sessions-once) ([#172](https://github.com/TimoSto/screenreader-speech-capture/pull/172))
 - [The speech table is a real `<table>`](#the-speech-table-is-a-real-table) ([#172](https://github.com/TimoSto/screenreader-speech-capture/pull/172))
@@ -52,6 +53,7 @@ refined it (`git log -S '<heading>' -- docs/implementation/decisions.md`).
 - [The add-marker action only shows where the marker would land](#the-add-marker-action-only-shows-where-the-marker-would-land) ([#173](https://github.com/TimoSto/screenreader-speech-capture/pull/173))
 - [The UI theme lives in the browser, not in the bridge config](#the-ui-theme-lives-in-the-browser-not-in-the-bridge-config) ([#179](https://github.com/TimoSto/screenreader-speech-capture/pull/179))
 - [A UI opened on the bridge's machine hides its log from the screen reader](#a-ui-opened-on-the-bridges-machine-hides-its-log-from-the-screen-reader) ([#192](https://github.com/TimoSto/screenreader-speech-capture/pull/192))
+- [The Setup page repeats the short setup steps](#the-setup-page-repeats-the-short-setup-steps) ([#256](https://github.com/TimoSto/screenreader-speech-capture/pull/256))
 
 ## Node.js, not Go
 
@@ -477,6 +479,19 @@ address is loopback or one of the machine's own interface addresses (a page open
 the region and `tabindex`, and a warning banner above the log says why. A page opened from another machine is unchanged. A proxy that
 connects from the machine itself makes remote viewers look local.
 
+## The Settings page saves by section and leaves access settings out
+
+The Settings page is one scrolling page of topic sections, each saved on its own. One tall form per
+setting made the page several screens long; one Save for the whole page puts the button far from the
+edit and lets one refused value block unrelated ones; autosave would save half-typed values. The
+restart consequences are collected in one box, since every bridge setting waits for a restart.
+
+Settings that can cut people off from the UI or weaken access protection (`http.host`, `http.port`,
+`http.allowedHosts`, `tcp.host`) get no field: a wrong value saved from the UI might not be
+reachable from the UI any more. `log.consoleSpeech` can start a speech feedback loop, and ports of
+the child services, the log file and the line limit are rarely needed. All stay flags and config
+file settings.
+
 ## The UI uses SvelteKit's experimental remote functions
 
 Remote functions (`query`, `command` in `*.remote.ts`) replace a hand-written `+server.ts` route and a
@@ -492,3 +507,12 @@ time, starting with the sessions list (`lib/remote/sessions.remote.ts`). Two rul
   is always `undefined`, so the page's load awaits the query and the page seeds the store with the result
   while it renders.
 
+## The Setup page repeats the short setup steps
+
+The commands and screen reader steps of [VM setup](../usage/vm-setup.md) exist twice: in the docs
+and under [Setup instructions](../usage/web-ui.md#instructions) in the UI. One home per fact is the
+rule, but the page fills in what the docs can't (the voice for the port the bridge listens on, the
+URL, the Playwright version, the firewall port) and has copy buttons. Rendering the Markdown into
+the UI would need a build step and placeholders in the docs for a few short lists. The docs stay the
+home, only short steps that almost everyone needs are repeated, and a test checks that the commands
+match (`lib/core/instructions.test.ts`).

@@ -303,12 +303,18 @@ the speech store, which the monitor page re-opens whenever the selected scope ch
   `BridgeApi.clearSpeech` (`DELETE /api/v1/speech?session=<id|none>`). `canClearSpeech` shows the button
   for the live scopes only. Nothing is removed locally: the scope's SSE feed gets the bridge's scoped
   `clear` event and empties the table; the page then re-reads the sessions list for the counts.
-- **Bridge settings**: `HttpConfigApi` (the `ConfigApi` port) reads `GET /ui/api/config`, which answers
-  `{ active, saved, overrides }` from three bridge calls (`BridgeApi.config('active'|'saved')`,
-  `configOverrides`), and saves with `PUT /ui/api/config` (`BridgeApi.updateConfig`, `PUT /api/v1/config`).
+- **Bridge settings**: `readConfigState` (`lib/server`) reads `{ active, saved, overrides }` with three
+  bridge calls (`BridgeApi.config('active'|'saved')`, `configOverrides`). The Settings page's load calls it
+  and the page seeds the config store while rendering, so the server's HTML has the settings. In the
+  browser, `HttpConfigApi` (the `ConfigApi` port) re-reads it through `GET /ui/api/config` (after a save,
+  or if the load failed) and saves with `PUT /ui/api/config` (`BridgeApi.updateConfig`, `PUT /api/v1/config`).
   A refused setting keeps the bridge's `details.field` as `error.field` (`App.Error`), which the adapter turns
   into a `SettingRejected`. The config store keeps the state and `pending` (`pendingFields`: the saved
-  settings that differ from what runs); the page and `TcpPortSetting` only show it.
+  settings that differ from what runs); the page and its setting components only show it.
+  Each setting is data in `lib/core/settings.ts` (label, texts, how its value is shown and read), and
+  `buildPatch` makes a patch of the changed ones only. `SettingsForm` is the form of one section (drafts,
+  save) and renders each setting with `SettingField` (a text field, a select, a `CheckboxField`, or a read-only row if a flag sets it). `RestartSummary`
+  lists what waits for a restart (`waitingForRestart`).
 - **Sessions list**: the `getSessions` remote query (`lib/remote/sessions.remote.ts`, `BridgeApi.sessions`).
   The monitor page's load awaits it, so the server's HTML has the list and Kit puts the answer in the
   page. The page seeds the sessions store with it while rendering, on the server too.
@@ -318,10 +324,23 @@ the speech store, which the monitor page re-opens whenever the selected scope ch
   `BridgeApi.deleteSession` (`DELETE /api/v1/sessions?session=<id>`). `canDeleteSession` shows the
   button only for an ended session; the page picks the next scope with `scopeAfterDelete` before the
   list is read again.
+- **Setup check**: `deriveCheckRows` (`lib/core/setup.ts`) turns the status into the page's rows, and
+  `docsUrl` builds their links. The speech test is the voice check store: it reads the status for the
+  newest `seq`, follows every scope's speech from there (`SseSpeechFeed.listen`, the `SpeechProbe`
+  port: the stream relay without `session`) and, to send keys, adds its marker and calls
+  `HttpKeysApi.press` (`POST /ui/api/input/keys`, `BridgeApi.pressKeys`, `POST /api/v1/input/keys`
+  without `capture`). Only the speech after its own marker counts then. A new run or leaving the page
+  ends the stream ([flow](flows/web-ui.md#the-setup-check)).
+- **Setup instructions**: `lib/core/instructions.ts` builds the commands from the status (`tcp`, the
+  services), the page's address and `http` of the active config (the server load of
+  `/ui/setup/instructions`). The two Setup tabs are routes under one layout; `TabBar` links them.
+  `CommandBlock` copies through the `Clipboard` port: `BrowserClipboard` uses `navigator.clipboard`
+  and, outside a secure context (plain HTTP from another machine), a selected text area
+  ([decision](decisions.md#the-setup-page-repeats-the-short-setup-steps)).
 
 ### Serving the UI
 
-The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's routes under `/ui/api/` (`status`, `sessions` (`POST` only), `sessions/<id>`, `speech`, `speech/stream`, `markers`, `config`). Every route reads a scope the same way: `parseScope` (`lib/core/sessions.ts`)
+The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings`, `/ui/setup` and `/ui/setup/instructions` the others, the BFF's routes under `/ui/api/` (`status`, `sessions` (`POST` only), `sessions/<id>`, `speech`, `speech/stream`, `markers`, `input/keys`, `config`). Every route reads a scope the same way: `parseScope` (`lib/core/sessions.ts`)
 accepts a session id or `none`. `scopeParam` (`lib/server/scope.ts`) applies it to `?session=` and
 answers 400 for anything else, and the `id` matcher does the same for
 `sessions/<id>` (`src/params.ts`, typed as a number), where an invalid id is a 404. The bridge's UI handler redirects the bare `/` to `/ui/`. Code builds URLs with `resolve()` from `$app/paths`.

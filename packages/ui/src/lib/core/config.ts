@@ -1,4 +1,9 @@
-import type { ConfigDto, ConfigPatchDto } from '@screenreader-speech-capture/shared';
+import {
+  CONFIG_LIMITS,
+  EXACT_VERSION_PATTERN,
+  type ConfigDto,
+  type ConfigPatchDto,
+} from '@screenreader-speech-capture/shared';
 
 /** What the settings page knows about the bridge's configuration. */
 export interface ConfigState {
@@ -65,4 +70,33 @@ export function parsePort(
   if (!/^\d{1,5}$/.test(trimmed)) return { ok: false, message: PORT_MESSAGE };
   const port = Number(trimmed);
   return port >= 1 && port <= 65535 ? { ok: true, port } : { ok: false, message: PORT_MESSAGE };
+}
+
+export const PLAYWRIGHT_VERSION_MESSAGE =
+  'Enter an exact version like 1.65.0, or leave the field empty.';
+
+/** Reads a Playwright version as typed: an exact version, or empty for the bundled one (`null`). */
+export function parsePlaywrightVersion(
+  text: string,
+): { ok: true; version: string | null } | { ok: false; message: string } {
+  const trimmed = text.trim();
+  if (trimmed === '') return { ok: true, version: null };
+  return EXACT_VERSION_PATTERN.test(trimmed)
+    ? { ok: true, version: trimmed }
+    : { ok: false, message: PLAYWRIGHT_VERSION_MESSAGE };
+}
+
+const { min: MIN_ENTRIES, max: MAX_ENTRIES } = CONFIG_LIMITS.maxEntries;
+
+export const MAX_ENTRIES_MESSAGE = `Enter a whole number from ${MIN_ENTRIES} to ${MAX_ENTRIES}.`;
+
+/** Reads the size of the speech buffer as typed: a whole number within the API's limits. */
+export function parseMaxEntries(
+  text: string,
+): { ok: true; entries: number } | { ok: false; message: string } {
+  const trimmed = text.trim();
+  const entries = /^\d+$/.test(trimmed) ? Number(trimmed) : Number.NaN;
+  return entries >= MIN_ENTRIES && entries <= MAX_ENTRIES
+    ? { ok: true, entries }
+    : { ok: false, message: MAX_ENTRIES_MESSAGE };
 }

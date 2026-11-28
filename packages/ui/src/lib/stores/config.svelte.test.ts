@@ -36,6 +36,18 @@ describe('createConfigStore', () => {
     expect(store.pending).toEqual([]);
   });
 
+  it('shows the seeded configuration without a request, and the newest seed wins', () => {
+    const api = fakeApi();
+    const store = createConfigStore(api);
+    store.seed({ active: config, saved: config, overrides: {} });
+    expect(store.active?.tcp.port).toBe(4449);
+    const saved = { ...config, tcp: { ...config.tcp, port: 4450 } };
+    store.seed({ active: config, saved, overrides: {} });
+    store.seed(null);
+    expect(store.pending).toEqual(['tcp.port']);
+    expect(api.fetch).not.toHaveBeenCalled();
+  });
+
   it('reads the active and the saved configuration and the overrides', async () => {
     const store = createConfigStore(fakeApi({ 'tcp.port': '--tcp-port' }));
     await store.refresh();
