@@ -92,11 +92,26 @@ describe('SettingsForm with the TCP port', () => {
     await expect.element(field()).toHaveValue('4450');
   });
 
-  it('is read-only when a flag or variable sets the port', async () => {
+  it('shows a port a flag sets as text, with what sets it', async () => {
     await render(SettingsForm, props({ overrides: { 'tcp.port': '--tcp-port' } }));
+    await expect.element(page.getByRole('definition').first()).toHaveTextContent('4449');
     await expect.element(page.getByText('--tcp-port')).toBeInTheDocument();
-    await expect.element(field()).toBeDisabled();
-    expect(page.getByRole('button', { name: 'Save' }).elements()).toHaveLength(0);
+    expect(page.getByRole('textbox').elements()).toHaveLength(0);
+    expect(page.getByRole('button').elements()).toHaveLength(0);
+  });
+
+  it('shows the port in use, without a restart notice, when another was saved', async () => {
+    await render(SettingsForm, props({ saved: 4450, overrides: { 'tcp.port': '--tcp-port' } }));
+    await expect.element(page.getByRole('definition').first()).toHaveTextContent('4449');
+    expect(page.getByText(/4450/).elements()).toHaveLength(0);
+    expect(page.getByText(/Restart the bridge/).elements()).toHaveLength(0);
+  });
+
+  it('has no axe violations when a flag sets the port', async () => {
+    const overrides = { 'tcp.port': '--tcp-port' };
+    const { container } = await render(SettingsForm, props({ overrides }));
+    const results = await axe.run(container);
+    expect(results.violations.map((violation) => violation.id)).toEqual([]);
   });
 
   it('has no axe violations, also with a restart pending and an error', async () => {
@@ -188,14 +203,14 @@ describe('SettingsForm with the Playwright version', () => {
     expect(status()).toContain('still runs version 1.64.0');
   });
 
-  it('is read-only when a flag or variable sets the version', async () => {
-    await render(
-      SettingsForm,
-      props({ overrides: { 'playwright.version': '--playwright-version' } }),
-    );
+  it('shows a version a flag sets as text, with what sets it', async () => {
+    const overrides = { 'playwright.version': '--playwright-version' };
+    await render(SettingsForm, props({ overrides }));
+    await expect
+      .element(page.getByRole('definition').first())
+      .toHaveTextContent('bundled version (1.65.0)');
     await expect.element(page.getByText('--playwright-version')).toBeInTheDocument();
-    await expect.element(field()).toBeDisabled();
-    expect(page.getByRole('button', { name: 'Save' }).elements()).toHaveLength(0);
+    expect(page.getByRole('textbox').elements()).toHaveLength(0);
   });
 
   it('has no axe violations, also with a restart pending and an error', async () => {

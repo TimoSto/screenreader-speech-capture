@@ -37,7 +37,7 @@
   const editable = $derived(settings.filter((setting) => overrides[setting.path] === undefined));
   const changed = $derived(changedSettings(editable, drafts, saved));
   const pending = $derived(
-    settings.filter(
+    editable.filter(
       (setting) => readSetting(saved, setting.path) !== readSetting(active, setting.path),
     ),
   );
@@ -83,19 +83,18 @@
       {setting}
       value={drafts[setting.path] ?? setting.format(readSetting(saved, setting.path))}
       error={errors[setting.path] ?? ''}
-      disabled={overriddenBy !== undefined}
+      fixed={overriddenBy === undefined
+        ? undefined
+        : {
+            by: overriddenBy,
+            value: setting.describe(readSetting(active, setting.path), settingContext),
+          }}
       onInput={(value: string) => {
         drafts[setting.path] = value;
         delete errors[setting.path];
       }}
       onSubmit={() => void save()}
     />
-    {#if overriddenBy !== undefined}
-      <p class="note">
-        Set by <code>{overriddenBy}</code> when the bridge starts, so a saved {setting.noun} has no effect.
-        Remove it to change the {setting.noun} here.
-      </p>
-    {/if}
   {/each}
 
   {#if editable.length > 0}
@@ -109,7 +108,7 @@
     </div>
   {/if}
 
-  {#each settings as setting (setting.path)}
+  {#each editable as setting (setting.path)}
     <p class="note">
       In use: {setting.describe(readSetting(active, setting.path), settingContext)}
     </p>
