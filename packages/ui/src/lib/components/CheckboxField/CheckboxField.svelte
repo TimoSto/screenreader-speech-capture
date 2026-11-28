@@ -34,11 +34,13 @@
 </div>
 
 <style>
+  /* The row leaves 4px under the 20px box: as far as a text field's supporting text is from its
+     field. */
   label {
     display: flex;
     align-items: center;
     gap: 12px;
-    min-height: 48px;
+    min-height: 28px;
     color: var(--md-sys-color-on-surface);
     font-size: 16px;
     line-height: 24px;
@@ -59,9 +61,11 @@
     outline-offset: 2px;
   }
 
+  /* Indented like a text field's supporting text. */
   .help,
   .error {
     margin: 0;
+    padding: 0 16px;
     color: var(--md-sys-color-on-surface-variant);
     font-size: 13px;
     line-height: 18px;

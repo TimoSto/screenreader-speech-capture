@@ -596,3 +596,81 @@ describe('SettingsForm with the log level', () => {
     expect(results.violations.map((violation) => violation.id)).toEqual([]);
   });
 });
+
+describe('SettingsForm layout', () => {
+  /** Renders into a box of this width: the columns follow the form, not the window. */
+  async function renderAt(width: number, settings: unknown[]) {
+    const config = configWith();
+    const screen = await render(
+      SettingsForm,
+      form({ settings, active: config, saved: config }) as never,
+    );
+    screen.container.style.width = `${width}px`;
+    return screen;
+  }
+
+  const box = (path: string) =>
+    document.querySelector(`[data-setting="${path}"]`)!.getBoundingClientRect();
+  const capture = [TCP_PORT, TEXT_ENCODING, BUFFER_SIZE];
+  const services = [[PLAYWRIGHT_ENABLED, PLAYWRIGHT_VERSION], MCP_ENABLED];
+
+  it('puts two fields side by side when there is room', async () => {
+    await renderAt(720, capture);
+    const [port, encoding, buffer] = capture.map((setting) => box(setting.path));
+    expect(encoding.top).toBe(port.top);
+    expect(encoding.left).toBeGreaterThan(port.right);
+    expect(buffer.top).toBeGreaterThan(port.bottom);
+    expect(buffer.left).toBe(port.left);
+  });
+
+  it('has no third column in a wider box', async () => {
+    await renderAt(1400, capture);
+    expect(box('buffer.maxEntries').top).toBeGreaterThan(box('tcp.port').bottom);
+  });
+
+  it('has one column when two do not fit', async () => {
+    await renderAt(600, capture);
+    const [port, encoding, buffer] = capture.map((setting) => box(setting.path));
+    expect(encoding.top).toBeGreaterThan(port.bottom);
+    expect(buffer.top).toBeGreaterThan(encoding.bottom);
+    expect(new Set([port.left, encoding.left, buffer.left]).size).toBe(1);
+  });
+
+  it('keeps the settings of a cell together, beside the next cell', async () => {
+    await renderAt(720, services);
+    const server = box('playwright.enabled');
+    const version = box('playwright.version');
+    const mcp = box('mcp.enabled');
+    expect(version.top).toBeGreaterThan(server.bottom);
+    expect(version.left).toBe(server.left);
+    expect(mcp.top).toBe(server.top);
+    expect(mcp.left).toBeGreaterThan(version.right);
+  });
+
+  it('tabs through a cell before the next one', async () => {
+    await renderAt(720, services);
+    const focusedSetting = () => document.activeElement?.getAttribute('data-setting');
+    document.querySelector<HTMLElement>('[data-setting="playwright.enabled"]')!.focus();
+    await userEvent.tab();
+    expect(focusedSetting()).toBe('playwright.version');
+    await userEvent.tab();
+    expect(focusedSetting()).toBe('mcp.enabled');
+  });
+
+  it('places the text under a checkbox like the supporting text of a text field', async () => {
+    await renderAt(720, services);
+    const input = document.querySelector<HTMLInputElement>('[data-setting="mcp.enabled"]')!;
+    const help = document.getElementById(input.getAttribute('aria-describedby')!)!;
+    const range = document.createRange();
+    range.selectNodeContents(help);
+    // A Material text field's supporting text starts 4px under its box, 16px in from its side.
+    expect(help.getBoundingClientRect().top - input.getBoundingClientRect().bottom).toBe(4);
+    expect(range.getBoundingClientRect().left - input.getBoundingClientRect().left).toBe(16);
+  });
+
+  it.each([capture, services])('fits the narrowest screen', async (...settings) => {
+    // What the pane leaves for it in a window 320px wide.
+    const screen = await renderAt(182, settings);
+    expect(screen.container.scrollWidth).toBeLessThanOrEqual(182);
+  });
+});

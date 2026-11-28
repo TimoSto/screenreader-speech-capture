@@ -129,7 +129,8 @@ this browser and applies at once, and the rest applies after a restart.
   separate.
 - A choice from a closed set (the text encoding) is a Material outlined select, not free text.
 - An on / off setting is a native checkbox with a description under it (`md-checkbox` doesn't pass a
-  description to the control). It never saves by itself.
+  description to the control), placed like a text field's supporting text: 4px under the box, 16px
+  in. It never saves by itself.
 - A refusal that names a setting of the form shows on that field and gets the focus; it ends with
   "Nothing was saved.".
 - Each form has an always-present `role="status"` for "Saved.".
@@ -137,7 +138,12 @@ this browser and applies at once, and the rest applies after a restart.
   supporting text. The consequences stand once, in a `--app-warning-container` box above the
   sections, which is not a live region.
 - A setting a flag or variable sets is a read-only row: label, value in use, what sets it.
-- Below 600px the pane's padding shrinks; fields take the width there is, up to 480px.
+- The fields of a section stand in two columns when each can be 340px wide, else in one (up to
+  480px wide). This follows the form's width, not a screen breakpoint, and there is never a third
+  column. Save, Revert and the messages stay below.
+- Settings that belong together share a column, stacked: the Playwright version under its server's
+  checkbox, beside the MCP checkbox. So Tab goes down a column before it moves to the next.
+- Below 600px the pane's padding shrinks.
 
 ### Sessions pane
 
