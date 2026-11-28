@@ -33,6 +33,15 @@ describe('planRelease', () => {
     expect(planRelease(bridge, '0.0.1-preview.5', commits.slice(3)).version).toBe('0.0.1');
   });
 
+  it.each([
+    [['1.0.0'], '1.0.1'],
+    [['1.0.0', '1.0.1'], '1.0.2'],
+    [['1.0.1'], '1.0.0'],
+  ])('moves past the unusable versions %j to %s', (unusableVersions, version) => {
+    const breaking = [{ sha: 'f'.repeat(40), subject: 'feat(bridge)!: rename `--port`' }];
+    expect(planRelease({ ...bridge, unusableVersions }, '0.3.0', breaking).version).toBe(version);
+  });
+
   it('releases nothing without a releasable commit for the package', () => {
     const plan = planRelease(bridge, '0.1.0', commits.slice(1, 3));
     expect(plan.version).toBeNull();

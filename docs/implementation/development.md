@@ -127,7 +127,7 @@ from the commit titles. PRs are squash-merged, so the commit title is the **PR t
 | --- | --- |
 | `feat(bridge): …` | minor |
 | `fix(client): …`, `perf(…): …` | patch |
-| `<any type>(…)!: …` | major (breaking change), also from 0.x: the first `!` releases `1.0.0` |
+| `<any type>(…)!: …` | major (breaking change), also from 0.x: the first `!` releases `1.0.0` (or the next [usable version](#unusable-versions)) |
 | `refactor`, `docs`, `test`, `chore`, `ci`, `build`, `revert` | no release |
 
 - Scopes: `bridge` and `client` select the packages. `shared`, `fake-speech`, `release`, `ui` and `deps`
@@ -170,7 +170,8 @@ What the Publish workflow stages:
   a branch installs with `pnpm add -D screenreader-speech-capture-client@preview-feat-markers-x`.
 
 Each step skips work that is already done, so **Re-run failed jobs** finishes a publish that
-failed halfway.
+failed halfway. It keeps the versions the run has already determined: after a change that affects
+them, start a new run.
 
 The **GitHub releases are the changelog**: one per package and stable version, with the commit
 titles grouped into breaking changes, features and fixes. There is no `CHANGELOG.md`. Run
@@ -181,3 +182,11 @@ titles grouped into breaking changes, features and fixes. There is no `CHANGELOG
 Actions** and enter the repository and workflow `publish.yml`, without an environment. Allow only
 staged publishing (`npm stage`). Leave "Allow npm-publish" and "Allow npm-dist-tag" unchecked, so
 the workflow can't publish directly.
+
+### Unusable versions
+
+npm never accepts a version number again once it was published, even after it was removed
+(`E409 Cannot stage previously published version`). Such versions have no git tag, so they are
+listed per package as `unusableVersions` in `tools/release/release.config.json`, and a stable
+release that would get one takes the next free patch: the client's first major is `1.0.1`, the
+bridge's `1.0.2`. Add a version there when you remove it from npm.
