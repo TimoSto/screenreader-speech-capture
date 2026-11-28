@@ -33,7 +33,7 @@
     "directory": "packages/bridge"
   },
   "dependencies": {
-    "@playwright/mcp": "0.0.85"
+    "@playwright/mcp": "0.0.86"
   },
   "optionalDependencies": {
     "@jitsi/robotjs": "0.6.24",
