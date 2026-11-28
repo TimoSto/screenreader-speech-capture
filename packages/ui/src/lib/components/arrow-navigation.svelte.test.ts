@@ -66,10 +66,59 @@ describe('arrowNavigation', () => {
     expect(focused()).toBe('Two');
   });
 
-  it('keeps the tab stop on the first item after moving', async () => {
+  it('moves the tab stop with the focus and back to the first once the focus leaves', async () => {
     focus('One');
     await userEvent.keyboard('{ArrowDown}');
+    expect(tabStops()).toEqual(['One -1', 'Action 0', 'Two 0', 'Three -1']);
+    focus('Action');
     expect(tabStops()).toEqual(['One 0', 'Action 0', 'Two -1', 'Three -1']);
+  });
+
+  it('puts the tab stop on the selected item, following the selection', async () => {
+    const item = (name: string) =>
+      [...container.querySelectorAll('button')].find((b) => b.textContent === name)!;
+    item('Two').setAttribute('aria-selected', 'true');
+    await expect.poll(tabStops).toEqual(['One -1', 'Action 0', 'Two 0', 'Three -1']);
+
+    focus('Two');
+    await userEvent.keyboard('{ArrowDown}');
+    expect(focused()).toBe('Three');
+    focus('Action');
+    expect(tabStops()).toEqual(['One -1', 'Action 0', 'Two 0', 'Three -1']);
+
+    item('Two').setAttribute('aria-selected', 'false');
+    item('Three').setAttribute('aria-selected', 'true');
+    await expect.poll(tabStops).toEqual(['One -1', 'Action 0', 'Two -1', 'Three 0']);
+  });
+
+  it('keeps the tab stop on the focused item when the items change', async () => {
+    focus('One');
+    await userEvent.keyboard('{ArrowDown}');
+    container.querySelector('ul')?.prepend(button('New'));
+    await expect.poll(tabStops).toEqual(['New -1', 'One -1', 'Action 0', 'Two 0', 'Three -1']);
+  });
+
+  it('wraps around the ends with wrap', async () => {
+    detach();
+    detach = arrowNavigation('.item', { wrap: true })(container) as () => void;
+    focus('One');
+    await userEvent.keyboard('{ArrowUp}');
+    expect(focused()).toBe('Three');
+    await userEvent.keyboard('{ArrowDown}');
+    expect(focused()).toBe('One');
+  });
+
+  it('moves with left and right only with leftRight', async () => {
+    focus('One');
+    await userEvent.keyboard('{ArrowRight}');
+    expect(focused()).toBe('One');
+
+    detach();
+    detach = arrowNavigation('.item', { leftRight: true })(container) as () => void;
+    await userEvent.keyboard('{ArrowRight}');
+    expect(focused()).toBe('Two');
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(focused()).toBe('One');
   });
 
   it('hands the tab stop to a prepended item and on when the first is removed', async () => {

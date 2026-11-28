@@ -2,6 +2,7 @@
   import '@material/web/icon/icon.js';
   import '@material/web/iconbutton/icon-button.js';
   import type { SessionDto } from '@screenreader-speech-capture/shared';
+  import { arrowNavigation } from '#lib/components/arrow-navigation.js';
   import ListItem from '#lib/components/ListItem/ListItem.svelte';
   import { OUTSIDE_SESSIONS, type SessionScope } from '#lib/core/sessions.js';
   import EndSessionDialog from './EndSessionDialog.svelte';
@@ -82,35 +83,50 @@
 
   {#if collapsed}
     <!-- Only the header shows while collapsed. -->
-  {:else if sessions.length === 0}
-    <p class="empty">No sessions in the buffer. Start one with the play button.</p>
   {:else}
-    <ul aria-labelledby="sessions-heading">
-      {#each sessions as session (session.id)}
-        <SessionRow
-          {session}
-          {now}
-          live={session.id === currentId}
-          selected={session.id === selectedId}
-          onSelect={() => onSelect(session.id)}
+    <!-- Not in the listbox, which holds options only. -->
+    {#if sessions.length === 0}
+      <p class="empty">No sessions in the buffer. Start one with the play button.</p>
+    {/if}
+    <!-- One selection, so one listbox and one tab stop, "Outside sessions" included. -->
+    <div
+      class="listbox"
+      role="listbox"
+      aria-label="Session to show"
+      {@attach arrowNavigation('[role="option"]', {
+        singleTabStop: true,
+        wrap: true,
+        leftRight: true,
+      })}
+    >
+      {#if sessions.length > 0}
+        <!-- tabindex: Chromium would else make the scrolling box a tab stop of its own. A box that
+             can take the focus needs a role a listbox may contain. -->
+        <div class="rows" role="group" aria-label="Sessions" tabindex="-1">
+          {#each sessions as session (session.id)}
+            <SessionRow
+              {session}
+              {now}
+              live={session.id === currentId}
+              selected={session.id === selectedId}
+              onSelect={() => onSelect(session.id)}
+            />
+          {/each}
+        </div>
+      {/if}
+      <!-- Pinned below the rows: not a session, so it stays out of the newest-first order. Always
+           shown while expanded, so it doesn't vanish when a session starts. -->
+      <div class="outside">
+        <ListItem
+          title="Outside sessions"
+          shape="var(--md-sys-shape-corner-extra-large, 28px)"
+          {subtitle}
+          selected={selectedId === OUTSIDE_SESSIONS}
+          description={`Speech captured while no session was running, ${entries}`}
+          onSelect={() => onSelect(OUTSIDE_SESSIONS)}
         />
-      {/each}
-    </ul>
-  {/if}
-
-  <!-- Pinned below the list: not a session, so it stays out of the newest-first order. Always shown
-       while expanded, so it doesn't vanish when a session starts. -->
-  {#if !collapsed}
-    <ul class="outside" aria-label="Outside sessions">
-      <ListItem
-        title="Outside sessions"
-        shape="var(--md-sys-shape-corner-extra-large, 28px)"
-        {subtitle}
-        selected={selectedId === OUTSIDE_SESSIONS}
-        description={`Speech captured while no session was running, ${entries}`}
-        onSelect={() => onSelect(OUTSIDE_SESSIONS)}
-      />
-    </ul>
+      </div>
+    </div>
   {/if}
 </section>
 
@@ -182,24 +198,24 @@
     --md-icon-button-focus-icon-color: var(--md-sys-color-error);
   }
 
-  ul {
+  .listbox,
+  .rows {
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: 4px;
     min-height: 0;
-    overflow-y: auto;
-    margin: 0;
-    padding: 0;
-    list-style: none;
   }
 
-  /* Not scrollable and not stretched: it sits at the bottom, under the (possibly empty) list. */
-  ul.outside {
+  .rows {
+    gap: 4px;
+    overflow-y: auto;
+  }
+
+  /* Not scrollable and not stretched: it sits at the bottom, under the (possibly empty) rows. */
+  .outside {
     flex: none;
     margin-top: auto;
     padding-top: 8px;
-    overflow: visible;
     border-top: 1px solid var(--md-sys-color-outline-variant);
   }
 

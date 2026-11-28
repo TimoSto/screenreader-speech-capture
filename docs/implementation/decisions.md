@@ -419,12 +419,13 @@ and a second origin), and a supervised child process (heavier than needed for a 
 
 `md-list` renders a `<ul>` in its shadow DOM and `md-list-item` an `<li>`, so the accessibility tree
 becomes `md-list > ul > md-list-item > li`, which axe rejects and which can't be fixed from outside.
-`md-list-item` is also the one interactive element of its row, but the sessions pane needs a select
-button and a stop button side by side (an interactive element inside another is invalid). So lists are
-plain `ul > li` with `button`s styled with the theme tokens (like the navigation rail); Material Web
-stays for icon buttons, dialogs and text fields. Icon buttons carry `aria-label` and a `title`; the
-axe check in `SessionsPane.svelte.test.ts` turns off `label-content-name-mismatch`, which flags the
-icon ligature text (`add`, `stop`) as a visible label.
+So lists are our own elements, styled with the theme tokens (like the navigation rail); Material Web
+stays for icon buttons, dialogs and text fields. The sessions list is a `listbox` of `button` options
+([guidelines](web-ui-design/DESIGN.md#sessions-pane)), so a row holds no action of its own: an option
+can't contain another interactive element, and ending a session is a button in the pane's header.
+Icon buttons carry `aria-label` and a `title`; the axe check in `SessionsPane.svelte.test.ts` turns
+off `label-content-name-mismatch`, which flags the icon ligature text (`add`, `stop`) as a visible
+label.
 
 ## The UI's server build is self-contained
 

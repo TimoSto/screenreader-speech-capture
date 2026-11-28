@@ -163,8 +163,12 @@ Just a list:
 
 - Header: "Sessions" (title-medium) + **+** icon button (`primary`) → "Start a session" dialog.
 - Rows, newest first, no grouping: name (label-large, ellipsis) over one mono meta line
-  `#id · run · duration · entries`. Row height 60 px, radius 28, full-row `secondary-container`
-  when selected (`aria-current="true"`).
+  `#id · run · duration · entries`. Row height 60 px, radius 28. The selected row has a full-row
+  `secondary-container` and a leading eye icon (`visibility`), so it doesn't rely on color.
+- Follows the [MD3 list accessibility guidelines](https://m3.material.io/components/lists/accessibility):
+  rows and "Outside sessions" are the options of one single-select listbox ("Session to show") and
+  one tab stop, entered on the selected row, else the first. The arrow keys move through them and
+  wrap around; Enter, Space or a click select.
 - The current session has a pulsing `success` dot in the meta line and an `error`-colored **stop**
   icon button at the end of the row → "End session #n?" dialog. The stop button is a sibling of
   the row's select button, not inside it.
@@ -308,7 +312,7 @@ sessions started from the UI are attributed.
   entries" makes it `polite`, for people using the UI from another machine. Don't use
   `role="log"` (it implies `aria-live`).
 - Toggles are `aria-pressed` chips / segments or `role="switch"`; the selected session row has
-  `aria-current="true"`; icon buttons have `aria-label` and a tooltip.
+  `aria-selected="true"`; icon buttons have `aria-label` and a tooltip.
 - Focus ring: 3 px `secondary` outline, 2 px offset, on every control. Dialogs trap focus and return
   it to their trigger.
 - All text ≥ 4.5:1 on its container in both schemes. Touch targets ≥ 48 px (controls may look smaller, e.g. 40 px buttons, but get a 48 px hit area).
