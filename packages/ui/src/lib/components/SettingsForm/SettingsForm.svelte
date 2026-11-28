@@ -174,6 +174,7 @@
     flex-direction: column;
     gap: 12px;
     max-width: 720px;
+    padding: 8px;
   }
 
   /* Two columns when the form has room for them. A column holds the longest option of a select. */
