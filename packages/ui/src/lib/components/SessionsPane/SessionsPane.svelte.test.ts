@@ -1,6 +1,6 @@
 import axe from 'axe-core';
 import { describe, expect, it, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import type { SessionDto } from '@screenreader-speech-capture/shared';
 import SessionsPane from './SessionsPane.svelte';
@@ -67,7 +67,7 @@ describe('SessionsPane collapsing', () => {
     await render(SessionsPane, props({ collapsed: true, onToggleCollapse: () => {} }));
     await expect.poll(() => innerExpanded('Expand sessions')).toBe('false');
     await expect.element(page.getByTitle('End session 7')).toBeVisible();
-    expect(document.querySelector('ul')).toBeNull();
+    expect(document.querySelector('[role="listbox"]')).toBeNull();
     expect(document.querySelector('section[aria-labelledby]')).not.toBeNull();
   });
 
@@ -100,24 +100,25 @@ describe('SessionsPane', () => {
     await render(SessionsPane, props());
     await expect.element(page.getByRole('heading', { name: 'Sessions' })).toBeInTheDocument();
     await expect.element(page.getByTitle('End session 7')).toBeVisible();
-    const list = page.getByRole('list', { name: 'Sessions' });
-    expect(list.getByRole('listitem').elements()).toHaveLength(2);
+    const list = page.getByRole('listbox', { name: 'Session to show' });
+    // The two sessions and "Outside sessions".
+    expect(list.getByRole('option').elements()).toHaveLength(3);
   });
 
   it('speaks the facts of a row and marks the selected one', async () => {
     await render(SessionsPane, props());
-    const row = page.getByRole('button', {
+    const row = page.getByRole('option', {
       name: 'agent: audit checkout form Session 7, live, run agent-2026-11-12, 4 s, 4 entries',
     });
-    await expect.element(row).toHaveAttribute('aria-current', 'true');
+    await expect.element(row).toHaveAttribute('aria-selected', 'true');
     await expect
-      .element(page.getByRole('button', { name: /manual: explore header/ }))
-      .not.toHaveAttribute('aria-current');
+      .element(page.getByRole('option', { name: /manual: explore header/ }))
+      .toHaveAttribute('aria-selected', 'false');
   });
 
   it('keeps the session rows fully rounded (28px), unlike the 8px default of a list item', async () => {
     await render(SessionsPane, props());
-    for (const row of document.querySelectorAll('ul > li')) {
+    for (const row of document.querySelectorAll('[role="option"]')) {
       expect(getComputedStyle(row).borderRadius).toBe('28px');
     }
   });
@@ -136,16 +137,92 @@ describe('SessionsPane', () => {
     expect(document.querySelector('header md-icon')?.textContent).toBe('play_arrow');
   });
 
-  it('has no button inside a row besides the select button', async () => {
-    await render(SessionsPane, props());
-    expect(document.querySelectorAll('ul md-icon-button, button button')).toHaveLength(0);
+  const option = (name: RegExp) => page.getByRole('option', { name });
+  const first = /audit checkout form/;
+  const second = /explore header/;
+  const outside = /Outside sessions/;
+
+  /** Focus starts on the collapse button, so one Tab goes to the start button and two to the list. */
+  const tabIntoList = async () => {
+    (document.querySelector('md-icon-button.collapse') as HTMLElement).focus();
+    await userEvent.tab();
+    await userEvent.tab();
+  };
+
+  it.each([
+    [7, first],
+    [6, second],
+    ['none', outside],
+    [null, first],
+  ])(
+    'is entered with Tab on the selected option (%s), else the first',
+    async (selectedId, name) => {
+      await render(SessionsPane, props({ selectedId, onToggleCollapse: () => {} }));
+      await tabIntoList();
+      await expect.element(option(name)).toHaveFocus();
+    },
+  );
+
+  it('is one tab stop', async () => {
+    await render(SessionsPane, props({ selectedId: 6, onToggleCollapse: () => {} }));
+    const after = document.body.appendChild(document.createElement('button'));
+    try {
+      await tabIntoList();
+      await userEvent.tab();
+      expect(document.activeElement).toBe(after);
+      await userEvent.tab({ shift: true });
+      await expect.element(option(second)).toHaveFocus();
+    } finally {
+      after.remove();
+    }
   });
 
-  it('puts one ripple under every row, before the buttons', async () => {
-    await render(SessionsPane, props());
-    const rows = document.querySelectorAll('ul:not(.outside) > li');
-    expect(rows).toHaveLength(2);
-    for (const row of rows) expect(row.firstElementChild?.localName).toBe('md-ripple');
+  it('moves through all options with the arrows, wrapping around, without selecting', async () => {
+    const onSelect = vi.fn();
+    await render(SessionsPane, props({ onSelect, onToggleCollapse: () => {} }));
+    await tabIntoList();
+    for (const [key, name] of [
+      ['ArrowDown', second],
+      ['ArrowRight', outside],
+      ['ArrowDown', first],
+      ['ArrowUp', outside],
+      ['ArrowLeft', second],
+    ] as const) {
+      await userEvent.keyboard(`{${key}}`);
+      await expect.element(option(name)).toHaveFocus();
+    }
+    expect(onSelect).not.toHaveBeenCalled();
+    await userEvent.keyboard(' ');
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith(6);
+  });
+
+  it('stays one tab stop when the rows scroll and "Outside sessions" is selected', async () => {
+    const many = Array.from({ length: 20 }, (_, index) => session({ id: 20 - index }));
+    const screen = await render(
+      SessionsPane,
+      props({ sessions: many, selectedId: 'none', onToggleCollapse: () => {} }),
+    );
+    screen.container.style.height = '400px';
+    const rows = document.querySelector('.rows')!;
+    expect(rows.scrollHeight).toBeGreaterThan(rows.clientHeight);
+    await tabIntoList();
+    await expect.element(option(outside)).toHaveFocus();
+  });
+
+  it('is a single tab stop on "Outside sessions" without any session', async () => {
+    await render(
+      SessionsPane,
+      props({ sessions: [], currentId: null, selectedId: 'none', onToggleCollapse: () => {} }),
+    );
+    await tabIntoList();
+    await expect.element(option(outside)).toHaveFocus();
+  });
+
+  it('is a tab stop again after collapsing and expanding', async () => {
+    const screen = await render(SessionsPane, props({ onToggleCollapse: () => {} }));
+    await screen.rerender({ collapsed: true });
+    await screen.rerender({ collapsed: false });
+    expect(document.querySelectorAll('[role="option"][tabindex="0"]')).toHaveLength(1);
   });
 
   it('fills the height it is given and scrolls the list, not the heading', async () => {
@@ -158,7 +235,7 @@ describe('SessionsPane', () => {
     const container = screen.container;
     container.style.height = '400px';
     const pane = container.querySelector('section')!;
-    const list = container.querySelector('ul')!;
+    const list = container.querySelector('.rows')!;
     expect(pane.getBoundingClientRect().height).toBe(400);
     expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
     const heading = container.querySelector('h2')!.getBoundingClientRect();
@@ -171,7 +248,7 @@ describe('SessionsPane', () => {
   it('selects the clicked session', async () => {
     const onSelect = vi.fn();
     await render(SessionsPane, props({ onSelect }));
-    await page.getByRole('button', { name: /manual: explore header/ }).click();
+    await page.getByRole('option', { name: /manual: explore header/ }).click();
     expect(onSelect).toHaveBeenCalledWith(6);
   });
 
@@ -229,27 +306,27 @@ describe('SessionsPane', () => {
   it('pins an "Outside sessions" row with its entry count below the list', async () => {
     const onSelect = vi.fn();
     await render(SessionsPane, props({ outsideEntries: 12, onSelect }));
-    const row = page.getByRole('button', {
+    const row = page.getByRole('option', {
       name: 'Outside sessions Speech captured while no session was running, 12 entries',
     });
-    await expect.element(row).not.toHaveAttribute('aria-current');
+    await expect.element(row).toHaveAttribute('aria-selected', 'false');
     await row.click();
     expect(onSelect).toHaveBeenCalledWith('none');
   });
 
   it('keeps the outside row visible while empty, selected only when it is the scope', async () => {
     const screen = await render(SessionsPane, props());
-    const row = page.getByRole('button', {
+    const row = page.getByRole('option', {
       name: 'Outside sessions Speech captured while no session was running, 0 entries',
     });
-    await expect.element(row).not.toHaveAttribute('aria-current');
+    await expect.element(row).toHaveAttribute('aria-selected', 'false');
     await screen.rerender(props({ sessions: [], currentId: null, selectedId: 'none' }));
-    await expect.element(row).toHaveAttribute('aria-current', 'true');
+    await expect.element(row).toHaveAttribute('aria-selected', 'true');
   });
 
   it('hides the outside row while collapsed', async () => {
     await render(SessionsPane, props({ collapsed: true, outsideEntries: 3 }));
-    expect(page.getByRole('button', { name: /Outside sessions/ }).elements()).toHaveLength(0);
+    expect(page.getByRole('option', { name: /Outside sessions/ }).elements()).toHaveLength(0);
   });
 
   it('has no accessibility violations', async () => {
