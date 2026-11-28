@@ -87,8 +87,9 @@ Speech capture and the HTTP API keep working while a child service is down.
 
 The **bridge log** records what the bridge itself does: start/stop, TCP connects/disconnects,
 config changes, warnings (cut lines), errors and child service output. Settings: `--bridge-log
-<path>` / `log.file`, `--log-level` / `log.level`. The recorded speech itself lives in the
-in-memory [buffer](speech-capture.md#buffer).
+<path>` / `log.file`, `--log-level` / `log.level` (the level also on the web UI's
+[Settings](web-ui.md#bridge-log) page). The recorded speech itself lives in the in-memory
+[buffer](speech-capture.md#buffer).
 
 Bridge log details:
 

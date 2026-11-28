@@ -1,4 +1,9 @@
-import type { ConfigDto, ConfigPatchDto } from '@screenreader-speech-capture/shared';
+import {
+  LOG_LEVELS,
+  type ConfigDto,
+  type ConfigPatchDto,
+  type LogLevel,
+} from '@screenreader-speech-capture/shared';
 import {
   parseMaxEntries,
   parsePlaywrightVersion,
@@ -17,7 +22,8 @@ export type SettingPath =
   | 'buffer.maxEntries'
   | 'playwright.enabled'
   | 'playwright.version'
-  | 'mcp.enabled';
+  | 'mcp.enabled'
+  | 'log.level';
 
 export type SettingValue = string | number | boolean | null;
 
@@ -241,6 +247,31 @@ export const MCP_ENABLED: Setting<boolean> = {
   ],
 };
 
+/** What each level of the bridge log holds. */
+const LEVELS: Record<LogLevel, string> = {
+  error: 'errors only',
+  warn: 'errors and warnings',
+  info: 'normal operation',
+  debug: 'everything, with the speech',
+};
+
+export const LOG_LEVEL: Setting<LogLevel> = {
+  path: 'log.level',
+  label: 'Log level',
+  control: {
+    kind: 'select',
+    options: LOG_LEVELS.map((value) => ({ value, label: `${value} (${LEVELS[value]})` })),
+  },
+  help: () =>
+    'How much the bridge writes to its log. At debug that includes everything the screen reader ' +
+    'says, in the log file. Default info.',
+  format: (level) => level,
+  parse: (text) => ({ ok: true, value: text as LogLevel }),
+  describe: (level) => level,
+  consequence: (saved) =>
+    saved === 'debug' ? ['What the screen reader says is then written to the log file.'] : [],
+};
+
 /** The settings with a UI element. */
 export const SETTINGS: readonly Setting[] = [
   TCP_PORT,
@@ -249,6 +280,7 @@ export const SETTINGS: readonly Setting[] = [
   PLAYWRIGHT_ENABLED,
   PLAYWRIGHT_VERSION,
   MCP_ENABLED,
+  LOG_LEVEL,
 ];
 
 /** Whether the saved value of a setting waits for a restart. A flag or variable keeps winning. */

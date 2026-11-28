@@ -81,7 +81,9 @@ GitHub issues. This file only tracks milestones.
       ignores `prefers-color-scheme`
 - [x] Settings: TCP port field (saved on the bridge, "restart necessary" notice, read-only when a flag sets it)
 - [x] Settings: Playwright version field (same pattern; empty means the bundled version)
-- [ ] Settings: the other bridge settings (validation, services)
+- [x] Settings: text encoding, speech buffer size, Playwright server and MCP on / off, log level;
+      pending restarts in one summary (the other settings stay flags and config file)
+- [ ] Settings: state and version of the services
 - [ ] Setup page with check button
 - [ ] Accessibility of the UI itself (no feedback loop)
 

@@ -5,9 +5,10 @@ The web UI served by the bridge, for people watching, driving and configuring it
 > **Partly implemented ([M5](../ROADMAP.md#m5-web-ui-)).** Working today: the status chips with a
 > refresh button, the [context pane](#context-pane) (sessions), the [live log](#live-log) with
 > markers, clear and delete, and on the [Settings](#settings) page the color theme, the TCP port, the
-> text encoding, the speech buffer size, the Playwright server and its version, and Playwright MCP.
+> text encoding, the speech buffer size, the Playwright server and its version, Playwright MCP and the
+> log level.
 > The rest of this page is design and marked *(planned)*: the status panel, the actions panel, the
-> other settings and the Setup page's check.
+> service state on the Settings page and the Setup page's check.
 
 The UI is at `http://<vm>:5151/ui/` (`/` leads there): **Monitor** (`/ui/`), **Settings**
 (`/ui/settings`) and **Setup** (`/ui/setup`).
@@ -197,12 +198,23 @@ the system's `prefers-color-scheme`.
 - **Playwright MCP:** a checkbox for [the MCP server](playwright-mcp.md) AI agents connect to
   (`mcp.enabled`, on by default). It brings its own Playwright, so the version above doesn't change it.
 
-### More bridge settings *(planned, [M5](../ROADMAP.md))*
+### Bridge log
 
-A form for the rest of the [configuration](configuration.md): other ports, hosts, log file, and native input on/off, in the sections described above.
+- **Log level** of the [bridge log](operations.md#logging) (`log.level`, default `info`). At `debug`
+  the file also gets everything the screen reader says.
 
-- **Services:** the state and version of the Playwright server and MCP (from `status`). They are
-  switched on and off with their `enabled` setting; there are no start / stop buttons.
+### Settings without a field
+
+The rest of the [configuration](configuration.md) is set with a flag, a variable or the config file.
+`http.host`, `http.port`, `http.allowedHosts` and `tcp.host` could cut people off from the UI or
+weaken its protection ([why](../implementation/decisions.md#the-settings-page-saves-by-section-and-leaves-access-settings-out));
+`log.consoleSpeech` can start a speech feedback loop; the ports of the Playwright server and MCP,
+`log.file` and `tcp.maxLineBytes` are rarely needed.
+
+### Service state *(planned, [M5](../ROADMAP.md#m5-web-ui-))*
+
+The state and version of the Playwright server and MCP (from `status`) in their section. They are
+turned on and off with their checkboxes; there are no start / stop buttons.
 
 ## Setup
 

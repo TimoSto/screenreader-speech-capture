@@ -3,6 +3,7 @@
   import type { ConfigPatchDto } from '@screenreader-speech-capture/shared';
   import {
     BUFFER_SIZE,
+    LOG_LEVEL,
     MCP_ENABLED,
     PLAYWRIGHT_ENABLED,
     PLAYWRIGHT_VERSION,
@@ -87,6 +88,19 @@
         <SettingsForm
           name="Playwright and MCP"
           settings={[PLAYWRIGHT_ENABLED, PLAYWRIGHT_VERSION, MCP_ENABLED]}
+          active={configStore.active}
+          saved={configStore.saved}
+          overrides={configStore.overrides}
+          {settingContext}
+          onSave={(patch: ConfigPatchDto) => configStore.save(patch)}
+        />
+      </section>
+
+      <section aria-labelledby="log-heading">
+        <h2 id="log-heading">Bridge log</h2>
+        <SettingsForm
+          name="bridge log"
+          settings={[LOG_LEVEL]}
           active={configStore.active}
           saved={configStore.saved}
           overrides={configStore.overrides}

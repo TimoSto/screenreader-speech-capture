@@ -4,6 +4,7 @@ import {
   changedSettings,
   explainRejection,
   isPending,
+  LOG_LEVEL,
   MCP_ENABLED,
   PLAYWRIGHT_ENABLED,
   PLAYWRIGHT_VERSION,
@@ -14,6 +15,7 @@ import {
   waitingForRestart,
   type Setting,
 } from './settings.js';
+import { LOG_LEVELS } from '@screenreader-speech-capture/shared';
 import { configWith } from '../../test/config.js';
 import { SettingRejected } from './config.js';
 
@@ -198,5 +200,20 @@ describe('turning a service on or off', () => {
     expect(setting.describe(false, context)).toBe('Off');
     expect(setting.consequence(true, false)[0]).toContain('installs what is missing');
     expect(setting.consequence(false, true)[0]).toContain("can't connect");
+  });
+});
+
+describe('the log level', () => {
+  const { control } = LOG_LEVEL;
+
+  it('offers exactly the levels the API takes', () => {
+    expect(control.kind === 'select' && control.options.map((option) => option.value)).toEqual([
+      ...LOG_LEVELS,
+    ]);
+  });
+
+  it('warns before a restart that writes the speech to the log file', () => {
+    expect(LOG_LEVEL.consequence('debug', 'info')[0]).toContain('written to the log file');
+    expect(LOG_LEVEL.consequence('info', 'debug')).toEqual([]);
   });
 });
