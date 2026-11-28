@@ -16,7 +16,7 @@ afterEach(
 /** A TCP server that collects what each connection sends. */
 async function voiceServer() {
   const received: Buffer[] = [];
-  server = net.createServer((socket) => socket.on('data', (chunk) => received.push(chunk)));
+  server = net.createServer((socket) => socket.on('data', (chunk: Buffer) => received.push(chunk)));
   await new Promise<void>((resolve) => server!.listen(0, '127.0.0.1', resolve));
   const { port } = server.address() as net.AddressInfo;
   return { port, received: () => Buffer.concat(received) };
