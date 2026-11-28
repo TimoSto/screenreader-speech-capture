@@ -3,6 +3,7 @@
   import '@material/web/icon/icon.js';
   import { tick } from 'svelte';
   import ExternalLink from '#lib/components/ExternalLink/ExternalLink.svelte';
+  import ScreenReaderLink from '#lib/components/ScreenReaderLink/ScreenReaderLink.svelte';
   import type { CheckRow, CheckTone } from '#lib/core/setup.js';
 
   type Props = {
@@ -64,13 +65,21 @@
             >
           {/if}
           {#if row.help !== null}
-            <span class="help"
-              ><ExternalLink href={row.help.href}
-                >{row.help.label}<span class="visually-hidden">
-                  (help for {row.label})</span
-                ></ExternalLink
-              ></span
-            >
+            <span class="help">
+              {#if 'href' in row.help}
+                <ExternalLink href={row.help.href}
+                  >{row.help.label}<span class="visually-hidden">
+                    (help for {row.label})</span
+                  ></ExternalLink
+                >
+              {:else}
+                <ScreenReaderLink
+                  >{row.help.label}<span class="visually-hidden">
+                    (help for {row.label})</span
+                  ></ScreenReaderLink
+                >
+              {/if}
+            </span>
           {/if}
         </span>
       </li>

@@ -52,7 +52,7 @@ describe('deriveCheckRows', () => {
     const voice = row(statusWith(), 'voice');
     expect(voice.tone).toBe('neutral');
     expect(voice.state).toContain('connects with its first words');
-    expect(voice.help?.href).toContain('@0.9.0/docs/usage/vm-setup.md#screen-reader-setup');
+    expect(voice.help).toEqual({ label: 'Select the voice', screenReader: true });
   });
 
   it('counts the voice connections and names each voice once', () => {
@@ -82,6 +82,13 @@ describe('deriveCheckRows', () => {
     const other = { available: true, backend: 'other', reason: null };
     const status = statusWith({ input: { native: other, focus: other } });
     expect(row(status, 'input').library).toEqual({ name: 'other', href: null });
+  });
+
+  it('links a warning to the docs of the release', () => {
+    const tcp = { ...statusWith().tcp, listening: false };
+    expect(row(statusWith({ tcp }), 'listener').help).toMatchObject({
+      href: expect.stringContaining('@0.9.0/docs/usage/troubleshooting.md#speech') as string,
+    });
   });
 
   it('says why native input and focus are not available', () => {

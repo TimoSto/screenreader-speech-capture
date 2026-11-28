@@ -53,6 +53,7 @@ refined it (`git log -S '<heading>' -- docs/implementation/decisions.md`).
 - [The add-marker action only shows where the marker would land](#the-add-marker-action-only-shows-where-the-marker-would-land) ([#173](https://github.com/TimoSto/screenreader-speech-capture/pull/173))
 - [The UI theme lives in the browser, not in the bridge config](#the-ui-theme-lives-in-the-browser-not-in-the-bridge-config) ([#179](https://github.com/TimoSto/screenreader-speech-capture/pull/179))
 - [A UI opened on the bridge's machine hides its log from the screen reader](#a-ui-opened-on-the-bridges-machine-hides-its-log-from-the-screen-reader) ([#192](https://github.com/TimoSto/screenreader-speech-capture/pull/192))
+- [The Setup page repeats the short setup steps](#the-setup-page-repeats-the-short-setup-steps) ([#256](https://github.com/TimoSto/screenreader-speech-capture/pull/256))
 
 ## Node.js, not Go
 
@@ -506,3 +507,12 @@ time, starting with the sessions list (`lib/remote/sessions.remote.ts`). Two rul
   is always `undefined`, so the page's load awaits the query and the page seeds the store with the result
   while it renders.
 
+## The Setup page repeats the short setup steps
+
+The commands and screen reader steps of [VM setup](../usage/vm-setup.md) exist twice: in the docs
+and under [Setup instructions](../usage/web-ui.md#instructions) in the UI. One home per fact is the
+rule, but the page fills in what the docs can't (the voice for the port the bridge listens on, the
+URL, the Playwright version, the firewall port) and has copy buttons. Rendering the Markdown into
+the UI would need a build step and placeholders in the docs for a few short lists. The docs stay the
+home, only short steps that almost everyone needs are repeated, and a test checks that the commands
+match (`lib/core/instructions.test.ts`).

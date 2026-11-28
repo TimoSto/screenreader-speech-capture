@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import Pane from '#lib/components/Pane/Pane.svelte';
   import SetupStatus from '#lib/components/SetupStatus/SetupStatus.svelte';
   import SpeechTest from '#lib/components/SpeechTest/SpeechTest.svelte';
   import { appStores } from '#lib/composition.js';
@@ -36,28 +35,26 @@
   <title>Setup · Speech Capture</title>
 </svelte:head>
 
-<Pane heading="Setup">
-  <section class="part" aria-labelledby="status-heading">
-    <h2 id="status-heading">Status</h2>
-    <SetupStatus {rows} reachable={statusStore.reachable} onCheck={() => statusStore.retry()} />
-  </section>
+<section class="part" aria-labelledby="status-heading">
+  <h2 id="status-heading">Status</h2>
+  <SetupStatus {rows} reachable={statusStore.reachable} onCheck={() => statusStore.retry()} />
+</section>
 
-  <section class="part" aria-labelledby="test-heading">
-    <h2 id="test-heading">Speech test</h2>
-    <SpeechTest
-      phase={voiceCheck.phase}
-      via={voiceCheck.via}
-      entries={voiceCheck.entries}
-      reconnecting={voiceCheck.reconnecting}
-      failure={voiceCheck.failure}
-      local={data.local}
-      input={status?.input.native ?? null}
-      port={status?.tcp.port ?? null}
-      version={status?.bridge.version ?? null}
-      onListen={() => void voiceCheck.start('manual')}
-      onSendKeys={() => void voiceCheck.start('keys')}
-      onStop={() => voiceCheck.stop()}
-      {isSessionRunning}
-    />
-  </section>
-</Pane>
+<section class="part" aria-labelledby="test-heading">
+  <h2 id="test-heading">Speech test</h2>
+  <SpeechTest
+    phase={voiceCheck.phase}
+    via={voiceCheck.via}
+    entries={voiceCheck.entries}
+    reconnecting={voiceCheck.reconnecting}
+    failure={voiceCheck.failure}
+    local={data.local}
+    input={status?.input.native ?? null}
+    port={status?.tcp.port ?? null}
+    version={status?.bridge.version ?? null}
+    onListen={() => void voiceCheck.start('manual')}
+    onSendKeys={() => void voiceCheck.start('keys')}
+    onStop={() => voiceCheck.stop()}
+    {isSessionRunning}
+  />
+</section>
