@@ -4,11 +4,11 @@ The web UI served by the bridge, for people watching, driving and configuring it
 
 > **Partly implemented ([M5](../ROADMAP.md#m5-web-ui-)).** Working today: the status chips with a
 > refresh button, the [context pane](#context-pane) (sessions), the [live log](#live-log) with
-> markers, clear and delete, and on the [Settings](#settings) page the color theme, the TCP port, the
+> markers, clear and delete, on the [Settings](#settings) page the color theme, the TCP port, the
 > text encoding, the speech buffer size, the Playwright server and its version, Playwright MCP and the
-> log level.
+> log level, and on the [Setup](#setup) page the check.
 > The rest of this page is design and marked *(planned)*: the status panel, the actions panel, the
-> service state on the Settings page and the Setup page's check.
+> service state on the Settings page and the instructions on the Setup page.
 
 The UI is at `http://<vm>:5151/ui/` (`/` leads there): **Monitor** (`/ui/`), **Settings**
 (`/ui/settings`) and **Setup** (`/ui/setup`).
@@ -218,12 +218,47 @@ turned on and off with their checkboxes; there are no start / stop buttons.
 
 ## Setup
 
-*(planned, [M5](../ROADMAP.md#m5-web-ui-); the page exists but has no content yet)*
+For checking that the VM is set up: what the bridge knows about it, and a test that speech arrives.
+Links on the page open these docs on GitHub, as of the bridge's release (`main` for a preview or a
+development build).
 
-The [socket voice](vm-setup.md#socket-voice-setup) and [screen reader](vm-setup.md#screen-reader-setup) instructions
-from these docs, plus a **check** button. It inserts a marker, asks you to make the screen
-reader speak (or sends `Insert+T` through native input, if enabled), and shows a green check when
-speech arrives within a few seconds.
+The [socket voice](vm-setup.md#socket-voice-setup) and [screen reader](vm-setup.md#screen-reader-setup)
+instructions on the page itself are *(planned, [M5](../ROADMAP.md#m5-web-ui-))*.
+
+### Status
+
+One row each, read when the page opens and again with **Check again** (the page doesn't poll):
+
+| Row | Warning when |
+|---|---|
+| Speech listener, with the port and encoding | the bridge doesn't listen |
+| Voice connected, with the number of connections and the voices | never: the voice only [connects with its first words](speech-capture.md#wire-format) |
+| Native input and Window focus | not available, with the reason |
+| Playwright server and Playwright MCP | crashed or failed (starting and off are not warnings) |
+
+A row that isn't fine links to the page that helps. The library behind native input
+([robotjs](https://github.com/jitsi/robotjs)) and window focus
+([koffi](https://github.com/Koromix/koffi)) is named with a link to its repository.
+
+### Speech test
+
+- **Listen** waits 30 s for new speech, in any session or outside one. Make the screen reader speak,
+  for example with a key press. It adds nothing to the recording.
+- **Send Insert+T** (read the window title) sends the keys to the foreground window of the VM with
+  [native input](native-input.md), after a marker `ui: Insert+T`, and waits 5 s for the speech after
+  that marker. While a session is running it asks first, because the speech lands in that session.
+  The button is off when native input isn't available.
+- **Stop** ends the test.
+
+When speech arrives, the page shows up to five entries (those that follow until a second passes
+without speech). Wrong characters mean the wrong [text encoding](#speech-capture). When nothing
+arrives after **Listen**, check the selected voice, its port and, with JAWS,
+[language detection](vm-setup.md#jaws-language-detection). When nothing arrives after
+**Send Insert+T** but **Listen** works, the keys don't reach the screen reader.
+
+Opened on the VM itself, the arrived text is hidden from the screen reader
+(see [Accessibility](#accessibility-of-the-ui-itself)). The screen reader still reads the page, and
+that speech can pass the test.
 
 ## Accessibility of the UI itself
 

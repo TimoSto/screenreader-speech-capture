@@ -16,6 +16,7 @@ import {
   type ConfigPatchDto,
   type DtoOf,
   type DtoSchema,
+  type KeysRequestDto,
   type SessionListDto,
   type SpeechEntryDto,
   type SpeechListDto,
@@ -47,6 +48,8 @@ export interface BridgeApi {
    * bridge's status and message, plus `field` (`tcp.port`) when the bridge names one.
    */
   updateConfig(patch: ConfigPatchDto): Promise<ConfigDto>;
+  /** Presses keys in the foreground window of the bridge's machine. */
+  pressKeys(keys: KeysRequestDto['keys']): Promise<void>;
   /** Inserts a marker; the bridge files it under the current session (or outside any). */
   addMarker(label: string): Promise<SpeechEntryDto>;
   /** One page of a scope's entries with `seq > since`, oldest first (`session`: an id or `none`). */
@@ -138,6 +141,9 @@ export function createBridgeApi(baseUrl: string, fetchFn: Fetch): BridgeApi {
     config: (view) => read('GET', `/config?view=${view}`, ConfigSchema),
     configOverrides: () => read('GET', '/config/overrides', ConfigOverridesSchema),
     updateConfig: (patch) => read('PUT', '/config', ConfigSchema, patch),
+    pressKeys: async (keys) => {
+      await call('POST', '/input/keys', { keys });
+    },
     addMarker: (label) => read('POST', '/markers', SpeechEntrySchema, { label }),
     speech: (session, since, limit) => {
       const query = new URLSearchParams({ since: String(since), limit: String(limit) });

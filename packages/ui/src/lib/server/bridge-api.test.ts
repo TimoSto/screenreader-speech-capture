@@ -259,6 +259,31 @@ describe('createBridgeApi', () => {
     expect(list.hasMore).toBe(false);
   });
 
+  it('presses keys with a POST and accepts the empty 204 answer', async () => {
+    let seen: { url: string; method: string | undefined; body: unknown } | undefined;
+    const api = createBridgeApi('http://bridge', (input, init) => {
+      seen = { url: urlOf(input), method: init?.method, body: init?.body };
+      return Promise.resolve(new Response(null, { status: 204 }));
+    });
+    await expect(api.pressKeys('Insert+T')).resolves.toBeUndefined();
+    expect(seen).toEqual({
+      url: 'http://bridge/api/v1/input/keys',
+      method: 'POST',
+      body: '{"keys":"Insert+T"}',
+    });
+  });
+
+  it('passes on why keys cannot be pressed', async () => {
+    const api = createBridgeApi(
+      'http://bridge',
+      fakeFetch(() => json({ error: { code: 'INPUT_DISABLED', message: 'only on Windows' } }, 409)),
+    );
+    await expect(api.pressKeys('Insert+T')).rejects.toMatchObject({
+      status: 409,
+      body: { message: 'only on Windows' },
+    });
+  });
+
   it('posts a marker and returns the entry', async () => {
     const entry = {
       seq: 7,
