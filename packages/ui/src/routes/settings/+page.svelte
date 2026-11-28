@@ -1,20 +1,29 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import type { ConfigPatchDto } from '@screenreader-speech-capture/shared';
   import { PLAYWRIGHT_VERSION, TCP_PORT } from '#lib/core/settings.js';
   import type { Theme } from '#lib/core/theme.js';
   import { appStores } from '#lib/composition.js';
   import SettingsForm from '#lib/components/SettingsForm/SettingsForm.svelte';
   import ThemeSetting from '#lib/components/ThemeSetting/ThemeSetting.svelte';
+  import type { PageProps } from './$types';
+
+  let { data }: PageProps = $props();
 
   const { config: configStore, status: statusStore, theme: themeStore } = appStores();
 
+  // The config the load read (`+page.server.ts`), already while rendering, so the server's HTML has
+  // the settings.
+  untrack(() => configStore.seed(data.config));
+
+  // On the server the header's status store is still empty, the layout's load has the status.
   const settingContext = $derived({
-    runningPlaywright: statusStore.status?.playwright.version ?? null,
+    runningPlaywright: (statusStore.status ?? data.status)?.playwright.version ?? null,
   });
 
   onMount(() => {
-    void configStore.refresh();
+    // Only if the load failed: try from the browser, which then says that the bridge is gone.
+    if (data.config === null) void configStore.refresh();
   });
 </script>
 

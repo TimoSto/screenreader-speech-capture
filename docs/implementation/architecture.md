@@ -303,9 +303,11 @@ the speech store, which the monitor page re-opens whenever the selected scope ch
   `BridgeApi.clearSpeech` (`DELETE /api/v1/speech?session=<id|none>`). `canClearSpeech` shows the button
   for the live scopes only. Nothing is removed locally: the scope's SSE feed gets the bridge's scoped
   `clear` event and empties the table; the page then re-reads the sessions list for the counts.
-- **Bridge settings**: `HttpConfigApi` (the `ConfigApi` port) reads `GET /ui/api/config`, which answers
-  `{ active, saved, overrides }` from three bridge calls (`BridgeApi.config('active'|'saved')`,
-  `configOverrides`), and saves with `PUT /ui/api/config` (`BridgeApi.updateConfig`, `PUT /api/v1/config`).
+- **Bridge settings**: `readConfigState` (`lib/server`) reads `{ active, saved, overrides }` with three
+  bridge calls (`BridgeApi.config('active'|'saved')`, `configOverrides`). The Settings page's load calls it
+  and the page seeds the config store while rendering, so the server's HTML has the settings. In the
+  browser, `HttpConfigApi` (the `ConfigApi` port) re-reads it through `GET /ui/api/config` (after a save,
+  or if the load failed) and saves with `PUT /ui/api/config` (`BridgeApi.updateConfig`, `PUT /api/v1/config`).
   A refused setting keeps the bridge's `details.field` as `error.field` (`App.Error`), which the adapter turns
   into a `SettingRejected`. The config store keeps the state and `pending` (`pendingFields`: the saved
   settings that differ from what runs); the page and its setting components only show it.
