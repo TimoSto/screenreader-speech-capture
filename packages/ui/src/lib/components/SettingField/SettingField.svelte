@@ -98,19 +98,6 @@
 {/if}
 
 <style>
-  /* The server's HTML has the field before the browser knows the element: keep its room, so what
-     follows doesn't jump. */
-  md-outlined-text-field:not(:defined),
-  md-outlined-select:not(:defined) {
-    display: block;
-    min-height: 76px;
-  }
-
-  /* Not a list of every option before the browser knows the select. */
-  md-outlined-select:not(:defined) > * {
-    display: none;
-  }
-
   md-outlined-text-field,
   md-outlined-select {
     width: 100%;

@@ -85,6 +85,14 @@ API over loopback; core / adapters / stores / components layers.
 
 ## Components
 
+### Loading placeholders
+
+Until the scripts have defined a Material element, CSS alone (`:not(:defined)` in `global.css`)
+draws a shimmering placeholder in its size: a 56px box and a bar for the supporting text for a text
+field or select, a pill as wide as its label for a button, a circle for an icon (also until the icon
+font is there). A dialog shows nothing. The shimmer stands still with reduced motion. A supporting
+text of more than one line still moves what follows when the field appears.
+
 ### Top app bar = status bar
 
 - Logo tile (44 px, radius 14, `primary`), title (title-large), mono subline:
