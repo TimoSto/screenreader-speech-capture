@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import { SettingRejected } from '#lib/core/config.js';
-import { PLAYWRIGHT_VERSION, TCP_PORT, TEXT_ENCODING } from '#lib/core/settings.js';
+import { BUFFER_SIZE, PLAYWRIGHT_VERSION, TCP_PORT, TEXT_ENCODING } from '#lib/core/settings.js';
 import { configWith } from '../../../test/config.js';
 import SettingsForm from './SettingsForm.svelte';
 
@@ -374,5 +374,49 @@ describe('SettingsForm with the port and the encoding', () => {
     // The Material options get their role through `ElementInternals`, which axe can't see, so it
     // reports the list's children. The role queries above find them as options.
     expect(await violations({ 'aria-required-children': { enabled: false } })).toEqual([]);
+  });
+});
+
+describe('SettingsForm with the port and the buffer size', () => {
+  const props = (patch: Record<string, unknown> = {}) =>
+    form({
+      settings: [TCP_PORT, BUFFER_SIZE],
+      active: configWith(),
+      saved: configWith(),
+      ...patch,
+    });
+
+  const size = () => page.getByRole('textbox', { name: 'Speech buffer size' });
+  const port = () => page.getByRole('textbox', { name: 'TCP port' });
+
+  it('saves a size as a number', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    await render(SettingsForm, props({ onSave }));
+    await expect.element(size()).toHaveValue('10000');
+    await size().fill('50000');
+    await save().click();
+    expect(onSave).toHaveBeenCalledWith({ buffer: { maxEntries: 50_000 } });
+  });
+
+  it('saves nothing while a field is refused, shows every refusal and focuses the first', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    await render(SettingsForm, props({ onSave }));
+    await port().fill('0');
+    await size().fill('2000000');
+    await save().click();
+    for (const message of [
+      'Enter a port from 1 to 65535.',
+      'Enter a whole number from 1 to 1000000.',
+    ]) {
+      await expect.element(page.getByText(message).first()).toBeInTheDocument();
+    }
+    expect(onSave).not.toHaveBeenCalled();
+    await expect.poll(() => document.activeElement?.getAttribute('data-setting')).toBe('tcp.port');
+  });
+
+  it('has no axe violations', async () => {
+    const { container } = await render(SettingsForm, props());
+    const results = await axe.run(container);
+    expect(results.violations.map((violation) => violation.id)).toEqual([]);
   });
 });

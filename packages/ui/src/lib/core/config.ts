@@ -1,4 +1,5 @@
 import {
+  CONFIG_LIMITS,
   EXACT_VERSION_PATTERN,
   type ConfigDto,
   type ConfigPatchDto,
@@ -83,4 +84,19 @@ export function parsePlaywrightVersion(
   return EXACT_VERSION_PATTERN.test(trimmed)
     ? { ok: true, version: trimmed }
     : { ok: false, message: PLAYWRIGHT_VERSION_MESSAGE };
+}
+
+const { min: MIN_ENTRIES, max: MAX_ENTRIES } = CONFIG_LIMITS.maxEntries;
+
+export const MAX_ENTRIES_MESSAGE = `Enter a whole number from ${MIN_ENTRIES} to ${MAX_ENTRIES}.`;
+
+/** Reads the size of the speech buffer as typed: a whole number within the API's limits. */
+export function parseMaxEntries(
+  text: string,
+): { ok: true; entries: number } | { ok: false; message: string } {
+  const trimmed = text.trim();
+  const entries = /^\d+$/.test(trimmed) ? Number(trimmed) : Number.NaN;
+  return entries >= MIN_ENTRIES && entries <= MAX_ENTRIES
+    ? { ok: true, entries }
+    : { ok: false, message: MAX_ENTRIES_MESSAGE };
 }
