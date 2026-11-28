@@ -93,8 +93,9 @@ before you ask about the page.
 
 Ask whether the user has markdown files (specs, user stories, component docs, a11y requirements)
 describing what the page does, and read any they give (paths may be passed as arguments). Also get the
-**page URL** and whether it needs a login (the MCP browser starts with a fresh profile every session,
-so there are no cookies; credentials must come from the user, never invent them).
+**page URL** and whether it needs a login. If it does, tell the user now that they will sign in by
+hand on the VM ([Logins](#logins-the-user-signs-in-by-hand)); the MCP browser starts with a fresh
+profile every session, so there are no cookies.
 
 Before you click anything, also settle:
 
@@ -102,6 +103,28 @@ Before you click anything, also settle:
 - **Environment**: a test system or production?
 - **Side effects**: which actions must never be triggered (purchases, emails, deletions)?
 - **Test data**: can it be used more than once, or reset?
+
+## Logins: the user signs in by hand
+
+Signing in is always the user's job, so that credentials never reach you, the transcript or your
+tool calls. Don't ask for passwords or one-time codes, and don't enter any with MCP or `press`,
+even if the user posts them in the chat. This holds for every sign-in step (password, second
+factor, CAPTCHA, an expired session), whether it shows up in the rehearsal or during the run:
+
+1. Open the login page in the MCP browser and run `client focus`. During a run, also
+   `client mark login-start`.
+2. Ask the user to sign in in that browser on the VM and to tell you when they are done. Warn them
+   that the screen reader may speak what they type, and that the bridge records it where anyone who
+   can reach the bridge can read it; turning off the screen reader's typing echo first avoids that.
+   If they use RDP, they must stay connected: disconnecting leaves no active desktop.
+3. Wait for their answer. Until then, don't send input, take snapshots or read speech.
+4. Check with `browser_snapshot` that they are signed in, then run `client focus` again. During a
+   run, `client mark login-done`, and don't read or quote the speech between the two markers:
+   continue from a new step marker.
+
+If the user can't reach the VM's desktop, stop and report that the pages behind the login can't be
+tested. A login form can be audited only as far as that works without credentials (names, roles,
+focus order, errors on an empty submit); report the rest as not verified.
 
 ## Step 2: Rehearse the flow (no speech judging yet)
 
@@ -116,9 +139,11 @@ the flow works at all, so a later failure isn't mistaken for a screen reader pro
    wait in the test.
 3. Stop before any side effect the user hasn't allowed. On production, submit nothing without a yes.
    If you can't complete the flow, ask the user instead of guessing.
-4. Restore the start state: MCP `browser_close` discards the browser profile (check that the next
-   page load is signed out and fresh). Data on the server stays changed, so ask the user to reset it
-   if the flow needs that.
+4. Restore the start state. If the user signed in, keep the browser open and navigate back to the
+   start page: `browser_close` discards the profile and with it the login. Otherwise
+   `browser_close` gives a fresh profile. If the flow needs a fresh profile despite a login, close
+   the browser and have the user sign in again. Data on the server stays changed, so ask the user to
+   reset it if the flow needs that.
 
 The rehearsal is **not a test result**: input through MCP proves nothing about keyboard or screen
 reader use. Odd things in the DOM (a button without a name) are suspicions to verify in the test, not
@@ -132,8 +157,8 @@ small batches (2-4 questions), pick the next questions from the previous answers
 guess as the default so they can just confirm. Skip questions that are already answered (context
 files, step 1, the rehearsal), but state your assumption. Cover:
 
-- **Workflow**: the exact start state and end goal ("sign in, add item to cart, reach confirmation").
-  Which steps, in which order? Happy path only, or also errors (empty required field, wrong password)?
+- **Workflow**: the exact start state and end goal ("add item to cart, reach confirmation").
+  Which steps, in which order? Happy path only, or also errors (empty required field, invalid input)?
 - **Navigation style**: sequential Tab/keyboard flow, screen reader browse mode (headings/landmarks/
   forms), or both?
 - **Expectations**: what should be announced at each important step (names, roles, states, error
@@ -149,15 +174,18 @@ the user, **never from the DOM**: otherwise a wrong label becomes the expectatio
 
 ## Step 4: Start the run and put the browser in the foreground
 
-1. `client session start "<short task name>" --json`. A session scopes reads and waits to this task
+1. If the flow needs a login and the browser isn't signed in, open the page with MCP
+   `browser_navigate` and hand over ([Logins](#logins-the-user-signs-in-by-hand)) before the session
+   starts, so the typing stays out of it.
+2. `client session start "<short task name>" --json`. A session scopes reads and waits to this task
    and lets a person follow it in the bridge's web UI. Prefer it over `clear` (`clear --all` wipes
    every session). If it warns that it **ended another client's session**, someone else is using the
    screen reader: stop and tell the user, two clients can't share it.
-2. Open the page in its start state: MCP `browser_navigate`. MCP only starts its browser on the
+3. Open the page in its start state: MCP `browser_navigate`. MCP only starts its browser on the
    first browser tool call.
-3. `client focus --json` → `{"focused": true, "window": {"title", "pid"}}`. The screen reader
+4. `client focus --json` → `{"focused": true, "window": {"title", "pid"}}`. The screen reader
    announces the window.
-4. **Keyboard focus inside the page.** `client focus` leaves keyboard focus wherever it last was
+5. **Keyboard focus inside the page.** `client focus` leaves keyboard focus wherever it last was
    in that window. That can be the browser's toolbar (a fresh tab starts in the address bar).
    Confirm with speech: `client press Tab --capture --json` must announce an element of the page.
    `document.activeElement` can't show this, because it describes the page even while the keyboard
@@ -281,6 +309,7 @@ Exit 1 is a result to judge, exit 2 and 3 come with an error object. Condensed f
 | `client focus`: `INPUT_DISABLED`, exit 2, but `input.native.available: true` | This bridge can't focus windows. | Use the click fallback (Step 4). |
 | `FOCUS_FAILED`, or `INPUT_DISABLED` from `press`, exit 2 | Locked desktop, or no native input on this bridge. | Stop and report: an agent can't fix it. |
 | `--since mark:…`: exit 3 | No such marker in the current session. | Mark again; repeat the step if harmless. |
+| A login page appears | The session expired, or the flow needs another sign-in step. | Hand over: [Logins](#logins-the-user-signs-in-by-hand). |
 | `BridgeUnreachableError`, exit 2 | Bridge not running, or wrong URL. | `status --wait-ready`, then `config get url`. |
 
 ## Step 6: Report
@@ -297,6 +326,7 @@ the bridge's web UI.
 ## Ground rules
 
 - Never fabricate speech or assume what the screen reader "would" say; only report what was captured.
+- Never enter login credentials; the user [signs in by hand](#logins-the-user-signs-in-by-hand).
 - Only one thing drives the screen reader at a time: one session, one browser in front. A browser
   started by Playwright tests and the MCP browser are separate windows.
 - Don't change the bridge config, install packages, or touch the user's MCP/CLI settings without

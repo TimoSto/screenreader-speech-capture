@@ -136,6 +136,7 @@ It teaches an agent how to use the CLI:
 - to start a [session](speech-capture.md#sessions) per task (`session start`) instead of `clear`,
   so a person can follow the task in the [web UI](web-ui.md#context-pane),
 - to rehearse the flow through Playwright MCP, without judging speech, before it agrees a test plan,
+- that the user signs in by hand on the VM: the agent never asks for or enters credentials,
 - to check that its Playwright MCP tools are the bridge's,
 - the loop: `press … --capture` for keyboard operations and screen reader commands, **mark →
   act → wait → speech --since** when speech may come late, and for typing through Playwright MCP,
