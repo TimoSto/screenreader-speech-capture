@@ -4,7 +4,8 @@ The web UI served by the bridge, for people watching, driving and configuring it
 
 > **Partly implemented ([M5](../ROADMAP.md#m5-web-ui-)).** Working today: the status chips with a
 > refresh button, the [context pane](#context-pane) (sessions), the [live log](#live-log) with
-> markers, clear and delete, and on the [Settings](#settings) page the color theme and the TCP port.
+> markers, clear and delete, and on the [Settings](#settings) page the color theme, the TCP port and
+> the Playwright version.
 > The rest of this page is design and marked *(planned)*: the status panel, the actions panel, the
 > other settings and the Setup page's check.
 
@@ -171,10 +172,25 @@ sends to (default 4449). Enter saves, or the **Save** button; **Revert** puts th
 - A port set by a flag or variable (`--tcp-port`, `GET /config/overrides`) shows the flag and can't be
   edited: it wins over the config file on every start.
 
+### Playwright
+
+The **Playwright version** of the [Playwright server](playwright-mcp.md#version), saved on the bridge
+like the TCP port and applied when the bridge is restarted. The section appears once the bridge
+settings are read. Enter saves, or the **Save** button; **Revert** puts the saved version back.
+
+- The field takes an exact version like `1.65.0`; empty means the bundled version. The browser checks
+  the format, then saves with `PUT /api/v1/config {"playwright":{"version":…}}` (`null` for the
+  bundled one). Whether the version exists is only found out on the next start: the service then fails.
+- "In use" is the version the bridge is configured with now; for the bundled one it names the version
+  the server runs (`GET /status`). While the saved version differs, a notice says to restart the
+  bridge.
+- A version set by `--playwright-version` or `SR_SPEECH_PLAYWRIGHT_VERSION` shows what sets it and
+  can't be edited.
+
 ### More bridge settings *(planned, [M5](../ROADMAP.md))*
 
 A form for the rest of the [configuration](configuration.md): other ports, hosts, encoding, buffer
-size, log file, Playwright version, and native input on/off, with the same pattern as the TCP port.
+size, log file, and native input on/off, with the same pattern as the TCP port.
 
 - **Services:** the state and version of the Playwright server and MCP (from `status`). They are
   switched on and off with their `enabled` setting; there are no start / stop buttons.

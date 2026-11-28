@@ -80,6 +80,7 @@ GitHub issues. This file only tracks milestones.
       (`data-theme` on `<html>`, choice remembered in `localStorage`). The UI starts light and
       ignores `prefers-color-scheme`
 - [x] Settings: TCP port field (saved on the bridge, "restart necessary" notice, read-only when a flag sets it)
+- [x] Settings: Playwright version field (same pattern; empty means the bundled version)
 - [ ] Settings: the other bridge settings (validation, services)
 - [ ] Setup page with check button
 - [ ] Accessibility of the UI itself (no feedback loop)

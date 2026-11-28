@@ -2,10 +2,11 @@
   import { onMount } from 'svelte';
   import type { Theme } from '#lib/core/theme.js';
   import { appStores } from '#lib/composition.js';
+  import PlaywrightVersionSetting from '#lib/components/PlaywrightVersionSetting/PlaywrightVersionSetting.svelte';
   import TcpPortSetting from '#lib/components/TcpPortSetting/TcpPortSetting.svelte';
   import ThemeSetting from '#lib/components/ThemeSetting/ThemeSetting.svelte';
 
-  const { config: configStore, theme: themeStore } = appStores();
+  const { config: configStore, status: statusStore, theme: themeStore } = appStores();
 
   onMount(() => {
     void configStore.refresh();
@@ -41,6 +42,22 @@
         <p class="scope">Reading the bridge settings…</p>
       {/if}
     </section>
+
+    {#if configStore.active !== null && configStore.saved !== null}
+      <section aria-labelledby="playwright-heading">
+        <h2 id="playwright-heading">Playwright</h2>
+        <p class="scope">
+          Saved on the bridge. A change takes effect when the bridge is restarted.
+        </p>
+        <PlaywrightVersionSetting
+          active={configStore.active.playwright.version}
+          saved={configStore.saved.playwright.version}
+          running={statusStore.status?.playwright.version ?? null}
+          overriddenBy={configStore.overrides['playwright.version'] ?? null}
+          onSave={(version: string | null) => configStore.save({ playwright: { version } })}
+        />
+      </section>
+    {/if}
 
     <section aria-labelledby="appearance-heading">
       <h2 id="appearance-heading">Appearance</h2>

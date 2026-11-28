@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ConfigDto } from '@screenreader-speech-capture/shared';
-import { parsePort, pendingFields } from './config.js';
+import { parsePlaywrightVersion, parsePort, pendingFields } from './config.js';
 
 const config: ConfigDto = {
   tcp: { host: '127.0.0.1', port: 4449, encoding: 'windows-1252', maxLineBytes: 65536 },
@@ -43,4 +43,22 @@ describe('parsePort', () => {
       });
     },
   );
+});
+
+describe('parsePlaywrightVersion', () => {
+  it.each([
+    ['1.65.0', '1.65.0'],
+    [' 1.57.0-beta-1 ', '1.57.0-beta-1'],
+    ['', null],
+    ['  ', null],
+  ])('accepts %j', (text, version) => {
+    expect(parsePlaywrightVersion(text)).toEqual({ ok: true, version });
+  });
+
+  it.each(['1.65', '^1.65.0', 'latest', 'v1.65.0', '1.65.0 && x'])('refuses %j', (text) => {
+    expect(parsePlaywrightVersion(text)).toEqual({
+      ok: false,
+      message: 'Enter an exact version like 1.65.0, or leave the field empty.',
+    });
+  });
 });
