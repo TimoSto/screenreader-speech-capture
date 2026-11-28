@@ -45,6 +45,7 @@ refined it (`git log -S '<heading>' -- docs/implementation/decisions.md`).
 
 - [The web UI is a SvelteKit BFF inside the bridge process](#the-web-ui-is-a-sveltekit-bff-inside-the-bridge-process) ([#145](https://github.com/TimoSto/screenreader-speech-capture/pull/145))
 - [The UI's server build is self-contained](#the-uis-server-build-is-self-contained) ([#168](https://github.com/TimoSto/screenreader-speech-capture/pull/168))
+- [The Settings page saves by section and leaves access settings out](#the-settings-page-saves-by-section-and-leaves-access-settings-out)
 - [The UI uses SvelteKit's experimental remote functions](#the-ui-uses-sveltekits-experimental-remote-functions) ([#203](https://github.com/TimoSto/screenreader-speech-capture/pull/203))
 - [The speech table follows live scopes over SSE and reads ended sessions once](#the-speech-table-follows-live-scopes-over-sse-and-reads-ended-sessions-once) ([#172](https://github.com/TimoSto/screenreader-speech-capture/pull/172))
 - [The speech table is a real `<table>`](#the-speech-table-is-a-real-table) ([#172](https://github.com/TimoSto/screenreader-speech-capture/pull/172))
@@ -476,6 +477,19 @@ address is loopback or one of the machine's own interface addresses (a page open
 `hooks.server.ts` turns it into `locals.local`, and `SpeechLog` then marks its rows `aria-hidden`, drops
 the region and `tabindex`, and a warning banner above the log says why. A page opened from another machine is unchanged. A proxy that
 connects from the machine itself makes remote viewers look local.
+
+## The Settings page saves by section and leaves access settings out
+
+The Settings page is one scrolling page of topic sections, each saved on its own. One tall form per
+setting made the page several screens long; one Save for the whole page puts the button far from the
+edit and lets one refused value block unrelated ones; autosave would save half-typed values. The
+restart consequences are collected in one box, since every bridge setting waits for a restart.
+
+Settings that can cut people off from the UI or weaken access protection (`http.host`, `http.port`,
+`http.allowedHosts`, `tcp.host`) get no field: a wrong value saved from the UI might not be
+reachable from the UI any more. `log.consoleSpeech` can start a speech feedback loop, and ports of
+the child services, the log file and the line limit are rarely needed. All stay flags and config
+file settings.
 
 ## The UI uses SvelteKit's experimental remote functions
 

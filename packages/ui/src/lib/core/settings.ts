@@ -1,5 +1,5 @@
 import type { ConfigDto, ConfigPatchDto } from '@screenreader-speech-capture/shared';
-import { parsePlaywrightVersion, parsePort } from './config.js';
+import { parsePlaywrightVersion, parsePort, pendingFields } from './config.js';
 
 // The bridge settings the Settings page edits, as data: what each one is called, how its value is
 // shown and read, and what to say about it. The components only render this.
@@ -26,16 +26,16 @@ export interface Setting<T = SettingValue> {
   /** What the messages call the value (`port`). */
   noun: string;
   control: { kind: 'text'; inputmode: 'text' | 'numeric' };
-  /** The text under the control. */
-  help: string;
+  /** The text under the control; `active` is the value in use. */
+  help(active: T, context: SettingContext): string;
   /** A value as the control holds it. */
   format(value: T): string;
   /** Reads what the control holds; a refused text has a message and is not saved. */
   parse(text: string): Parsed<T>;
   /** A value in words. */
   describe(value: T, context: SettingContext): string;
-  /** What to say while the saved value differs from the one in use. */
-  notice(saved: T, active: T, context: SettingContext): { headline: string; detail: Fragment[] };
+  /** What to know before the restart that applies `saved` instead of `active`. */
+  consequence(saved: T, active: T): Fragment[];
 }
 
 export const TCP_PORT: Setting<number> = {
@@ -43,22 +43,18 @@ export const TCP_PORT: Setting<number> = {
   label: 'TCP port',
   noun: 'port',
   control: { kind: 'text', inputmode: 'numeric' },
-  help: "The port the screen reader's speech voice sends to. Default 4449.",
+  help: () => "The port the screen reader's speech voice sends to. Default 4449.",
   format: String,
   parse(text) {
     const parsed = parsePort(text);
     return parsed.ok ? { ok: true, value: parsed.port } : parsed;
   },
   describe: String,
-  notice: (saved, active) => ({
-    headline: `Restart the bridge to use port ${saved}.`,
-    detail: [
-      `It still listens on ${active} until it is restarted. The speech voice on the VM sends to ` +
-        `a fixed port, so also add a voice for ${saved} (`,
-      { code: 'text-to-socket-engine-add-voice' },
-      ') and select it in the screen reader.',
-    ],
-  }),
+  consequence: (saved) => [
+    `The speech voice on the VM sends to a fixed port, so also add a voice for ${saved} (`,
+    { code: 'text-to-socket-engine-add-voice' },
+    ') and select it in the screen reader.',
+  ],
 };
 
 const bundled = ({ runningPlaywright }: SettingContext) =>
@@ -69,26 +65,21 @@ export const PLAYWRIGHT_VERSION: Setting<string | null> = {
   label: 'Playwright version',
   noun: 'version',
   control: { kind: 'text', inputmode: 'text' },
-  help:
+  // The running version is the bundled one only while no version is configured.
+  help: (active, { runningPlaywright }) =>
     'The exact version of the Playwright server, like 1.65.0. Use the version your tests use. ' +
-    'Leave empty for the bundled version.',
+    'Leave empty for the bundled version' +
+    (active === null && runningPlaywright !== null ? ` (${runningPlaywright}).` : '.'),
   format: (version) => version ?? '',
   parse(text) {
     const parsed = parsePlaywrightVersion(text);
     return parsed.ok ? { ok: true, value: parsed.version } : parsed;
   },
   describe: (version, context) => version ?? bundled(context),
-  notice(saved, active, context) {
-    const next = saved === null ? 'the bundled Playwright version' : `Playwright ${saved}`;
-    const running = active === null ? `the ${bundled(context)}` : `version ${active}`;
-    return {
-      headline: `Restart the bridge to use ${next}.`,
-      detail: [
-        `It still runs ${running} until it is restarted. The first start of a new version ` +
-          'installs it, which can take a minute or two. Your test projects need the same version.',
-      ],
-    };
-  },
+  consequence: () => [
+    'The first start of a new version installs it, which can take a minute or two. Your test ' +
+      'projects need the same version.',
+  ],
 };
 
 /** The value of a setting in a configuration. */
@@ -136,4 +127,63 @@ export function buildPatch(
     (patch[section] ??= {})[key] = parsed.value;
   }
   return Object.keys(errors).length > 0 ? { ok: false, errors } : { ok: true, patch };
+}
+
+/** The settings with a UI element. */
+export const SETTINGS: readonly Setting[] = [TCP_PORT, PLAYWRIGHT_VERSION];
+
+/** Whether the saved value of a setting waits for a restart. A flag or variable keeps winning. */
+export function isPending(
+  path: SettingPath,
+  active: ConfigDto,
+  saved: ConfigDto,
+  overrides: Readonly<Record<string, string>>,
+): boolean {
+  return overrides[path] === undefined && readSetting(active, path) !== readSetting(saved, path);
+}
+
+/** A saved change that the next start of the bridge applies. */
+export interface PendingChange {
+  path: string;
+  /** The setting's label, or its dotted path if the page has no field for it. */
+  label: string;
+  from: string;
+  to: string;
+  consequence: Fragment[];
+}
+
+const valueAt = (config: ConfigDto, path: string): unknown => {
+  const [section, key] = path.split('.') as [keyof ConfigDto, string];
+  return (config[section] as Record<string, unknown>)[key];
+};
+
+/**
+ * Everything that waits for a restart, also settings saved through the API that have no field
+ * here.
+ */
+export function waitingForRestart(
+  active: ConfigDto,
+  saved: ConfigDto,
+  overrides: Readonly<Record<string, string>>,
+  context: SettingContext,
+): PendingChange[] {
+  return pendingFields(active, saved)
+    .filter((path) => overrides[path] === undefined)
+    .map((path) => {
+      const setting = SETTINGS.find((candidate) => candidate.path === path);
+      if (setting === undefined) {
+        const text = (config: ConfigDto) => JSON.stringify(valueAt(config, path));
+        return { path, label: path, from: text(active), to: text(saved), consequence: [] };
+      }
+      const from = readSetting(active, setting.path);
+      const to = readSetting(saved, setting.path);
+      return {
+        path,
+        label: setting.label,
+        from: setting.describe(from, context),
+        // What runs now says nothing about the next start.
+        to: setting.describe(to, { ...context, runningPlaywright: null }),
+        consequence: setting.consequence(to, from),
+      };
+    });
 }
