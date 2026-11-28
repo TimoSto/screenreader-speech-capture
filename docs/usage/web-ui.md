@@ -169,8 +169,10 @@ sends to (default 4449). Enter saves, or the **Save** button; **Revert** puts th
   a fixed port, so a voice for the new port has to be added (`text-to-socket-engine-add-voice`)
   and selected. The notice survives a reload: the page compares `GET /config` with
   `GET /config?view=saved`.
-- A port set by a flag or variable (`--tcp-port`, `GET /config/overrides`) shows the flag and can't be
-  edited: it wins over the config file on every start.
+- A setting a flag or variable sets (`--tcp-port`, `GET /config/overrides`) wins over the config file
+  on every start, so the page shows it as text: the value **in use** and what sets it. A value saved
+  through the API meanwhile isn't shown, and no restart is asked for. This holds for every bridge
+  setting on the page.
 
 ### Playwright
 
@@ -184,8 +186,6 @@ settings are read. Enter saves, or the **Save** button; **Revert** puts the save
 - "In use" is the version the bridge is configured with now; for the bundled one it names the version
   the server runs (`GET /status`). While the saved version differs, a notice says to restart the
   bridge.
-- A version set by `--playwright-version` or `SR_SPEECH_PLAYWRIGHT_VERSION` shows what sets it and
-  can't be edited.
 
 ### More bridge settings *(planned, [M5](../ROADMAP.md))*
 
