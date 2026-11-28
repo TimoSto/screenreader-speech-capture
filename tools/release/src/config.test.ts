@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { config } from './config.js';
+import { parseVersion } from './version.js';
 
 const root = path.join(import.meta.dirname, '../../..');
 
@@ -11,6 +12,12 @@ describe('release.config.json', () => {
       const manifest = path.join(root, dir, 'package.json');
       expect(existsSync(manifest), manifest).toBe(true);
       expect((JSON.parse(readFileSync(manifest, 'utf8')) as { name: string }).name).toBe(name);
+    }
+  });
+
+  it('lists only stable versions as unusable', () => {
+    for (const version of config.packages.flatMap((p) => p.unusableVersions ?? [])) {
+      expect(parseVersion(version), version).toMatchObject({ pre: null });
     }
   });
 
