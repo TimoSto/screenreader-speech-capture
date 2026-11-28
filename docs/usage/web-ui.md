@@ -4,8 +4,8 @@ The web UI served by the bridge, for people watching, driving and configuring it
 
 > **Partly implemented ([M5](../ROADMAP.md#m5-web-ui-)).** Working today: the status chips with a
 > refresh button, the [context pane](#context-pane) (sessions), the [live log](#live-log) with
-> markers, clear and delete, and on the [Settings](#settings) page the color theme, the TCP port and
-> the Playwright version.
+> markers, clear and delete, and on the [Settings](#settings) page the color theme, the TCP port, the
+> text encoding and the Playwright version.
 > The rest of this page is design and marked *(planned)*: the status panel, the actions panel, the
 > other settings and the Setup page's check.
 
@@ -179,7 +179,11 @@ the system's `prefers-color-scheme`.
 
 - **TCP port:** the port the [socket voice](vm-setup.md#socket-voice-setup) sends to (default 4449), a
   whole number from 1 to 65535. The voice on the VM has its port built in, so after a change add a
+  whole number from 1 to 65535. The voice on the VM has its port built in, so after a change add a
   voice for the new port (`text-to-socket-engine-add-voice`) and select it.
+- **Text encoding:** the code page the voice sends, the VM's ANSI code page
+  ([Wire format](speech-capture.md#wire-format)): a list of the Windows code pages and UTF-8. Another
+  label saved elsewhere (such as `cp1252`) is shown and kept.
 
 ### Playwright
 
@@ -189,7 +193,7 @@ the system's `prefers-color-scheme`.
 
 ### More bridge settings *(planned, [M5](../ROADMAP.md))*
 
-A form for the rest of the [configuration](configuration.md): other ports, hosts, encoding, buffer
+A form for the rest of the [configuration](configuration.md): other ports, hosts, buffer
 size, log file, and native input on/off, in the sections described above.
 
 - **Services:** the state and version of the Playwright server and MCP (from `status`). They are

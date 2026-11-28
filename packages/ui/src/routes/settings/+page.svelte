@@ -1,7 +1,12 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
   import type { ConfigPatchDto } from '@screenreader-speech-capture/shared';
-  import { PLAYWRIGHT_VERSION, TCP_PORT, waitingForRestart } from '#lib/core/settings.js';
+  import {
+    PLAYWRIGHT_VERSION,
+    TCP_PORT,
+    TEXT_ENCODING,
+    waitingForRestart,
+  } from '#lib/core/settings.js';
   import type { Theme } from '#lib/core/theme.js';
   import { appStores } from '#lib/composition.js';
   import RestartSummary from '#lib/components/RestartSummary/RestartSummary.svelte';
@@ -64,7 +69,7 @@
         <h2 id="capture-heading">Speech capture</h2>
         <SettingsForm
           name="speech capture"
-          settings={[TCP_PORT]}
+          settings={[TCP_PORT, TEXT_ENCODING]}
           active={configStore.active}
           saved={configStore.saved}
           overrides={configStore.overrides}
