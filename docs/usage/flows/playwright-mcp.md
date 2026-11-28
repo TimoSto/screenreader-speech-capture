@@ -76,8 +76,9 @@ sequenceDiagram
 ## An agent drives the browser through MCP
 
 Playwright MCP runs in HTTP mode on `127.0.0.1:8931`; the bridge passes `/playwright-mcp` through.
-The agent brings MCP's browser to the front with the CLI and reads the speech with it. The whole
-loop (screen reader commands, markers) is in the [agent flows](agents.md#the-agent-loop). Details:
+The agent brings MCP's browser to the front with the CLI, operates it with native keys and reads
+the speech with it. The whole loop (also markers, and typing through MCP) is in the
+[agent flows](agents.md#the-agent-loop). Details:
 [Agents](../agents.md#agent-loop).
 
 ```mermaid
@@ -93,14 +94,11 @@ sequenceDiagram
     MCP->>Br: open headed Chromium, go to url
     A->>B: CLI: focus (POST /api/v1/input/focus {"target": "mcp"})
     Note over Br: the foreground window: the screen reader reads it
-    A->>B: CLI: mark step-1
-    A->>B: POST /playwright-mcp (browser_press_key Tab)
-    B->>MCP: same request
-    MCP->>Br: Tab
+    A->>B: CLI: press Tab --capture (POST /api/v1/input/keys)
+    B->>Br: native Tab
     Br-->>SR: focus change
     SR->>B: "Email, edit" (TCP :4449)
-    A->>B: CLI: wait-silence, then text --since mark:step-1
-    B-->>A: the speech since the step
+    B-->>A: the speech the key caused
 ```
 
 ## A service that isn't running
