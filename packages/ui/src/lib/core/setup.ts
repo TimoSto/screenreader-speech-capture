@@ -41,6 +41,9 @@ export interface KeysApi {
   press(keys: string): Promise<void>;
 }
 
+/** The id of the screen reader heading in the Setup instructions, where the check links to. */
+export const SCREEN_READER_ID = 'screen-reader-heading';
+
 const DOCS_URL = 'https://github.com/TimoSto/screenreader-speech-capture/blob';
 
 /**
@@ -63,6 +66,9 @@ export type CheckRowId = 'listener' | 'voice' | 'input' | 'focus' | 'playwright'
 /** `neutral`: nothing wrong, but nothing to confirm either (yet). */
 export type CheckTone = 'ok' | 'warning' | 'neutral';
 
+/** A page of the docs (its URL), or the screen reader steps of the Setup instructions. */
+export type RowHelp = { label: string } & ({ href: string } | { screenReader: true });
+
 export type CheckRow = {
   id: CheckRowId;
   label: string;
@@ -72,8 +78,11 @@ export type CheckRow = {
   /** The library that provides the feature; `href` is `null` for one without a known repository. */
   library: { name: string; href: string | null } | null;
   /** Where to read on, for a row that isn't ok. */
-  help: { label: string; href: string } | null;
+  help: RowHelp | null;
 };
+
+/** A row's help as it is written here: a docs page still without the release it is read at. */
+type Help = { label: string; path: string } | { label: string; screenReader: true };
 
 /** What the bridge itself knows about the setup, one row each. */
 export function deriveCheckRows(status: StatusDto): CheckRow[] {
@@ -86,7 +95,7 @@ export function deriveCheckRows(status: StatusDto): CheckRow[] {
     label: string,
     tone: CheckTone,
     state: string,
-    help: { label: string; path: string },
+    help: Help,
     library: CheckRow['library'] = null,
   ): CheckRow => ({
     id,
@@ -94,7 +103,7 @@ export function deriveCheckRows(status: StatusDto): CheckRow[] {
     tone,
     state,
     library,
-    help: tone === 'ok' ? null : link(help.label, help.path),
+    help: tone === 'ok' ? null : 'path' in help ? link(help.label, help.path) : help,
   });
 
   const { listening, port, encoding, connections } = status.tcp;
@@ -105,7 +114,7 @@ export function deriveCheckRows(status: StatusDto): CheckRow[] {
     id: CheckRowId,
     label: string,
     { available, backend, reason }: InputAvailabilityDto,
-    help: { label: string; path: string },
+    help: Help,
   ) =>
     row(
       id,
@@ -145,7 +154,7 @@ export function deriveCheckRows(status: StatusDto): CheckRow[] {
       connections.length > 0
         ? `${count}${voices.length > 0 ? ` (voice ${voices.join(', ')})` : ''}`
         : 'None yet: the voice connects with its first words',
-      { label: 'Select the voice', path: 'usage/vm-setup.md#screen-reader-setup' },
+      { label: 'Select the voice', screenReader: true },
     ),
     input('input', 'Native input', status.input.native, {
       label: 'Troubleshooting',

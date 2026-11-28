@@ -85,7 +85,7 @@ GitHub issues. This file only tracks milestones.
       pending restarts in one summary (the other settings stay flags and config file)
 - [ ] Settings: state and version of the services
 - [x] Setup page: check (status rows, speech test by hand or with `Insert+T`)
-- [ ] Setup page: instructions (socket voice, screen reader, connecting the test machine)
+- [x] Setup page: instructions (socket voice, screen reader, connecting the test machine)
 - [ ] Accessibility of the UI itself (no feedback loop)
 
 ### M6 Agents ⬜

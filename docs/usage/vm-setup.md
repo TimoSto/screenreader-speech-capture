@@ -152,7 +152,8 @@ A German JAWS also needs *Detect Language Changes* turned off
 
 ## Screen reader setup
 
-The UI has the same instructions under **Setup** *(planned, [M5](../ROADMAP.md#m5-web-ui-))*.
+The web UI's [Setup page](web-ui.md#setup) repeats the short steps of this page (socket voice, screen
+reader, firewall, connecting the test machine) with the bridge's live values: change both together.
 In both screen readers, select the voice
 **"Text To Socket 127.0.0.1:4449"** (or the display name of a voice you added).
 

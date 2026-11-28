@@ -38,7 +38,7 @@ describe('SetupStatus', () => {
     expect(links).toHaveLength(3);
     await expect
       .element(page.getByRole('link', { name: 'Select the voice (help for Voice connected)' }))
-      .toHaveAttribute('href', expect.stringContaining('usage/vm-setup.md#screen-reader-setup'));
+      .toHaveAttribute('href', '/setup/instructions#screen-reader-heading');
   });
 
   it('links the libraries to their repositories', async () => {

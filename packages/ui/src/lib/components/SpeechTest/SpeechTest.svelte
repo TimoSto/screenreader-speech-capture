@@ -5,6 +5,7 @@
   import { resolve } from '$app/paths';
   import type { InputAvailabilityDto, SpeechEntryDto } from '@screenreader-speech-capture/shared';
   import ExternalLink from '#lib/components/ExternalLink/ExternalLink.svelte';
+  import ScreenReaderLink from '#lib/components/ScreenReaderLink/ScreenReaderLink.svelte';
   import { CHECK_CHORD, docsUrl, type CheckVia } from '#lib/core/setup.js';
   import type { CheckPhase } from '#lib/stores/voice-check.svelte.js';
   import SendKeysDialog from './SendKeysDialog.svelte';
@@ -147,9 +148,7 @@
 {:else if phase === 'silent' && via === 'manual'}
   <ul class="hints">
     <li>
-      <ExternalLink href={docsUrl(version, 'usage/vm-setup.md#screen-reader-setup')}
-        >Select the socket voice</ExternalLink
-      > in the screen reader.
+      <ScreenReaderLink>Select the socket voice</ScreenReaderLink> in the screen reader.
     </li>
     <li>
       The voice must send to {port === null ? "the bridge's port" : `port ${port}`}
@@ -228,7 +227,7 @@
     margin-top: 4px;
   }
 
-  /* The link to the settings; the doc links style themselves. */
+  /* The link to the settings; the other links style themselves. */
   p a {
     color: var(--md-sys-color-primary);
   }

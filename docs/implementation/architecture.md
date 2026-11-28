@@ -331,10 +331,16 @@ the speech store, which the monitor page re-opens whenever the selected scope ch
   `HttpKeysApi.press` (`POST /ui/api/input/keys`, `BridgeApi.pressKeys`, `POST /api/v1/input/keys`
   without `capture`). Only the speech after its own marker counts then. A new run or leaving the page
   ends the stream ([flow](flows/web-ui.md#the-setup-check)).
+- **Setup instructions**: `lib/core/instructions.ts` builds the commands from the status (`tcp`, the
+  services), the page's address and `http` of the active config (the server load of
+  `/ui/setup/instructions`). The two Setup tabs are routes under one layout; `TabBar` links them.
+  `CommandBlock` copies through the `Clipboard` port: `BrowserClipboard` uses `navigator.clipboard`
+  and, outside a secure context (plain HTTP from another machine), a selected text area
+  ([decision](decisions.md#the-setup-page-repeats-the-short-setup-steps)).
 
 ### Serving the UI
 
-The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's routes under `/ui/api/` (`status`, `sessions` (`POST` only), `sessions/<id>`, `speech`, `speech/stream`, `markers`, `input/keys`, `config`). Every route reads a scope the same way: `parseScope` (`lib/core/sessions.ts`)
+The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings`, `/ui/setup` and `/ui/setup/instructions` the others, the BFF's routes under `/ui/api/` (`status`, `sessions` (`POST` only), `sessions/<id>`, `speech`, `speech/stream`, `markers`, `input/keys`, `config`). Every route reads a scope the same way: `parseScope` (`lib/core/sessions.ts`)
 accepts a session id or `none`. `scopeParam` (`lib/server/scope.ts`) applies it to `?session=` and
 answers 400 for anything else, and the `id` matcher does the same for
 `sessions/<id>` (`src/params.ts`, typed as a number), where an invalid id is a 404. The bridge's UI handler redirects the bare `/` to `/ui/`. Code builds URLs with `resolve()` from `$app/paths`.

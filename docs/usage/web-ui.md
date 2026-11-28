@@ -6,9 +6,9 @@ The web UI served by the bridge, for people watching, driving and configuring it
 > refresh button, the [context pane](#context-pane) (sessions), the [live log](#live-log) with
 > markers, clear and delete, on the [Settings](#settings) page the color theme, the TCP port, the
 > text encoding, the speech buffer size, the Playwright server and its version, Playwright MCP and the
-> log level, and on the [Setup](#setup) page the check.
-> The rest of this page is design and marked *(planned)*: the status panel, the actions panel, the
-> service state on the Settings page and the instructions on the Setup page.
+> log level, and the [Setup](#setup) page.
+> The rest of this page is design and marked *(planned)*: the status panel, the actions panel and the
+> service state on the Settings page.
 
 The UI is at `http://<vm>:5151/ui/` (`/` leads there): **Monitor** (`/ui/`), **Settings**
 (`/ui/settings`) and **Setup** (`/ui/setup`).
@@ -218,12 +218,14 @@ turned on and off with their checkboxes; there are no start / stop buttons.
 
 ## Setup
 
-For checking that the VM is set up: what the bridge knows about it, and a test that speech arrives.
-Links on the page open these docs on GitHub, as of the bridge's release (`main` for a preview or a
-development build).
+Two tabs, each a page of its own:
 
-The [socket voice](vm-setup.md#socket-voice-setup) and [screen reader](vm-setup.md#screen-reader-setup)
-instructions on the page itself are *(planned, [M5](../ROADMAP.md#m5-web-ui-))*.
+- **Check** (`/ui/setup`): is the VM set up? The [status](#status-1) the bridge knows and a
+  [speech test](#speech-test).
+- **Instructions** (`/ui/setup/instructions`): the [steps](#instructions) to get there.
+
+Links to these docs open them on GitHub, as of the bridge's release (`main` for a preview or a
+development build). Leaving the Check tab stops a running speech test.
 
 ### Status
 
@@ -236,7 +238,8 @@ One row each, read when the page opens and again with **Check again** (the page 
 | Native input and Window focus | not available, with the reason |
 | Playwright server and Playwright MCP | crashed or failed (starting and off are not warnings) |
 
-A row that isn't fine links to the page that helps. The library behind native input
+A row that isn't fine links to what helps: the screen reader steps under [Instructions](#instructions),
+or the docs. The library behind native input
 ([robotjs](https://github.com/jitsi/robotjs)) and window focus
 ([koffi](https://github.com/Koromix/koffi)) is named with a link to its repository.
 
@@ -252,13 +255,29 @@ A row that isn't fine links to the page that helps. The library behind native in
 
 When speech arrives, the page shows up to five entries (those that follow until a second passes
 without speech). Wrong characters mean the wrong [text encoding](#speech-capture). When nothing
-arrives after **Listen**, check the selected voice, its port and, with JAWS,
+arrives after **Listen**, check the [selected voice](#instructions), its port and, with JAWS,
 [language detection](vm-setup.md#jaws-language-detection). When nothing arrives after
 **Send Insert+T** but **Listen** works, the keys don't reach the screen reader.
 
 Opened on the VM itself, the arrived text is hidden from the screen reader
 (see [Accessibility](#accessibility-of-the-ui-itself)). The screen reader still reads the page, and
 that speech can pass the test.
+
+### Instructions
+
+The short steps of [VM setup](vm-setup.md), filled with the bridge's values. Each command has a
+**Copy** button. Long, rare and one-off topics are links to the docs.
+
+- **Socket voice:** installing and registering it. If the bridge listens somewhere the default voice
+  doesn't send to (`tcp.port`, `tcp.host`), also the command that adds a voice for it.
+- **Screen reader:** selecting that voice in NVDA or JAWS.
+- **Test machine:** the [client's bridge URL](client.md#bridge-url), the test packages with the
+  bridge's [Playwright version](playwright-mcp.md#version) and the
+  [MCP client entry](playwright-mcp.md#playwright-mcp). A service that is off points to
+  [Settings](#playwright-and-mcp) instead. The URL is the page's own address. Opened as `localhost`
+  or another loopback address, it holds `<vm-ip>` to fill in, with the bridge's HTTP port. Opened on
+  the VM, the page also shows the [firewall](vm-setup.md#firewall) command, and it warns when
+  `http.host` keeps other machines out.
 
 ## Accessibility of the UI itself
 

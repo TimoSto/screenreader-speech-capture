@@ -1,5 +1,6 @@
 import { getContext, setContext } from 'svelte';
 import { resolve } from '$app/paths';
+import { BrowserClipboard } from '#lib/adapters/browser-clipboard.js';
 import { BrowserThemeStorage } from '#lib/adapters/browser-theme-storage.js';
 import { markIconFontReady } from '#lib/adapters/icon-font.js';
 import { HttpConfigApi } from '#lib/adapters/http-config-api.js';
@@ -16,12 +17,14 @@ import { createSpeechStore } from '#lib/stores/speech.svelte.js';
 import { createStatusStore } from '#lib/stores/status.svelte.js';
 import { createThemeStore } from '#lib/stores/theme.svelte.js';
 import { createVoiceCheckStore } from '#lib/stores/voice-check.svelte.js';
+import type { Clipboard } from '#lib/core/instructions.js';
 
 /** Wires the adapters into the stores; components get the stores, never the adapters. */
 export function createAppStores() {
   const statusApi = new HttpStatusApi(resolve('/api/status'));
   const speechFeed = new SseSpeechFeed(resolve('/api/speech/stream'), resolve('/api/speech'));
   const speechApi = new HttpSpeechApi(resolve('/api/markers'), resolve('/api/speech'));
+  const clipboard: Clipboard = new BrowserClipboard();
   return {
     theme: createThemeStore(new BrowserThemeStorage()),
     status: createStatusStore(statusApi),
@@ -35,6 +38,8 @@ export function createAppStores() {
       speechApi,
     ),
     sessionsPane: createSessionsPaneStore(new BrowserSessionsPaneStorage()),
+    /** A port without state, so there is no store around it. */
+    clipboard,
   };
 }
 
