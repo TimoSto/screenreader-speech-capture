@@ -1,19 +1,11 @@
 import { error, json } from '@sveltejs/kit';
 import { checkDto, ConfigPatchSchema } from '@screenreader-speech-capture/shared';
+import { readConfigState } from '#lib/server/config-state.js';
 import type { RequestHandler } from './$types';
 
-/**
- * The settings page's read in one answer: what runs (`active`), what the next start will use
- * (`saved`) and the settings a flag or variable sets (`overrides`, by dotted path).
- */
-export const GET: RequestHandler = async ({ locals: { bridge } }) => {
-  const [active, saved, overrides] = await Promise.all([
-    bridge.config('active'),
-    bridge.config('saved'),
-    bridge.configOverrides(),
-  ]);
-  return json({ active, saved, overrides: overrides.overrides });
-};
+/** The settings page's re-read in the browser (`readConfigState`). */
+export const GET: RequestHandler = async ({ locals: { bridge } }) =>
+  json(await readConfigState(bridge));
 
 /** Saves a partial config for the next start and answers with the saved config. */
 export const PUT: RequestHandler = async ({ request, locals }) => {

@@ -25,7 +25,7 @@
   supporting-text={setting.help}
   {value}
   {disabled}
-  error={error !== ''}
+  error={error !== '' ? true : undefined}
   error-text={error}
   onkeydown={(event: KeyboardEvent) => {
     // Enter saves, whatever the text field does with the form around it.
@@ -35,3 +35,12 @@
   }}
   oninput={(event: Event) => onInput((event.target as HTMLInputElement).value)}
 ></md-outlined-text-field>
+
+<style>
+  /* The server's HTML has the field before the browser knows the element: keep its room, so what
+     follows doesn't jump. */
+  md-outlined-text-field:not(:defined) {
+    display: block;
+    min-height: 76px;
+  }
+</style>
