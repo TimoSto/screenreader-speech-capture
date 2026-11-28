@@ -17,7 +17,7 @@
     "@screenreader-speech-capture/shared": "workspace:*",
     "@sveltejs/adapter-node": "6.0.2",
     "@sveltejs/kit": "3.2.0",
-    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "@sveltejs/vite-plugin-svelte": "7.3.2",
     "@types/node": "25.9.12",
     "@vitest/browser": "5.1.2",
     "@vitest/browser-playwright": "5.1.2",
