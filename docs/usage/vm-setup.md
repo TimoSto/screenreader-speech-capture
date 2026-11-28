@@ -152,7 +152,8 @@ A German JAWS also needs *Detect Language Changes* turned off
 
 ## Screen reader setup
 
-The UI has the same instructions under **Setup**. In both screen readers, select the voice
+The UI has the same instructions under **Setup** *(planned, [M5](../ROADMAP.md#m5-web-ui-))*.
+In both screen readers, select the voice
 **"Text To Socket 127.0.0.1:4449"** (or the display name of a voice you added).
 
 Check the screen reader's **bitness**: a 64-bit screen reader only sees the 64-bit voice
@@ -205,6 +206,9 @@ language in the voice profile (**Voice Adjustment…**, see step 3 above; *Stimm
 German JAWS).
 
 ### Checking the setup
+
+The [Setup page](web-ui.md#setup) of the web UI (`http://localhost:5151/ui/setup` on the VM) shows
+what the bridge knows about the setup and tests that speech arrives. By hand:
 
 With the bridge running, press a key that makes the screen reader speak (for example
 `Insert+T` to read the window title). The text should appear within a few milliseconds in

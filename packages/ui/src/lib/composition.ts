@@ -3,6 +3,7 @@ import { resolve } from '$app/paths';
 import { BrowserThemeStorage } from '#lib/adapters/browser-theme-storage.js';
 import { markIconFontReady } from '#lib/adapters/icon-font.js';
 import { HttpConfigApi } from '#lib/adapters/http-config-api.js';
+import { HttpKeysApi } from '#lib/adapters/http-keys-api.js';
 import { HttpSpeechApi } from '#lib/adapters/http-speech-api.js';
 import { HttpSessionsApi } from '#lib/adapters/http-sessions-api.js';
 import { SseSpeechFeed } from '#lib/adapters/sse-speech-feed.js';
@@ -14,17 +15,24 @@ import { createSessionsStore } from '#lib/stores/sessions.svelte.js';
 import { createSpeechStore } from '#lib/stores/speech.svelte.js';
 import { createStatusStore } from '#lib/stores/status.svelte.js';
 import { createThemeStore } from '#lib/stores/theme.svelte.js';
+import { createVoiceCheckStore } from '#lib/stores/voice-check.svelte.js';
 
 /** Wires the adapters into the stores; components get the stores, never the adapters. */
 export function createAppStores() {
+  const statusApi = new HttpStatusApi(resolve('/api/status'));
+  const speechFeed = new SseSpeechFeed(resolve('/api/speech/stream'), resolve('/api/speech'));
+  const speechApi = new HttpSpeechApi(resolve('/api/markers'), resolve('/api/speech'));
   return {
     theme: createThemeStore(new BrowserThemeStorage()),
-    status: createStatusStore(new HttpStatusApi(resolve('/api/status'))),
+    status: createStatusStore(statusApi),
     config: createConfigStore(new HttpConfigApi(resolve('/api/config'))),
     sessions: createSessionsStore(new HttpSessionsApi(resolve('/api/sessions'))),
-    speech: createSpeechStore(
-      new SseSpeechFeed(resolve('/api/speech/stream'), resolve('/api/speech')),
-      new HttpSpeechApi(resolve('/api/markers'), resolve('/api/speech')),
+    speech: createSpeechStore(speechFeed, speechApi),
+    voiceCheck: createVoiceCheckStore(
+      statusApi,
+      speechFeed,
+      new HttpKeysApi(resolve('/api/input/keys')),
+      speechApi,
     ),
     sessionsPane: createSessionsPaneStore(new BrowserSessionsPaneStorage()),
   };

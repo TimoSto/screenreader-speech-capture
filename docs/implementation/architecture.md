@@ -324,10 +324,17 @@ the speech store, which the monitor page re-opens whenever the selected scope ch
   `BridgeApi.deleteSession` (`DELETE /api/v1/sessions?session=<id>`). `canDeleteSession` shows the
   button only for an ended session; the page picks the next scope with `scopeAfterDelete` before the
   list is read again.
+- **Setup check**: `deriveCheckRows` (`lib/core/setup.ts`) turns the status into the page's rows, and
+  `docsUrl` builds their links. The speech test is the voice check store: it reads the status for the
+  newest `seq`, follows every scope's speech from there (`SseSpeechFeed.listen`, the `SpeechProbe`
+  port: the stream relay without `session`) and, to send keys, adds its marker and calls
+  `HttpKeysApi.press` (`POST /ui/api/input/keys`, `BridgeApi.pressKeys`, `POST /api/v1/input/keys`
+  without `capture`). Only the speech after its own marker counts then. A new run or leaving the page
+  ends the stream ([flow](flows/web-ui.md#the-setup-check)).
 
 ### Serving the UI
 
-The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's routes under `/ui/api/` (`status`, `sessions` (`POST` only), `sessions/<id>`, `speech`, `speech/stream`, `markers`, `config`). Every route reads a scope the same way: `parseScope` (`lib/core/sessions.ts`)
+The app lives under the base path `/ui` (`paths.base` in `packages/ui/vite.config.ts`): `/ui/` is the Monitor page, `/ui/settings` and `/ui/setup` the others, the BFF's routes under `/ui/api/` (`status`, `sessions` (`POST` only), `sessions/<id>`, `speech`, `speech/stream`, `markers`, `input/keys`, `config`). Every route reads a scope the same way: `parseScope` (`lib/core/sessions.ts`)
 accepts a session id or `none`. `scopeParam` (`lib/server/scope.ts`) applies it to `?session=` and
 answers 400 for anything else, and the `id` matcher does the same for
 `sessions/<id>` (`src/params.ts`, typed as a number), where an invalid id is a 404. The bridge's UI handler redirects the bare `/` to `/ui/`. Code builds URLs with `resolve()` from `$app/paths`.
