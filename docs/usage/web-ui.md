@@ -5,7 +5,7 @@ The web UI served by the bridge, for people watching, driving and configuring it
 > **Partly implemented ([M5](../ROADMAP.md#m5-web-ui-)).** Working today: the status chips with a
 > refresh button, the [context pane](#context-pane) (sessions), the [live log](#live-log) with
 > markers, clear and delete, and on the [Settings](#settings) page the color theme, the TCP port, the
-> text encoding, the speech buffer size, and the Playwright server and its version.
+> text encoding, the speech buffer size, the Playwright server and its version, and Playwright MCP.
 > The rest of this page is design and marked *(planned)*: the status panel, the actions panel, the
 > other settings and the Setup page's check.
 
@@ -194,6 +194,8 @@ the system's `prefers-color-scheme`.
 - **Playwright version** of the [Playwright server](playwright-mcp.md#version): an exact version like
   `1.65.0`, or empty for the bundled one (`null`). Its number is under the field while the bundled one
   runs. Whether the version exists is only found out on the next start: the service then fails.
+- **Playwright MCP:** a checkbox for [the MCP server](playwright-mcp.md) AI agents connect to
+  (`mcp.enabled`, on by default). It brings its own Playwright, so the version above doesn't change it.
 
 ### More bridge settings *(planned, [M5](../ROADMAP.md))*
 

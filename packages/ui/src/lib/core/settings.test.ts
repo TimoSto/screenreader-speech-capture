@@ -4,6 +4,7 @@ import {
   changedSettings,
   explainRejection,
   isPending,
+  MCP_ENABLED,
   PLAYWRIGHT_ENABLED,
   PLAYWRIGHT_VERSION,
   readSetting,
@@ -187,5 +188,15 @@ describe('an on / off setting', () => {
     expect(PLAYWRIGHT_VERSION.help(null, context)).toContain(
       'Applies when the server is turned on.',
     );
+  });
+});
+
+describe('turning a service on or off', () => {
+  const context = { runningPlaywright: null };
+
+  it.each([PLAYWRIGHT_ENABLED, MCP_ENABLED])('says what each way means ($label)', (setting) => {
+    expect(setting.describe(false, context)).toBe('Off');
+    expect(setting.consequence(true, false)[0]).toContain('installs what is missing');
+    expect(setting.consequence(false, true)[0]).toContain("can't connect");
   });
 });
