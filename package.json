@@ -28,6 +28,7 @@
     "eslint-config-prettier": "10.1.9",
     "eslint-plugin-svelte": "3.24.1",
     "globals": "17.14.0",
+    "playwright": "1.65.0",
     "prettier": "3.10.1",
     "prettier-plugin-svelte": "4.2.0",
     "svelte-eslint-parser": "1.12.0",
