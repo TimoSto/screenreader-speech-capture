@@ -32,10 +32,13 @@ textarea {
   font-family: var(--app-font-mono);
 }
 
-/* Icon placeholder. Until <md-icon> is defined (JS loaded) the server-rendered ligature name
-   ("refresh") would show as plain text, and until the icon font is loaded (the layout sets
-   data-icons-ready on <html>) it would be blank. Both phases show a shimmer in the same 24px box
-   the real icon uses, so nothing shifts. Undefined <md-icon-button>s get their 40px box too. */
+/* Placeholders. The server's HTML has the Material elements before the browser knows them (JS not
+   loaded yet), so each keeps the room of the real control and shimmers: nothing shifts. */
+
+/* Icons. Until <md-icon> is defined the server-rendered ligature name ("refresh") would show as
+   plain text, and until the icon font is loaded (the layout sets data-icons-ready on <html>) it
+   would be blank. Both phases show the same 24px box the real icon uses. Undefined
+   <md-icon-button>s get their 40px box too. */
 md-icon-button:not(:defined) {
   display: inline-flex;
   align-items: center;
@@ -53,6 +56,79 @@ html:not([data-icons-ready]) md-icon {
   border-radius: 50%;
   color: transparent;
   user-select: none;
+}
+
+/* Text fields and selects: the 56px field, and a bar for the line of supporting text under it. */
+md-outlined-text-field:not(:defined),
+md-outlined-select:not(:defined) {
+  display: block;
+  min-height: 76px;
+}
+
+md-outlined-text-field:not(:defined)::before,
+md-outlined-select:not(:defined)::before {
+  display: block;
+  block-size: 56px;
+  border-radius: 4px;
+  content: '';
+}
+
+md-outlined-text-field:not(:defined)::after,
+md-outlined-select:not(:defined)::after {
+  display: block;
+  inline-size: 60%;
+  block-size: 10px;
+  margin: 7px 16px 3px;
+  border-radius: 4px;
+  content: '';
+}
+
+/* Not a list of every option before the browser knows the select. */
+md-outlined-select:not(:defined) > * {
+  display: none;
+}
+
+/* Buttons: a pill as wide as the real button, because the label is there, only not visible. */
+md-filled-button:not(:defined),
+md-outlined-button:not(:defined),
+md-text-button:not(:defined) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 64px;
+  min-block-size: 40px;
+  padding-inline: 23px; /* 24px with the border */
+  border-radius: 20px;
+  color: transparent;
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size: var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  letter-spacing: normal; /* the real label does not take the page's */
+  white-space: nowrap;
+  user-select: none;
+}
+
+md-text-button:not(:defined) {
+  padding-inline: 11px; /* 12px with the border */
+}
+
+/* A closed dialog is nothing: not its content as text on the page. */
+md-dialog:not(:defined) {
+  display: none;
+}
+
+/* The shimmer. The transparent border shows in forced-colors mode, where backgrounds don't. */
+md-icon:not(:defined),
+html:not([data-icons-ready]) md-icon,
+md-outlined-text-field:not(:defined)::before,
+md-outlined-select:not(:defined)::before,
+md-outlined-text-field:not(:defined)::after,
+md-outlined-select:not(:defined)::after,
+md-filled-button:not(:defined),
+md-outlined-button:not(:defined),
+md-text-button:not(:defined) {
+  border: 1px solid transparent;
   background: linear-gradient(
       90deg,
       transparent,
@@ -60,10 +136,10 @@ html:not([data-icons-ready]) md-icon {
       transparent
     )
     0 0 / 200% 100% no-repeat var(--md-sys-color-surface-container-highest);
-  animation: icon-shimmer 1.2s ease-in-out infinite;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
 }
 
-@keyframes icon-shimmer {
+@keyframes skeleton-shimmer {
   from {
     background-position: 200% 0;
   }
@@ -74,7 +150,14 @@ html:not([data-icons-ready]) md-icon {
 
 @media (prefers-reduced-motion: reduce) {
   md-icon:not(:defined),
-  html:not([data-icons-ready]) md-icon {
+  html:not([data-icons-ready]) md-icon,
+  md-outlined-text-field:not(:defined)::before,
+  md-outlined-select:not(:defined)::before,
+  md-outlined-text-field:not(:defined)::after,
+  md-outlined-select:not(:defined)::after,
+  md-filled-button:not(:defined),
+  md-outlined-button:not(:defined),
+  md-text-button:not(:defined) {
     animation: none;
   }
 }
